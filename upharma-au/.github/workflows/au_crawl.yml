@@ -1,12 +1,43 @@
-# 호주 크롤링 워크플로(workflow_dispatch 스켈레톤, 구현 예정).
-name: AU Crawl
+# Next.js 대시보드·수동 실행에서 단일 품목만 크롤링해 Supabase에 적재한다.
+name: 호주 1공정 크롤러 실행
 
 on:
   workflow_dispatch:
+    inputs:
+      product_filter:
+        description: "실행할 product_id (필수. 예: au-hydrine-004)"
+        required: true
+        default: ""
 
 jobs:
-  placeholder:
+  crawl-au:
     runs-on: ubuntu-latest
     steps:
-      - name: Skipped
-        run: echo "PROMPT 7에서 구현"
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 3.12 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: 의존성 설치 (requirements.txt)
+        run: pip install -r requirements.txt
+
+      - name: 크롤러 실행
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PRODUCT_FILTER: ${{ github.event.inputs.product_filter }}
+          PBS_SUBSCRIPTION_KEY: ${{ secrets.PBS_SUBSCRIPTION_KEY }}
+        working-directory: crawler
+        run: python au_crawler.py
+
+      - name: 실행 결과 요약 출력
+        if: always()
+        run: |
+          echo "크롤러 표준 출력은 위 '크롤러 실행' 단계 로그를 확인하세요."
+          echo "Supabase australia 테이블에 product_id 기준으로 upsert 됩니다."

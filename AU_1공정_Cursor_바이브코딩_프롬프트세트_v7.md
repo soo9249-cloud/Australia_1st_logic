@@ -598,7 +598,7 @@ GitHub Actions가 au_crawler.py를 실행하고
 
 [실행 환경]
 - ubuntu-latest
-- Python 3.11
+- Python 3.12(venv 가상환경이랑 같아야함)
 - Render에 별도 서버를 띄우지 않고 Actions runner에서 직접 실행
 
 [Secrets 사용]
@@ -636,6 +636,7 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PRODUCT_FILTER: ${{ github.event.inputs.product_filter }}
+          PBS_SUBSCRIPTION_KEY: ${{ secrets.PBS_SUBSCRIPTION_KEY }}
         run: cd crawler && python au_crawler.py
       - name: 실행 결과 요약 출력
         # upsert_product 결과 출력

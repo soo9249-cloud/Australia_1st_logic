@@ -10,14 +10,17 @@ import httpx
 from selectolax.parser import HTMLParser
 
 _BASE = "https://www.tga.gov.au"
-_USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/120.0.0.0 Safari/537.36"
-)
 
 
 def _headers() -> dict[str, str]:
-    return {"User-Agent": _USER_AGENT, "Accept": "text/html,application/xhtml+xml"}
+    return {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+    }
 
 
 def _abs_url(href: str) -> str | None:
@@ -27,11 +30,11 @@ def _abs_url(href: str) -> str | None:
 
 
 def _first_artg_href(html: str) -> str | None:
-    tree = HTMLParser(html)
-    for node in tree.css("a"):
-        href = node.attributes.get("href") or ""
-        if re.search(r"/resources/artg/\d+", href):
-            return _abs_url(href)
+    import re
+
+    matches = re.findall(r"/resources/artg/\d+", html)
+    if matches:
+        return _abs_url(matches[0])
     return None
 
 
@@ -79,7 +82,7 @@ def _parse_sponsor_from_detail(text: str) -> str | None:
 def fetch_tga_artg(ingredient: str) -> dict[str, Any]:
     """검색 후 상세 1회 조회. 항상 dict 반환."""
     q = (ingredient or "").strip()
-    search_url = f"{_BASE}/resources/artg?s={quote(q)}" if q else f"{_BASE}/resources/artg"
+    search_url = f"{_BASE}/resources/artg?keywords={quote(q)}" if q else f"{_BASE}/resources/artg"
 
     not_reg: dict[str, Any] = {
         "artg_number": None,
@@ -90,7 +93,7 @@ def fetch_tga_artg(ingredient: str) -> dict[str, Any]:
     }
 
     try:
-        r0 = httpx.get(search_url, headers=_headers(), timeout=10, follow_redirects=True)
+        r0 = httpx.get(search_url, headers=_headers(), timeout=30, follow_redirects=True)
         if r0.status_code != 200:
             return not_reg
 
@@ -98,23 +101,29 @@ def fetch_tga_artg(ingredient: str) -> dict[str, Any]:
         if not detail_url:
             return not_reg
 
-        r1 = httpx.get(detail_url, headers=_headers(), timeout=10, follow_redirects=True)
+        artg_number = _artg_number_from_href(detail_url)
         sched: str | None = None
         sponsor: str | None = None
-        if r1.status_code == 200:
-            tree = HTMLParser(r1.text)
-            blob = _text_blob(tree)
-            sched = _parse_schedule_from_detail(blob)
-            sponsor = _parse_sponsor_from_detail(blob)
+
+        try:
+            r1 = httpx.get(detail_url, headers=_headers(), timeout=30, follow_redirects=True)
+            if r1.status_code == 200:
+                tree = HTMLParser(r1.text)
+                blob = _text_blob(tree)
+                sched = _parse_schedule_from_detail(blob)
+                sponsor = _parse_sponsor_from_detail(blob)
+        except Exception as e:
+            print(f"[TGA DETAIL] {e}")
 
         return {
-            "artg_number": _artg_number_from_href(detail_url),
+            "artg_number": artg_number,
             "artg_status": "registered",
             "tga_schedule": sched,
             "tga_sponsor": sponsor,
             "artg_source_url": detail_url,
         }
-    except Exception:
+    except Exception as e:
+        print(f"[TGA ERROR] {e}")
         return not_reg
 
 

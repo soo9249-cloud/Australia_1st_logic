@@ -1,18 +1,23 @@
-# 크롤링·가격 산정에 사용할 열거형(구현 예정).
+# 크롤링·수출 판단에 사용하는 문자열 Enum (프롬프트 v7 PROMPT 5).
 
 from enum import Enum
 
 
-class ErrorType(Enum):
-    """수집·검증 오류 유형."""
-    PLACEHOLDER = "placeholder"
+class ErrorType(str, Enum):
+    AUTH_FAIL = "auth_fail"
+    RATE_LIMIT = "rate_limit"
+    WAF_BLOCK = "waf_block"
+    PARSE_ERROR = "parse_error"
+    TIMEOUT = "timeout"
 
 
-class PricingCase(Enum):
-    """가격 시나리오 분류."""
-    PLACEHOLDER = "placeholder"
+class PricingCase(str, Enum):
+    DIRECT = "DIRECT"  # PBS 공시가 직접 수집
+    COMPONENT_SUM = "COMPONENT_SUM"  # 복합제 성분별 합산
+    ESTIMATE = "ESTIMATE"  # 민간가 추정 또는 수집 불가
 
 
-class ExportViable(Enum):
-    """수출 적합성 판단."""
-    PLACEHOLDER = "placeholder"
+class ExportViable(str, Enum):
+    VIABLE = "viable"
+    CONDITIONAL = "conditional"
+    NOT_VIABLE = "not_viable"

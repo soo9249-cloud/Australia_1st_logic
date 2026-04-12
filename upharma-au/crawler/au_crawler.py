@@ -60,6 +60,8 @@ def build_product_summary(
     austender = austender or {}
 
     viable_result = determine_export_viable(tga)
+    if pbs.get("pbs_listed") == True:
+        viable_result = {"export_viable": "viable", "reason_code": "PBS_REGISTERED"}
 
     inn = str(product.get("inn_normalized") or "")
     pricing_case = str(product.get("pricing_case") or "ESTIMATE")

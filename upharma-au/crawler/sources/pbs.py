@@ -148,7 +148,7 @@ def _filter_results(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
     """ingredient를 반영해 PBS 품목을 찾는다. 매칭 행마다 dict 하나, 없으면 [_empty_dict()]."""
-    from crawler.utils.inn_normalize import normalize_inn
+    from utils.inn_normalize import normalize_inn
 
     ing_raw = (ingredient or "").strip()
     if not ing_raw:

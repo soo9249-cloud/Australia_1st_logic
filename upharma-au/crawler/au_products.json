@@ -8,7 +8,7 @@
       "strength": "2g",
       "dosage_form": "capsule",
       "hs_code_6": "300490",
-      "pricing_case": "DIRECT",
+      "pricing_case": "ESTIMATE",
       "pbs_search_terms": ["omega-3-acid ethyl esters", "omega 3 ethyl esters"],
       "tga_search_terms": ["omega-3-acid ethyl esters", "Omethyl"],
       "market_segment": "public"
@@ -21,10 +21,10 @@
       "strength": "604.72mg",
       "dosage_form": "injection",
       "hs_code_6": "300640",
-      "pricing_case": "DIRECT",
+      "pricing_case": "ESTIMATE",
       "pbs_search_terms": ["gadobutrol"],
       "tga_search_terms": ["gadobutrol", "Gadvoa"],
-      "market_segment": "public"
+      "market_segment": "hospital"
     },
     {
       "product_id": "au-sereterol-003",
@@ -42,13 +42,13 @@
     {
       "product_id": "au-hydrine-004",
       "product_name_ko": "Hydrine",
-      "inn_normalized": "hydroxyurea",
+      "inn_normalized": "hydroxycarbamide",
       "inn_components": ["hydroxyurea"],
       "strength": "500mg",
       "dosage_form": "capsule",
       "hs_code_6": "300490",
       "pricing_case": "DIRECT",
-      "pbs_search_terms": ["hydroxyurea"],
+      "pbs_search_terms": ["hydroxycarbamide"],
       "tga_search_terms": ["hydroxyurea", "Hydrine"],
       "market_segment": "public"
     },

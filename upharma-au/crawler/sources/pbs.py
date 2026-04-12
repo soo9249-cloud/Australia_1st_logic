@@ -118,12 +118,42 @@ def fetch_latest_schedule_code() -> str | None:
         return None
 
 
+def _filter_results(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not rows or not rows[0].get("pbs_listed"):
+        return rows
+    result: list[dict[str, Any]] = []
+
+    # 오리지널
+    originals = [r for r in rows if r.get("pbs_innovator") == "Y"]
+    if originals:
+        result.append(originals[0])
+
+    # 제네릭 최저가
+    generics = [r for r in rows if r.get("pbs_innovator") == "N"]
+    if generics:
+        cheapest = min(generics, key=lambda x: x.get("pbs_price_aud") or 999)
+        result.append(cheapest)
+
+    # 최신 등재
+    latest = max(rows, key=lambda x: x.get("pbs_first_listed_date") or "")
+    if latest not in result:
+        result.append(latest)
+
+    out = result if result else rows
+    pbs_total_brands = len(set(r.get("pbs_brand_name") for r in rows))
+    for d in out:
+        d["pbs_total_brands"] = pbs_total_brands
+    return out
+
+
 def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
     """ingredient를 반영해 PBS 품목을 찾는다. 매칭 행마다 dict 하나, 없으면 [_empty_dict()]."""
-    ing = (ingredient or "").strip()
-    if not ing:
-        return [_empty_dict()]
+    from crawler.utils.inn_normalize import normalize_inn
 
+    ing_raw = (ingredient or "").strip()
+    if not ing_raw:
+        return [_empty_dict()]
+    ing = normalize_inn(ing_raw)  # PubChem으로 WHO INN 자동 정규화
     needle = ing.lower()
     out_empty = _empty_dict()
 
@@ -163,7 +193,7 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
                         primary_matched.append(row)
 
         if primary_matched:
-            return [_row_to_result(r) for r in primary_matched]
+            return _filter_results([_row_to_result(r) for r in primary_matched])
 
         # fallback: filter 없이 page 순차, drug_name / li_drug_name 부분일치(소문자)
         fallback_matched: list[dict[str, Any]] = []
@@ -197,7 +227,7 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
                 break
 
         if fallback_matched:
-            return [_row_to_result(r) for r in fallback_matched]
+            return _filter_results([_row_to_result(r) for r in fallback_matched])
 
         return [out_empty]
     except Exception:

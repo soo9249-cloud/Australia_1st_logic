@@ -1,0 +1,12 @@
+# 호주 크롤링 워크플로(workflow_dispatch 스켈레톤, 구현 예정).
+name: AU Crawl
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skipped
+        run: echo "PROMPT 7에서 구현"

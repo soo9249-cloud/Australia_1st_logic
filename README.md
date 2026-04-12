@@ -1,0 +1,72 @@
+# 호주 1공정 MVP (Australia_1st_logic)
+
+한국 제약회사 수출 지원 자동화를 위한 호주 시장조사 파이프라인입니다.  
+8개 품목의 TGA 인허가·PBS 약가·민간 소매가를 수집해 Supabase에 저장하고, Next.js로 조회한 뒤 PDF 시장조사 보고서로 출력하는 것을 목표로 합니다.
+
+상세 스펙·프롬프트 순서는 저장소 내 [`AU_1공정_Cursor_바이브코딩_프롬프트세트_v7.md`](./AU_1공정_Cursor_바이브코딩_프롬프트세트_v7.md)를 기준으로 합니다.
+
+---
+
+## 프로젝트 구조
+
+| 경로 | 설명 |
+|------|------|
+| `upharma-au/` | 크롤러(Python), GitHub Actions, Next.js 앱 뼈대 |
+| `upharma-au/crawler/` | `au_crawler.py`, 소스별 모듈(`sources/`), 유틸, DB INSERT |
+| `upharma-au/next-app/` | 조회 UI·API·컴포넌트 (스켈레톤) |
+| `upharma-au/.github/workflows/` | `au_crawl.yml` (workflow_dispatch) |
+
+---
+
+## 사전 준비 (문서 요약)
+
+- **환경 변수** (프로젝트 최상단 `.env` 한 곳에 통일): `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `OPENAI_API_KEY`, `GH_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO`
+- **데이터 소스 URL**: PBS API, TGA ARTG, Chemist Warehouse 검색, AusTender 검색 (문서 표 참고)
+- **GitHub**: PAT(repo + workflow), 저장소 Secrets 연동
+
+---
+
+## 권장 구현 순서 (프롬프트 세트 v7)
+
+문서의 **Cursor에 넣을 순서**를 따릅니다. DB가 막히면 이후 단계가 진행되므로 **PROMPT 6(Supabase)** 을 앞당겨 두는 것이 권장됩니다.
+
+| 단계 | 프롬프트 | 비고 |
+|------|-----------|------|
+| 1 | PROMPT 1 | 폴더·파일 뼈대 |
+| 2 | PROMPT 2 | `au_products.json` 8개 품목 |
+| 3 | **PROMPT 6** | Supabase 연결·INSERT (우선) |
+| 4 | PROMPT 3 | PBS / TGA |
+| 5 | PROMPT 4 | Chemist / AusTender |
+| 6 | PROMPT 5 | `product_summary` 매핑 |
+| 7 | PROMPT 7 | GitHub Actions + `main()` |
+| 8 | PROMPT 8 | Next.js 조회·트리거 API |
+| 9 | PROMPT 9 | PDF 출력 |
+
+---
+
+## 진행 현황 (체크리스트)
+
+| # | 항목 | 상태 |
+|---|------|------|
+| 1 | 폴더 구조 및 기본 파일 (PROMPT 1) | 완료 |
+| 2 | `au_products.json` (PROMPT 2) | 미완료 |
+| 3 | PBS / TGA 수집 (PROMPT 3) | 미완료 |
+| 4 | Chemist / AusTender (PROMPT 4) | 미완료 |
+| 5 | product_summary 매핑 (PROMPT 5) | 미완료 |
+| 6 | Supabase INSERT (PROMPT 6) | 미완료 |
+| 7 | GitHub Actions (PROMPT 7) | 미완료 |
+| 8 | Next.js 조회·API (PROMPT 8) | 미완료 |
+| 9 | PDF 출력 (PROMPT 9) | 미완료 |
+
+---
+
+## 업데이트 이력
+
+### 2026-04-12
+
+- **PROMPT 1 완료:** `upharma-au/` 이하에 문서에 정의된 폴더·파일 생성. Python/TS는 주석·시그니처·스텁만 포함(실구현 없음). `crawler/requirements.txt`에 httpx, selectolax, trafilatura, supabase-py, python-dotenv, tenacity 명시. `.github/workflows/au_crawl.yml`은 workflow_dispatch 스켈레톤만 배치(PROMPT 7에서 본 구현 예정).
+- **README.md 최초 작성:** 본 문서로 진행 상황을 추적하기 시작함.
+
+---
+
+*참고: UPharma Export AI · KITA 무역AX 1기 · 한국유나이티드제약 5조 — 프롬프트 세트 v7 (2026-04-12)*

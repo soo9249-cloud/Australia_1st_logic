@@ -1,0 +1,6 @@
+httpx
+selectolax
+trafilatura
+supabase-py
+python-dotenv
+tenacity

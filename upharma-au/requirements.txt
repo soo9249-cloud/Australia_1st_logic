@@ -1,6 +1,7 @@
 httpx
 selectolax
 trafilatura
-supabase-py
+supabase
 python-dotenv
 tenacity
+openai

@@ -51,7 +51,7 @@
 |---|------|------|
 | 1 | 폴더 구조 및 기본 파일 (PROMPT 1) | 완료 |
 | 2 | `au_products.json` (PROMPT 2) | 완료 |
-| 3 | PBS / TGA 수집 (PROMPT 3) | 미완료 |
+| 3 | PBS / TGA 수집 (PROMPT 3) | 완료 |
 | 4 | Chemist / AusTender (PROMPT 4) | 미완료 |
 | 5 | product_summary 매핑 (PROMPT 5) | 미완료 |
 | 6 | Supabase INSERT (PROMPT 6) | 완료 |
@@ -69,6 +69,7 @@
 - **README.md 최초 작성:** 본 문서로 진행 상황을 추적하기 시작함.
 - **PROMPT 2 완료:** `upharma-au/crawler/au_products.json`에 8개 품목을 `products` 배열로 정의. `product_id`는 `au-{약어}-{번호}` TEXT 형식, `pricing_case`는 문서 기준(DIRECT 1~4, COMPONENT_SUM 5~6, ESTIMATE 7~8), `market_segment`는 모두 `public`. 완료 조건: `upharma-au`에서 `python -c "import json; data=json.load(open('crawler/au_products.json')); print(len(data['products']))"` → `8` 출력 확인.
 - **PROMPT 6 완료:** `upharma-au/crawler/db/supabase_insert.py`에 `get_supabase_client()`(싱글턴·`create_client`), `upsert_product()`, `upsert_all()` 구현. 환경변수는 `SUPABASE_URL`·`SUPABASE_SERVICE_KEY`; 로컬에서는 프로젝트 루트 `.env`를 자동 탐색해 `python-dotenv`로 로드(이미 설정된 값은 유지). 테이블 DDL은 `crawler/db/australia_table.sql`에 동봉(Supabase SQL Editor에서 미적용 시 실행). 완료 조건: `upharma-au/crawler`에서 `python -c "from db.supabase_insert import get_supabase_client; ..."` → `Supabase 연결 성공: True` 확인.
+- **PROMPT 3 완료:** `crawler/sources/pbs.py` — `Subscription-Key`만 사용, `/schedules`로 `schedule_code` 후 `/items`는 필터 없이 `page=1&limit=10` 첫 행만 파싱(`pbs_code`, `determined_price`/`claimed_price`). `crawler/sources/tga.py` — 검색 페이지에 ARTG 링크 있으면 `registered`·없으면 `not_registered`, 상세 요청 없음·스케줄은 `None` 허용.
 
 ---
 

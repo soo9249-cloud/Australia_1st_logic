@@ -152,117 +152,98 @@ crawler/sources/pbs.py 와 crawler/sources/tga.py 를 작성해라.
 
 [공통 제약]
 - httpx 사용. requests 금지.
-- LLM 호출 없음. 결정론적 파싱만.
+- LLM 호출 없음. 결정론적 파싱만 수행.
 - 함수 하나당 역할 하나. 과설계 금지.
 - 에러는 try/except로 잡고 None 반환. raise 금지.
 - 타임아웃: httpx.get(..., timeout=10)
+- .env의 환경변수(PBS_SUBSCRIPTION_KEY)를 사용하기 위해 python-dotenv와 os.getenv 활용.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 [pbs.py 작성 스펙]
 ━━━━━━━━━━━━━━━━━━━━━━━━
 PBS(Pharmaceutical Benefits Scheme)는 호주 정부의 공식 약가 공개 데이터다.
-공개 REST API(v3)가 존재하며 로그인 없이 사용 가능하다.
+공개 REST API(v3)를 사용하며, 아까 확인된 '공용 구독 키'를 반드시 포함해야 한다.
 
 [⚠️ PBS API 실제 특이사항 — 반드시 반영]
-- 실시간 성분명 검색 API가 없다. /items 엔드포인트는 전체 스케줄 다운로드 전용이다.
-- 따라서 전략을 바꿔야 한다:
-  1) /schedules 엔드포인트로 최신 schedule_code를 먼저 가져온다
-  2) /items?schedule_code={code}&filter=DRUG_NAME+like+'{ingredient}' 로 성분 필터링
-  3) 응답 JSON에서 DPMQ_PRICE(환자 본인부담가), PBS_CODE, DRUG_NAME 파싱
-- Rate limit: 1요청/20초 (공유). 요청 사이에 time.sleep(21) 반드시 추가.
-- 구독키 불필요. 헤더 없이 GET 가능.
-
-[실제 확인된 URL]
-PBS_SCHEDULE_URL = "https://data-api.health.gov.au/pbs/api/v3/schedules"
-PBS_ITEMS_URL    = "https://data-api.health.gov.au/pbs/api/v3/items"
-
-# ⚠️ 코드 작성 전 반드시 먼저 확인:
-# curl https://data-api.health.gov.au/pbs/api/v3/schedules
-# 200 응답 오면 그대로 진행. 인증오류/404면 → https://data.pbs.gov.au/api/api-public.html 참고해서 URL 수정 후 진행.
+- 인증: .env에서 PBS_SUBSCRIPTION_KEY를 읽어와 Header의 'Ocp-Apim-Subscription-Key'에 설정할 것.
+  (현재 공용 키: )
+- 전략: 
+  1) /schedules 엔드포인트로 최신 schedule_code를 먼저 가져온다.
+  2) /items?schedule_code={code}&filter=DRUG_NAME+like+'{ingredient}' 로 성분 필터링.
+- Rate limit: 1요청/20초 준수. 요청 전후에 time.sleep(21) 반드시 추가.
 
 함수 1: fetch_latest_schedule_code() -> str | None
-- GET PBS_SCHEDULE_URL
-- 반환: 가장 최신 schedule_code (예: "202504")
+- GET https://data-api.health.gov.au/pbs/api/v3/schedules
+- 최신 schedule_code (예: "202604") 반환.
 
 함수 2: fetch_pbs_by_ingredient(ingredient: str) -> dict | None
 - 입력: INN 성분명 (예: "hydroxyurea")
-- GET PBS_ITEMS_URL?schedule_code={latest_code}&filter=DRUG_NAME+like+'{ingredient}'
-- time.sleep(21) 호출 후 요청 (rate limit 준수)
+- GET https://data-api.health.gov.au/pbs/api/v3/items
+- 응답 JSON에서 DPMQ_PRICE(float), PBS_CODE, DRUG_NAME, RESTRICTION_TEXT 파싱.
 - 반환: {
-    "pbs_item_code": str | None,    // PBS_CODE 필드
+    "pbs_item_code": str | None,
     "pbs_listed": bool,
-    "pbs_price_aud": float | None,  // DPMQ_PRICE 필드
-    "pbs_source_url": str,          // PBS_ITEMS_URL + 파라미터
-    "restriction_text": str | None  // RESTRICTION_TEXT 필드 (있으면)
+    "pbs_price_aud": float | None,
+    "pbs_source_url": str,
+    "restriction_text": str | None
   }
-
-함수 3: fetch_pbs_multi(components: list[str]) -> list[dict]
-- 복합제(COMPONENT_SUM)용. 성분 목록을 받아 각각 fetch_pbs_by_ingredient 호출
-- 반환: 각 성분별 결과 리스트
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 [tga.py 작성 스펙]
 ━━━━━━━━━━━━━━━━━━━━━━━━
 TGA(Therapeutic Goods Administration)는 호주 의약품 인허가 기관이다.
-ARTG(Australian Register of Therapeutic Goods) 등재 여부를 확인한다.
+ARTG 등재 여부를 확인한다.
 
 [⚠️ TGA 실제 특이사항 — 반드시 반영]
-- TGA는 공개 REST API가 없다. HTML 검색 페이지만 존재한다.
+- API가 없으므로 웹 크롤링 수행. 파싱은 selectolax.parser.HTMLParser 사용.
 - 검색 URL: https://www.tga.gov.au/resources/artg?s={ingredient}
-- 검색 결과는 HTML 테이블로 반환됨 → selectolax로 파싱
-- 파싱 대상: ARTG number, 제품명, 스폰서사, Schedule 분류
-- Schedule 정보는 ARTG 상세 페이지에 있으므로 추가 GET 1회 필요할 수 있음
-- 실패 시 None 반환. 예외 전파 금지.
-
-[실제 확인된 URL]
-TGA_ARTG_SEARCH = "https://www.tga.gov.au/resources/artg"  # ?s={ingredient} 파라미터
-TGA_ARTG_DETAIL = "https://www.tga.gov.au/resources/artg/{artg_id}"  # 상세 페이지
-
-# ⚠️ 코드 작성 전 반드시 먼저 확인:
-# 브라우저에서 https://www.tga.gov.au/resources/artg?s=hydroxyurea 직접 접속
-# 검색 결과 테이블이 HTML로 렌더링되면 selectolax 파싱 가능. JS 렌더링만 되면 파싱 불가 → 팀에 즉시 알릴 것.
+- 필수 로직: 
+  1) 검색 결과 테이블의 첫 번째 행에서 상세 페이지 URL(artg_id 포함)을 추출한다.
+  2) 상세 페이지(https://www.tga.gov.au/resources/artg/{artg_id})로 추가 GET 요청을 보낸다.
+  3) 상세 페이지 내에서 'Schedule' 정보(S2, S3, S4, S8 등)를 반드시 파싱한다.
 
 함수 1: fetch_tga_artg(ingredient: str) -> dict | None
-- 입력: INN 성분명
-- GET TGA_ARTG_SEARCH?s={ingredient}
-- selectolax로 첫 번째 결과 행에서 파싱:
-  - ARTG number (테이블 첫 번째 컬럼)
-  - 스폰서사 (sponsor 컬럼)
-  - 등재 상태 추론: 결과 있으면 registered, 없으면 not_registered
-- Schedule 분류는 상세 페이지에서 추가 파싱 (실패 시 None 허용)
+- 결과 있으면 registered, 없으면 not_registered.
 - 반환: {
     "artg_number": str | None,
-    "artg_status": "registered" | "ingredient_only" | "not_registered",
-    "tga_schedule": "S2" | "S3" | "S4" | "S8" | None,
+    "artg_status": "registered" | "not_registered",
+    "tga_schedule": str | None,
     "tga_sponsor": str | None,
     "artg_source_url": str
   }
 
 함수 2: determine_export_viable(artg_result: dict) -> dict
-- 입력: fetch_tga_artg 반환값
-- 결정론적 룰로 수출 가능 여부 판단 (LLM 금지)
-- 판단 룰:
-  if schedule == "S8" → not_viable, SCHEDULE_8
-  if artg_status == "registered" → viable, PBS_REGISTERED 또는 ARTG_REGISTERED
-  if artg_status == "ingredient_only" → conditional, SPONSOR_REQUIRED
-  else → not_viable, TGA_NOT_APPROVED
-- 반환: {
-    "export_viable": "viable" | "conditional" | "not_viable",
-    "reason_code": str
-  }
-```
+- schedule == "S8" -> not_viable, SCHEDULE_8
+- artg_status == "registered" -> viable, ARTG_REGISTERED
+- 그 외 -> not_viable, TGA_NOT_APPROVED
+- 반환: { "export_viable": str, "reason_code": str }
 
 **✅ 완료 조건:**
 ```bash
-cd crawler
 python -c "
-from sources.pbs import fetch_pbs_by_ingredient
-from sources.tga import fetch_tga_artg, determine_export_viable
-result = fetch_pbs_by_ingredient('hydroxyurea')
-print('PBS:', result)
-artg = fetch_tga_artg('hydroxyurea')
-print('TGA:', artg)
-print('Viable:', determine_export_viable(artg))
+import os
+from dotenv import load_dotenv
+load_dotenv()
+from crawler.sources.pbs import fetch_pbs_by_ingredient
+from crawler.sources.tga import fetch_tga_artg, determine_export_viable
+
+ingredient = 'hydroxyurea'
+print(f'\n🚀 [테스트 시작] 성분명: {ingredient}')
+
+# 1. PBS 테스트
+print('1. PBS API 호출 (21초 대기 발생)...')
+pbs = fetch_pbs_by_ingredient(ingredient)
+print('   결과:', pbs if pbs else '❌ 실패 (키 또는 통신 확인)')
+
+# 2. TGA 테스트
+print('2. TGA 크롤링 및 상세 페이지 분석...')
+tga = fetch_tga_artg(ingredient)
+if tga:
+    print(f'   결과: 등록번호 {tga[\'artg_number\']}, 스케줄 {tga[\'tga_schedule\']}, 스폰서 {tga[\'tga_sponsor\']}')
+    viable = determine_export_viable(tga)
+    print(f'   판단: {viable[\'export_viable\']} ({viable[\'reason_code\']})')
+else:
+    print('   결과: ❌ 실패 (HTML 구조 변경 확인 필요)')
 "
 ```
 오류 없이 dict 또는 None 반환되면 통과.
@@ -629,6 +610,7 @@ yml에서는 ${{ secrets.XXX }} 형식으로 참조:
 - GH_TOKEN              (Next.js trigger 호출용, yml에선 불필요)
 - GITHUB_OWNER
 - GITHUB_REPO
+- PBS_SUBSCRIPTION_KEY
 
 [yml 내용]
 name: 호주 1공정 크롤러 실행

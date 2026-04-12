@@ -12,7 +12,8 @@
 | 경로 | 설명 |
 |------|------|
 | `upharma-au/` | 크롤러(Python), GitHub Actions, Next.js 앱 뼈대 |
-| `upharma-au/crawler/` | `au_crawler.py`, 소스별 모듈(`sources/`), 유틸, DB INSERT |
+| `upharma-au/crawler/` | `au_crawler.py`, 소스별 모듈(`sources/`), 유틸, `db/supabase_insert.py` |
+| `upharma-au/crawler/db/australia_table.sql` | Supabase `australia` 테이블 CREATE 스크립트(PROMPT 6) |
 | `upharma-au/next-app/` | 조회 UI·API·컴포넌트 (스켈레톤) |
 | `upharma-au/.github/workflows/` | `au_crawl.yml` (workflow_dispatch) |
 
@@ -53,7 +54,7 @@
 | 3 | PBS / TGA 수집 (PROMPT 3) | 미완료 |
 | 4 | Chemist / AusTender (PROMPT 4) | 미완료 |
 | 5 | product_summary 매핑 (PROMPT 5) | 미완료 |
-| 6 | Supabase INSERT (PROMPT 6) | 미완료 |
+| 6 | Supabase INSERT (PROMPT 6) | 완료 |
 | 7 | GitHub Actions (PROMPT 7) | 미완료 |
 | 8 | Next.js 조회·API (PROMPT 8) | 미완료 |
 | 9 | PDF 출력 (PROMPT 9) | 미완료 |
@@ -67,6 +68,7 @@
 - **PROMPT 1 완료:** `upharma-au/` 이하에 문서에 정의된 폴더·파일 생성. Python/TS는 주석·시그니처·스텁만 포함(실구현 없음). `crawler/requirements.txt`에 httpx, selectolax, trafilatura, supabase-py, python-dotenv, tenacity 명시. `.github/workflows/au_crawl.yml`은 workflow_dispatch 스켈레톤만 배치(PROMPT 7에서 본 구현 예정).
 - **README.md 최초 작성:** 본 문서로 진행 상황을 추적하기 시작함.
 - **PROMPT 2 완료:** `upharma-au/crawler/au_products.json`에 8개 품목을 `products` 배열로 정의. `product_id`는 `au-{약어}-{번호}` TEXT 형식, `pricing_case`는 문서 기준(DIRECT 1~4, COMPONENT_SUM 5~6, ESTIMATE 7~8), `market_segment`는 모두 `public`. 완료 조건: `upharma-au`에서 `python -c "import json; data=json.load(open('crawler/au_products.json')); print(len(data['products']))"` → `8` 출력 확인.
+- **PROMPT 6 완료:** `upharma-au/crawler/db/supabase_insert.py`에 `get_supabase_client()`(싱글턴·`create_client`), `upsert_product()`, `upsert_all()` 구현. 환경변수는 `SUPABASE_URL`·`SUPABASE_SERVICE_KEY`; 로컬에서는 프로젝트 루트 `.env`를 자동 탐색해 `python-dotenv`로 로드(이미 설정된 값은 유지). 테이블 DDL은 `crawler/db/australia_table.sql`에 동봉(Supabase SQL Editor에서 미적용 시 실행). 완료 조건: `upharma-au/crawler`에서 `python -c "from db.supabase_insert import get_supabase_client; ..."` → `Supabase 연결 성공: True` 확인.
 
 ---
 

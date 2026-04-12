@@ -49,7 +49,7 @@
 | # | 항목 | 상태 |
 |---|------|------|
 | 1 | 폴더 구조 및 기본 파일 (PROMPT 1) | 완료 |
-| 2 | `au_products.json` (PROMPT 2) | 미완료 |
+| 2 | `au_products.json` (PROMPT 2) | 완료 |
 | 3 | PBS / TGA 수집 (PROMPT 3) | 미완료 |
 | 4 | Chemist / AusTender (PROMPT 4) | 미완료 |
 | 5 | product_summary 매핑 (PROMPT 5) | 미완료 |
@@ -66,6 +66,7 @@
 
 - **PROMPT 1 완료:** `upharma-au/` 이하에 문서에 정의된 폴더·파일 생성. Python/TS는 주석·시그니처·스텁만 포함(실구현 없음). `crawler/requirements.txt`에 httpx, selectolax, trafilatura, supabase-py, python-dotenv, tenacity 명시. `.github/workflows/au_crawl.yml`은 workflow_dispatch 스켈레톤만 배치(PROMPT 7에서 본 구현 예정).
 - **README.md 최초 작성:** 본 문서로 진행 상황을 추적하기 시작함.
+- **PROMPT 2 완료:** `upharma-au/crawler/au_products.json`에 8개 품목을 `products` 배열로 정의. `product_id`는 `au-{약어}-{번호}` TEXT 형식, `pricing_case`는 문서 기준(DIRECT 1~4, COMPONENT_SUM 5~6, ESTIMATE 7~8), `market_segment`는 모두 `public`. 완료 조건: `upharma-au`에서 `python -c "import json; data=json.load(open('crawler/au_products.json')); print(len(data['products']))"` → `8` 출력 확인.
 
 ---
 

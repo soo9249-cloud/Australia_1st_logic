@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -65,16 +66,18 @@ def _restriction_from_row(row: dict[str, Any]) -> str | None:
     return None
 
 
-def _row_matches_ingredient(row: dict[str, Any], needle_lower: str) -> bool:
-    if not needle_lower:
+def _row_matches_ingredient(row: dict[str, Any], needles: list[str]) -> bool:
+    """PubChem 정규화가 브랜드명(cardyl 등)으로 바뀌는 경우가 있어, 원문 성분·정규화 둘 다로 부분일치."""
+    needles = [n.strip().lower() for n in needles if n and str(n).strip()]
+    if not needles:
         return False
     parts: list[str] = []
-    for key in ("drug_name", "li_drug_name"):
+    for key in ("drug_name", "li_drug_name", "generic_name", "product_name"):
         v = row.get(key)
         if isinstance(v, str):
             parts.append(v.lower())
     blob = " ".join(parts)
-    return needle_lower in blob
+    return any(n in blob for n in needles)
 
 
 def _row_to_result(row: dict[str, Any]) -> dict[str, Any]:
@@ -97,7 +100,7 @@ def _row_to_result(row: dict[str, Any]) -> dict[str, Any]:
         "pbs_first_listed_date": row.get("first_listed_date"),
         "pbs_repeats": row.get("number_of_repeats"),
         "pbs_formulary": row.get("formulary"),
-        "pbs_restriction": row.get("benefit_type_code") == "S",
+        "pbs_restriction": row.get("benefit_type_code") in ("R", "S"),
     }
 
 
@@ -118,43 +121,68 @@ def fetch_latest_schedule_code() -> str | None:
         return None
 
 
-def _filter_results(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if not rows or not rows[0].get("pbs_listed"):
-        return rows
-    result: list[dict[str, Any]] = []
+def _pbs_price_sort_key(row: dict[str, Any]) -> float:
+    v = row.get("pbs_price_aud")
+    if isinstance(v, (int, float)):
+        return float(v)
+    return float("inf")
 
-    # 오리지널
+
+def _filter_results(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """매칭된 여러 브랜드 중 1행만 반환: 오리지널(Y) 1개 우선, 없으면 최저가 제네릭(N) 1개."""
+    if not rows:
+        return rows
+    if not rows[0].get("pbs_listed"):
+        return rows
+
     originals = [r for r in rows if r.get("pbs_innovator") == "Y"]
     if originals:
-        result.append(originals[0])
+        chosen = dict(originals[0])
+    else:
+        generics = [r for r in rows if r.get("pbs_innovator") == "N"]
+        pool = generics if generics else rows
+        chosen = dict(min(pool, key=_pbs_price_sort_key))
 
-    # 제네릭 최저가
-    generics = [r for r in rows if r.get("pbs_innovator") == "N"]
-    if generics:
-        cheapest = min(generics, key=lambda x: x.get("pbs_price_aud") or 999)
-        result.append(cheapest)
+    pbs_total_brands = len(
+        {r.get("pbs_brand_name") for r in rows if r.get("pbs_brand_name")}
+    )
+    chosen["pbs_total_brands"] = pbs_total_brands
+    pbs_brands: list[dict[str, Any]] = [
+        {
+            "brand_name": r.get("pbs_brand_name"),
+            "pbs_price_aud": r.get("pbs_price_aud"),
+            "pbs_innovator": r.get("pbs_innovator"),
+            "pbs_item_code": r.get("pbs_item_code"),
+        }
+        for r in rows
+    ]
+    chosen["pbs_brands"] = pbs_brands
+    return [chosen]
 
-    # 최신 등재
-    latest = max(rows, key=lambda x: x.get("pbs_first_listed_date") or "")
-    if latest not in result:
-        result.append(latest)
 
-    out = result if result else rows
-    pbs_total_brands = len(set(r.get("pbs_brand_name") for r in rows))
-    for d in out:
-        d["pbs_total_brands"] = pbs_total_brands
-    return out
+def _pbs_needles(ing_raw: str) -> list[str]:
+    """원문 성분 + PubChem 정규화명(브랜드명으로 왜곡될 수 있음) 모두로 매칭."""
+    from utils.inn_normalize import normalize_inn
+
+    raw = ing_raw.strip().lower()
+    if not raw:
+        return []
+    norm = normalize_inn(ing_raw).strip().lower()
+    return list(dict.fromkeys([x for x in (raw, norm) if x]))
 
 
 def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
-    """ingredient를 반영해 PBS 품목을 찾는다. 매칭 행마다 dict 하나, 없으면 [_empty_dict()]."""
-    from utils.inn_normalize import normalize_inn
+    """ingredient로 PBS 품목을 찾는다.
 
+    매칭이 여러 브랜드일 때는 리스트에 dict **1개**만 담는다:
+    innovator_indicator=Y 인 오리지널 1개만, 없으면 innovator=N 중 pbs_price_aud 최저 1개.
+    없으면 [_empty_dict()].
+    """
     ing_raw = (ingredient or "").strip()
     if not ing_raw:
         return [_empty_dict()]
-    ing = normalize_inn(ing_raw)  # PubChem으로 WHO INN 자동 정규화
-    needle = ing.lower()
+    needles = _pbs_needles(ing_raw)
+    ing = needles[0] if needles else ing_raw.lower()
     out_empty = _empty_dict()
 
     try:
@@ -189,11 +217,47 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
             rows = payload.get("data") if isinstance(payload, dict) else None
             if isinstance(rows, list):
                 for row in rows:
-                    if isinstance(row, dict) and _row_matches_ingredient(row, needle):
+                    if isinstance(row, dict) and _row_matches_ingredient(row, needles):
                         primary_matched.append(row)
 
         if primary_matched:
             return _filter_results([_row_to_result(r) for r in primary_matched])
+
+        # 1차 보조: drug_name 을 정규화명만으로 재조회(원문과 API 인덱스 불일치 대비)
+        if (
+            not primary_matched
+            and len(needles) > 1
+            and needles[1] != needles[0]
+        ):
+            try:
+                time.sleep(21)
+                r1b = httpx.get(
+                    f"{_BASE}/items",
+                    params={
+                        "schedule_code": schedule,
+                        "drug_name": needles[1],
+                        "page": 1,
+                        "limit": 10,
+                    },
+                    headers=_headers(),
+                    timeout=10,
+                )
+            except Exception:
+                r1b = None
+            if r1b is not None and r1b.status_code == 200:
+                try:
+                    payload_b = r1b.json()
+                except Exception:
+                    payload_b = {}
+                rows_b = payload_b.get("data") if isinstance(payload_b, dict) else None
+                if isinstance(rows_b, list):
+                    for row in rows_b:
+                        if isinstance(row, dict) and _row_matches_ingredient(
+                            row, needles
+                        ):
+                            primary_matched.append(row)
+            if primary_matched:
+                return _filter_results([_row_to_result(r) for r in primary_matched])
 
         # fallback: filter 없이 page 순차, drug_name / li_drug_name 부분일치(소문자)
         fallback_matched: list[dict[str, Any]] = []
@@ -219,7 +283,7 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
             if not isinstance(rows, list) or not rows:
                 break
             for row in rows:
-                if isinstance(row, dict) and _row_matches_ingredient(row, needle):
+                if isinstance(row, dict) and _row_matches_ingredient(row, needles):
                     fallback_matched.append(row)
             meta = payload.get("_meta") if isinstance(payload.get("_meta"), dict) else {}
             total = meta.get("total_records")
@@ -242,3 +306,101 @@ def fetch_pbs_multi(ingredients: list[str]) -> list[dict[str, Any]]:
     for raw in ingredients:
         acc.extend(fetch_pbs_by_ingredient(raw))
     return acc if acc else [_empty_dict()]
+
+
+def fetch_pbs_web(pbs_item_code: str) -> dict[str, Any]:
+    """Jina Reader로 PBS 품목 페이지 마크다운을 받아 가격·브랜드 표를 파싱한다."""
+
+    def _dollar(cell: str) -> float | None:
+        m = re.search(r"\$\s*(\d+(?:,\d{3})*(?:\.\d+)?)", cell.strip())
+        if not m:
+            return None
+        try:
+            return float(m.group(1).replace(",", ""))
+        except ValueError:
+            return None
+
+    def _strip_md_links(cell: str) -> str:
+        s = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", cell)
+        return re.sub(r"\s+", " ", s).strip()
+
+    def _code_in_first_cell(first_cell: str, want: str) -> bool:
+        s = first_cell.strip()
+        m_link = re.match(r"\[([^\]]+)\]\(", s)
+        if m_link:
+            return m_link.group(1).strip().upper() == want.upper()
+        return s.upper().startswith(want.upper())
+
+    code = (pbs_item_code or "").strip()
+    canonical = f"https://www.pbs.gov.au/medicine/item/{code}" if code else ""
+    empty: dict[str, Any] = {
+        "pbs_dpmq": None,
+        "pbs_patient_charge": None,
+        "pbs_web_source_url": canonical,
+        "pbs_brand_name": None,
+        "pbs_innovator": None,
+        "pbs_brands": None,
+    }
+    if not code:
+        return empty
+
+    jina_url = f"https://r.jina.ai/https://www.pbs.gov.au/medicine/item/{code}"
+    try:
+        r = httpx.get(jina_url, timeout=15)
+        if r.status_code != 200:
+            return empty
+        text = r.text or ""
+    except Exception:
+        return empty
+
+    rows_out: list[dict[str, Any]] = []
+    for line in text.splitlines():
+        line_st = line.strip()
+        if not line_st.startswith("|"):
+            continue
+        parts = [p.strip() for p in line_st.split("|")]
+        while parts and parts[0] == "":
+            parts.pop(0)
+        while parts and parts[-1] == "":
+            parts.pop()
+        if len(parts) < 8:
+            continue
+        if not _code_in_first_cell(parts[0], code):
+            continue
+        brand_txt = _strip_md_links(parts[1]) if len(parts) > 1 else ""
+        dpmq_v = _dollar(parts[5])
+        pat_v = _dollar(parts[7])
+        rows_out.append(
+            {
+                "brand_name": brand_txt or None,
+                "pbs_price_aud": dpmq_v,
+                "pbs_dpmq": dpmq_v,
+                "pbs_patient_charge": pat_v,
+                "pbs_innovator": None,
+                "pbs_item_code": code,
+            }
+        )
+
+    if not rows_out:
+        return empty
+
+    first = rows_out[0]
+    pbs_brands: list[dict[str, Any]] = [
+        {
+            "brand_name": r.get("brand_name"),
+            "pbs_price_aud": r.get("pbs_price_aud"),
+            "pbs_innovator": r.get("pbs_innovator"),
+            "pbs_item_code": r.get("pbs_item_code"),
+        }
+        for r in rows_out
+    ]
+    return {
+        "pbs_dpmq": first.get("pbs_dpmq"),
+        "pbs_patient_charge": first.get("pbs_patient_charge"),
+        "pbs_web_source_url": canonical,
+        "pbs_brand_name": first.get("brand_name"),
+        "pbs_innovator": None,
+        "pbs_brands": pbs_brands,
+    }
+
+

@@ -1,91 +1,68 @@
-# Chemist Warehouse 검색 페이지에서 첫 상품 가격을 정적 HTML로 파싱한다.
-
 from __future__ import annotations
 
 import re
 from typing import Any
-from urllib.parse import quote, urljoin
+from urllib.parse import quote
 
 import httpx
-from selectolax.parser import HTMLParser
 
 _USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 _BASE = "https://www.chemistwarehouse.com.au"
 
-
-def _parse_dollar_aud(fragment: str) -> float | None:
-    m = re.search(r"\$\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)", fragment.replace("\u00a0", " "))
-    if not m:
-        return None
-    try:
-        return float(m.group(1).replace(",", ""))
-    except ValueError:
-        return None
-
-
 def fetch_chemist_price(search_term: str) -> dict[str, Any] | None:
-    """검색어로 첫 결과 가격·출처 URL을 반환한다. 실패 시 None."""
+    """Jina AI (r.jina.ai)를 활용해 Chemist Warehouse의 가격을 추출한다."""
     try:
         q = (search_term or "").strip()
         if not q:
             return None
-        search_url = f"{_BASE}/search?searchstr={quote(q)}"
+            
+        # 1. 원본 Chemist URL
+        target_url = f"{_BASE}/search?query={quote(q)}"
+        
+        # 🚀 2. Jina AI 렌더링 API를 앞에 붙여서 우회 호출!
+        jina_url = f"https://r.jina.ai/{target_url}"
+        
+        # Jina AI 전용 헤더
+        headers = {
+            "Accept": "text/event-stream",
+            "User-Agent": _USER_AGENT
+        }
+        
         r = httpx.get(
-            search_url,
-            headers={"User-Agent": _USER_AGENT},
-            timeout=10,
+            jina_url,
+            headers=headers,
+            timeout=30, # Jina가 렌더링할 시간을 충분히 줍니다 (30초)
             follow_redirects=True,
         )
+        
         if r.status_code != 200:
             return None
-        tree = HTMLParser(r.text)
+            
         retail: float | None = None
-
-        n = tree.css_first("span.product-price")
-        if n is not None:
-            retail = _parse_dollar_aud(n.text())
-
-        if retail is None:
-            n2 = tree.css_first("div[data-price]")
-            if n2 is not None:
-                attr = n2.attributes.get("data-price")
-                if attr:
-                    try:
-                        retail = float(str(attr).replace(",", ""))
-                    except ValueError:
-                        retail = _parse_dollar_aud(str(attr))
-                if retail is None:
-                    retail = _parse_dollar_aud(n2.text())
-
-        if retail is None:
-            blob = tree.text(separator=" ")
-            for m in re.finditer(r"\$\d+\.\d{2}", blob):
-                retail = _parse_dollar_aud(m.group())
-                if retail is not None:
-                    break
-
+        
+        # Jina AI는 불필요한 HTML을 다 지우고 깔끔한 텍스트(마크다운)만 줍니다.
+        # 따라서 복잡한 파싱 없이, 텍스트에서 정규식으로 $XX.XX만 찾으면 끝!
+        blob = r.text
+        for m in re.finditer(r"\$\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)", blob):
+            val = float(m.group(1).replace(",", ""))
+            # 장바구니 0.0 무시하고 실제 가격만 낚아챔
+            if val > 0:
+                retail = val
+                break
+                
         if retail is None:
             return None
-
-        product_url = search_url
-        for a in tree.css("a"):
-            href = (a.attributes.get("href") or "").strip()
-            if "/buy/" in href.lower():
-                if href.startswith("http"):
-                    product_url = href.split("?")[0]
-                else:
-                    product_url = urljoin(_BASE, href.split("?")[0])
-                break
 
         return {
             "retail_price_aud": retail,
             "price_unit": "per pack",
             "price_source_name": "Chemist Warehouse",
-            "price_source_url": product_url,
+            "price_source_url": target_url, # 사용자에게는 원본 URL을 돌려줍니다.
         }
-    except Exception:
+        
+    except Exception as e:
+        print(f"Jina AI 파싱 에러: {e}")
         return None
-
 
 def build_sites(
     pbs_url: str,
@@ -94,7 +71,7 @@ def build_sites(
     austender_url: str,
     pubmed_url: str | None = None,
 ) -> dict[str, Any]:
-    """출처 URL들을 sites JSON 구조로 묶는다. tga_url 은 v7 반환 스키마에 항목이 없어 현재 미사용(시그니처만 유지)."""
+    """출처 URL들을 sites JSON 구조로 묶는다."""
     out: dict[str, Any] = {
         "public_procurement": [
             {"name": "PBS", "url": pbs_url},

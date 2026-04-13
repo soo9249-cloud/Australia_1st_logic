@@ -43,3 +43,26 @@ CREATE TABLE IF NOT EXISTS australia (
   error_type        TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_australia_product_id ON australia(product_id);
+
+-- PBS 확장 컬럼 (기존 테이블에만 적용 시 아래 실행)
+ALTER TABLE australia
+  ADD COLUMN IF NOT EXISTS pbs_dpmq              DECIMAL,
+  ADD COLUMN IF NOT EXISTS pbs_patient_charge    DECIMAL,
+  ADD COLUMN IF NOT EXISTS pbs_determined_price  DECIMAL,
+  ADD COLUMN IF NOT EXISTS pbs_pack_size         INTEGER,
+  ADD COLUMN IF NOT EXISTS pbs_pricing_quantity  INTEGER,
+  ADD COLUMN IF NOT EXISTS pbs_benefit_type      TEXT,
+  ADD COLUMN IF NOT EXISTS pbs_program_code      TEXT,
+  ADD COLUMN IF NOT EXISTS pbs_brand_name        TEXT,
+  ADD COLUMN IF NOT EXISTS pbs_innovator         TEXT,
+  ADD COLUMN IF NOT EXISTS pbs_first_listed_date TEXT,
+  ADD COLUMN IF NOT EXISTS pbs_repeats           INTEGER,
+  ADD COLUMN IF NOT EXISTS pbs_formulary         TEXT,
+  ADD COLUMN IF NOT EXISTS pbs_restriction       BOOLEAN,
+  ADD COLUMN IF NOT EXISTS pbs_total_brands      INTEGER;
+
+ALTER TABLE australia ADD COLUMN IF NOT EXISTS pbs_brands JSONB;
+
+ALTER TABLE australia
+  ADD COLUMN IF NOT EXISTS tga_licence_category TEXT,
+  ADD COLUMN IF NOT EXISTS tga_licence_status TEXT;

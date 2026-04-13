@@ -18,6 +18,33 @@ from utils.scoring import AU_REQUIRED_FIELDS, completeness_score
 _CRAWLER_DIR = Path(__file__).resolve().parent
 
 
+def _chemist_retail_trustworthy(
+    chemist: dict[str, Any],
+    pbs_price: object,
+) -> tuple[float | None, bool]:
+    """Chemist 첫 검색 가격이 소매 정상가로 볼 수 있을 때만 True(저가·오매칭·부분파싱 배제)."""
+    raw = chemist.get("retail_price_aud")
+    if raw is None or not isinstance(raw, (int, float)):
+        return None, False
+    r = float(raw)
+    if r <= 0:
+        return None, False
+    if r < 5.0:
+        return None, False
+    if isinstance(pbs_price, (int, float)) and float(pbs_price) > 0:
+        if r < float(pbs_price) * 0.15:
+            return None, False
+    return r, True
+
+
+def _tga_schedule_s2348_only(raw: object) -> str | None:
+    """tga_schedule 컬럼에는 S2/S3/S4/S8만 저장(RE 등 라이선스 코드 제외)."""
+    if raw is None:
+        return None
+    s = str(raw).strip().upper()
+    return s if s in ("S2", "S3", "S4", "S8") else None
+
+
 def _raw_evidence_text(
     pbs: dict[str, Any],
     tga: dict[str, Any],
@@ -59,27 +86,47 @@ def build_product_summary(
     chemist = chemist or {}
     austender = austender or {}
 
-    viable_result = determine_export_viable(tga)
+    tga_sched = _tga_schedule_s2348_only(tga.get("tga_schedule"))
+    tga_norm = {**tga, "tga_schedule": tga_sched}
+
+    viable_result = determine_export_viable(tga_norm)
     if pbs.get("pbs_listed") == True:
         viable_result = {"export_viable": "viable", "reason_code": "PBS_REGISTERED"}
 
     inn = str(product.get("inn_normalized") or "")
     pricing_case = str(product.get("pricing_case") or "ESTIMATE")
-    raw_text = _raw_evidence_text(pbs, tga, austender)
+    raw_text = _raw_evidence_text(pbs, tga_norm, austender)
     evidence = build_evidence_text(pricing_case, raw_text, inn)
 
-    retail_aud: float | None = chemist.get("retail_price_aud")
-    if retail_aud is None:
-        pbs_price = pbs.get("pbs_price_aud")
-        retail_aud = float(pbs_price) if isinstance(pbs_price, (int, float)) else None
+    pbs_price = pbs.get("pbs_price_aud")
+    cr_trusted, chemist_ok = _chemist_retail_trustworthy(chemist, pbs_price)
+    retail_aud: float | None
+    price_url: str
+    price_name: str
+    if chemist_ok and cr_trusted is not None:
+        retail_aud = cr_trusted
+        price_url = (chemist.get("price_source_url") or "") or (
+            pbs.get("pbs_source_url") or ""
+        )
+        price_name = chemist.get("price_source_name") or "Chemist Warehouse"
+    elif isinstance(pbs_price, (int, float)) and float(pbs_price) > 0:
+        retail_aud = float(pbs_price)
+        price_url = pbs.get("pbs_source_url") or ""
+        price_name = "PBS"
+    else:
+        retail_aud = None
+        price_url = (chemist.get("price_source_url") or "") or (
+            pbs.get("pbs_source_url") or ""
+        )
+        price_name = "PBS"
 
-    price_url = (chemist.get("price_source_url") or "") or (pbs.get("pbs_source_url") or "")
-
-    price_name = chemist.get("price_source_name") or "PBS"
+    chemist_url_for_sites = (
+        (chemist.get("price_source_url") or "") if chemist_ok else ""
+    )
 
     assembled: dict[str, Any] = {
         "artg_number": tga.get("artg_number"),
-        "tga_schedule": tga.get("tga_schedule"),
+        "tga_schedule": tga_sched,
         "pbs_item_code": pbs.get("pbs_item_code"),
         "retail_price_aud": retail_aud,
         "price_source_url": price_url,
@@ -95,10 +142,20 @@ def build_product_summary(
     sites = build_sites(
         pbs.get("pbs_source_url", "") or "",
         tga.get("artg_source_url", "") or "",
-        chemist.get("price_source_url", "") or "",
+        chemist_url_for_sites,
         austender.get("austender_source_url", "") or "",
         pubmed_url=None,
     )
+
+    error_type: str | None = None
+    if (
+        pbs.get("pbs_item_code")
+        and pbs.get("pbs_listed") is True
+        and pbs.get("pbs_brand_name") is None
+        and pbs.get("pbs_innovator") is None
+        and pbs.get("pbs_brands") is None
+    ):
+        error_type = "PBS_WEB_ENRICHMENT_INCOMPLETE"
 
     return {
         "id": str(uuid.uuid4()),
@@ -114,17 +171,38 @@ def build_product_summary(
         "strength": product["strength"],
         "artg_number": tga.get("artg_number"),
         "artg_status": tga.get("artg_status"),
-        "tga_schedule": tga.get("tga_schedule"),
+        "tga_schedule": tga_sched,
+        "tga_licence_category": tga.get("tga_licence_category"),
+        "tga_licence_status": tga.get("tga_licence_status"),
         "tga_sponsor": tga.get("tga_sponsor"),
         "artg_source_url": tga.get("artg_source_url", ""),
         "pbs_listed": pbs.get("pbs_listed", False),
         "pbs_item_code": pbs.get("pbs_item_code"),
         "pbs_price_aud": pbs.get("pbs_price_aud"),
+        "pbs_dpmq": pbs.get("pbs_dpmq"),
+        "pbs_patient_charge": pbs.get("pbs_patient_charge"),
+        "pbs_determined_price": pbs.get("pbs_determined_price"),
+        "pbs_pack_size": pbs.get("pbs_pack_size"),
+        "pbs_pricing_quantity": pbs.get("pbs_pricing_quantity"),
+        "pbs_benefit_type": pbs.get("pbs_benefit_type"),
+        "pbs_program_code": pbs.get("pbs_program_code"),
+        "pbs_brand_name": pbs.get("pbs_brand_name"),
+        "pbs_innovator": pbs.get("pbs_innovator"),
+        "pbs_first_listed_date": pbs.get("pbs_first_listed_date"),
+        "pbs_repeats": pbs.get("pbs_repeats"),
+        "pbs_formulary": pbs.get("pbs_formulary"),
+        "pbs_restriction": pbs.get("pbs_restriction"),
+        "pbs_total_brands": pbs.get("pbs_total_brands"),
+        "pbs_brands": pbs.get("pbs_brands"),
         "pbs_source_url": pbs.get("pbs_source_url", ""),
         "retail_price_aud": retail_aud,
         "price_source_name": price_name,
         "price_source_url": price_url,
-        "price_unit": chemist.get("price_unit", "per pack"),
+        "price_unit": (
+            chemist.get("price_unit", "per pack")
+            if chemist_ok
+            else "per pack"
+        ),
         "pricing_case": product["pricing_case"],
         "export_viable": viable_result.get("export_viable"),
         "reason_code": viable_result.get("reason_code"),
@@ -134,7 +212,7 @@ def build_product_summary(
         "sites": sites,
         "completeness_ratio": completeness_ratio,
         "data_source_count": data_source_count,
-        "error_type": None,
+        "error_type": error_type,
     }
 
 
@@ -195,7 +273,7 @@ def main() -> None:
     from db.supabase_insert import upsert_product
     from sources.austender import fetch_austender
     from sources.chemist import fetch_chemist_price
-    from sources.pbs import fetch_pbs_by_ingredient, fetch_pbs_multi
+    from sources.pbs import fetch_pbs_by_ingredient, fetch_pbs_multi, fetch_pbs_web
     from sources.tga import fetch_tga_artg
 
     tga_terms = product.get("tga_search_terms") or []
@@ -212,6 +290,32 @@ def main() -> None:
     else:
         pbs_rows = fetch_pbs_by_ingredient(components[0])
     pbs = _merge_pbs_rows(pbs_rows)
+    if pbs.get("pbs_item_code"):
+        codes = [c.strip() for c in str(pbs["pbs_item_code"]).split("+") if c.strip()]
+        api_inno = pbs.get("pbs_innovator")
+        api_bn = pbs.get("pbs_brand_name")
+        api_brs = pbs.get("pbs_brands")
+        agg_brands: list[dict[str, Any]] = []
+        for c in codes:
+            web = fetch_pbs_web(c)
+            if web.get("pbs_dpmq") is not None:
+                pbs["pbs_dpmq"] = web.get("pbs_dpmq")
+            if web.get("pbs_patient_charge") is not None:
+                pbs["pbs_patient_charge"] = web.get("pbs_patient_charge")
+            if web.get("pbs_web_source_url"):
+                pbs["pbs_web_source_url"] = web.get("pbs_web_source_url")
+            if web.get("pbs_brand_name") and not pbs.get("pbs_brand_name"):
+                pbs["pbs_brand_name"] = web.get("pbs_brand_name")
+            if web.get("pbs_brands"):
+                agg_brands.extend(web["pbs_brands"])
+        if agg_brands:
+            pbs["pbs_brands"] = agg_brands
+        elif api_brs is not None:
+            pbs["pbs_brands"] = api_brs
+        if pbs.get("pbs_brand_name") is None:
+            pbs["pbs_brand_name"] = api_bn
+        if pbs.get("pbs_innovator") is None:
+            pbs["pbs_innovator"] = api_inno
 
     pbs_terms = product.get("pbs_search_terms") or []
     retail_query = str(pbs_terms[0] if pbs_terms else product.get("inn_normalized") or "")

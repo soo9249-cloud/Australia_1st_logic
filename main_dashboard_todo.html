@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>한국유나이티드제약 해외 영업·마케팅 대시보드</title>
+  <style>
+    :root {
+      --ukp-bg: #f3efe8;
+      --ukp-shell: #fbf8f3;
+      --ukp-surface: #fffdf9;
+      --ukp-surface-soft: #f8f4ed;
+      --ukp-line: #e5ddd0;
+      --ukp-text: #243247;
+      --ukp-muted: #738197;
+      --ukp-navy: #173f78;
+      --ukp-navy-2: #224f91;
+      --ukp-orange: #f0a13a;
+      --ukp-orange-deep: #e18e20;
+      --ukp-green: #2d9870;
+      --ukp-warn: #c98b28;
+      --ukp-error: #c8564d;
+      --ukp-shadow: 0 14px 34px rgba(23, 63, 120, 0.06);
+      --ukp-shadow-soft: 0 4px 12px rgba(23, 63, 120, 0.04);
+      --ukp-radius-xl: 34px;
+      --ukp-radius-lg: 26px;
+      --ukp-radius-md: 20px;
+      --ukp-radius-sm: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      color: var(--ukp-text);
+      background:
+        radial-gradient(circle at top left, rgba(240,161,58,0.05), transparent 22%),
+        radial-gradient(circle at top right, rgba(23,63,120,0.04), transparent 24%),
+        linear-gradient(180deg, #f2ede5 0%, #efe9e0 100%);
+      padding: 24px;
+    }
+
+    .ukp-app {
+      max-width: 1840px;
+      margin: 0 auto;
+      background: var(--ukp-shell);
+      border: 1px solid rgba(23,63,120,0.06);
+      border-radius: 36px;
+      box-shadow: 0 24px 56px rgba(23,63,120,0.07);
+      overflow: hidden;
+    }
+
+    .ukp-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--ukp-line);
+      background: linear-gradient(180deg, rgba(255,253,249,0.94), rgba(251,248,243,0.98));
+    }
+
+    .ukp-brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .ukp-logo {
+      width: 66px;
+      height: 66px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid rgba(23,63,120,0.08);
+      box-shadow: var(--ukp-shadow-soft);
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      overflow: hidden;
+      padding: 8px;
+    }
+
+    .ukp-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .ukp-brand-text h1 {
+      margin: 0;
+      font-size: 21px;
+      line-height: 1.2;
+      letter-spacing: -0.03em;
+    }
+
+    .ukp-brand-text p {
+      margin: 8px 0 0;
+      font-size: 13px;
+      color: var(--ukp-muted);
+    }
+
+    .ukp-top-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .ukp-pill {
+      height: 54px;
+      padding: 0 18px 0 12px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid rgba(23,63,120,0.08);
+      box-shadow: var(--ukp-shadow-soft);
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--ukp-navy);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .ukp-dot-flag {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex: 0 0 auto;
+      box-shadow:
+        inset 0 0 0 2px rgba(255,255,255,0.16),
+        0 4px 10px rgba(23,63,120,0.14);
+    }
+
+    .ukp-dot-flag svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .ukp-search {
+      width: 320px;
+      max-width: 100%;
+      height: 52px;
+      border-radius: 999px;
+      border: 1px solid rgba(23,63,120,0.08);
+      background: #fff;
+      box-shadow: var(--ukp-shadow-soft);
+      padding: 0 18px;
+      color: var(--ukp-muted);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .ukp-main {
+      padding: 22px 28px 28px;
+    }
+
+    .ukp-nav {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+
+    .ukp-tab {
+      height: 56px;
+      padding: 0 24px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid rgba(23,63,120,0.08);
+      color: #6680a3;
+      box-shadow: var(--ukp-shadow-soft);
+      display: inline-flex;
+      align-items: center;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .ukp-tab.active {
+      background: var(--ukp-navy);
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(23,63,120,0.16);
+    }
+
+    .ukp-grid-top {
+      display: grid;
+      grid-template-columns: 1.5fr .95fr .95fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .ukp-grid-mid {
+      display: grid;
+      grid-template-columns: 1.28fr .92fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .ukp-grid-bottom {
+      display: grid;
+      grid-template-columns: 1.25fr .85fr;
+      gap: 20px;
+    }
+
+    .ukp-card {
+      background: var(--ukp-surface);
+      border: 1px solid rgba(23,63,120,0.06);
+      border-radius: 28px;
+      box-shadow: var(--ukp-shadow);
+      padding: 24px;
+    }
+
+    .ukp-card-soft {
+      background: linear-gradient(180deg, #fffdf9 0%, #f8f3eb 100%);
+    }
+
+    .ukp-section-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .ukp-section-head h2,
+    .ukp-section-head h3 {
+      margin: 0;
+      letter-spacing: -0.03em;
+    }
+
+    .ukp-section-head h2 { font-size: 22px; }
+    .ukp-section-head h3 { font-size: 21px; }
+
+    .ukp-section-head p {
+      margin: 8px 0 0;
+      color: var(--ukp-muted);
+      line-height: 1.55;
+    }
+
+    .ukp-tag {
+      height: 44px;
+      padding: 0 16px;
+      border-radius: 999px;
+      background: rgba(23,63,120,0.05);
+      color: var(--ukp-navy);
+      display: inline-flex;
+      align-items: center;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .ukp-hero {
+      min-height: 388px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .ukp-hero-badge {
+      width: fit-content;
+      padding: 11px 16px;
+      border-radius: 999px;
+      background: rgba(23,63,120,0.05);
+      color: var(--ukp-navy);
+      font-size: 13px;
+      font-weight: 800;
+      border: 1px solid rgba(23,63,120,0.06);
+    }
+
+    .ukp-hero h2 {
+      margin: 18px 0 0;
+      font-size: clamp(34px, 3.1vw, 56px);
+      line-height: 1.06;
+      letter-spacing: -0.055em;
+      color: var(--ukp-navy);
+      word-break: keep-all;
+    }
+
+    .ukp-hero p {
+      margin: 18px 0 0;
+      color: var(--ukp-muted);
+      font-size: 15px;
+      line-height: 1.78;
+      max-width: 95%;
+    }
+
+    .ukp-chip-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 22px;
+    }
+
+    .ukp-chip {
+      padding: 11px 15px;
+      border-radius: 999px;
+      border: 1px solid rgba(23,63,120,0.08);
+      background: #fff;
+      color: var(--ukp-navy);
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: var(--ukp-shadow-soft);
+    }
+
+    .ukp-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .ukp-kpi {
+      background: #fff;
+      border: 1px solid rgba(23,63,120,0.06);
+      border-radius: 22px;
+      padding: 20px;
+    }
+
+    .ukp-kpi small {
+      display: block;
+      margin-bottom: 12px;
+      color: var(--ukp-muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .ukp-kpi strong {
+      display: block;
+      color: var(--ukp-navy);
+      font-size: 26px;
+      letter-spacing: -0.03em;
+    }
+
+    .ukp-kpi span {
+      display: block;
+      margin-top: 10px;
+      color: var(--ukp-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .ukp-stack {
+      display: grid;
+      gap: 20px;
+    }
+
+    .ukp-info-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .ukp-info-item {
+      background: linear-gradient(180deg, #fffdf9, #f7f2ea);
+      border: 1px solid rgba(23,63,120,0.06);
+      border-radius: 22px;
+      padding: 18px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .ukp-info-item strong {
+      display: block;
+      color: var(--ukp-navy);
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    .ukp-info-item span {
+      display: block;
+      color: var(--ukp-muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .ukp-status-badge {
+      padding: 9px 11px;
+      border-radius: 999px;
+      background: rgba(23,63,120,0.06);
+      color: var(--ukp-navy);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .ukp-status-badge.orange {
+      background: rgba(240,161,58,0.18);
+      color: #96570a;
+    }
+
+    .ukp-status-badge.green {
+      background: rgba(45,152,112,0.14);
+      color: var(--ukp-green);
+    }
+
+    .ukp-chart-box {
+      background: linear-gradient(180deg, rgba(23,63,120,0.03), rgba(255,255,255,0.8));
+      border: 1px solid rgba(23,63,120,0.06);
+      border-radius: 22px;
+      padding: 18px 18px 10px;
+    }
+
+    .ukp-chart-box svg {
+      width: 100%;
+      height: 250px;
+      display: block;
+    }
+
+    .ukp-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 14px;
+      color: var(--ukp-muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .ukp-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ukp-legend span::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--ukp-navy);
+    }
+
+    .ukp-legend span.orange::before {
+      background: var(--ukp-orange);
+    }
+
+    .ukp-side-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .ukp-list-item {
+      background: #fff;
+      border: 1px solid rgba(23,63,120,0.06);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .ukp-list-item strong {
+      display: block;
+      color: var(--ukp-navy);
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    .ukp-list-item p {
+      margin: 0;
+      color: var(--ukp-muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .ukp-list-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+      color: var(--ukp-muted);
+      font-size: 12px;
+    }
+
+    .ukp-state {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .ukp-state::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--ukp-warn);
+    }
+
+    .ukp-state.complete::before { background: var(--ukp-green); }
+    .ukp-state.error::before { background: var(--ukp-error); }
+
+    .ukp-ghost-btn {
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(23,63,120,0.08);
+      background: #fff;
+      color: var(--ukp-navy);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .ukp-process-box {
+      background: linear-gradient(180deg, #fffdf9 0%, #f9f4ec 100%);
+      border: 1px solid rgba(23,63,120,0.06);
+      border-radius: 30px;
+      box-shadow: var(--ukp-shadow);
+      padding: 24px;
+    }
+
+    .ukp-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .ukp-run {
+      height: 44px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--ukp-orange);
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(240,161,58,0.22);
+    }
+
+    .ukp-run:hover {
+      background: var(--ukp-orange-deep);
+    }
+
+    .ukp-thermo {
+      position: relative;
+      padding: 6px 10px 18px;
+      margin-bottom: 18px;
+    }
+
+    .ukp-thermo-base,
+    .ukp-thermo-fill {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 34px;
+      height: 12px;
+      border-radius: 999px;
+    }
+
+    .ukp-thermo-base {
+      background: #e4ddcf;
+    }
+
+    .ukp-thermo-fill {
+      width: 0%;
+      right: auto;
+      background: linear-gradient(90deg, var(--ukp-orange) 0%, #ebb669 18%, #91d1a6 50%, #69c6d5 74%, var(--ukp-navy-2) 100%);
+      box-shadow: 0 8px 16px rgba(23,63,120,0.12);
+      transition: width 1.15s cubic-bezier(.22,1,.36,1);
+    }
+
+    .ukp-thermo-points {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      text-align: center;
+      padding-top: 0;
+    }
+
+    .ukp-point {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .ukp-point-dot {
+      width: 22px;
+      height: 22px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      border: 4px solid #d7d9de;
+      background: #fff;
+      box-shadow: 0 4px 10px rgba(23,63,120,0.08);
+      transition: .3s ease;
+    }
+
+    .ukp-point strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 12px;
+      line-height: 1;
+      background: linear-gradient(180deg, rgba(255,253,249,0.98), rgba(255,253,249,0.98));
+      padding: 0 8px;
+      border-radius: 999px;
+    }
+
+    .ukp-point span {
+      color: var(--ukp-muted);
+      font-size: 12px;
+      line-height: 1;
+      background: linear-gradient(180deg, rgba(255,253,249,0.98), rgba(255,253,249,0.98));
+      padding: 0 8px;
+      border-radius: 999px;
+    }
+
+    .ukp-point.complete .ukp-point-dot {
+      border-color: var(--ukp-navy-2);
+    }
+
+    .ukp-point.active .ukp-point-dot {
+      border-color: var(--ukp-orange);
+      transform: scale(1.06);
+    }
+
+    .ukp-stage-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .ukp-stage {
+      background: linear-gradient(180deg, #fffdf9 0%, #f7f2e9 100%);
+      border: 1px solid rgba(23,63,120,0.06);
+      border-radius: 24px;
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ukp-stage::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--ukp-orange), var(--ukp-navy));
+      opacity: .16;
+    }
+
+    .ukp-stage-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+
+    .ukp-stage-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(240,161,58,0.16), rgba(23,63,120,0.08));
+      color: var(--ukp-navy);
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .ukp-stage-num {
+      color: var(--ukp-muted);
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .ukp-stage h4 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -0.03em;
+    }
+
+    .ukp-stage p {
+      margin: 0;
+      min-height: 82px;
+      color: var(--ukp-muted);
+      line-height: 1.65;
+    }
+
+    .ukp-meter {
+      margin-top: 18px;
+    }
+
+    .ukp-meter-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: var(--ukp-muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .ukp-meter-bar {
+      height: 14px;
+      border-radius: 999px;
+      background: #e3dccf;
+      overflow: hidden;
+    }
+
+    .ukp-meter-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--ukp-orange), var(--ukp-navy-2));
+      transition: width 1s cubic-bezier(.22,1,.36,1);
+    }
+
+    .ukp-stage-badge {
+      display: inline-flex;
+      margin-top: 14px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(23,63,120,0.06);
+      color: var(--ukp-navy);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .ukp-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
+
+    .ukp-table th {
+      text-align: left;
+      padding: 0 12px 6px;
+      color: var(--ukp-muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .ukp-table td {
+      background: #fff;
+      padding: 14px 12px;
+      border-top: 1px solid rgba(23,63,120,0.06);
+      border-bottom: 1px solid rgba(23,63,120,0.06);
+      font-size: 14px;
+    }
+
+    .ukp-table tr td:first-child {
+      border-left: 1px solid rgba(23,63,120,0.06);
+      border-top-left-radius: 16px;
+      border-bottom-left-radius: 16px;
+    }
+
+    .ukp-table tr td:last-child {
+      border-right: 1px solid rgba(23,63,120,0.06);
+      border-top-right-radius: 16px;
+      border-bottom-right-radius: 16px;
+    }
+
+    .ukp-small-chip {
+      display: inline-flex;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(23,63,120,0.06);
+      color: var(--ukp-navy);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .ukp-small-chip.green {
+      background: rgba(45,152,112,0.14);
+      color: var(--ukp-green);
+    }
+
+    .ukp-small-chip.orange {
+      background: rgba(240,161,58,0.16);
+      color: #96570a;
+    }
+
+    .ukp-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 1420px) {
+      .ukp-grid-top {
+        grid-template-columns: 1.2fr 1fr;
+      }
+      .ukp-grid-top > :last-child {
+        grid-column: span 2;
+      }
+    }
+
+    @media (max-width: 1180px) {
+      .ukp-grid-top,
+      .ukp-grid-mid,
+      .ukp-grid-bottom,
+      .ukp-stage-grid {
+        grid-template-columns: 1fr;
+      }
+      .ukp-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: 12px;
+      }
+      .ukp-topbar,
+      .ukp-main {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      .ukp-topbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .ukp-brand {
+        align-items: flex-start;
+      }
+      .ukp-nav {
+        gap: 8px;
+      }
+      .ukp-tab {
+        width: 100%;
+        justify-content: center;
+      }
+      .ukp-kpi-grid {
+        grid-template-columns: 1fr;
+      }
+      .ukp-thermo-base,
+      .ukp-thermo-fill {
+        display: none;
+      }
+      .ukp-thermo-points {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      .ukp-table {
+        display: block;
+        overflow: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ukp-app">
+    <header class="ukp-topbar">
+      <div class="ukp-brand">
+        <div class="ukp-logo">
+          <img src="data:image/png;base64,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" alt="한국유나이티드제약 로고" />
+        </div>
+        <div class="ukp-brand-text">
+          <h1>한국유나이티드제약 해외 영업·마케팅 대시보드</h1>
+          <p>국가 단일 인스턴스 운영 · Australia Export Preview Dashboard</p>
+        </div>
+      </div>
+
+      <div class="ukp-top-actions">
+        <div class="ukp-pill" aria-label="Australia">
+          <span class="ukp-dot-flag" aria-hidden="true">
+            <svg viewBox="0 0 64 64" width="30" height="30" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Australia flag">
+              <defs>
+                <clipPath id="ukpAuCircle">
+                  <circle cx="32" cy="32" r="32"/>
+                </clipPath>
+              </defs>
+              <g clip-path="url(#ukpAuCircle)">
+                <rect width="64" height="64" fill="#173F78"/>
+                <rect x="0" y="0" width="32" height="32" fill="#214D8F"/>
+                <path d="M0 0 L32 32 M32 0 L0 32" stroke="#FFFFFF" stroke-width="7"/>
+                <path d="M0 0 L32 32 M32 0 L0 32" stroke="#C8414B" stroke-width="3.4"/>
+                <rect x="12.5" y="0" width="7" height="32" fill="#FFFFFF"/>
+                <rect x="0" y="12.5" width="32" height="7" fill="#FFFFFF"/>
+                <rect x="14.2" y="0" width="3.6" height="32" fill="#C8414B"/>
+                <rect x="0" y="14.2" width="32" height="3.6" fill="#C8414B"/>
+
+                <polygon points="16,35 17.9,40.8 24,40.8 19,44.4 20.9,50.2 16,46.6 11.1,50.2 13,44.4 8,40.8 14.1,40.8"
+                         fill="#FFFFFF"/>
+                <polygon points="46,13 47.5,16.9 51.7,17 48.3,19.5 49.6,23.5 46,21.1 42.4,23.5 43.7,19.5 40.3,17 44.5,16.9"
+                         fill="#FFFFFF"/>
+                <polygon points="53,25 54.2,28.3 57.7,28.4 54.9,30.5 56,33.8 53,31.8 50,33.8 51.1,30.5 48.3,28.4 51.8,28.3"
+                         fill="#FFFFFF"/>
+                <polygon points="46,36 47.5,39.9 51.7,40 48.3,42.5 49.6,46.5 46,44.1 42.4,46.5 43.7,42.5 40.3,40 44.5,39.9"
+                         fill="#FFFFFF"/>
+                <polygon points="58,41 58.9,43.5 61.6,43.5 59.4,45.1 60.2,47.6 58,46 55.8,47.6 56.6,45.1 54.4,43.5 57.1,43.5"
+                         fill="#FFFFFF"/>
+              </g>
+            </svg>
+          </span>
+          <span>Australia</span>
+        </div>
+        <input class="ukp-search" value="호주 시장 개요, 관세, 뉴스 검색" />
+      </div>
+    </header>
+
+    <main class="ukp-main">
+      <nav class="ukp-nav">
+        <a class="ukp-tab active" href="#">메인 프리뷰</a>
+        <a class="ukp-tab" href="#">1공정 - 시장조사</a>
+        <a class="ukp-tab" href="#">2공정 - 수출전략</a>
+        <a class="ukp-tab" href="#">3공정 - 바이어 발굴</a>
+        <a class="ukp-tab" href="#">보고서</a>
+      </nav>
+
+      <section class="ukp-grid-top">
+        <article class="ukp-card ukp-card-soft ukp-hero">
+          <div>
+            <div class="ukp-hero-badge">AU Preview Workspace</div>
+            <h2>호주 시장 진입을 위한 수출 프리뷰 대시보드</h2>
+            <p>
+              첫 화면에서 국가 기본 정보, 한국과의 관계, 관세 체크포인트, 최근 뉴스,
+              공정별 산출 현황을 한 번에 확인할 수 있도록 구성한 메인 페이지 예시야.
+            </p>
+
+            <div class="ukp-chip-row">
+              <span class="ukp-chip">의약품 수입 규제 추적</span>
+              <span class="ukp-chip">FTA/관세 체크포인트</span>
+              <span class="ukp-chip">잠재 바이어 우선순위</span>
+              <span class="ukp-chip">AI 보고서 생성 상태</span>
+            </div>
+          </div>
+
+          <div class="ukp-kpi-grid">
+            <div class="ukp-kpi">
+              <small>시장 규모</small>
+              <strong>$1.8B</strong>
+              <span>OTC/의약품 수입 시장 기준 예시</span>
+            </div>
+            <div class="ukp-kpi">
+              <small>시장 성장률</small>
+              <strong>6.4%</strong>
+              <span>최근 3개년 추세 반영 예시</span>
+            </div>
+            <div class="ukp-kpi">
+              <small>주요 수입사 수</small>
+              <strong>184</strong>
+              <span>도매·유통·병원 공급망 포함</span>
+            </div>
+            <div class="ukp-kpi">
+              <small>잠재 바이어</small>
+              <strong>42</strong>
+              <span>우선 검토 대상 기업 리스트</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="ukp-card">
+          <div class="ukp-section-head">
+            <div>
+              <h3>한국-호주 관계</h3>
+              <p>메인에서 바로 보는 진입 협력 포인트</p>
+            </div>
+          </div>
+
+          <div class="ukp-stack">
+            <div class="ukp-info-item">
+              <div>
+                <strong>FTA 운영</strong>
+                <span>무역 관계 안정성, 제도 접근성, 파트너십 검토 여지가 높은 시장.</span>
+              </div>
+            </div>
+            <div class="ukp-info-item">
+              <div>
+                <strong>평균 관세 체크</strong>
+                <span>품목별 차이 존재. 인증/비관세 장벽을 함께 확인해야 함.</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="ukp-card">
+          <div class="ukp-section-head">
+            <div>
+              <h3>국가 기본 정보</h3>
+              <p>진입 전 빠르게 보는 핵심 체크포인트</p>
+            </div>
+            <span class="ukp-tag">Preview</span>
+          </div>
+
+          <div class="ukp-info-list">
+            <div class="ukp-info-item">
+              <div>
+                <strong>시장 성숙도</strong>
+                <span>선진 유통 구조, 품질·인증 요구 수준 높음</span>
+              </div>
+              <span class="ukp-status-badge">High</span>
+            </div>
+            <div class="ukp-info-item">
+              <div>
+                <strong>진입 포인트</strong>
+                <span>현지 파트너십, 인증 대응, 유통 포지셔닝이 중요</span>
+              </div>
+              <span class="ukp-status-badge orange">중요</span>
+            </div>
+            <div class="ukp-info-item">
+              <div>
+                <strong>관세 / 인증 메모</strong>
+                <span>품목별 관세율과 함께 TGA 관련 검토가 필수</span>
+              </div>
+              <span class="ukp-status-badge">검토</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="ukp-grid-mid">
+        <article class="ukp-card">
+          <div class="ukp-section-head">
+            <div>
+              <h3>시장 분석 프리뷰</h3>
+              <p>메인에서 바로 읽히는 수요 흐름과 시장 반응 요약</p>
+            </div>
+            <span class="ukp-tag">Market Analysis</span>
+          </div>
+
+          <div class="ukp-chart-box">
+            <svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" aria-label="시장 분석 차트">
+              <line x1="46" y1="194" x2="722" y2="194" stroke="#D9DFE7" stroke-width="2"/>
+              <line x1="46" y1="148" x2="722" y2="148" stroke="#E8EDF3" stroke-width="1"/>
+              <line x1="46" y1="102" x2="722" y2="102" stroke="#E8EDF3" stroke-width="1"/>
+              <line x1="46" y1="56" x2="722" y2="56" stroke="#E8EDF3" stroke-width="1"/>
+
+              <rect x="78" y="122" width="40" height="72" rx="10" fill="#DDE9F8"/>
+              <rect x="164" y="106" width="40" height="88" rx="10" fill="#DDE9F8"/>
+              <rect x="250" y="88" width="40" height="106" rx="10" fill="#DDE9F8"/>
+              <rect x="336" y="74" width="40" height="120" rx="10" fill="#DDE9F8"/>
+              <rect x="422" y="68" width="40" height="126" rx="10" fill="#DDE9F8"/>
+              <rect x="508" y="82" width="40" height="112" rx="10" fill="#DDE9F8"/>
+
+              <rect x="90" y="138" width="16" height="56" rx="8" fill="#F0A13A"/>
+              <rect x="176" y="120" width="16" height="74" rx="8" fill="#F0A13A"/>
+              <rect x="262" y="108" width="16" height="86" rx="8" fill="#F0A13A"/>
+              <rect x="348" y="96" width="16" height="98" rx="8" fill="#F0A13A"/>
+              <rect x="434" y="90" width="16" height="104" rx="8" fill="#F0A13A"/>
+              <rect x="520" y="102" width="16" height="92" rx="8" fill="#F0A13A"/>
+
+              <path d="M98 140 C154 118, 212 96, 270 108 S390 108, 442 92 S550 74, 608 86" fill="none" stroke="#173F78" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="98" cy="140" r="6" fill="#173F78"/>
+              <circle cx="270" cy="108" r="6" fill="#173F78"/>
+              <circle cx="442" cy="92" r="6" fill="#173F78"/>
+              <circle cx="608" cy="86" r="6" fill="#173F78"/>
+
+              <text x="84" y="222" fill="#738197" font-size="14">Jan</text>
+              <text x="170" y="222" fill="#738197" font-size="14">Feb</text>
+              <text x="256" y="222" fill="#738197" font-size="14">Mar</text>
+              <text x="342" y="222" fill="#738197" font-size="14">Apr</text>
+              <text x="428" y="222" fill="#738197" font-size="14">May</text>
+              <text x="514" y="222" fill="#738197" font-size="14">Jun</text>
+            </svg>
+          </div>
+
+          <div class="ukp-legend">
+            <span>시장 관심도 추세</span>
+            <span class="orange">수입 볼륨 프리뷰</span>
+          </div>
+        </article>
+
+        <article class="ukp-card">
+          <div class="ukp-section-head">
+            <div>
+              <h3>생성된 보고서</h3>
+              <p>중요 상태만 깔끔하게 정리한 우측 패널</p>
+            </div>
+            <span class="ukp-tag">Reports</span>
+          </div>
+
+          <div class="ukp-side-list">
+            <div class="ukp-list-item">
+              <strong>호주 시장조사 초안</strong>
+              <p>수입 규모, 경쟁사, 인증 이슈, 유통 구조 요약</p>
+              <div class="ukp-list-meta">
+                <span class="ukp-state complete">Completed</span>
+                <button class="ukp-ghost-btn">view</button>
+              </div>
+            </div>
+            <div class="ukp-list-item">
+              <strong>호주 수출전략 설계안</strong>
+              <p>채널, 가격, 파트너십 접근 우선순위 정리 중</p>
+              <div class="ukp-list-meta">
+                <span class="ukp-state">Generating</span>
+                <button class="ukp-ghost-btn">view</button>
+              </div>
+            </div>
+            <div class="ukp-list-item">
+              <strong>잠재 바이어 분류 리포트</strong>
+              <p>카테고리 정합성 검토 중 일부 데이터 누락</p>
+              <div class="ukp-list-meta">
+                <span class="ukp-state error">Error</span>
+                <button class="ukp-ghost-btn">retry</button>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section style="margin-bottom: 20px;">
+        <div class="ukp-process-box">
+          <div class="ukp-section-head">
+            <div>
+              <h3>공정별 TO-DO</h3>
+              <p>각 공정에서 지금 해야 할 핵심 작업과 산출 상태를 한 번에 보는 TO-DO 영역</p>
+            </div>
+            <div class="ukp-toolbar">
+              <span class="ukp-tag">Pipeline TO-DO</span>
+              <button class="ukp-run" id="ukpRun">보고서 산출 시뮬레이션</button>
+            </div>
+          </div>
+
+          <div class="ukp-thermo">
+            <div class="ukp-thermo-base"></div>
+            <div class="ukp-thermo-fill" id="ukpLine"></div>
+
+            <div class="ukp-thermo-points">
+              <div class="ukp-point complete" id="ukpPoint1">
+                <div class="ukp-point-dot"></div>
+                <strong>1공정</strong>
+                <span>시장조사</span>
+              </div>
+              <div class="ukp-point active" id="ukpPoint2">
+                <div class="ukp-point-dot"></div>
+                <strong>2공정</strong>
+                <span>수출전략</span>
+              </div>
+              <div class="ukp-point" id="ukpPoint3">
+                <div class="ukp-point-dot"></div>
+                <strong>3공정</strong>
+                <span>바이어 발굴</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ukp-stage-grid">
+            <article class="ukp-stage">
+              <div class="ukp-stage-top">
+                <div class="ukp-stage-icon">①</div>
+                <div>
+                  <div class="ukp-stage-num">1공정</div>
+                  <h4>시장조사</h4>
+                </div>
+              </div>
+              <p>국가 개요, 수입 규모, 경쟁사, 유통 구조, 제도·인증 리스크를 조사하는 단계</p>
+              <div class="ukp-meter">
+                <div class="ukp-meter-head">
+                  <span>보고서 초안</span>
+                  <strong>74%</strong>
+                </div>
+                <div class="ukp-meter-bar"><div class="ukp-meter-fill" id="ukpFill1"></div></div>
+              </div>
+              <div class="ukp-stage-badge">리서치 정리 단계</div>
+            </article>
+
+            <article class="ukp-stage">
+              <div class="ukp-stage-top">
+                <div class="ukp-stage-icon">②</div>
+                <div>
+                  <div class="ukp-stage-num">2공정</div>
+                  <h4>수출전략</h4>
+                </div>
+              </div>
+              <p>포지셔닝, 가격, 채널, 인증 대응, 파트너십 접근 우선순위를 정리하는 단계</p>
+              <div class="ukp-meter">
+                <div class="ukp-meter-head">
+                  <span>전략 설계</span>
+                  <strong>48%</strong>
+                </div>
+                <div class="ukp-meter-bar"><div class="ukp-meter-fill" id="ukpFill2"></div></div>
+              </div>
+              <div class="ukp-stage-badge">전략 프레임 설계</div>
+            </article>
+
+            <article class="ukp-stage">
+              <div class="ukp-stage-top">
+                <div class="ukp-stage-icon">③</div>
+                <div>
+                  <div class="ukp-stage-num">3공정</div>
+                  <h4>바이어 발굴</h4>
+                </div>
+              </div>
+              <p>회사 리스트업, 접촉 우선순위, 카테고리 매칭, 상태 추적을 수행하는 단계</p>
+              <div class="ukp-meter">
+                <div class="ukp-meter-head">
+                  <span>리드 정리</span>
+                  <strong>61%</strong>
+                </div>
+                <div class="ukp-meter-bar"><div class="ukp-meter-fill" id="ukpFill3"></div></div>
+              </div>
+              <div class="ukp-stage-badge">바이어 후보 매핑</div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="ukp-grid-bottom">
+        <article class="ukp-card">
+          <div class="ukp-section-head">
+            <div>
+              <h3>잠재 바이어 리스트</h3>
+              <p>메인에서도 바로 액션할 수 있는 CRM형 리스트</p>
+            </div>
+            <span class="ukp-tag">Buyer Discovery</span>
+          </div>
+
+          <table class="ukp-table">
+            <thead>
+              <tr>
+                <th>회사명</th>
+                <th>국가</th>
+                <th>카테고리</th>
+                <th>상태</th>
+                <th>액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Southern Health Imports</td>
+                <td>호주</td>
+                <td>Pharma Distributor</td>
+                <td><span class="ukp-small-chip green">우선 검토</span></td>
+                <td>
+                  <div class="ukp-actions">
+                    <button class="ukp-ghost-btn">view</button>
+                    <button class="ukp-ghost-btn">contact</button>
+                    <button class="ukp-ghost-btn">analyze</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>Medipath Australia</td>
+                <td>호주</td>
+                <td>Hospital Supply</td>
+                <td><span class="ukp-small-chip orange">검토 중</span></td>
+                <td>
+                  <div class="ukp-actions">
+                    <button class="ukp-ghost-btn">view</button>
+                    <button class="ukp-ghost-btn">contact</button>
+                    <button class="ukp-ghost-btn">analyze</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>Pacific Care Trade</td>
+                <td>호주</td>
+                <td>Retail / OTC</td>
+                <td><span class="ukp-small-chip">초기 분석</span></td>
+                <td>
+                  <div class="ukp-actions">
+                    <button class="ukp-ghost-btn">view</button>
+                    <button class="ukp-ghost-btn">contact</button>
+                    <button class="ukp-ghost-btn">analyze</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <aside class="ukp-card">
+          <div class="ukp-section-head">
+            <div>
+              <h3>뉴스 피드</h3>
+              <p>시장 관련 최근 이슈를 요약형 카드로 정리</p>
+            </div>
+            <span class="ukp-tag">News</span>
+          </div>
+
+          <div class="ukp-side-list">
+            <div class="ukp-list-item">
+              <strong>호주 의약품 유통 채널 재편 관련 업계 보도</strong>
+              <p>현지 파트너십 구조와 도매 유통 전략에 영향을 줄 수 있는 흐름을 추적.</p>
+              <div class="ukp-list-meta">
+                <span>2시간 전</span>
+                <button class="ukp-ghost-btn">view</button>
+              </div>
+            </div>
+            <div class="ukp-list-item">
+              <strong>TGA 관련 심사·인증 해석 가이드 주목</strong>
+              <p>품목 포지셔닝과 인증 선행 검토 여부가 초기 전략 수립에 영향.</p>
+              <div class="ukp-list-meta">
+                <span>오늘</span>
+                <button class="ukp-ghost-btn">view</button>
+              </div>
+            </div>
+            <div class="ukp-list-item">
+              <strong>호주 헬스케어 수요 변화에 따른 바이어 재분류 필요</strong>
+              <p>카테고리 매칭, OTC 중심 유통, 전문 채널 파트너 후보를 다시 정리할 필요가 있음.</p>
+              <div class="ukp-list-meta">
+                <span>이번 주</span>
+                <button class="ukp-ghost-btn">view</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const values = [74, 48, 61];
+    const stops = [33, 66, 100];
+    const fills = [document.getElementById('ukpFill1'), document.getElementById('ukpFill2'), document.getElementById('ukpFill3')];
+    const line = document.getElementById('ukpLine');
+    const points = [document.getElementById('ukpPoint1'), document.getElementById('ukpPoint2'), document.getElementById('ukpPoint3')];
+
+    function resetPipeline() {
+      fills.forEach(f => f.style.width = '0%');
+      line.style.width = '0%';
+      points.forEach((p, i) => {
+        p.classList.remove('complete', 'active');
+        if(i === 0) p.classList.add('active');
+      });
+    }
+
+    function animatePipeline() {
+      resetPipeline();
+      values.forEach((v, i) => {
+        setTimeout(() => {
+          fills[i].style.width = v + '%';
+          line.style.width = stops[i] + '%';
+          points.forEach((p, idx) => {
+            p.classList.remove('active');
+            if(idx <= i) p.classList.add('complete');
+          });
+          if(i + 1 < points.length) {
+            points[i + 1].classList.add('active');
+          }
+        }, i * 850 + 250);
+      });
+    }
+
+    window.addEventListener('load', () => setTimeout(animatePipeline, 400));
+    document.getElementById('ukpRun').addEventListener('click', animatePipeline);
+  </script>
+</body>
+</html>

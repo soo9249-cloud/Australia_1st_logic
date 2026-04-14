@@ -48,7 +48,7 @@ def _tga_schedule_s2348_only(raw: object) -> str | None:
 def _raw_evidence_text(
     pbs: dict[str, Any],
     tga: dict[str, Any],
-    austender: dict[str, Any],
+    nsw: dict[str, Any],
 ) -> str:
     """PBS·TGA·조달 텍스트를 이어 붙여 근거 원문으로 쓴다."""
     parts: list[str] = []
@@ -64,7 +64,7 @@ def _raw_evidence_text(
     ast = tga.get("artg_status")
     if ast:
         parts.append(f"ARTG status: {ast}")
-    sup = austender.get("supplier_name")
+    sup = nsw.get("supplier_name")
     if sup:
         parts.append(f"Procurement supplier: {sup}")
     return "\n".join(parts)
@@ -75,16 +75,16 @@ def build_product_summary(
     pbs: dict[str, Any] | None,
     tga: dict[str, Any] | None,
     chemist: dict[str, Any] | None,
-    austender: dict[str, Any] | None,
+    nsw: dict[str, Any] | None,
 ) -> dict[str, Any]:
     """각 소스 dict 를 australia 스키마에 맞는 단일 dict 로 병합한다."""
     data_source_count = sum(
-        1 for x in (pbs, tga, chemist, austender) if x is not None
+        1 for x in (pbs, tga, chemist, nsw) if x is not None
     )
     pbs = pbs or {}
     tga = tga or {}
     chemist = chemist or {}
-    austender = austender or {}
+    nsw = nsw or {}
 
     tga_sched = _tga_schedule_s2348_only(tga.get("tga_schedule"))
     tga_norm = {**tga, "tga_schedule": tga_sched}
@@ -95,7 +95,7 @@ def build_product_summary(
 
     inn = str(product.get("inn_normalized") or "")
     pricing_case = str(product.get("pricing_case") or "ESTIMATE")
-    raw_text = _raw_evidence_text(pbs, tga_norm, austender)
+    raw_text = _raw_evidence_text(pbs, tga_norm, nsw)
     evidence = build_evidence_text(pricing_case, raw_text, inn)
 
     pbs_price = pbs.get("pbs_price_aud")
@@ -143,7 +143,7 @@ def build_product_summary(
         pbs.get("pbs_source_url", "") or "",
         tga.get("artg_source_url", "") or "",
         chemist_url_for_sites,
-        austender.get("austender_source_url", "") or "",
+        nsw.get("nsw_source_url", "") or "",
         pubmed_url=None,
     )
 
@@ -196,10 +196,10 @@ def build_product_summary(
         "pbs_brands": pbs.get("pbs_brands"),
         "pbs_source_url": pbs.get("pbs_source_url", ""),
         "pbs_web_source_url": pbs.get("pbs_web_source_url"),
-        "austender_contract_value_aud": austender.get("contract_value_aud"),
-        "austender_supplier_name": austender.get("supplier_name"),
-        "austender_contract_date": austender.get("contract_date"),
-        "austender_source_url": austender.get("austender_source_url"),
+        "nsw_contract_value_aud": nsw.get("contract_value_aud"),
+        "nsw_supplier_name": nsw.get("supplier_name"),
+        "nsw_contract_date": nsw.get("contract_date"),
+        "nsw_source_url": nsw.get("nsw_source_url"),
         "retail_price_aud": retail_aud,
         "price_source_name": price_name,
         "price_source_url": price_url,
@@ -276,7 +276,7 @@ def main() -> None:
         sys.exit(1)
 
     from db.supabase_insert import upsert_product
-    from sources.austender import fetch_austender
+    from sources.buynsw import fetch_buynsw
     from sources.chemist import fetch_chemist_price
     from sources.pbs import fetch_pbs_by_ingredient, fetch_pbs_multi, fetch_pbs_web
     from sources.tga import fetch_tga_artg
@@ -326,14 +326,14 @@ def main() -> None:
     retail_query = str(pbs_terms[0] if pbs_terms else product.get("inn_normalized") or "")
 
     chemist = fetch_chemist_price(retail_query)
-    austender = fetch_austender(retail_query)
+    nsw = fetch_buynsw(retail_query)
 
     summary = build_product_summary(
         product,
         pbs,
         tga,
         chemist,
-        austender,
+        nsw,
     )
     ok = upsert_product(summary)
     print(f"[완료] product_id={product_filter} upsert={'성공' if ok else '실패'}")

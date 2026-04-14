@@ -1,6 +1,5 @@
 # buy.nsw.gov.au "Notices" 검색 결과 첫 행을 파싱한다.
-# (모듈명·함수명·반환 필드는 호환 유지: contract_value_aud, supplier_name,
-#  contract_date, austender_source_url)
+# (이전 austender.py 의 rename 후속판 — NSW 주정부 공공조달 공고 검색)
 #
 # 호출 URL 패턴
 #   https://buy.nsw.gov.au/notices/search?mode=regular&query={검색어}
@@ -31,7 +30,7 @@ def _empty_row(source_url: str) -> dict[str, Any]:
         "contract_value_aud": None,
         "supplier_name": None,           # buy.nsw 컨텍스트에서는 발주 Agency 명을 매핑
         "contract_date": None,           # Publish date (DD-MMM-YYYY)
-        "austender_source_url": source_url,
+        "nsw_source_url": source_url,
     }
 
 
@@ -109,7 +108,7 @@ def _parse_first_block(markdown: str) -> dict[str, Any] | None:
     }
 
 
-def fetch_austender(search_term: str) -> dict[str, Any]:
+def fetch_buynsw(search_term: str) -> dict[str, Any]:
     """buy.nsw.gov.au 에서 첫 노티스의 발주처·금액·날짜를 추출한다."""
     q = (search_term or "").strip()
     canonical = _search_url(q) if q else f"{_BASE}/notices/search"
@@ -139,9 +138,9 @@ def fetch_austender(search_term: str) -> dict[str, Any]:
         "contract_value_aud": parsed["contract_value_aud"],
         "supplier_name": parsed["supplier_name"],
         "contract_date": parsed["contract_date"],
-        "austender_source_url": canonical,
+        "nsw_source_url": canonical,
     }
 
 
 if __name__ == "__main__":
-    print(fetch_austender("medical"))
+    print(fetch_buynsw("medical"))

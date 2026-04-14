@@ -46,7 +46,7 @@ function mapRowToCard(row) {
     ? `A$${Number(retailAud).toFixed(2)}`
     : (pbsListed ? '해당없음' : '—');
 
-  // NSW 조달 블록 — 1공정에서는 austender 가 summary 에 직접 매핑되지 않으므로 간략 표시
+  // buy.nsw.gov.au 블록 — 1공정 summary 에서는 market_segment 기반으로 간략 표시
   const nswVal = row.market_segment === 'hospital' ? '병원 조달' : '해당없음';
 
   // 수출 가능성
@@ -142,7 +142,7 @@ function renderPendingCard(productId) {
     <div class="cc-head">
       <div>
         <div class="cc-title">${productId} <span style="font-size:11px;color:var(--muted);">크롤링 중...</span></div>
-        <div class="cc-inn">TGA · PBS · Chemist · AusTender 병렬 수집</div>
+        <div class="cc-inn">TGA · PBS · Chemist · buy.nsw 병렬 수집</div>
       </div>
       <div class="cc-time">진행 중</div>
     </div>

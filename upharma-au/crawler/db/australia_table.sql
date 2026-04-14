@@ -72,11 +72,11 @@ CREATE TABLE IF NOT EXISTS australia (
   price_source_url  TEXT,
   price_unit        TEXT,
 
-  -- AusTender (병원/공공 조달)                  NEW: 4개 모두 독립 컬럼으로 분리
-  austender_contract_value_aud DECIMAL,
-  austender_supplier_name      TEXT,
-  austender_contract_date      TEXT,
-  austender_source_url         TEXT,
+  -- buy.nsw.gov.au (NSW 주정부 공공조달 공고)     NEW: 4개 모두 독립 컬럼으로 분리
+  nsw_contract_value_aud DECIMAL,
+  nsw_supplier_name      TEXT,
+  nsw_contract_date      TEXT,
+  nsw_source_url         TEXT,
 
   -- 수출성 판정
   export_viable   TEXT,                    -- viable | conditional | not_viable
@@ -126,10 +126,10 @@ ALTER TABLE australia
   ADD COLUMN IF NOT EXISTS pbs_web_source_url          TEXT,
   ADD COLUMN IF NOT EXISTS tga_licence_category        TEXT,
   ADD COLUMN IF NOT EXISTS tga_licence_status          TEXT,
-  ADD COLUMN IF NOT EXISTS austender_contract_value_aud DECIMAL,
-  ADD COLUMN IF NOT EXISTS austender_supplier_name     TEXT,
-  ADD COLUMN IF NOT EXISTS austender_contract_date     TEXT,
-  ADD COLUMN IF NOT EXISTS austender_source_url        TEXT,
+  ADD COLUMN IF NOT EXISTS nsw_contract_value_aud      DECIMAL,
+  ADD COLUMN IF NOT EXISTS nsw_supplier_name           TEXT,
+  ADD COLUMN IF NOT EXISTS nsw_contract_date           TEXT,
+  ADD COLUMN IF NOT EXISTS nsw_source_url              TEXT,
   ADD COLUMN IF NOT EXISTS fob_local_ref_aud           DECIMAL,
   ADD COLUMN IF NOT EXISTS fob_conservative_usd        DECIMAL,
   ADD COLUMN IF NOT EXISTS fob_base_usd                DECIMAL,

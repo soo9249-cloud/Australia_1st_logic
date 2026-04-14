@@ -1,9 +1,56 @@
 # 호주 1공정 MVP (Australia_1st_logic)
 
-한국 제약회사 수출 지원 자동화를 위한 호주 시장조사 파이프라인입니다.  
-8개 품목의 TGA 인허가·PBS 약가·민간 소매가를 수집해 Supabase에 저장하고, Next.js로 조회한 뒤 PDF 시장조사 보고서로 출력하는 것을 목표로 합니다.
+한국 제약회사 수출 지원을 위한 **호주 시장조사(1공정)** 파이프라인입니다.  
+`au_products.json`에 정의된 품목별로 **TGA ARTG**, **PBS(공식 API + 품목 웹 보강)**, **Chemist Warehouse(민간 소매)**, **AusTender(공공 조달)** 데이터를 수집해 단일 요약 행으로 만들고, **Supabase `australia` 테이블**에 `product_id` 기준으로 upsert합니다. Next.js 대시보드에서 조회·GitHub Actions 트리거까지 연결된 상태입니다.
 
-상세 스펙·프롬프트 순서는 저장소 내 [`AU_1공정_Cursor_바이브코딩_프롬프트세트_v7.md`](./AU_1공정_Cursor_바이브코딩_프롬프트세트_v7.md)를 기준으로 합니다.
+상세 프롬프트 순서·원 스펙은 [`AU_1공정_Cursor_바이브코딩_프롬프트세트_v7.md`](./AU_1공정_Cursor_바이브코딩_프롬프트세트_v7.md)를 참고합니다.
+
+---
+
+## 기술 스택 (상세)
+
+### 런타임·언어
+
+| 구분 | 버전·비고 |
+|------|-----------|
+| Python | **3.12** (GitHub Actions `setup-python@v5`와 동일) |
+| Node.js | Next.js 빌드 시 LTS 권장 (로컬에 설치) |
+
+### 크롤러 (Python) — `upharma-au/crawler/`
+
+| 패키지 / 도구 | 용도 |
+|----------------|------|
+| **httpx** | PBS API, TGA/PBS/Chemist용 **Jina Reader** 프록시 URL, PubChem REST, OpenAI HTTP 등 동기 HTTP 클라이언트 |
+| **python-dotenv** | `pbs.py`·`supabase_insert.py` 등에서 상위 디렉터리 `.env` 탐색 후 로드 (`override=False`) |
+| **supabase-py** | `create_client` + `table("australia").upsert(..., on_conflict="product_id")` |
+| **selectolax** | (레거시/HTML 직접 파싱 경로가 남아 있을 수 있음) DOM 파싱 보조 |
+| **openai** | `utils/evidence.py`에서 `gpt-4o-mini`로 근거 문구 번역·요약 (키 없으면 원문 유지) |
+
+### 외부 서비스·API
+
+| 서비스 | 역할 |
+|--------|------|
+| **Australian PBS API v3** | `https://data-api.health.gov.au/pbs/api/v3` — `Subscription-Key` 헤더, `schedules` → `items` |
+| **PubChem PUG REST** | `utils/inn_normalize.py` — 성분명 동의어 후보에서 WHO INN에 가까운 표기 추정 (실패 시 소문자 원문) |
+| **Jina AI Reader** (`https://r.jina.ai/` + 원본 HTTPS URL) | TGA·PBS 품목·Chemist 등 **정적 차단 우회** 및 마크다운/텍스트 수신 |
+| **OpenAI Chat Completions** | 근거 필드 `evidence_text` / `evidence_text_ko` 생성 |
+| **Supabase (Postgres)** | 테이블 `australia`, PostgREST 경유 upsert |
+| **GitHub Actions** | `workflow_dispatch`로 크롤러 1품목 실행 |
+
+### 프론트·API — `upharma-au/next-app/`
+
+| 기술 | 용도 |
+|------|------|
+| **Next.js (Pages Router)** | `/au` 대시보드, `/api/au/products`, `/api/trigger` |
+| **@supabase/supabase-js** | 브라우저·API 라우트 공용 `createClient` — **anon 키**로 `australia` SELECT |
+| **TypeScript** | `lib/types.ts` 등 |
+
+### 인프라·배포
+
+| 항목 | 설명 |
+|------|------|
+| **GitHub Actions** | `.github/workflows/au_crawl.yml` — 수동 입력 `product_filter` → `PRODUCT_FILTER` 환경변수로 `python au_crawler.py` |
+| **Supabase** | 서울 리전 등 프로젝트 설정, SQL Editor에서 `australia_table.sql`의 `CREATE` + `ALTER` 적용 |
 
 ---
 
@@ -11,37 +58,272 @@
 
 | 경로 | 설명 |
 |------|------|
-| `upharma-au/` | 크롤러(Python), Next.js 앱 뼈대 |
-| `upharma-au/crawler/` | `au_crawler.py`, 소스별 모듈(`sources/`), 유틸, `db/supabase_insert.py` |
-| `upharma-au/crawler/db/australia_table.sql` | Supabase `australia` 테이블 CREATE 스크립트(PROMPT 6) |
-| `upharma-au/next-app/` | 조회 UI·API·컴포넌트 (스켈레톤) |
-| `.github/workflows/` | `au_crawl.yml` (workflow_dispatch, 저장소 루트) |
+| `upharma-au/crawler/` | **`au_crawler.py`** — 엔트리·`build_product_summary`·`main()` |
+| `upharma-au/crawler/sources/` | **`pbs.py`**, **`tga.py`**, **`chemist.py`**, **`austender.py`** |
+| `upharma-au/crawler/utils/` | **`inn_normalize.py`**, **`scoring.py`**, **`evidence.py`** |
+| `upharma-au/crawler/db/` | **`australia_table.sql`**, **`supabase_insert.py`** |
+| `upharma-au/crawler/au_products.json` | 카탈로그 8품목 (`product_id`, 성분, `pricing_case`, 검색어 등) |
+| `upharma-au/next-app/` | Next.js 앱 (대시보드·API) |
+| `.github/workflows/au_crawl.yml` | 크롤러 수동 실행 워크플로 |
 
 ---
 
-## 사전 준비 (문서 요약)
+## 환경 변수
 
-- **환경 변수** (프로젝트 최상단 `.env` 한 곳에 통일): `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `OPENAI_API_KEY`, `GH_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO`
-- **데이터 소스 URL**: PBS API, TGA ARTG, Chemist Warehouse 검색, AusTender 검색 (문서 표 참고)
-- **GitHub**: PAT(repo + workflow), 저장소 Secrets 연동
+### 크롤러·Actions 공통 (저장소 Secrets / 로컬 `.env`)
+
+| 변수 | 용도 |
+|------|------|
+| `SUPABASE_URL` | Supabase 프로젝트 URL |
+| `SUPABASE_SERVICE_KEY` | **service_role** — 크롤러 upsert 시 RLS 우회 |
+| `PBS_SUBSCRIPTION_KEY` | PBS API v3 `Subscription-Key` |
+| `OPENAI_API_KEY` | 근거 문구 번역·요약 (없어도 크롤은 동작, 근거 한글 품질만 저하) |
+| `PRODUCT_FILTER` | **단일** `product_id` (예: `au-atmeg-006`). 비어 있으면 `main()` 즉시 종료 |
+
+### Next.js (로컬 `next-app/.env.local` 등)
+
+| 변수 | 용도 |
+|------|------|
+| `NEXT_PUBLIC_SUPABASE_URL` | 클라이언트·API 라우트용 프로젝트 URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `australia` 읽기 전용 |
+
+### GitHub Actions 트리거 API (`/api/trigger`)
+
+| 변수 | 용도 |
+|------|------|
+| `GH_TOKEN` | repo + workflow 권한 PAT |
+| `GITHUB_OWNER` | 저장소 소유자 |
+| `GITHUB_REPO` | 저장소 이름 |
+
+> `.env`·`.env.local`은 **커밋하지 않음** (`.gitignore`에 포함).
 
 ---
 
-## 권장 구현 순서 (프롬프트 세트 v7)
+## 크롤링 로직 (핵심 — 자세히)
 
-문서의 **Cursor에 넣을 순서**를 따릅니다. DB가 막히면 이후 단계가 진행되므로 **PROMPT 6(Supabase)** 을 앞당겨 두는 것이 권장됩니다.
+전체는 **`au_crawler.py`의 `main()`** 한 줄기로, **품목 1개만** 처리합니다 (`PRODUCT_FILTER` 필수).
 
-| 단계 | 프롬프트 | 비고 |
-|------|-----------|------|
-| 1 | PROMPT 1 | 폴더·파일 뼈대 |
-| 2 | PROMPT 2 | `au_products.json` 8개 품목 |
-| 3 | **PROMPT 6** | Supabase 연결·INSERT (우선) |
-| 4 | PROMPT 3 | PBS / TGA |
-| 5 | PROMPT 4 | Chemist / AusTender |
-| 6 | PROMPT 5 | `product_summary` 매핑 |
-| 7 | PROMPT 7 | GitHub Actions + `main()` |
-| 8 | PROMPT 8 | Next.js 조회·트리거 API |
-| 9 | PROMPT 9 | PDF 출력 |
+### 1) 품목 로드
+
+- `au_products.json`의 `products` 배열에서 `product_id == PRODUCT_FILTER`인 객체 **1건**을 찾습니다.
+- 없으면 stderr 메시지 후 `sys.exit(1)`.
+
+### 2) TGA (`sources/tga.py`)
+
+1. **검색어**  
+   - `product["tga_search_terms"][0]`가 있으면 사용, 없으면 `inn_normalized`.
+2. **Jina Reader**  
+   - URL 형식: `https://r.jina.ai/https://www.tga.gov.au/resources/artg?keywords={인코딩된 검색어}`  
+   - `httpx.get`, 타임아웃 **20초**, 예외는 삼기고 `not_registered` 계열 기본값으로 폴백.
+3. **등록 여부**  
+   - 마크다운에 `result(s) found`(대소문자 무시)가 있으면 결과 있음으로 간주.
+4. **첫 ARTG ID**  
+   - 정규식 `### ... (숫자) ](` 형태에서 **첫 번째** ARTG 숫자만 추출.
+5. **검색 페이지 스폰서**  
+   - `Sponsor` 섹션과 `## Published date` 사이에서, 첫 `* - [x] 스폰서명(건수) [` 패턴의 스폰서 문자열 추출.
+6. **상세 병합**  
+   - ARTG ID가 있으면 `fetch_tga_detail(artg_id)` 호출:  
+     `https://r.jina.ai/https://www.tga.gov.au/resources/artg/{id}`  
+   - 마크다운에서 `Sponsor` 링크 텍스트, `Licence category` 다음 줄, `Licence status` 다음 줄 파싱.
+7. **스케줄 vs 라이선스**  
+   - **의약품 스케줄(S2/S3/S4/S8)** 만 `tga_schedule`에 넣기 위해, 상세 **전체 텍스트**에 대해 `\bS(?:2|3|4|8)\b` **첫 매칭**만 사용. 없으면 `None`.  
+   - **RE 등 라이선스 구분**은 `tga_licence_category` / `tga_licence_status`에만 저장 (`tga_schedule`에 RE를 넣지 않음).
+8. **`determine_export_viable`**  
+   - `tga_schedule`에 S8 포함 시 `not_viable`, 그 외 `artg_status == "registered"`이면 `viable` 등 (함수 시그니처 유지).
+
+### 3) PBS — 공식 API (`sources/pbs.py`)
+
+#### 3-1. 스케줄 코드
+
+- `GET .../schedules` — 응답 `data[0].schedule_code` 사용.  
+- 호출 전 **`time.sleep(21)`** — PBS API 속도 제한 완화용(문서/운영 정책에 맞춘 간격).
+
+#### 3-2. 성분 매칭 needle (중요)
+
+- `_pbs_needles(ing_raw)`  
+  - **① 원문 소문자** `ing_raw.strip().lower()`  
+  - **② `normalize_inn(ing_raw)`** (PubChem 동의어 휴리스틱)  
+  - 순서 유지한 중복 제거 리스트.
+- **문제 해결 사례:** `atorvastatin`만 PubChem에 넘기면 첫 동의어가 브랜드명(`cardyl`)으로 바뀌어 PBS `drug_name`과 안 맞는 경우가 있어, **원문 needle을 반드시 포함**해 부분일치합니다.
+
+#### 3-3. `_row_matches_ingredient(row, needles)`
+
+- `drug_name`, `li_drug_name`, `generic_name`, `product_name`을 소문자로 이어 붙인 문자열에, **needle 중 하나라도 부분 문자열로 포함**되면 매칭.
+
+#### 3-4. 1차 검색 (`/items`)
+
+- 파라미터: `schedule_code`, **`drug_name` = needles[0]**(보통 원문 성분), `page=1`, `limit=10`.  
+- 200이면 `data` 각 행에 대해 위 매칭으로 필터 → `primary_matched`.
+
+#### 3-5. 1차 보조 (원문 매칭 실패 시)
+
+- `primary_matched`가 비었고 needle이 2개 이상이며 서로 다르면, **`drug_name = needles[1]`** 로 동일 limit 재요청(역시 `sleep(21)` 후).  
+- 다시 `_row_matches_ingredient`로 채움.
+
+#### 3-6. 다단계 폴백 (페이지 순회)
+
+- 여전히 비면 `page` 1…`_MAX_FALLBACK_PAGES`(10)까지 **`drug_name` 없이** `limit=100`으로 `/items` 순회.  
+- `_meta.total_records`로 마지막 페이지 판단.  
+- 각 페이지 행에 동일 needle 부분일치.
+
+#### 3-7. API 행 → 내부 dict (`_row_to_result`)
+
+- PBS 코드, 가격(`determined_price` / `claimed_price` 우선순위), 제한 문구, DPMQ·pack·benefit type·브랜드·innovator·formulary 등.  
+- **`pbs_restriction`**: `benefit_type_code in ("R", "S")` (Restricted / Special).
+
+#### 3-8. 브랜드 다건 → 대표 1행 (`_filter_results`)
+
+- 매칭 행이 여러 브랜드일 때 **리스트에는 dict 1개만** 반환.  
+- **오리지널** `innovator_indicator == "Y"`가 있으면 그중 첫 행, 없으면 **제네릭 N** 중 `pbs_price_aud` 최저 1행.  
+- `pbs_total_brands`: 서로 다른 `pbs_brand_name` 개수.  
+- **`pbs_brands`**: 전 행을 `{ brand_name, pbs_price_aud, pbs_innovator, pbs_item_code }` 리스트로 JSONB 적재용 보존.
+
+#### 3-9. 복합 성분 (`fetch_pbs_multi` + `_merge_pbs_rows`)
+
+- `inn_components`가 2개 이상이면 성분마다 `fetch_pbs_by_ingredient` → 결과 리스트를 이어 붙임.  
+- `_merge_pbs_rows`:  
+  - `pbs_listed`: 한 행이라도 True면 True  
+  - `pbs_price_aud`: 숫자만 **합산** (복합제 요약용)  
+  - `pbs_item_code`: 문자열로 **`+` 연결**  
+  - `restriction_text`: ` | `로 결합
+
+### 4) PBS — 품목 웹 보강 (`fetch_pbs_web`)
+
+- **`pbs_item_code`가 있으면** (복합이면 `+`로 분리한) **코드마다** 호출:  
+  `https://r.jina.ai/https://www.pbs.gov.au/medicine/item/{코드}`  
+- 마크다운 **표 행**(`|` 구분)에서 PBS 코드 열이 일치하는 행들을 모읍니다.  
+- **DPMQ·General Patient Charge**는 지정 열(6·8번째 `$` 금액) 정규식 추출.  
+- **브랜드**: 2열 텍스트에서 마크다운 링크 제거 후 `pbs_brand_name`(첫 행)·`pbs_brands` 배열 구축.  
+- 웹만으로 innovator 구분이 어려우면 `None` — **`main()`에서 API가 준 `pbs_innovator`를 덮어쓰지 않도록** 병합 순서 유지.
+
+### 5) Chemist (`sources/chemist.py`)
+
+- 검색 URL을 Jina로 감싼 뒤 응답 **전체 텍스트**에서 `\$\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)` 반복, **0 초과인 첫 금액**을 소매가로 사용(구현은 파일 기준 최신 주석 참고).
+
+### 6) AusTender (`sources/austender.py`)
+
+- 키워드 검색 URL로 HTML 수신 후 테이블 첫 데이터 행에서 금액·공급자 등 추출(실패 시 빈 필드 dict).
+
+### 7) 요약 조립 (`build_product_summary`)
+
+- **`tga_schedule` 저장용:** `tga`에서 읽은 값을 `_tga_schedule_s2348_only`로 한 번 더 걸러 **S2/S3/S4/S8만** `assembled`/반환 dict에 반영.  
+- **`determine_export_viable`:** 위 정규화된 `tga` dict로 호출.  
+- **PBS 등재 시:** `export_viable`을 PBS 기준으로 viable 덮어쓰기(기존 정책).  
+- **`retail_price_aud`:**  
+  1. **`_chemist_retail_trustworthy`**: Chemist 가격이 없거나 ≤0, **5 AUD 미만**, 또는 PBS 가격 대비 **15% 미만**이면 신뢰하지 않음(잘못된 첫 검색·저가 오매칭 완화).  
+  2. 신뢰 시 Chemist 가격·출처명·URL.  
+  3. 아니면 PBS `pbs_price_aud`가 양수일 때만 소매 자리에 PBS 가격 사용.  
+  4. 둘 다 안 되면 `None`.  
+- **`pbs_patient_charge`:** PBS API + `fetch_pbs_web`에서 온 값만 사용(소매가와 혼동 없음).  
+- **`error_type`:** `pbs_item_code` 있고 `pbs_listed`인데 `pbs_brand_name`·`pbs_innovator`·`pbs_brands`가 **모두** `None`이면 `PBS_WEB_ENRICHMENT_INCOMPLETE`.  
+- **`completeness_ratio` / `confidence`:** `utils/scoring.py`의 필드 채움 규칙.  
+- **`evidence_*`:** `utils/evidence.py` + `_raw_evidence_text`(PBS 제한·TGA 스케줄·스폰서·ARTG 상태·조달 등).
+
+### 8) DB 적재
+
+- `db/supabase_insert.py`: `_ALLOWED_COLUMNS` 화이트리스트만 PostgREST로 전송, **`on_conflict="product_id"`** upsert.  
+- 스키마 확장 컬럼은 `australia_table.sql`의 **`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`** 블록 참고 (PBS 확장, `pbs_brands` JSONB, `tga_licence_*` 등).
+
+---
+
+## 소스 파일별 크롤링 로직 (PBS / TGA / Chemist)
+
+아래는 **AusTender 점검 전**까지 동작이 확인된 세 파일 기준으로, 파일 단위로 정리한 요약입니다. (전체 파이프라인 순서는 위 「크롤링 로직 (핵심)」과 동일.)
+
+### `sources/pbs.py`
+
+| 항목 | 내용 |
+|------|------|
+| **환경** | `PBS_SUBSCRIPTION_KEY` — `GET` 시 헤더 `Subscription-Key`. 상위 경로 `.env` 자동 로드. |
+| **스케줄** | `GET /schedules` → `data[0].schedule_code`. 호출 전 `sleep(21)` (속도 제한 완화). |
+| **성분 needle** | `_pbs_needles`: **원문 소문자** + **`normalize_inn`(PubChem)** 둘 다 리스트에 넣어 중복 제거. |
+| **행 매칭** | `_row_matches_ingredient(row, needles)`: `drug_name`·`li_drug_name`·`generic_name`·`product_name`을 합친 소문자 문자열에, needle 중 **하나라도 부분 문자열**이면 매칭. |
+| **1차 `/items`** | `schedule_code` + `drug_name=needles[0]`, `page=1`, `limit=10` → 매칭 행만 수집. |
+| **1차 보조** | 1차 매칭이 비었고 needle이 2개 이상이면 `drug_name=needles[1]`로 **한 번 더** 동일 limit 조회. |
+| **폴백** | `drug_name` 없이 `page` 1…10, `limit=100` 순회하며 동일 needle 매칭. |
+| **행 → dict** | `_row_to_result`: PBS 코드, 가격, 제한문, pack, benefit, brand, innovator 등. `pbs_restriction` = `benefit_type_code in ("R","S")`. |
+| **다브랜드** | `_filter_results`: 오리지널(Y) 1행 우선, 없으면 제네릭(N) 중 최저가 1행. `pbs_brands`·`pbs_total_brands` 부가. |
+| **복합** | `fetch_pbs_multi` + (호출부) `_merge_pbs_rows`: 가격 합산, `pbs_item_code`는 `+` 연결. |
+| **웹** | `fetch_pbs_web(pbs_item_code)`: Jina `r.jina.ai/https://www.pbs.gov.au/medicine/item/{코드}` → 표 행에서 DPMQ·환자부담·브랜드 목록 파싱. |
+
+**단품 스모크 (crawler 디렉터리):**
+
+```powershell
+python -c "from sources.pbs import fetch_pbs_by_ingredient; print(fetch_pbs_by_ingredient('atorvastatin')[0])"
+```
+
+### `sources/tga.py`
+
+| 항목 | 내용 |
+|------|------|
+| **검색** | Jina: `r.jina.ai/https://www.tga.gov.au/resources/artg?keywords={quote(검색어)}`, 타임아웃 20초. |
+| **등록 여부** | 본문에 `result(s) found` 있으면 결과 있음. |
+| **ARTG ID** | `### ... (숫자)](` 패턴에서 **첫** ID. |
+| **검색창 스폰서** | `Sponsor` ~ `## Published date` 블록에서 첫 `[x]` 스폰서 줄 파싱. |
+| **상세** | `fetch_tga_detail(artg_id)`: Jina로 `/resources/artg/{id}` — Sponsor 링크 텍스트, Licence category/status 다음 줄. |
+| **스케줄** | 상세 **전체 텍스트**에 `\bS(?:2|3|4|8)\b` **첫 매칭만** `tga_schedule` (없으면 `None`). RE 등은 `tga_licence_category`만. |
+| **병합** | `fetch_tga_artg`가 상세 dict를 검색 결과에 merge. |
+| **수출 판정** | `determine_export_viable` — S8이면 불가, 등록이면 viable 등 (시그니처 고정). |
+
+**단품 스모크 (구 `test_tga.py` 대체):**
+
+```powershell
+python -c "from sources.tga import fetch_tga_artg, determine_export_viable; r=fetch_tga_artg('hydroxycarbamide'); print(r); print(determine_export_viable(r))"
+```
+
+### `sources/chemist.py`
+
+| 항목 | 내용 |
+|------|------|
+| **URL** | 원본: `https://www.chemistwarehouse.com.au/search?query={quote(검색어)}`. |
+| **Jina** | `https://r.jina.ai/{원본URL}` — `Accept: text/event-stream`, `User-Agent` 지정, 타임아웃 30초. |
+| **가격** | 응답 전체 텍스트에서 `\$\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)` 전역 검색, **0보다 큰 첫 값**을 `retail_price_aud`로 사용 후 중단. |
+| **반환** | `retail_price_aud`, `price_unit`(per pack), `price_source_name`, `price_source_url`(원본 검색 URL). 실패·예외 시 `None`. |
+| **기타** | `build_sites(...)`: PBS·TGA·Chemist·AusTender·선택 PubMed URL을 `sites` JSON 구조로 묶음. |
+
+**단품 스모크:**
+
+```powershell
+python -c "from sources.chemist import fetch_chemist_price; print(fetch_chemist_price('atorvastatin'))"
+```
+
+### `test_tga.py` 제거
+
+- 저장소 어디에서도 import/호출되지 않음.  
+- 위 **한 줄 `python -c`** 로 TGA만 빠르게 검증 가능하므로 **삭제해도 됨** (이 README에 대체 명령을 적어 둠).
+
+---
+
+## 로컬 실행 (크롤러 1품목)
+
+```powershell
+cd C:\Users\user\Desktop\Australia_1st_logic\upharma-au\crawler
+$env:PRODUCT_FILTER="au-hydrine-004"
+python au_crawler.py
+```
+
+- PBS API는 호출 간 **수십 초**가 걸릴 수 있음 (`sleep(21)` 등).  
+- Python 의존성: `pip install -r ..\requirements.txt` (또는 프로젝트 안내 경로).
+
+---
+
+## Git / 용량 정리
+
+- **제외:** `venv/`, `.env`, `.env.local`, `__pycache__/`, **`upharma-au/next-app/node_modules/`**, **`upharma-au/next-app/.next/`** (`.gitignore`에 명시).  
+- Next 앱 소스(`package.json`, `pages/`, `lib/` 등)는 커밋 대상으로 두고, 생성물만 제외하는 것이 일반적입니다.
+
+---
+
+## 권장 구현 순서 (프롬프트 세트 v7 요약)
+
+| 단계 | 내용 |
+|------|------|
+| PROMPT 1~2 | 폴더·`au_products.json` |
+| PROMPT 6 | Supabase DDL·`supabase_insert` |
+| PROMPT 3~5 | PBS/TGA/Chemist/AusTender·요약·점수·근거 |
+| PROMPT 7 | GitHub Actions |
+| PROMPT 8 | Next 조회·트리거 |
+| PROMPT 9 | PDF (미구현 시 README 체크리스트 유지) |
 
 ---
 
@@ -49,15 +331,15 @@
 
 | # | 항목 | 상태 |
 |---|------|------|
-| 1 | 폴더 구조 및 기본 파일 (PROMPT 1) | 완료 |
-| 2 | `au_products.json` (PROMPT 2) | 완료 |
-| 3 | PBS / TGA 수집 (PROMPT 3) | 완료 |
-| 4 | Chemist / AusTender (PROMPT 4) | 완료 |
-| 5 | product_summary 매핑 (PROMPT 5) | 완료 |
-| 6 | Supabase INSERT (PROMPT 6) | 완료 |
-| 7 | GitHub Actions (PROMPT 7) | 완료 |
-| 8 | Next.js 조회·API (PROMPT 8) | 미완료 |
-| 9 | PDF 출력 (PROMPT 9) | 미완료 |
+| 1 | 폴더 구조 및 기본 파일 | 완료 |
+| 2 | `au_products.json` 8품목 | 완료 |
+| 3 | PBS / TGA (API + Jina 상세·웹 보강, 복합 병합) | 완료 |
+| 4 | Chemist(Jina) / AusTender | 완료 |
+| 5 | `build_product_summary`·점수·근거 | 완료 |
+| 6 | Supabase upsert·확장 컬럼 SQL | 완료 |
+| 7 | GitHub Actions `au_crawl.yml` | 완료 |
+| 8 | Next.js 조회·트리거 API | 부분~완료(저장소 기준 점검) |
+| 9 | PDF 출력 | 미완료 |
 
 ---
 
@@ -65,17 +347,23 @@
 
 ### 2026-04-12
 
-- **PROMPT 1 완료:** `upharma-au/` 이하에 문서에 정의된 폴더·파일 생성. Python/TS는 주석·시그니처·스텁만 포함(실구현 없음). `crawler/requirements.txt`에 httpx, selectolax, trafilatura, supabase-py, python-dotenv, tenacity 명시. `.github/workflows/au_crawl.yml`은 workflow_dispatch 스켈레톤만 배치(PROMPT 7에서 본 구현 예정).
-- **README.md 최초 작성:** 본 문서로 진행 상황을 추적하기 시작함.
-- **PROMPT 2 완료:** `upharma-au/crawler/au_products.json`에 8개 품목을 `products` 배열로 정의. `product_id`는 `au-{약어}-{번호}` TEXT 형식, `pricing_case`는 문서 기준(DIRECT 1~4, COMPONENT_SUM 5~6, ESTIMATE 7~8), `market_segment`는 모두 `public`. 완료 조건: `upharma-au`에서 `python -c "import json; data=json.load(open('crawler/au_products.json')); print(len(data['products']))"` → `8` 출력 확인.
-- **PROMPT 6 완료:** `upharma-au/crawler/db/supabase_insert.py`에 `get_supabase_client()`(싱글턴·`create_client`), `upsert_product()`, `upsert_all()` 구현. 환경변수는 `SUPABASE_URL`·`SUPABASE_SERVICE_KEY`; 로컬에서는 프로젝트 루트 `.env`를 자동 탐색해 `python-dotenv`로 로드(이미 설정된 값은 유지). 테이블 DDL은 `crawler/db/australia_table.sql`에 동봉(Supabase SQL Editor에서 미적용 시 실행). 완료 조건: `upharma-au/crawler`에서 `python -c "from db.supabase_insert import get_supabase_client; ..."` → `Supabase 연결 성공: True` 확인.
-- **PROMPT 3 완료:** `crawler/sources/pbs.py` — `Subscription-Key`만 사용, `/schedules`로 `schedule_code` 후 `/items`는 필터 없이 `page=1&limit=10` 첫 행만 파싱(`pbs_code`, `determined_price`/`claimed_price`). `crawler/sources/tga.py` — 검색 페이지에 ARTG 링크 있으면 `registered`·없으면 `not_registered`, 상세 요청 없음·스케줄은 `None` 허용.
-- **PROMPT 4 완료:** `crawler/sources/chemist.py` — `fetch_chemist_price()`(셀렉터 2단계 + 본문 정규식 폴백, 가격 없으면 `None`), `build_sites()`(PBS·AusTender·Chemist·선택 PubMed URL 묶음). `crawler/sources/austender.py` — `fetch_austender()`로 계약 검색 테이블 첫 데이터 행에서 금액·공급자·일자 추출, 없거나 오류 시 필드 `None`·`austender_source_url`만 채운 dict. 공통: `httpx`+`selectolax`, UA·타임아웃 10초, 예외 삼킴. Chemist는 Cloudflare 등으로 정적 GET이 막히면 `None`이 될 수 있음(MVP는 Playwright 없음). 완료 조건: `crawler`에서 `python -c "from sources.chemist import fetch_chemist_price, build_sites; from sources.austender import fetch_austender; ..."` 오류 없이 실행.
-- **PROMPT 5 완료:** `crawler/utils/enums.py`(ErrorType·PricingCase·ExportViable `str, Enum`), `utils/scoring.py`(`AU_REQUIRED_FIELDS`, `completeness_score`·치명 필드 감점), `utils/evidence.py`(`translate_to_korean`·`build_evidence_text`, OpenAI `gpt-4o-mini`, 키 없으면 번역 생략·원문 유지). `crawler/au_crawler.py`의 `build_product_summary()`가 PBS/TGA/Chemist/AusTender·`determine_export_viable`·`build_sites`·근거 텍스트를 단일 dict로 조립. 완료 조건: `crawler`에서 `python -c "from au_crawler import build_product_summary; ... au_products.json products[3] ..."` → `fob_estimated_usd is None`, `id`가 UUID 형식.
-- **PROMPT 7 완료:** `.github/workflows/au_crawl.yml`(저장소 루트) — `workflow_dispatch`만, 입력 `product_filter`(필수), Ubuntu·Python 3.12, `upharma-au/requirements.txt` 설치 후 `upharma-au/crawler`에서 `python au_crawler.py`. Secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `OPENAI_API_KEY`, `PBS_SUBSCRIPTION_KEY`. `au_crawler.py`의 `main()`은 `PRODUCT_FILTER` 없으면 즉시 종료(전체 실행 없음), `au_products.json`에서 해당 `product_id` 1건만 TGA→PBS(복합은 `fetch_pbs_multi`+행 병합)→Chemist→AusTender→`build_product_summary`→`upsert_product` 순 실행. 완료 조건: Actions에서 워크플로 이름 **「호주 1공정 크롤러 실행」**이 보이고, 수동 실행 시 Supabase `australia`에 해당 행 upsert.
+- PROMPT 1~7 및 README 최초 작성, Supabase·크롤러 스켈레톤 연동 등 (상세는 이전 README 본문과 동일).
+
+### 2026-04-14
+
+- **README:** `pbs.py` / `tga.py` / `chemist.py` **소스 파일별 크롤링 요약** 및 단품 스모크 명령 추가.  
+- **`crawler/test_tga.py` 삭제:** 동일 검증은 README의 `python -c` 한 줄로 대체.
+
+### 2026-04-13
+
+- **PBS:** PubChem `normalize_inn`만 쓸 때 생기는 오매칭(예: atorvastatin → cardyl) 보완을 위해 **`_pbs_needles`(원문+정규화)** 및 **`_row_matches_ingredient` 다중 needle** 도입. 1차 실패 시 **`drug_name` 두 번째 needle** 재조회, 이후 **페이지 순회 fallback** 유지.  
+- **`fetch_pbs_web`:** Jina로 PBS **품목 페이지** 마크다운 수신, 표에서 DPMQ·환자부담금·브랜드 행(`pbs_brands`) 파싱.  
+- **`au_crawler` `main`:** `pbs_item_code`가 있으면 **`+` 분리 후 코드별 `fetch_pbs_web`**, API 브랜드/innovator와 병합.  
+- **TGA:** 직접 HTML 스크래핑 대신 **Jina Reader**로 검색·상세 마크다운 파싱, **`tga_licence_category` / `tga_licence_status`**, 스케줄은 **S2~S8 정규식만** `tga_schedule`.  
+- **`build_product_summary`:** Chemist 소매가 **신뢰 구간 검사** 후에만 사용, 아니면 PBS 가격, **`pbs_patient_charge` 혼동 방지**, 웹 보강 실패 시 **`error_type`**.  
+- **`.gitignore`:** `next-app/node_modules/`, `.next/` 제외로 Git 푸시 부담 완화.  
+- **실측:** `PRODUCT_FILTER`로 Sereterol / Rosumeg / Atmeg 크롤 후 Supabase upsert 성공 로그 확인.
 
 ---
 
-*참고: UPharma Export AI · KITA 무역AX 1기 · 한국유나이티드제약 5조 — 프롬프트 세트 v7 (2026-04-12)*
-
-
+*참고: UPharma Export AI · KITA 무역AX 1기 · 한국유나이티드제약 5조 — 프롬프트 세트 v7 기반 문서.*

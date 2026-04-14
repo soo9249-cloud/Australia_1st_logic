@@ -5,3 +5,6 @@ supabase
 python-dotenv
 tenacity
 openai
+fastapi
+uvicorn[standard]
+jinja2

@@ -1,7 +1,7 @@
 # 호주 1공정 MVP (Australia_1st_logic)
 
 한국 제약회사 수출 지원을 위한 **호주 시장조사(1공정)** 파이프라인입니다.  
-`au_products.json`에 정의된 품목별로 **TGA ARTG**, **PBS(공식 API + 품목 웹 보강)**, **Chemist Warehouse(민간 소매)**, **AusTender(공공 조달)** 데이터를 수집해 단일 요약 행으로 만들고, **Supabase `australia` 테이블**에 `product_id` 기준으로 upsert합니다. Next.js 대시보드에서 조회·GitHub Actions 트리거까지 연결된 상태입니다.
+`au_products.json`에 정의된 품목별로 **TGA ARTG**, **PBS(공식 API + 품목 웹 보강)**, **Chemist Warehouse(민간 소매)**, **AusTender(공공 조달)** 데이터를 수집해 단일 요약 행으로 만들고, **Supabase `australia` 테이블**에 `product_id` 기준으로 upsert합니다. 현재는 **FastAPI(`render_api.py`) + 정적 프론트(`templates/index.html`, `static/*`)**로 조회/실행 UI를 제공합니다.
 
 상세 프롬프트 순서·원 스펙은 [`AU_1공정_Cursor_바이브코딩_프롬프트세트_v7.md`](./AU_1공정_Cursor_바이브코딩_프롬프트세트_v7.md)를 참고합니다.
 
@@ -14,7 +14,7 @@
 | 구분 | 버전·비고 |
 |------|-----------|
 | Python | **3.12** (GitHub Actions `setup-python@v5`와 동일) |
-| Node.js | Next.js 빌드 시 LTS 권장 (로컬에 설치) |
+| Node.js | (선택) 레거시 `next-app` 점검 시 LTS 권장 |
 
 ### 크롤러 (Python) — `upharma-au/crawler/`
 
@@ -37,13 +37,14 @@
 | **Supabase (Postgres)** | 테이블 `australia`, PostgREST 경유 upsert |
 | **GitHub Actions** | `workflow_dispatch`로 크롤러 1품목 실행 |
 
-### 프론트·API — `upharma-au/next-app/`
+### 프론트·API — `upharma-au/render_api.py`, `upharma-au/templates/`, `upharma-au/static/`
 
 | 기술 | 용도 |
 |------|------|
-| **Next.js (Pages Router)** | `/au` 대시보드, `/api/au/products`, `/api/trigger` |
-| **@supabase/supabase-js** | 브라우저·API 라우트 공용 `createClient` — **anon 키**로 `australia` SELECT |
-| **TypeScript** | `lib/types.ts` 등 |
+| **FastAPI** | `/api/crawl`, `/api/data`, `/api/reports`, `/health` 엔드포인트 |
+| **Jinja2 Templates** | `/` 진입 시 `templates/index.html` 렌더 |
+| **Vanilla JS + CSS** | `static/app.js`, `static/styles.css` 기반 대시보드 UI |
+| **Uvicorn** | Render 및 로컬에서 FastAPI ASGI 서버 실행 |
 
 ### 인프라·배포
 
@@ -51,6 +52,7 @@
 |------|------|
 | **GitHub Actions** | `.github/workflows/au_crawl.yml` — 수동 입력 `product_filter` → `PRODUCT_FILTER` 환경변수로 `python au_crawler.py` |
 | **Supabase** | 서울 리전 등 프로젝트 설정, SQL Editor에서 `australia_table.sql`의 `CREATE` + `ALTER` 적용 |
+| **Render** | 루트 `render.yaml`로 Python Web Service 배포 (`uvicorn render_api:app`) |
 
 ---
 
@@ -63,7 +65,11 @@
 | `upharma-au/crawler/utils/` | **`inn_normalize.py`**, **`scoring.py`**, **`evidence.py`** |
 | `upharma-au/crawler/db/` | **`australia_table.sql`**, **`supabase_insert.py`** |
 | `upharma-au/crawler/au_products.json` | 카탈로그 8품목 (`product_id`, 성분, `pricing_case`, 검색어 등) |
-| `upharma-au/next-app/` | Next.js 앱 (대시보드·API) |
+| `upharma-au/render_api.py` | FastAPI 어댑터 (크롤러 실행/조회/보고서 API) |
+| `upharma-au/templates/index.html` | 대시보드 HTML 템플릿 |
+| `upharma-au/static/app.js` | 프론트 로직 (크롤 실행, 결과 카드, 보고서 저장 UI) |
+| `upharma-au/static/styles.css` | 대시보드 스타일 |
+| `render.yaml` | Render 배포 정의 |
 | `.github/workflows/au_crawl.yml` | 크롤러 수동 실행 워크플로 |
 
 ---
@@ -80,22 +86,35 @@
 | `OPENAI_API_KEY` | 근거 문구 번역·요약 (없어도 크롤은 동작, 근거 한글 품질만 저하) |
 | `PRODUCT_FILTER` | **단일** `product_id` (예: `au-atmeg-006`). 비어 있으면 `main()` 즉시 종료 |
 
-### Next.js (로컬 `next-app/.env.local` 등)
+### 웹 서버(FastAPI/Render)
 
 | 변수 | 용도 |
 |------|------|
-| `NEXT_PUBLIC_SUPABASE_URL` | 클라이언트·API 라우트용 프로젝트 URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `australia` 읽기 전용 |
-
-### GitHub Actions 트리거 API (`/api/trigger`)
-
-| 변수 | 용도 |
-|------|------|
-| `GH_TOKEN` | repo + workflow 권한 PAT |
-| `GITHUB_OWNER` | 저장소 소유자 |
-| `GITHUB_REPO` | 저장소 이름 |
+| `SUPABASE_URL` | `render_api.py`에서 Supabase 조회/저장 시 사용 |
+| `SUPABASE_SERVICE_KEY` | `render_api.py` 및 크롤러 upsert에 사용 |
+| `PBS_SUBSCRIPTION_KEY` | `/api/crawl` 내부 `au_crawler.main()` 실행 시 사용 |
+| `OPENAI_API_KEY` | 근거 번역/요약 품질 향상(없어도 실행 가능) |
+| `PYTHON_VERSION` | Render 배포 시 Python 버전 고정(`render.yaml`) |
 
 > `.env`·`.env.local`은 **커밋하지 않음** (`.gitignore`에 포함).
+
+---
+
+## FastAPI 엔드포인트
+
+`upharma-au/render_api.py` 기준으로 현재 제공되는 API는 아래와 같습니다.
+
+| 메서드 | 경로 | 설명 |
+|------|------|------|
+| `GET` | `/` | 대시보드 HTML 렌더 |
+| `GET` | `/health` | 헬스체크 (`{"status":"ok"}`) |
+| `POST` | `/api/crawl` | `product_id` 1건 크롤링 실행 (`au_crawler.main()` 호출) |
+| `GET` | `/api/data` | `australia` 전체 목록(최신 `crawled_at` 순) |
+| `GET` | `/api/data/{product_id}` | `australia` 단건 조회 |
+| `GET` | `/api/reports` | 오늘(UTC) 생성된 `reports` 목록 |
+| `POST` | `/api/reports` | 보고서 메타 1건 저장 (`gong`, `title` 필수) |
+
+> 프론트의 `신약 직접 입력(manual)` 모드는 현재 UI 안내대로 **미지원**이며, `au_products.json`에 있는 `product_id` 8개만 실행됩니다.
 
 ---
 
@@ -307,6 +326,37 @@ python au_crawler.py
 
 ---
 
+## 로컬 실행 (FastAPI 서버)
+
+```powershell
+cd C:\Users\user\Desktop\Australia_1st_logic
+pip install -r .\upharma-au\requirements.txt
+uvicorn render_api:app --app-dir upharma-au --reload --host 127.0.0.1 --port 8000
+```
+
+- 브라우저: `http://127.0.0.1:8000/`
+- 헬스체크: `http://127.0.0.1:8000/health`
+- 크롤링 API 예시:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/api/crawl `
+  -H "Content-Type: application/json" `
+  -d "{\"product_id\":\"au-hydrine-004\"}"
+```
+
+---
+
+## Render 배포
+
+루트 `render.yaml` 기준 설정은 다음과 같습니다.
+
+- `buildCommand`: `pip install -r upharma-au/requirements.txt`
+- `startCommand`: `uvicorn render_api:app --app-dir upharma-au --host 0.0.0.0 --port $PORT`
+- 필수 환경변수: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
+- 권장 추가: `PBS_SUBSCRIPTION_KEY`, `OPENAI_API_KEY`
+
+---
+
 ## Git / 용량 정리
 
 - **제외:** `venv/`, `.env`, `.env.local`, `__pycache__/`, **`upharma-au/next-app/node_modules/`**, **`upharma-au/next-app/.next/`** (`.gitignore`에 명시).  
@@ -338,7 +388,7 @@ python au_crawler.py
 | 5 | `build_product_summary`·점수·근거 | 완료 |
 | 6 | Supabase upsert·확장 컬럼 SQL | 완료 |
 | 7 | GitHub Actions `au_crawl.yml` | 완료 |
-| 8 | Next.js 조회·트리거 API | 부분~완료(저장소 기준 점검) |
+| 8 | FastAPI 조회·크롤링·보고서 API + 정적 대시보드 | 완료 |
 | 9 | PDF 출력 | 미완료 |
 
 ---
@@ -353,6 +403,7 @@ python au_crawler.py
 
 - **README:** `pbs.py` / `tga.py` / `chemist.py` **소스 파일별 크롤링 요약** 및 단품 스모크 명령 추가.  
 - **`crawler/test_tga.py` 삭제:** 동일 검증은 README의 `python -c` 한 줄로 대체.
+- **웹 레이어 반영:** `render_api.py`(FastAPI), `templates/index.html`, `static/app.js`, `static/styles.css`, `render.yaml` 기준으로 실행/배포 문서 갱신.
 
 ### 2026-04-13
 

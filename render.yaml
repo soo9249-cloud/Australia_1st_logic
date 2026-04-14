@@ -1,0 +1,18 @@
+# Render.com 배포 스펙 — Python 웹서비스 1개 (FastAPI + Uvicorn)
+# 규칙: crawler/, next-app/ 미변경. render_api.py 가 어댑터 역할.
+
+services:
+  - type: web
+    name: upharma-au
+    env: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r upharma-au/requirements.txt
+    startCommand: uvicorn render_api:app --app-dir upharma-au --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.9

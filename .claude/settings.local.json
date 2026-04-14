@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:buy.nsw.gov.au)",
+      "WebFetch(domain:r.jina.ai)"
+    ]
+  }
+}

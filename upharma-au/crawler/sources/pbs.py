@@ -162,6 +162,8 @@ def _filter_results(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _pbs_needles(ing_raw: str) -> list[str]:
     """원문 성분 + PubChem 정규화명(브랜드명으로 왜곡될 수 있음) 모두로 매칭."""
+    import sys, os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from utils.inn_normalize import normalize_inn
 
     raw = ing_raw.strip().lower()
@@ -402,5 +404,11 @@ def fetch_pbs_web(pbs_item_code: str) -> dict[str, Any]:
         "pbs_innovator": None,
         "pbs_brands": pbs_brands,
     }
+
+
+if __name__ == "__main__":
+    result = fetch_pbs_by_ingredient("hydroxycarbamide")
+    for row in result:
+        print(row)
 
 

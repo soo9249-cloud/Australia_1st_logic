@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:buy.nsw.gov.au)",
-      "WebFetch(domain:r.jina.ai)"
+      "WebFetch(domain:r.jina.ai)",
+      "Bash(python scripts/migrate.py)",
+      "Bash(python -c ':*)",
+      "Bash(PRODUCT_FILTER=au-hydrine-004 python au_crawler.py)"
     ]
   }
 }

@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ':*)",
+      "Bash(du -sh upharma-au/next-app upharma-au/next-app/node_modules upharma-au/next-app/.next)",
+      "Bash(ls -la upharma_demo_v*.html)",
+      "Bash(du -sh upharma-au/next-app/*)",
+      "Bash(uvicorn render_api:app --app-dir upharma-au --host 127.0.0.1 --port 8000)",
+      "Bash(curl -s -w \"HTTP %{http_code}\\\\n\" http://127.0.0.1:8000/health)",
+      "Bash(curl -s -w \"HTTP %{http_code}\\\\n\" http://127.0.0.1:8000/api/data)",
+      "Bash(curl -s -w \"HTTP %{http_code}\\\\n\" http://127.0.0.1:8000/api/data/au-hydrine-004)",
+      "Bash(curl -s -w \"HTTP %{http_code}\\\\n\" http://127.0.0.1:8000/api/exchange)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}  size=%{size_download} bytes\\\\n\" http://127.0.0.1:8000/)",
+      "Bash(powershell -Command 'Stop-Process -Id 34920 -Force -ErrorAction SilentlyContinue; Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; echo killed')",
+      "Bash(curl -s http://127.0.0.1:8000/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}  size=%{size_download} bytes\\\\n\" http://127.0.0.1:8000/static/app.js)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}  size=%{size_download} bytes\\\\n\" http://127.0.0.1:8000/static/styles.css)",
+      "Bash(powershell -Command 'Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; Start-Sleep -Milliseconds 300; $p = Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue; if \\($p\\) { '\\\\''still running'\\\\'' } else { '\\\\''port 8000 free'\\\\'' }')",
+      "Bash(powershell -Command 'Start-Sleep -Milliseconds 800; $p = Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue; if \\($p\\) { '\\\\''PID still alive: '\\\\'' + $p.OwningProcess } else { '\\\\''port 8000 FREE'\\\\'' }')",
+      "Bash(taskkill //PID 26080 //F)",
+      "Bash(powershell -Command 'Start-Sleep -Milliseconds 500; $p = Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue; if \\($p\\) { '\\\\''still: '\\\\'' + $p.OwningProcess } else { '\\\\''port 8000 FREE'\\\\'' }')",
+      "Bash(powershell -Command 'Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { taskkill /PID $_ /F }; Start-Sleep -Milliseconds 500; $p = Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue; if \\($p\\) { '\\\\''still alive'\\\\'' } else { '\\\\''port 8000 FREE'\\\\'' }')",
+      "Bash(cmd //c \"netstat -ano | findstr :8000\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" --max-time 3 http://127.0.0.1:8000/health)"
+    ]
+  }
+}

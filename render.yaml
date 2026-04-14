@@ -1,5 +1,5 @@
 # Render.com 배포 스펙 — Python 웹서비스 1개 (FastAPI + Uvicorn)
-# 규칙: crawler/, next-app/ 미변경. render_api.py 가 어댑터 역할.
+# render_api.py 가 브라우저 요청을 받아 crawler/ 를 실행하고 Supabase 에 저장한다.
 
 services:
   - type: web

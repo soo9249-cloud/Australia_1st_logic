@@ -1,4 +1,4 @@
-# Next.js 대시보드·수동 실행에서 단일 품목만 크롤링해 Supabase에 적재한다.
+# workflow_dispatch 로 단일 품목만 크롤링해 Supabase 에 적재한다. (Render 와 독립적인 백업 실행 경로)
 name: 호주 1공정 크롤러 실행
 
 on:

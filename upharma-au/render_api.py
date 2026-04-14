@@ -1,5 +1,5 @@
 # Render 서빙용 FastAPI 어댑터 — crawler/ 내부 코드를 import만 해서 재사용한다.
-# 규칙: crawler/, next-app/ 안의 파일은 수정하지 않는다. 이 파일이 유일한 연결 지점.
+# 이 파일이 브라우저 ↔ 크롤러 ↔ Supabase 를 잇는 유일한 연결 지점.
 
 from __future__ import annotations
 
@@ -39,7 +39,8 @@ templates = Jinja2Templates(directory=str(_BASE_DIR / "templates"))
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("index.html", {"request": request})
+    # Starlette 최신 API: (request, name) 순서. 구 API 의 ("name", {"request": request}) 는 TypeError.
+    return templates.TemplateResponse(request, "index.html")
 
 
 @app.get("/health")

@@ -247,7 +247,7 @@ CREATE INDEX IF NOT EXISTS idx_reports_created_at ON reports(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS au_regulatory (
   id          SERIAL PRIMARY KEY,
-  title       TEXT NOT NULL,
+  title       TEXT NOT NULL UNIQUE,
   description TEXT,
   badge       TEXT,
   badge_color TEXT,
@@ -276,4 +276,5 @@ INSERT INTO au_regulatory (title, description, badge, badge_color, source_url) V
 ('Customs (Prohibited Imports) Regulations 1956',
  '항암제·향정신성 성분 수입 시 별도 허가 필요. Hydrine(hydroxyurea) 해당 여부 사전 확인.',
  '확인 필요', 'gray',
- 'https://www.legislation.gov.au/F1997B00390');
+ 'https://www.legislation.gov.au/F1997B00390')
+ON CONFLICT (title) DO NOTHING;

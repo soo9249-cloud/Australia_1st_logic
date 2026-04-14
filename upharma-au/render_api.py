@@ -15,6 +15,7 @@ _CRAWLER_DIR = _BASE_DIR / "crawler"
 if str(_CRAWLER_DIR) not in sys.path:
     sys.path.insert(0, str(_CRAWLER_DIR))
 
+import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -168,3 +169,87 @@ def create_report(payload: dict[str, Any]) -> JSONResponse:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"supabase error: {exc}")
     return JSONResponse(content={"ok": True, "row": data[0] if data else None})
+
+
+# ── 외부 데이터 어댑터 (Supabase 저장 없음) ─────────────────────────
+
+_MOCK_NEWS: list[dict[str, Any]] = [
+    {"title": "TGA approves fast-track for PIC/S generics",
+     "source": "TGA.gov.au", "date": "2025-07-14",
+     "link": "https://www.tga.gov.au"},
+    {"title": "Australia pharma imports from Korea up 11%",
+     "source": "Austrade", "date": "2025-07-13",
+     "link": "https://www.austrade.gov.au"},
+    {"title": "PBS listing reforms: what exporters need to know",
+     "source": "Dept. of Health", "date": "2025-07-12",
+     "link": "https://www.pbs.gov.au"},
+    {"title": "KAFTA 10주년 — 한-호주 의약품 교역 현황",
+     "source": "KITA", "date": "2025-07-10",
+     "link": "https://www.kita.net"},
+]
+
+_FX_FALLBACK: dict[str, Any] = {"aud_krw": 893.0, "aud_usd": 0.6412, "updated": ""}
+
+
+@app.get("/api/news")
+def get_news() -> JSONResponse:
+    """SerpAPI google_news 로 호주 의약품 뉴스 4건. 키 없거나 실패 시 mock."""
+    api_key = os.environ.get("SERPAPI_KEY", "").strip()
+    if not api_key:
+        return JSONResponse(content=_MOCK_NEWS)
+    try:
+        r = httpx.get(
+            "https://serpapi.com/search",
+            params={
+                "engine": "google_news",
+                "q": "Australia TGA PBS pharmaceutical",
+                "gl": "au",
+                "hl": "en",
+                "num": 4,
+                "api_key": api_key,
+            },
+            timeout=12.0,
+        )
+        if r.status_code != 200:
+            return JSONResponse(content=_MOCK_NEWS)
+        payload = r.json()
+    except Exception:
+        return JSONResponse(content=_MOCK_NEWS)
+
+    results = payload.get("news_results") or []
+    items: list[dict[str, Any]] = []
+    for it in results[:4]:
+        if not isinstance(it, dict):
+            continue
+        src = it.get("source")
+        src_name = src.get("name") if isinstance(src, dict) else src
+        items.append({
+            "title": it.get("title"),
+            "source": src_name,
+            "date": it.get("date"),
+            "link": it.get("link"),
+        })
+    return JSONResponse(content=items if items else _MOCK_NEWS)
+
+
+@app.get("/api/exchange")
+def get_exchange() -> JSONResponse:
+    """exchangerate-api.com 무료 엔드포인트로 AUD 기준 환율 조회. 실패 시 fallback."""
+    try:
+        r = httpx.get("https://api.exchangerate-api.com/v4/latest/AUD", timeout=10.0)
+        if r.status_code != 200:
+            return JSONResponse(content=_FX_FALLBACK)
+        data = r.json()
+    except Exception:
+        return JSONResponse(content=_FX_FALLBACK)
+
+    rates = data.get("rates") or {}
+    krw = rates.get("KRW")
+    usd = rates.get("USD")
+    if krw is None or usd is None:
+        return JSONResponse(content=_FX_FALLBACK)
+    return JSONResponse(content={
+        "aud_krw": float(krw),
+        "aud_usd": float(usd),
+        "updated": data.get("date") or "",
+    })

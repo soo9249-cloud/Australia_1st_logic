@@ -98,7 +98,27 @@ CREATE TABLE IF NOT EXISTS australia (
   sites              JSONB,
   completeness_ratio DECIMAL,
   data_source_count  INTEGER,
-  error_type         TEXT
+  error_type         TEXT,
+
+  -- Claude Haiku 생성 (Block 2 판정 근거)
+  block2_market      TEXT,
+  block2_regulatory  TEXT,
+  block2_trade       TEXT,
+  block2_procurement TEXT,
+  block2_channel     TEXT,
+
+  -- Claude Haiku 생성 (Block 3 시장 진출 전략)
+  block3_channel     TEXT,
+  block3_pricing     TEXT,
+  block3_partners    TEXT,
+  block3_risks       TEXT,
+
+  -- Perplexity 논문 레퍼런스
+  perplexity_refs    JSONB,
+
+  -- LLM 메타
+  llm_model          TEXT,
+  llm_generated_at   TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_australia_product_id ON australia(product_id);
@@ -134,7 +154,19 @@ ALTER TABLE australia
   ADD COLUMN IF NOT EXISTS fob_conservative_usd        DECIMAL,
   ADD COLUMN IF NOT EXISTS fob_base_usd                DECIMAL,
   ADD COLUMN IF NOT EXISTS fob_aggressive_usd          DECIMAL,
-  ADD COLUMN IF NOT EXISTS fob_confidence              DECIMAL;
+  ADD COLUMN IF NOT EXISTS fob_confidence              DECIMAL,
+  ADD COLUMN IF NOT EXISTS block2_market               TEXT,
+  ADD COLUMN IF NOT EXISTS block2_regulatory           TEXT,
+  ADD COLUMN IF NOT EXISTS block2_trade                TEXT,
+  ADD COLUMN IF NOT EXISTS block2_procurement          TEXT,
+  ADD COLUMN IF NOT EXISTS block2_channel              TEXT,
+  ADD COLUMN IF NOT EXISTS block3_channel              TEXT,
+  ADD COLUMN IF NOT EXISTS block3_pricing              TEXT,
+  ADD COLUMN IF NOT EXISTS block3_partners             TEXT,
+  ADD COLUMN IF NOT EXISTS block3_risks                TEXT,
+  ADD COLUMN IF NOT EXISTS perplexity_refs             JSONB,
+  ADD COLUMN IF NOT EXISTS llm_model                   TEXT,
+  ADD COLUMN IF NOT EXISTS llm_generated_at            TIMESTAMPTZ;
 
 
 -- ════════════════════════════════════════════════════════════
@@ -207,3 +239,41 @@ CREATE TABLE IF NOT EXISTS reports (
 CREATE INDEX IF NOT EXISTS idx_reports_product_id ON reports(product_id);
 CREATE INDEX IF NOT EXISTS idx_reports_gong       ON reports(gong);
 CREATE INDEX IF NOT EXISTS idx_reports_created_at ON reports(created_at DESC);
+
+
+-- ════════════════════════════════════════════════════════════
+-- 5) au_regulatory — 호주 규제 체크포인트 시드 데이터
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS au_regulatory (
+  id          SERIAL PRIMARY KEY,
+  title       TEXT NOT NULL,
+  description TEXT,
+  badge       TEXT,
+  badge_color TEXT,
+  source_url  TEXT,
+  content     TEXT,
+  updated_at  DATE DEFAULT CURRENT_DATE
+);
+
+INSERT INTO au_regulatory (title, description, badge, badge_color, source_url) VALUES
+('Therapeutic Goods Act 1989',
+ 'ARTG 등재 의무 · TGA 심사 12–18개월 소요. 처방의약품은 Registered 또는 Listed 경로.',
+ '핵심 장벽', 'orange',
+ 'https://www.legislation.gov.au/C2004A03952'),
+('GMP 기준 (PIC/S 상호인정)',
+ '한국 PIC/S 정회원(2014~). 호주 TGA와 제조소 실사 면제 협의 가능.',
+ '유리', 'green',
+ 'https://www.tga.gov.au/industry/manufacturing/overseas-manufacturers'),
+('National Health Act 1953 (PBS)',
+ 'PBS 등재 시 가격 통제 수반. PBAC 심사 필요. 민간 유통 병행 전략 권장.',
+ '공공조달', 'blue',
+ 'https://www.legislation.gov.au/C2004A07357'),
+('KAFTA (한-호주 FTA)',
+ '2014년 발효. Chapter 30 의약품 관세 철폐 완료. HS 3004.90 / 3006.30 모두 0%.',
+ '활성', 'green',
+ 'https://ftaportal.dfat.gov.au/tariff/KAFTA'),
+('Customs (Prohibited Imports) Regulations 1956',
+ '항암제·향정신성 성분 수입 시 별도 허가 필요. Hydrine(hydroxyurea) 해당 여부 사전 확인.',
+ '확인 필요', 'gray',
+ 'https://www.legislation.gov.au/F1997B00390');

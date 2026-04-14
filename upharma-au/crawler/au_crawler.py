@@ -218,6 +218,19 @@ def build_product_summary(
         "completeness_ratio": completeness_ratio,
         "data_source_count": data_source_count,
         "error_type": error_type,
+        # LLM/Perplexity 메타 — 1공정에서는 None, 이후 단계에서 채움
+        "block2_market": None,
+        "block2_regulatory": None,
+        "block2_trade": None,
+        "block2_procurement": None,
+        "block2_channel": None,
+        "block3_channel": None,
+        "block3_pricing": None,
+        "block3_partners": None,
+        "block3_risks": None,
+        "perplexity_refs": None,
+        "llm_model": None,
+        "llm_generated_at": None,
     }
 
 

@@ -20,6 +20,17 @@ function setMode(m) {
   document.getElementById('togManual').classList.toggle('on', m === 'manual');
 }
 
+/* ── 수출 적합성 판정 뱃지 ── */
+function renderViableBadge(val) {
+  const v = String(val || '').trim();
+  const cls = (v === '가능' || v.startsWith('가능')) ? 'green'
+            : v === '조건부' ? 'orange'
+            : v === '불가'   ? 'red'
+            : 'gray';
+  const label = v || '분석 중';
+  return `<span class="bdg ${cls}" style="font-size:13px;padding:6px 14px;">${label}</span>`;
+}
+
 /* ── Supabase row → 카드 뷰모델 매핑 ── */
 function mapRowToCard(row) {
   const pbsListed = !!row.pbs_listed;
@@ -119,11 +130,12 @@ function renderCard(p) {
         <div class="cc-src-sub">${p.nsw.contract || '조영제/병원 전용'}</div>
       </div>
     </div>
-    <div class="cc-footer">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span class="bdg ${p.viable === '가능' || String(p.viable).startsWith('가능') ? 'green' : p.viable === '조건부' ? 'orange' : p.viable === '불가' ? 'red' : 'gray'}">${p.viable}</span>
-        <span style="font-size:11.5px;color:var(--muted);">신뢰도 ${p.conf > 0 ? Math.round(p.conf * 100) + '%' : '—'}</span>
-      </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 0;margin-top:6px;border-top:1px solid rgba(23,63,120,.06);border-bottom:1px solid rgba(23,63,120,.06);">
+      <span style="font-size:11.5px;font-weight:800;color:var(--muted);letter-spacing:.02em;">수출 적합성 판정</span>
+      ${renderViableBadge(p.viable)}
+    </div>
+    <div class="cc-footer" style="margin-top:10px;">
+      <span style="font-size:11.5px;color:var(--muted);">신뢰도 ${p.conf > 0 ? Math.round(p.conf * 100) + '%' : '—'}</span>
     </div>`;
 
   stack.insertBefore(card, stack.firstChild);

@@ -68,14 +68,14 @@ def build_sites(
     pbs_url: str,
     tga_url: str,
     chemist_url: str,
-    austender_url: str,
+    nsw_url: str,
     pubmed_url: str | None = None,
 ) -> dict[str, Any]:
     """출처 URL들을 sites JSON 구조로 묶는다."""
     out: dict[str, Any] = {
         "public_procurement": [
             {"name": "PBS", "url": pbs_url},
-            {"name": "AusTender", "url": austender_url},
+            {"name": "NSW Health Procurement", "url": nsw_url},
         ],
         "private_price": [{"name": "Chemist Warehouse", "url": chemist_url}],
         "paper": [],

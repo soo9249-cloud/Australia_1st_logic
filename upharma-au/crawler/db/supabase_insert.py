@@ -73,6 +73,18 @@ _ALLOWED_COLUMNS: frozenset[str] = frozenset(
         "completeness_ratio",
         "data_source_count",
         "error_type",
+        "block2_market",
+        "block2_regulatory",
+        "block2_trade",
+        "block2_procurement",
+        "block2_channel",
+        "block3_channel",
+        "block3_pricing",
+        "block3_partners",
+        "block3_risks",
+        "perplexity_refs",
+        "llm_model",
+        "llm_generated_at",
     }
 )
 

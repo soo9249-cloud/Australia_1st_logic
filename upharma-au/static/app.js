@@ -492,24 +492,39 @@ function buildReportCards(apiData){
       </div>
     </div>`;
 
-  const regs=[
-    {t:"Therapeutic Goods Act 1989",d:"ARTG 등재 의무 · TGA 심사 12–18개월",b:"핵심 장벽",c:"orange"},
-    {t:"GMP (PIC/S 상호인정)",d:"한국 PIC/S 정회원 → 제조소 실사 면제 가능",b:"유리",c:"green"},
-    {t:"PBS (National Health Act 1953)",d:"공공조달 등재 시 가격 통제 수반",b:"공공조달",c:"blue"},
-    {t:"KAFTA",d:"2014년 발효 · 의약품 관세 철폐 완료",b:"활성",c:"green"},
+  // block4_regulatory 는 "① TGA Act 1989: 내용\n② GMP PIC/S: 내용\n..." 형식
+  // 5개 법령으로 파싱 → 각 항목 [법령명 / 이 품목 영향] 2열 테이블
+  const REG_META = [
+    {num:"①", title:"Therapeutic Goods Act 1989", badge:"핵심 장벽", color:"orange"},
+    {num:"②", title:"GMP (PIC/S 상호인정)",        badge:"유리",       color:"green"},
+    {num:"③", title:"PBS (National Health Act 1953)", badge:"공공조달", color:"blue"},
+    {num:"④", title:"KAFTA",                       badge:"활성",       color:"green"},
+    {num:"⑤", title:"Customs Regulations",         badge:"확인 필요",  color:"gray"},
   ];
+  const parseBlock4 = (txt) => {
+    if (!txt) return REG_META.map(m => ({...m, impact: "생성 실패"}));
+    const result = [];
+    for (const m of REG_META) {
+      // "① TGA Act 1989: 본문내용" 패턴에서 본문만 추출
+      const re = new RegExp(m.num + "\\s*[^:：]*[:：]\\s*([^\\n①②③④⑤]+)", "u");
+      const mt = txt.match(re);
+      result.push({...m, impact: mt ? mt[1].trim() : "본문 파싱 실패"});
+    }
+    return result;
+  };
+  const regsParsed = parseBlock4(blocks.block4_regulatory);
   const block4=`
     <div style="background:var(--card);border:1px solid rgba(23,63,120,.08);border-radius:18px;padding:18px;">
-      <div style="font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:14px;letter-spacing:.04em;">● 규제 체크포인트</div>
+      <div style="font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:14px;letter-spacing:.04em;">● 규제 체크포인트 — 이 품목 수출 시 실무 영향</div>
       <div style="display:flex;flex-direction:column;gap:8px;">
-        ${regs.map(r=>`
+        ${regsParsed.map(r=>`
           <div style="background:var(--inner);border-radius:12px;padding:12px 14px;
             display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-            <div>
-              <div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:3px;">${r.t}</div>
-              <div style="font-size:12px;color:var(--muted);">${r.d}</div>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:3px;">${r.num} ${_escapeHtml(r.title)}</div>
+              <div style="font-size:12px;color:var(--text);line-height:1.6;">${_escapeHtml(r.impact)}</div>
             </div>
-            <span class="bdg ${r.c}" style="flex-shrink:0;">${r.b}</span>
+            <span class="bdg ${r.color}" style="flex-shrink:0;">${_escapeHtml(r.badge)}</span>
           </div>`).join("")}
       </div>
     </div>`;

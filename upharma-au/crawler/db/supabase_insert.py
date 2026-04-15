@@ -83,6 +83,7 @@ _ALLOWED_COLUMNS: frozenset[str] = frozenset(
         "block3_pricing",
         "block3_partners",
         "block3_risks",
+        "block4_regulatory",
         "perplexity_refs",
         "llm_model",
         "llm_generated_at",

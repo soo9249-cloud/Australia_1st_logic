@@ -114,6 +114,9 @@ CREATE TABLE IF NOT EXISTS australia (
   block3_partners    TEXT,
   block3_risks       TEXT,
 
+  -- LLM 생성 (Block 4 규제 체크포인트 — 5개 법령 ①~⑤ 번호 형식 텍스트)
+  block4_regulatory  TEXT,
+
   -- Perplexity 논문 레퍼런스
   perplexity_refs    JSONB,
 
@@ -166,6 +169,7 @@ ALTER TABLE australia
   ADD COLUMN IF NOT EXISTS block3_pricing              TEXT,
   ADD COLUMN IF NOT EXISTS block3_partners             TEXT,
   ADD COLUMN IF NOT EXISTS block3_risks                TEXT,
+  ADD COLUMN IF NOT EXISTS block4_regulatory           TEXT,
   ADD COLUMN IF NOT EXISTS perplexity_refs             JSONB,
   ADD COLUMN IF NOT EXISTS llm_model                   TEXT,
   ADD COLUMN IF NOT EXISTS llm_generated_at            TIMESTAMPTZ;

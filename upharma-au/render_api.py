@@ -273,41 +273,57 @@ def get_exchange() -> JSONResponse:
 _CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 
 _CLAUDE_SYSTEM_PROMPT = (
-    "너는 한국 제약회사의 호주 수출 전문 애널리스트임. "
-    "주어진 품목의 실제 크롤링 데이터(TGA·PBS·Chemist·NSW)를 기반으로 "
+    "당신은 한국유나이티드제약(주)의 호주 수출 전문 애널리스트임. "
+    "주어진 품목의 실제 크롤링 데이터(TGA·PBS·Chemist·NSW)만을 근거로 "
     "아래 10개 필드를 한국어 보고서체로 작성함.\n\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     "Block 2 — 수출 적합성 판정 근거 (5축):\n"
-    "  block2_market      : 시장/의료 현황 분석\n"
-    "  block2_regulatory  : TGA/ARTG 규제 분석 (등재번호·스케줄·면허 카테고리)\n"
-    "  block2_trade       : KAFTA 관세/무역 분석 (HS 코드별 관세율)\n"
-    "  block2_procurement : PBS/NSW 조달 경로 분석 (급여·DPMQ·공공조달)\n"
-    "  block2_channel     : 유통 채널 분석 (스폰서·브랜드 구조)\n\n"
+    "  block2_market      : 시장/의료 현황 분석 (호주 시장에서 해당 품목의 위치, 경쟁 구도)\n"
+    "  block2_regulatory  : TGA/ARTG 규제 분석 (등재번호·스케줄·라이선스 카테고리)\n"
+    "  block2_trade       : KAFTA 관세/무역 분석 (HS 코드별 관세율, 원산지증명)\n"
+    "  block2_procurement : PBS/NSW 조달 경로 분석 (급여·DPMQ·공공조달 경로)\n"
+    "  block2_channel     : 유통 채널 분석 (스폰서·브랜드·도매 구조)\n\n"
     "Block 3 — 시장 진출 전략 (4축):\n"
-    "  block3_channel     : 진입 채널 전략\n"
+    "  block3_channel     : 진입 채널 전략 (PBS vs 민간 vs 병원 입찰)\n"
     "  block3_pricing     : 가격 포지셔닝 전략 (PBS DPMQ 기준 FOB 역산 고려)\n"
-    "  block3_partners    : 파트너 발굴 전략 (스폰서·유통사 섭외)\n"
+    "  block3_partners    : 파트너 발굴 전략 (현지 스폰서·유통사 섭외 방향)\n"
     "  block3_risks       : 리스크 및 선결 조건 (TGA 등재 일정·GMP·환율·경쟁)\n\n"
-    "Block 4 — 규제 체크포인트 (5개 법령, 이 품목 수출 시 실무적 영향):\n"
-    "  block4_regulatory : 아래 5개 법령이 해당 품목 수출 시 실무적으로 어떤 영향을 주는지\n"
-    "    각 법령당 1~2문장으로 작성. 실제 데이터 수치(ARTG 번호·스케줄·PBS 상태·DPMQ 등) 반드시 인용.\n"
-    "    반드시 아래 번호 형식으로 정확히 작성 (프론트 파싱용):\n"
-    "    ① TGA Act 1989: [이 품목 영향]\n"
-    "    ② GMP PIC/S: [이 품목 영향]\n"
-    "    ③ PBS National Health Act 1953: [이 품목 영향]\n"
-    "    ④ KAFTA: [이 품목 영향]\n"
-    "    ⑤ Customs Regulations: [이 품목 영향]\n"
-    "    (①~⑤ 사이에 줄바꿈만. 다른 서식·마크다운 금지.)\n\n"
-    "⚠️ 어투 규칙 (절대 준수):\n"
-    "- 보고서 문체: 종결어미 '~함', '~임', '~됨', '~가능함', '~필요함' 사용.\n"
-    "  예) '~입니다', '~합니다', '~있습니다' 금지.\n"
-    "- 마크다운 일체 금지: **굵게**, *기울임*, # 제목, - 리스트, `코드`, [링크]() 전부 X.\n"
-    "- 이모지 금지.\n\n"
-    "⚠️ 품질 규칙:\n"
-    "1. Block 2·3 각 필드는 3~5문장, Block 4는 법령당 1~2문장.\n"
-    "2. 실제 데이터의 숫자/값을 반드시 인용: ARTG 번호, PBS item code, DPMQ, 소매가, 스폰서명.\n"
-    "3. 데이터에 없는 내용은 업계 일반 지식 기반으로 보수적으로만 언급 (단정 금지).\n"
+    "Block 4 — 규제 체크포인트 (5개 법령, 이 품목 실무 영향):\n"
+    "  block4_regulatory : 반드시 아래 번호 형식으로 작성 (프론트 파싱용):\n"
+    "    ① TGA Act 1989: [이 품목 영향 1~2문장]\n"
+    "    ② GMP PIC/S: [이 품목 영향 1~2문장]\n"
+    "    ③ PBS National Health Act 1953: [이 품목 영향 1~2문장]\n"
+    "    ④ KAFTA: [이 품목 영향 1~2문장]\n"
+    "    ⑤ Customs Regulations: [이 품목 영향 1~2문장]\n"
+    "    (①~⑤ 사이 줄바꿈만. 다른 서식·마크다운 금지.)\n\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    "【어투 규칙 — 절대 준수】\n"
+    "- 보고서 문체: 종결어미 '~함', '~임', '~됨', '~가능함', '~필요함'만 사용.\n"
+    "- 금지 종결어미: '~입니다', '~합니다', '~있습니다', '~해요', '~이에요' 일체 금지.\n"
+    "- 마크다운 금지: **굵게**, *기울임*, # 제목, - 리스트, `코드`, [링크]() 전부 X.\n"
+    "- 이모지·특수 기호 장식 금지.\n\n"
+    "【환각 방지 규칙 — 최우선】\n"
+    "- 제공된 JSON 데이터에 없는 숫자·날짜·법령 조항·통계는 **절대 창작 금지**.\n"
+    "- 모르는 사실은 '제공 데이터 범위 외이므로 별도 검증 필요함' 으로 명시.\n"
+    "- 일반 지식을 쓸 때는 연도·출처 기관을 구체적으로 언급하지 말 것 (예: 'WHO 2023 통계' X).\n"
+    "- 제공 데이터의 값이 null 인 필드는 언급하지 말거나 '데이터 미수집'으로 명시.\n\n"
+    "【품질 규칙】\n"
+    "1. Block 2·3 각 필드: 3~5 문장, 각 문장 40~100자.\n"
+    "2. Block 4 각 법령: 1~2 문장.\n"
+    "3. 각 필드에 **제공 데이터의 실제 값 최소 2개** 구체 인용 "
+    "(ARTG 번호, PBS item code, DPMQ, 소매가, 스폰서명 등).\n"
     "4. '생성 예정', 'TBD', '추후 분석', '데이터 부족' 같은 플레이스홀더 문구 금지.\n"
-    "5. 모든 10개 필드를 반드시 채워서 반환."
+    "5. 모든 10개 필드를 반드시 채워서 반환.\n\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    "【Few-shot 좋은 예시】\n"
+    "block2_regulatory (입력: Hydrine, artg_number=313760, tga_sponsor=Medsurge Pharma, pbs_innovator=Y):\n"
+    '  "Hydrine은 ARTG 313760으로 Registered 상태이며, 스폰서 Medsurge Pharma Pty Ltd가 호주 '
+    "내 판매 대행을 수행함. PBS innovator 지위(Y)를 보유하여 참고 의약품 지정 대상에 해당함. "
+    "PIC/S 회원국 한국의 제조시설은 TGA 실사 면제 협의가 가능하여 규제 진입 장벽이 상대적으로 낮음. "
+    '정식 ARTG 등재를 확보한 상태이므로 병렬 수입 가능성 없이 스폰서 경로로만 진입 가능함."\n\n'
+    "【Few-shot 나쁜 예시 — 금지】\n"
+    '  "TGA 규제가 적용됩니다. 등재가 필요해요. 추가 검토가 필요합니다."  '
+    "→ 구체 수치 없음, 보고서체 위반, 빈약함. 절대 이렇게 작성하지 말 것."
 )
 
 
@@ -401,6 +417,221 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]
     return parsed.model_dump()
 
 
+# ═══════════════════════════════════════════════════════════════
+# 하이브리드 논문 검색: Semantic Scholar → PubMed → Perplexity 순 폴백
+# ═══════════════════════════════════════════════════════════════
+
+_SS_BASE = "https://api.semanticscholar.org/graph/v1"
+_PUBMED_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+
+# 카테고리별 검색어 · 필드분야 매핑
+_HYBRID_CATEGORIES: list[dict[str, Any]] = [
+    {
+        "id": "macro",
+        "label": "거시·시장 분석",
+        "ss_query": "Australia pharmaceutical market size healthcare spending import trade economics",
+        "ss_fos": "Medicine,Economics,Business",
+        "pubmed_query": "Australia[All Fields] AND (pharmaceutical[All Fields] OR medicines[All Fields]) AND (market[All Fields] OR economics[All Fields])",
+    },
+    {
+        "id": "regulatory",
+        "label": "규제 분석",
+        "ss_query": "Australia TGA ARTG registration GMP PIC/S pharmaceutical regulation compliance",
+        "ss_fos": "Medicine",
+        "pubmed_query": "Australia[All Fields] AND (TGA[All Fields] OR 'therapeutic goods administration'[All Fields] OR 'ARTG'[All Fields] OR 'GMP'[All Fields])",
+    },
+    {
+        "id": "pricing",
+        "label": "가격·조달 분석",
+        "ss_query": "Australia PBS Pharmaceutical Benefits Scheme DPMQ pricing PBAC cost effectiveness KAFTA tariff",
+        "ss_fos": "Medicine,Economics",
+        "pubmed_query": "Australia[All Fields] AND ('PBS'[All Fields] OR 'pharmaceutical benefits scheme'[All Fields] OR 'PBAC'[All Fields] OR 'cost-effectiveness'[All Fields])",
+    },
+]
+
+
+def _semantic_scholar_top1(query: str, fields_of_study: str) -> dict[str, Any] | None:
+    """Semantic Scholar /paper/search — 학술 논문 타입만 + 2015년 이후 + 인용수 정렬 후 Top 1."""
+    api_key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY", "").strip()
+    headers = {"x-api-key": api_key} if api_key else {}
+    try:
+        r = httpx.get(
+            f"{_SS_BASE}/paper/search",
+            headers=headers,
+            params={
+                "query": query,
+                "publicationTypes": "JournalArticle,Review,MetaAnalysis,ClinicalTrial",
+                "fieldsOfStudy": fields_of_study,
+                "year": "2015-",
+                "limit": 5,
+                "fields": "title,abstract,tldr,year,authors,venue,citationCount,openAccessPdf,url,externalIds",
+            },
+            timeout=25.0,
+        )
+        if r.status_code != 200:
+            return None
+        data = (r.json() or {}).get("data") or []
+    except Exception:
+        return None
+    if not data:
+        return None
+
+    # 인용수 내림차순 정렬 후 Top 1
+    data.sort(key=lambda p: (p.get("citationCount") or 0), reverse=True)
+    top = data[0]
+    tldr_text = None
+    tldr = top.get("tldr")
+    if isinstance(tldr, dict):
+        tldr_text = tldr.get("text")
+
+    oa = top.get("openAccessPdf") or {}
+    url = (oa.get("url") if isinstance(oa, dict) else None) or top.get("url") or ""
+
+    return {
+        "url": url,
+        "title": top.get("title"),
+        "abstract": (top.get("abstract") or "")[:500] or None,
+        "tldr": tldr_text,
+        "venue": top.get("venue"),
+        "year": top.get("year"),
+        "citation_count": top.get("citationCount"),
+        "authors": [a.get("name") for a in (top.get("authors") or []) if a.get("name")][:3],
+        "source": "semantic_scholar",
+    }
+
+
+def _pubmed_top1(query: str) -> dict[str, Any] | None:
+    """PubMed E-utilities: esearch 로 PMID 획득 → efetch 로 제목·초록 파싱."""
+    try:
+        # 1) 검색 → PMID 리스트 (JSON)
+        r_search = httpx.get(
+            f"{_PUBMED_BASE}/esearch.fcgi",
+            params={
+                "db": "pubmed",
+                "term": query,
+                "retmax": 3,
+                "retmode": "json",
+                "datetype": "pdat",
+                "mindate": "2015",
+                "sort": "relevance",
+            },
+            timeout=20.0,
+        )
+        if r_search.status_code != 200:
+            return None
+        pmid_list = (r_search.json().get("esearchresult") or {}).get("idlist") or []
+        if not pmid_list:
+            return None
+        pmid = pmid_list[0]
+
+        # 2) 초록 + 메타 가져오기 (XML)
+        r_fetch = httpx.get(
+            f"{_PUBMED_BASE}/efetch.fcgi",
+            params={
+                "db": "pubmed",
+                "id": pmid,
+                "retmode": "xml",
+                "rettype": "abstract",
+            },
+            timeout=20.0,
+        )
+        if r_fetch.status_code != 200:
+            return None
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(r_fetch.text)
+
+        article = root.find(".//PubmedArticle/MedlineCitation/Article")
+        if article is None:
+            return None
+
+        title_el = article.find("./ArticleTitle")
+        title = (title_el.text or "").strip() if title_el is not None else None
+
+        # 초록: AbstractText 여러 개 붙이기
+        abstract_parts = []
+        for at in article.findall("./Abstract/AbstractText"):
+            label = at.get("Label")
+            txt = (at.text or "").strip()
+            if txt:
+                abstract_parts.append(f"{label}: {txt}" if label else txt)
+        abstract = " ".join(abstract_parts)[:600] if abstract_parts else None
+
+        venue_el = article.find("./Journal/Title")
+        venue = venue_el.text.strip() if venue_el is not None and venue_el.text else None
+
+        year_el = article.find("./Journal/JournalIssue/PubDate/Year")
+        year = int(year_el.text) if year_el is not None and year_el.text and year_el.text.isdigit() else None
+
+        authors = []
+        for au in article.findall("./AuthorList/Author")[:3]:
+            last = au.findtext("./LastName")
+            initials = au.findtext("./Initials")
+            if last:
+                authors.append(f"{last} {initials}" if initials else last)
+
+        return {
+            "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
+            "title": title,
+            "abstract": abstract,
+            "tldr": None,
+            "venue": venue,
+            "year": year,
+            "citation_count": None,
+            "authors": authors,
+            "pmid": pmid,
+            "source": "pubmed",
+        }
+    except Exception:
+        return None
+
+
+def _fetch_refs_hybrid(row: dict[str, Any], perplexity_key: str) -> list[dict[str, Any]]:
+    """3카테고리 × [Semantic Scholar → PubMed → Perplexity] 순 폴백."""
+    inn = row.get("inn_normalized") or row.get("product_name_ko") or "pharmaceutical"
+    refs: list[dict[str, Any]] = []
+
+    for cat in _HYBRID_CATEGORIES:
+        cat_label = cat["label"]
+        cat_id = cat["id"]
+
+        # 1차: Semantic Scholar
+        top = _semantic_scholar_top1(f"{cat['ss_query']} {inn}", cat["ss_fos"])
+
+        # 2차: PubMed
+        if not top:
+            pm_query = f"{cat['pubmed_query']} AND {inn}[All Fields]"
+            top = _pubmed_top1(pm_query)
+
+        # 3차: Perplexity 폴백
+        if not top and perplexity_key:
+            pplx_query = (
+                f"Find peer-reviewed academic papers and journal articles "
+                f"(PubMed, Google Scholar, academic journals only — NO news, YouTube, retail) "
+                f"about {cat['ss_query']} for {inn}"
+            )
+            pplx = _perplexity_top1(pplx_query, perplexity_key)
+            if pplx:
+                top = {
+                    "url": pplx.get("url"),
+                    "title": pplx.get("title"),
+                    "abstract": None,
+                    "tldr": pplx.get("snippet"),  # Perplexity의 answer 본문 발췌
+                    "venue": None,
+                    "year": None,
+                    "citation_count": None,
+                    "authors": [],
+                    "source": "perplexity",
+                }
+
+        if top:
+            top["category"] = cat_label
+            top["category_id"] = cat_id
+            refs.append(top)
+
+    return refs
+
+
+# ── 기존 Perplexity-only 함수 및 카테고리 (폴백용으로 유지) ────────
 _PPLX_CATEGORIES: list[tuple[str, str, str]] = [
     (
         "macro",
@@ -524,6 +755,84 @@ def _compute_confidence_breakdown(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _openai_summarize_refs_ko(refs: list[dict[str, Any]], api_key: str) -> list[dict[str, Any]]:
+    """영문 tldr/abstract → 한국어 보고서체 3문장 요약. OpenAI gpt-4o-mini 1회 호출.
+    각 ref 에 'korean_summary' 필드를 주입하고 리스트를 그대로 반환."""
+    if not refs or not api_key:
+        return refs
+
+    try:
+        from openai import OpenAI
+    except ImportError:
+        return refs
+
+    client = OpenAI(api_key=api_key)
+
+    # 프롬프트용 항목 정리
+    items_text: list[str] = []
+    for i, r in enumerate(refs):
+        body = r.get("tldr") or r.get("abstract") or ""
+        if not body:
+            # Perplexity 폴백의 경우 snippet 에 들어있을 수 있음
+            body = r.get("snippet") or ""
+        title = r.get("title") or "(제목 없음)"
+        items_text.append(
+            f"[{i+1}] 카테고리: {r.get('category','')}\n"
+            f"    제목: {title}\n"
+            f"    영문 원문: {body[:600] if body else '(본문 없음)'}"
+        )
+
+    system_prompt = (
+        "당신은 제약 산업 학술 자료를 한국어 보고서체로 요약하는 전문가입니다. "
+        "반드시 보고서 문체(~함, ~임, ~됨) 사용. "
+        "마크다운·이모지 금지. "
+        "각 항목을 정확히 3문장, 각 문장 40~80자 길이로 요약."
+    )
+    user_prompt = (
+        "아래 자료들의 핵심 내용을 각각 한국어 3문장으로 요약하라.\n\n"
+        + "\n\n".join(items_text)
+        + "\n\n출력 형식 (번호 + 한 줄에 3문장 이어서):\n"
+        "1. [문장1] [문장2] [문장3]\n"
+        "2. [문장1] [문장2] [문장3]\n"
+        "3. [문장1] [문장2] [문장3]"
+    )
+
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.2,
+            max_tokens=900,
+        )
+        text = completion.choices[0].message.content or ""
+        # 비용 로그
+        try:
+            u = completion.usage
+            cost = (u.prompt_tokens * 0.15e-6) + (u.completion_tokens * 0.60e-6)
+            print(
+                f"[OpenAI Summarize] input={u.prompt_tokens} output={u.completion_tokens} "
+                f"est_cost=${cost:.5f}",
+                flush=True,
+            )
+        except Exception:
+            pass
+    except Exception as exc:
+        print(f"[OpenAI Summarize] 실패: {exc}", flush=True)
+        return refs
+
+    # "1. ... 2. ... 3. ..." 파싱
+    import re
+    for i, r in enumerate(refs):
+        m = re.search(rf"(?:^|\n)\s*{i+1}\.\s*(.+?)(?=\n\s*\d+\.|\Z)", text, re.DOTALL)
+        if m:
+            summary = re.sub(r"\s+", " ", m.group(1)).strip()
+            r["korean_summary"] = summary
+    return refs
+
+
 def _perplexity_fetch_refs(row: dict[str, Any], api_key: str) -> list[dict[str, Any]]:
     """3개 카테고리(거시/규제/가격) 별로 각 1개씩 = 총 3개 공신력 있는 출처 반환."""
     inn = row.get("inn_normalized") or row.get("product_name_ko") or "pharmaceutical products"
@@ -549,6 +858,7 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
 
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     perplexity_key = os.environ.get("PERPLEXITY_API_KEY", "").strip()
+    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not anthropic_key:
         raise HTTPException(
             status_code=500,
@@ -575,12 +885,15 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
     # 2) Claude Haiku 4.5 호출 — 크롤링 row 해석 → 10개 블록 생성
     blocks = _claude_generate_blocks(row, anthropic_key)
 
-    # 3) Perplexity 호출 — 거시/규제/가격 3개 카테고리당 각 1개씩, 총 3개 공신력 URL
-    refs: list[dict[str, Any]] = []
-    if perplexity_key:
-        refs = _perplexity_fetch_refs(row, perplexity_key)
+    # 3) 하이브리드 논문 검색 — Semantic Scholar → PubMed → Perplexity 순 폴백
+    #    카테고리당 1개씩 총 3개 공신력 있는 출처 (논문 우선).
+    refs: list[dict[str, Any]] = _fetch_refs_hybrid(row, perplexity_key)
 
-    # 4) Supabase UPDATE — 공통 6컬럼 제외
+    # 4) OpenAI gpt-4o-mini — 영문 초록/tldr 을 한국어 보고서체 3문장 요약
+    if refs and openai_key:
+        refs = _openai_summarize_refs_ko(refs, openai_key)
+
+    # 5) Supabase UPDATE — 공통 6컬럼 제외
     from datetime import datetime, timezone
     generated_at = datetime.now(timezone.utc).isoformat()
     update_data: dict[str, Any] = {
@@ -599,10 +912,10 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
             detail=f"supabase update failed: {exc}",
         )
 
-    # 5) 신뢰도 재계산 (원래 아는 정보 제외, 7개 크롤링 필드만)
+    # 6) 신뢰도 재계산 (원래 아는 정보 제외, 7개 크롤링 필드만)
     conf_meta = _compute_confidence_breakdown(row)
 
-    # 6) 프론트 메타바 렌더용 — DOM 스크래핑 폐기 대체
+    # 7) 프론트 메타바 렌더용 — DOM 스크래핑 폐기 대체
     meta = {
         "product_name_ko": row.get("product_name_ko"),
         "inn_normalized":  row.get("inn_normalized"),

@@ -609,39 +609,63 @@ function buildReportCards(apiData){
 
   document.getElementById("rptBlocks").innerHTML=block1+block2+block3+block4;
 
-  // Perplexity 3카테고리 레퍼런스 — apiRefs 있으면 실제 값, 없으면 기본 3개로 폴백
-  const refsFallback = [
-    {category:"거시·시장 분석", t:"Australia Pharmaceutical Industry Overview", src:"IMARC Group", url:"https://www.imarcgroup.com/"},
-    {category:"규제 분석",      t:"TGA — Prescription Medicines Registration", src:"TGA", url:"https://www.tga.gov.au"},
-    {category:"가격·조달 분석", t:"PBS — Fees, Patient Contributions and Safety Net Thresholds", src:"Dept. of Health", url:"https://www.pbs.gov.au"},
-  ];
-  const refs = apiRefs.length
-    ? apiRefs.map(r => ({
-        category: r.category || "관련 출처",
-        t: r.title || (r.url || "").replace(/^https?:\/\//,"").replace(/\/$/,"").slice(0,90),
-        src: (r.url || "").replace(/^https?:\/\//,"").split("/")[0] || (r.source || "perplexity"),
-        snippet: r.snippet || "",
-        url: r.url || "#",
-      }))
-    : refsFallback;
+  // 하이브리드 레퍼런스 렌더: korean_summary 우선 + venue + citationCount + source 뱃지
   const categoryColor = (cat) => (cat||"").startsWith("거시") ? "blue"
                               : (cat||"").startsWith("규제") ? "orange"
                               : (cat||"").startsWith("가격") ? "green"
                               : "gray";
+  const sourceBadge = (src) => {
+    if(src === "semantic_scholar") return "🎓 Semantic Scholar";
+    if(src === "pubmed")           return "🔬 PubMed";
+    if(src === "perplexity")       return "🔎 Perplexity";
+    return src || "출처";
+  };
+  const refsFallback = [
+    {category:"거시·시장 분석", title:"Australia Pharmaceutical Industry Overview", venue:"IMARC Group",   source:"perplexity", url:"https://www.imarcgroup.com/"},
+    {category:"규제 분석",      title:"TGA — Prescription Medicines Registration", venue:"TGA",           source:"perplexity", url:"https://www.tga.gov.au"},
+    {category:"가격·조달 분석", title:"PBS — Fees and Patient Contributions",       venue:"Dept. of Health", source:"perplexity", url:"https://www.pbs.gov.au"},
+  ];
+  const refs = apiRefs.length ? apiRefs : refsFallback;
+
+  const renderOneRef = (r) => {
+    const title = r.title || (r.url || "").replace(/^https?:\/\//,"").replace(/\/$/,"").slice(0,90) || "(제목 없음)";
+    const venue = r.venue || "";
+    const year = r.year || "";
+    const cites = (r.citation_count != null) ? ` · ${r.citation_count} citations` : "";
+    const authors = (r.authors && r.authors.length) ? r.authors.join(", ") : "";
+    const summary = r.korean_summary || r.tldr || r.abstract || r.snippet || "";
+    const srcLabel = sourceBadge(r.source);
+    const domain = (r.url || "").replace(/^https?:\/\//,"").split("/")[0];
+
+    return `
+      <div style="padding:12px 0;border-bottom:1px solid rgba(23,63,120,.06);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <span class="bdg ${categoryColor(r.category)}" style="font-size:10.5px;padding:2px 8px;">${_escapeHtml(r.category || "")}</span>
+          <span style="font-size:10px;color:var(--muted);font-weight:700;">${_escapeHtml(srcLabel)}</span>
+          ${venue ? `<span style="font-size:10.5px;color:var(--muted);">${_escapeHtml(venue)}${year ? ` (${year})` : ""}${cites}</span>` : ""}
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;line-height:1.4;">
+          <a href="${r.url || "#"}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${_escapeHtml(title)}</a>
+        </div>
+        ${authors ? `<div style="font-size:11px;color:var(--muted);margin-bottom:4px;">${_escapeHtml(authors)}</div>` : ""}
+        ${summary ? `<div style="font-size:12px;color:var(--text);line-height:1.6;">${_escapeHtml(summary)}</div>` : ""}
+        ${domain ? `<div style="font-size:10px;color:var(--muted);margin-top:4px;">🔗 ${_escapeHtml(domain)}</div>` : ""}
+      </div>`;
+  };
+
+  const sourceCounts = apiRefs.reduce((acc, r) => {
+    const k = r.source || "unknown";
+    acc[k] = (acc[k] || 0) + 1;
+    return acc;
+  }, {});
+  const sourceSummary = Object.entries(sourceCounts)
+    .map(([k, v]) => `${sourceBadge(k)} ${v}건`)
+    .join(" · ");
   const refsFooter = apiRefs.length
-    ? `<div style='font-size:11.5px;color:var(--muted);margin-top:10px;'>✅ Perplexity sonar · 거시/규제/가격 3개 카테고리 × 1건씩 · 총 ${apiRefs.length}건</div>`
-    : `<div style='font-size:11.5px;color:var(--muted);margin-top:10px;'>⚙️ Perplexity 호출 전 — 기본 레퍼런스 표시</div>`;
-  document.getElementById("rptRefs").innerHTML=refs.map(r=>`
-    <div style="padding:10px 0;border-bottom:1px solid rgba(23,63,120,.06);">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <span class="bdg ${categoryColor(r.category)}" style="font-size:10.5px;padding:2px 8px;">${_escapeHtml(r.category)}</span>
-        <span style="font-size:10.5px;color:var(--muted);">${_escapeHtml(r.src)}</span>
-      </div>
-      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:3px;">
-        <a href="${r.url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${_escapeHtml(r.t)}</a>
-      </div>
-      ${r.snippet ? `<div style="font-size:11.5px;color:var(--muted);line-height:1.5;">${_escapeHtml(r.snippet)}</div>` : ""}
-    </div>`).join("") + refsFooter;
+    ? `<div style="font-size:11px;color:var(--muted);margin-top:10px;">✅ 하이브리드 검색 · ${sourceSummary}</div>`
+    : `<div style="font-size:11px;color:var(--muted);margin-top:10px;">⚙️ 학술 API 호출 전 — 기본 레퍼런스</div>`;
+
+  document.getElementById("rptRefs").innerHTML = refs.map(renderOneRef).join("") + refsFooter;
 
   // A4 미리보기는 Step 2 (generateReportPreview) 에서 따로 처리
   // — Step 1(분석 실행) 에서는 여기까지만 렌더됨

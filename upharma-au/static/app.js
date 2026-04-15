@@ -314,13 +314,15 @@ let _currentAnalysisData = null;  // Step 1 결과 캐시 (Step 2 에서 사용)
 async function runAnalysis(n){
   // Step 1 — 시장분석 실행: 크롤링 row → Claude + Perplexity 호출
   const names = {1:"1공정 시장분석",2:"2공정 수출전략",3:"3공정 유망 바이어"};
+  const ICON_CHART = '<svg class="btn-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>';
+  const ICON_FILE  = '<svg class="btn-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>';
   const btn = document.getElementById("genBtn"+n);
 
   if(n !== 1){
     // 2/3 공정은 현재 데모 — 기존 동작 유지 (즉시 보고서 표시)
     if(btn){btn.textContent="생성 중...";btn.disabled=true;}
     setTimeout(()=>{
-      if(btn){btn.textContent="📄 "+names[n]+" 산출";btn.disabled=false;}
+      if(btn){btn.innerHTML=ICON_FILE+names[n]+" 산출";btn.disabled=false;}
       const sb=document.getElementById("saveBtn"+n);
       if(sb) sb.style.display="inline-flex";
     },1400);
@@ -357,7 +359,7 @@ async function runAnalysis(n){
     showToast("⚠ 네트워크 오류");
   }
 
-  if(btn){btn.textContent="📊 "+names[n]+" 실행";btn.disabled=false;}
+  if(btn){btn.innerHTML=ICON_CHART+names[n]+" 실행";btn.disabled=false;}
   setStep1(5);
   _currentAnalysisData = apiData;
 

@@ -72,11 +72,12 @@ CREATE TABLE IF NOT EXISTS australia (
   price_source_url  TEXT,
   price_unit        TEXT,
 
-  -- buy.nsw.gov.au (NSW 주정부 공공조달 공고)     NEW: 4개 모두 독립 컬럼으로 분리
+  -- buy.nsw.gov.au (NSW 주정부 공공조달 공고)     NEW: 4개 독립 컬럼 + nsw_note(안내문)
   nsw_contract_value_aud DECIMAL,
   nsw_supplier_name      TEXT,
   nsw_contract_date      TEXT,
   nsw_source_url         TEXT,
+  nsw_note               TEXT,          -- 매칭 없을 때 화면/보고서 표시용 일반 안내문
 
   -- 수출성 판정
   export_viable   TEXT,                    -- viable | conditional | not_viable
@@ -150,6 +151,7 @@ ALTER TABLE australia
   ADD COLUMN IF NOT EXISTS nsw_supplier_name           TEXT,
   ADD COLUMN IF NOT EXISTS nsw_contract_date           TEXT,
   ADD COLUMN IF NOT EXISTS nsw_source_url              TEXT,
+  ADD COLUMN IF NOT EXISTS nsw_note                    TEXT,
   ADD COLUMN IF NOT EXISTS fob_local_ref_aud           DECIMAL,
   ADD COLUMN IF NOT EXISTS fob_conservative_usd        DECIMAL,
   ADD COLUMN IF NOT EXISTS fob_base_usd                DECIMAL,

@@ -247,14 +247,25 @@ body{font-family:"Pretendard","Noto Sans KR",system-ui,sans-serif;color:var(--te
   opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:999;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-/* PRINT */
-@media print{
-  body{background:#fff!important;padding:0!important;}
-  *:not(#rptA4):not(#rptA4 *){display:none!important;}
-  #rptA4{display:block!important;position:fixed;top:0;left:0;
-    width:100%;padding:20mm;box-shadow:none!important;border:none!important;
-    font-size:11pt!important;}
-  @page{margin:0;size:A4;}
+/* PRINT — JS(printReport)가 body.printing-a4 클래스를 토글하고 #rptA4 를
+   document.body 직속으로 옮겨준 상태에서만 동작한다. 자식 선택자로 body 직속만
+   숨기므로 #rptA4 부모 체인 전체가 display:none 되는 기존 버그 없음. */
+@media print {
+  body.printing-a4 { background:#fff !important; padding:0 !important; }
+  body.printing-a4 > *:not(#rptA4) { display:none !important; }
+  body.printing-a4 #rptA4 {
+    display:block !important;
+    position:static !important;
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:20mm !important;
+    border:none !important;
+    box-shadow:none !important;
+    background:#fff !important;
+    font-size:11pt !important;
+  }
+  @page { margin:0; size:A4; }
 }
 @media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr);}.cc-src-grid{grid-template-columns:repeat(2,1fr);}.pipe-wrap{grid-template-columns:1fr;}}
 @media(max-width:1000px){#p1Main{grid-template-columns:1fr!important;}}

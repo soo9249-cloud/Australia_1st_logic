@@ -84,6 +84,8 @@ function mapRowToProd(row){
   if (row.nsw_supplier_name){
     nswContract = row.nsw_supplier_name;
   }
+  // 매칭 없을 때 buynsw.py 가 생성한 일반 안내문
+  const nswNote = row.nsw_note || null;
 
   return {
     name: row.product_name_ko || row.product_id || "—",
@@ -101,7 +103,7 @@ function mapRowToProd(row){
     },
     pbs:  { listed: pbsListed, price: pbsPriceStr, dpmq: pbsDpmqStr },
     cw:   { val: cwStr },
-    nsw:  { val: nswVal, contract: nswContract },
+    nsw:  { val: nswVal, contract: nswContract, note: nswNote },
     viable: mapViable(row),
     conf:   typeof row.confidence === "number" ? row.confidence : 0,
     error:  !!row.error_type || row.artg_status === "not_registered",
@@ -180,7 +182,7 @@ function renderCrawlCard(p){
       <div class="cc-src nsw">
         <div class="cc-src-name">④ NSW Health Procurement</div>
         <div class="cc-src-val">${p.nsw.val}</div>
-        <div class="cc-src-sub">${p.nsw.contract||"조영제 전용"}</div>
+        <div class="cc-src-sub">${p.nsw.contract || p.nsw.note || ""}</div>
       </div>
     </div>
     <div class="cc-footer">
@@ -300,59 +302,135 @@ async function runCrawl(mode){
 
 /* 보고서 생성 */
 const reportStore=[];
-function generateReport(n){
+async function generateReport(n){
   const names={1:"1공정 시장조사 보고서",2:"2공정 수출전략 보고서",3:"3공정 유망 바이어 보고서"};
   const btn=document.getElementById("genBtn"+n);
-  if(btn){btn.textContent="생성 중...";btn.disabled=true;}
-  setTimeout(()=>{
+
+  if(n===1){
+    // 1공정 — 실제 Claude Haiku + Perplexity 호출
+    const sel = document.getElementById("prodSel");
+    const idx = sel ? sel.value : "";
+    const productId = idx !== "" ? PRODUCT_IDS[parseInt(idx)] : null;
+
+    if(!productId){
+      alert("품목을 먼저 선택하고 크롤링한 뒤 보고서를 산출하세요.");
+      return;
+    }
+
+    if(btn){btn.textContent="⚙️ Claude Haiku 생성 중... (10~30초)";btn.disabled=true;}
+    showToast("🤖 Claude + Perplexity 호출 중 — 잠시만 기다리세요");
+
+    let apiData = null;
+    try{
+      const res = await fetch("/api/report/generate", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({product_id: productId}),
+      });
+      if(res.ok) {
+        apiData = await res.json();
+      } else {
+        const err = await res.json().catch(()=>({}));
+        showToast("⚠ 생성 실패: " + (err.detail || res.status) + " — 플레이스홀더로 표시");
+      }
+    }catch(e){
+      showToast("⚠ 네트워크 오류 — 플레이스홀더로 표시");
+    }
+
     if(btn){btn.textContent="📄 "+names[n]+" 산출";btn.disabled=false;}
-    if(n===1){
-      setStep1(5);
-      buildReportCards();
-      const pv=document.getElementById("rptPreview1");
-      pv.style.display="block";
-      pv.scrollIntoView({behavior:"smooth",block:"start"});
-    } else {
+    setStep1(5);
+    buildReportCards(apiData);
+    const pv=document.getElementById("rptPreview1");
+    pv.style.display="block";
+    pv.scrollIntoView({behavior:"smooth",block:"start"});
+    if(apiData && apiData.ok){
+      showToast("✅ 보고서 생성 완료 ("+apiData.refs_count+"개 레퍼런스)");
+    }
+  } else {
+    // 2/3 공정은 현재 데모 — 기존 동작 유지
+    if(btn){btn.textContent="생성 중...";btn.disabled=true;}
+    setTimeout(()=>{
+      if(btn){btn.textContent="📄 "+names[n]+" 산출";btn.disabled=false;}
       const sb=document.getElementById("saveBtn"+n);
       if(sb) sb.style.display="inline-flex";
-    }
-  },1400);
+    },1400);
+  }
+}
+
+/* A4 PDF 출력 — #rptA4 를 body 직속으로 임시 이동 후 window.print(), 끝나면 원위치.
+ * 기존 @media print의 `*:not(#rptA4){display:none}` 전체 선택자는 부모 체인까지
+ * 숨겨서 하얀 화면을 만들었음. 이 방식은 부모 체인 영향 없이 형제만 숨긴다. */
+function printReport(){
+  const a4 = document.getElementById("rptA4");
+  if(!a4){ alert("A4 미리보기 영역을 먼저 생성하세요 (보고서 산출 버튼)"); return; }
+  const origParent = a4.parentNode;
+  const origNext = a4.nextSibling;
+  document.body.appendChild(a4);
+  document.body.classList.add("printing-a4");
+
+  const restore = () => {
+    document.body.classList.remove("printing-a4");
+    if (origNext) origParent.insertBefore(a4, origNext);
+    else origParent.appendChild(a4);
+    window.removeEventListener("afterprint", restore);
+  };
+  window.addEventListener("afterprint", restore);
+  // afterprint 이벤트가 안 오는 브라우저 방어 — 1.5초 뒤 강제 복구
+  setTimeout(() => { if (document.body.classList.contains("printing-a4")) restore(); }, 1500);
+
+  window.print();
 }
 
 function saveAndDownload(){
   saveReport(1);
-  setTimeout(()=>window.print(),300);
+  setTimeout(()=>printReport(),300);
 }
 
-function buildReportCards(){
-  // 크롤링 카드에서 메타 추출
-  const stack=document.getElementById("crawlStack");
-  const firstCard=stack?stack.querySelector(".crawl-card"):null;
-  let prodName="—",prodInn="—",prodStr="—",prodForm="—",prodHs="—";
-  let viable="분석 중",conf="—",viableColor="gray";
-  if(firstCard){
-    const t=firstCard.querySelector(".cc-title");
-    const inn=firstCard.querySelector(".cc-inn");
-    const v=firstCard.querySelector(".bdg");
-    if(t) prodName=t.textContent.replace(/\[.*?\]/g,"").trim();
-    if(inn){
-      const parts=inn.textContent.split("·");
-      prodInn=(parts[0]||"").trim();
-      prodStr=(parts[1]||"").trim();
-      prodForm=(parts[2]||"").trim();
-      const hm=inn.textContent.match(/HS ([\d.]+)/);
-      if(hm) prodHs=hm[1];
-    }
-    if(v){viable=v.textContent.trim();viableColor=v.className.replace("bdg ","");}
-    const confEl=firstCard.querySelector(".cc-footer span");
-    if(confEl) conf=confEl.textContent.replace("신뢰도 ","");
-  }
-  const caseGrade=viable==="가능"?"A":viable.includes("병원")?"C":viable==="조건부"?"B":"C";
-  const now=new Date();
-  const dateStr=now.toISOString().slice(0,10);
+function buildReportCards(apiData){
+  // apiData: { ok, blocks, refs, llm_model, llm_generated_at, meta } | null
+  const blocks  = (apiData && apiData.blocks)  || {};
+  const apiRefs = (apiData && Array.isArray(apiData.refs)) ? apiData.refs : [];
+  const meta    = (apiData && apiData.meta)    || {};
 
-  document.getElementById("rptMetabar").textContent=
-    `${prodName}  ·  ${prodInn}  ·  ${prodStr} ${prodForm}  ·  HS ${prodHs}  ·  Case ${caseGrade}  ·  confidence ${conf}`;
+  // ── 메타 값은 서버 응답의 meta 에서만 읽는다 (DOM 스크래핑 폐기) ──
+  const prodName = meta.product_name_ko || "—";
+  const prodInn  = meta.inn_normalized  || "—";
+  const prodStr  = meta.strength        || "—";
+  const prodForm = meta.dosage_form     || "—";
+  // hs_code_6 은 "300490" 식 6자리 → "3004.90" 으로 포맷
+  const rawHs    = meta.hs_code_6 || "";
+  const prodHs   = rawHs.length >= 6 ? `${rawHs.slice(0,4)}.${rawHs.slice(4,6)}` : (rawHs || "—");
+
+  // 수출 적합 판정 (신호등)
+  const ev = String(meta.export_viable || "").toLowerCase();
+  const viable = ev === "viable" ? "가능"
+               : ev === "conditional" ? "조건부"
+               : ev === "not_viable" ? "불가" : "분석 중";
+  const viableColor = ev === "viable" ? "green"
+                    : ev === "conditional" ? "orange"
+                    : ev === "not_viable" ? "red" : "gray";
+
+  // 신뢰도 — 7개 크롤링 필드 기반 서버 재계산값
+  const cb = meta.confidence_breakdown || {checklist:[], hits:0, total:0};
+  const confPct = meta.confidence != null ? Math.round(Number(meta.confidence) * 100) + "%" : "—";
+  // 체크리스트 예: "ARTG ✓ · PBS가격 ✓ · 스폰서 ✓ · 소매가 ✓ · TGA스케줄 ✗ · NSW조달 ✗ · DPMQ ✓"
+  const checklistStr = (cb.checklist || []).map(c =>
+    `<span style="color:${c.collected ? '#8fe3bc' : '#f8b4ae'};">${c.label} ${c.collected ? '✓' : '✗'}</span>`
+  ).join(" · ");
+  const checklistFooter = cb.total > 0
+    ? ` <span style="color:rgba(255,255,255,.6);">(${cb.total}개 중 ${cb.hits}개)</span>`
+    : "";
+
+  const caseGrade = ev === "viable" ? "A" : ev === "conditional" ? "B" : "C";
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0,10);
+
+  // 메타바 — 2줄 구조 (1줄: 기본 정보, 2줄: 신뢰도 산정 근거)
+  document.getElementById("rptMetabar").innerHTML = `
+    <div>${_escapeHtml(prodName)}  ·  ${_escapeHtml(prodInn)}  ·  ${_escapeHtml(prodStr)} ${_escapeHtml(prodForm)}  ·  HS ${_escapeHtml(prodHs)}  ·  Case ${caseGrade}  ·  confidence ${confPct}</div>
+    <div style="font-size:10.5px;color:rgba(255,255,255,.75);margin-top:5px;font-weight:500;line-height:1.5;">
+      신뢰도 ${confPct} = ${checklistStr}${checklistFooter}
+    </div>`;
   const footerText=`생성일: ${now.toLocaleString("ko-KR")} · UPharma Export AI · 이 보고서는 자동 생성 초안이며 전문가 검토가 필요합니다.`;
   const rptFooterEl=document.getElementById("rptFooter");
   if(rptFooterEl) rptFooterEl.textContent=footerText;
@@ -378,11 +456,11 @@ function buildReportCards(){
     </div>`;
 
   const reasons=[
-    {k:"시장·의료",v:"⚙️ Claude Haiku 생성 예정 (ANTHROPIC_API_KEY 연동 후 자동 생성)"},
-    {k:"규제",v:"⚙️ TGA ARTG 등재 현황 및 스케줄 등급 기반 분석 예정"},
-    {k:"무역",v:"⚙️ KAFTA FTA 활용 가능성 및 관세 현황 분석 예정"},
-    {k:"조달",v:"⚙️ PBS/NSW Health 조달 경로 분석 예정"},
-    {k:"유통",v:"⚙️ 채널 구조 및 스폰서 파트너 분석 예정"},
+    {k:"시장/의료", v: blocks.block2_market      || "⚙️ Claude Haiku 생성 실패 — 재시도 필요"},
+    {k:"규제",      v: blocks.block2_regulatory  || "⚙️ Claude Haiku 생성 실패 — 재시도 필요"},
+    {k:"무역",      v: blocks.block2_trade       || "⚙️ Claude Haiku 생성 실패 — 재시도 필요"},
+    {k:"조달",      v: blocks.block2_procurement || "⚙️ Claude Haiku 생성 실패 — 재시도 필요"},
+    {k:"유통",      v: blocks.block2_channel     || "⚙️ Claude Haiku 생성 실패 — 재시도 필요"},
   ];
   const block2=`
     <div style="background:var(--card);border:1px solid rgba(23,63,120,.08);border-radius:18px;padding:18px;">
@@ -397,14 +475,15 @@ function buildReportCards(){
     </div>`;
 
   const strats=[
-    {k:"진입 채널 전략",v:"⚙️ Claude Haiku 생성 예정",em:true},
-    {k:"가격 포지셔닝",v:"⚙️ PBS DPMQ 기준 FOB 역산 연동 후 자동 생성"},
-    {k:"리스크·조건",v:"⚙️ TGA 등재 일정 / GMP 요건 / 시장 경쟁 분석 예정"},
+    {k:"진입 채널 전략",  v: blocks.block3_channel  || "⚙️ 생성 실패", em:true},
+    {k:"가격 포지셔닝",   v: blocks.block3_pricing  || "⚙️ 생성 실패"},
+    {k:"파트너 발굴",     v: blocks.block3_partners || "⚙️ 생성 실패"},
+    {k:"리스크·조건",     v: blocks.block3_risks    || "⚙️ 생성 실패"},
   ];
   const block3=`
     <div style="background:var(--card);border:1px solid rgba(23,63,120,.08);border-radius:18px;padding:18px;">
       <div style="font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:14px;letter-spacing:.04em;">● 시장 진출 전략</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
         ${strats.map(s=>`
           <div style="background:var(--inner);border-radius:12px;padding:14px;${s.em?"border-left:3px solid var(--orange);":""}">
             <div style="font-size:11.5px;font-weight:800;color:var(--navy);margin-bottom:8px;">${s.k}</div>
@@ -437,34 +516,62 @@ function buildReportCards(){
 
   document.getElementById("rptBlocks").innerHTML=block1+block2+block3+block4;
 
-  const refs=[
-    {t:"Prescription medicines registration process",src:"TGA 2024",url:"https://www.tga.gov.au"},
-    {t:"PBS Fees and patient contributions",src:"Dept. of Health 2025",url:"https://www.pbs.gov.au"},
-    {t:"KAFTA FTA Portal — Tariff Rates",src:"DFAT",url:"https://ftaportal.dfat.gov.au"},
+  // Perplexity 3카테고리 레퍼런스 — apiRefs 있으면 실제 값, 없으면 기본 3개로 폴백
+  const refsFallback = [
+    {category:"거시·시장 분석", t:"Australia Pharmaceutical Industry Overview", src:"IMARC Group", url:"https://www.imarcgroup.com/"},
+    {category:"규제 분석",      t:"TGA — Prescription Medicines Registration", src:"TGA", url:"https://www.tga.gov.au"},
+    {category:"가격·조달 분석", t:"PBS — Fees, Patient Contributions and Safety Net Thresholds", src:"Dept. of Health", url:"https://www.pbs.gov.au"},
   ];
+  const refs = apiRefs.length
+    ? apiRefs.map(r => ({
+        category: r.category || "관련 출처",
+        t: r.title || (r.url || "").replace(/^https?:\/\//,"").replace(/\/$/,"").slice(0,90),
+        src: (r.url || "").replace(/^https?:\/\//,"").split("/")[0] || (r.source || "perplexity"),
+        snippet: r.snippet || "",
+        url: r.url || "#",
+      }))
+    : refsFallback;
+  const categoryColor = (cat) => (cat||"").startsWith("거시") ? "blue"
+                              : (cat||"").startsWith("규제") ? "orange"
+                              : (cat||"").startsWith("가격") ? "green"
+                              : "gray";
+  const refsFooter = apiRefs.length
+    ? `<div style='font-size:11.5px;color:var(--muted);margin-top:10px;'>✅ Perplexity sonar · 거시/규제/가격 3개 카테고리 × 1건씩 · 총 ${apiRefs.length}건</div>`
+    : `<div style='font-size:11.5px;color:var(--muted);margin-top:10px;'>⚙️ Perplexity 호출 전 — 기본 레퍼런스 표시</div>`;
   document.getElementById("rptRefs").innerHTML=refs.map(r=>`
-    <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;
-      border-bottom:1px solid rgba(23,63,120,.06);">
-      <span style="color:var(--navy);font-size:14px;margin-top:1px;">▶</span>
-      <div>
-        <div style="font-size:13px;font-weight:700;color:var(--navy);">
-          <a href="${r.url}" target="_blank" style="color:inherit;text-decoration:none;">${r.t}</a>
-        </div>
-        <div style="font-size:11.5px;color:var(--muted);">[${r.src}]</div>
+    <div style="padding:10px 0;border-bottom:1px solid rgba(23,63,120,.06);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span class="bdg ${categoryColor(r.category)}" style="font-size:10.5px;padding:2px 8px;">${_escapeHtml(r.category)}</span>
+        <span style="font-size:10.5px;color:var(--muted);">${_escapeHtml(r.src)}</span>
       </div>
-    </div>`).join("")
-  +"<div style='font-size:11.5px;color:var(--muted);margin-top:8px;'>⚙️ PERPLEXITY_API_KEY 연동 후 실제 논문 자동 첨부</div>";
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:3px;">
+        <a href="${r.url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${_escapeHtml(r.t)}</a>
+      </div>
+      ${r.snippet ? `<div style="font-size:11.5px;color:var(--muted);line-height:1.5;">${_escapeHtml(r.snippet)}</div>` : ""}
+    </div>`).join("") + refsFooter;
 
   document.getElementById("a4Date").textContent=dateStr;
   document.getElementById("a4MetabarInner").textContent=document.getElementById("rptMetabar").textContent;
   document.getElementById("a4Footer").textContent=document.getElementById("rptFooter").textContent;
 
+  const b2 = (label, v) => `${label}: ${v || "—"}`;
   const a4rows=[
     ["1. 수출 적합 판정", `판정: ${viable} · HS ${prodHs} · 신뢰도: ${conf}`],
-    ["2. 판정 근거", "① 시장·의료: Claude Haiku 생성 예정\n② 규제: TGA 등재 현황 분석 예정\n③ 무역: KAFTA 활용 분석 예정\n④ 조달: PBS/NSW 경로 분석 예정\n⑤ 유통: 채널·스폰서 분석 예정"],
-    ["3. 시장 진출 전략", "진입채널 / 가격포지셔닝 / 리스크·조건 — Claude Haiku 생성 예정"],
+    ["2. 판정 근거",
+      b2("① 시장/의료",   blocks.block2_market)      + "\n" +
+      b2("② 규제",        blocks.block2_regulatory)  + "\n" +
+      b2("③ 무역",        blocks.block2_trade)       + "\n" +
+      b2("④ 조달",        blocks.block2_procurement) + "\n" +
+      b2("⑤ 유통",        blocks.block2_channel)],
+    ["3. 시장 진출 전략",
+      b2("① 진입 채널",   blocks.block3_channel)  + "\n" +
+      b2("② 가격 포지셔닝", blocks.block3_pricing) + "\n" +
+      b2("③ 파트너 발굴",  blocks.block3_partners) + "\n" +
+      b2("④ 리스크·조건",  blocks.block3_risks)],
     ["4. 규제 체크포인트", "① Therapeutic Goods Act 1989 — ARTG 등재 의무\n② GMP PIC/S 상호인정 — 실사 면제 가능\n③ PBS National Health Act — 가격 통제 수반\n④ KAFTA — 관세 0% 활성\n⑤ Customs Regulations — 항암제 수입 확인"],
-    ["5. 근거 및 출처", "TGA ARTG · PBS API v3 · Chemist Warehouse · NSW Health Procurement · Perplexity 논문"],
+    ["5. 근거 및 출처", apiRefs.length
+      ? apiRefs.map((r,i) => `${i+1}. ${r.title || r.url}`).join("\n")
+      : "TGA ARTG · PBS API v3 · Chemist Warehouse · NSW Health Procurement · Perplexity 논문"],
   ];
   document.getElementById("a4Blocks").innerHTML=a4rows.map(([h,v])=>`
     <div style="border:1px solid #e2e8f0;">
@@ -504,7 +611,7 @@ async function saveReport(n){
 
   if(ok){
     await loadReports();
-    showToast("✓ 보고서가 저장되었습니다");
+    showToast("✓ Supabase reports 테이블에 저장되었습니다");
     if(sb){sb.textContent="✓ 저장됨";}
   } else {
     // 저장 실패 → 로컬에만 추가 (화면 유지)
@@ -513,10 +620,10 @@ async function saveReport(n){
     const ts=now.toLocaleDateString("ko-KR")+" · "+now.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
     reportStore.unshift({id:Date.now(),title:names[n],sub:subs[n],time:ts,gong:n+"공정"});
     renderReports();
-    showToast("⚠ API 실패 — 로컬에만 저장됨");
+    showToast("⚠ API 실패 — 로컬에만 저장됨 (DB 미반영)");
     if(sb){sb.textContent="✓ 저장됨";}
   }
-  if(n===1) window.print();
+  // window.print() 는 호출하지 않는다 — PDF 출력은 별도 버튼(printReport)의 책임.
 }
 
 /* 페이지 로드 시 오늘의 보고서 조회 */

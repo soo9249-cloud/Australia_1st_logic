@@ -8,3 +8,5 @@ openai
 fastapi
 uvicorn[standard]
 jinja2
+anthropic
+pydantic

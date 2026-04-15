@@ -13,7 +13,9 @@
 <header class="topbar">
   <div class="brand">
     <div class="logo-wrap">
-      <div style="font-size:11px;font-weight:900;color:var(--navy);text-align:center;line-height:1.1;">한국<br/>유나이티드</div>
+      <!-- 사용자가 업로드한 실제 로고. logo_2 는 예비본. -->
+      <img src="/static/logo_1.png" alt="한국유나이티드제약"
+           onerror="this.onerror=null;this.src='/static/logo_2.png';"/>
     </div>
     <div class="brand-text">
       <h1>한국유나이티드제약(주) 해외 영업·마케팅 대시보드</h1>
@@ -201,15 +203,15 @@
           품목명 · INN · 함량·제형 · HS코드 · Case · confidence
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0;">
-          <button onclick="window.print()"
+          <button onclick="printReport()"
             style="height:36px;padding:0 14px;border-radius:8px;border:0;
             background:rgba(255,255,255,.15);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;">
-            📄 A4 PDF
+            📄 A4 PDF 생성
           </button>
           <button onclick="saveReport(1)"
             style="height:36px;padding:0 14px;border-radius:8px;border:0;
             background:var(--orange);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;">
-            💾 보고서 저장
+            💾 보고서 DB 저장
           </button>
         </div>
       </div>

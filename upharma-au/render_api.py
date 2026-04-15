@@ -15,6 +15,16 @@ _CRAWLER_DIR = _BASE_DIR / "crawler"
 if str(_CRAWLER_DIR) not in sys.path:
     sys.path.insert(0, str(_CRAWLER_DIR))
 
+# .env 자동 로드 (uvicorn 으로 뜰 때 프로세스 env 에 OPENAI_API_KEY 등이 반영되도록)
+try:
+    from dotenv import load_dotenv
+    # project root (upharma-au 의 부모) 의 .env 를 탐색
+    _env_path = _BASE_DIR.parent / ".env"
+    if _env_path.is_file():
+        load_dotenv(_env_path, override=False)
+except ImportError:
+    pass
+
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
@@ -253,4 +263,373 @@ def get_exchange() -> JSONResponse:
         "aud_krw": float(krw),
         "aud_usd": float(usd),
         "updated": data.get("date") or "",
+    })
+
+
+# ── LLM 보고서 생성 ─────────────────────────────────────────────────
+# [비용 절감 운영] Claude Haiku 4.5 를 OpenAI gpt-4o-mini 로 임시 교체.
+#   · 시연 영상 녹화 직전에 Claude 블록(_claude_generate_blocks) 주석 해제 후
+#     엔드포인트에서 _openai_generate_blocks 를 _claude_generate_blocks 로 교체만 하면 됨.
+#   · _ALLOWED_COLUMNS 와 DB 스키마는 동일. 프론트도 변경 불필요.
+
+_CLAUDE_MODEL = "claude-haiku-4-5-20251001"   # 시연용 — 지금은 미사용
+_OPENAI_MODEL = "gpt-4o-mini"                 # 실사용 모델
+
+_CLAUDE_SYSTEM_PROMPT = (
+    "너는 한국 제약회사의 호주 수출 전문 애널리스트야. "
+    "주어진 품목의 실제 크롤링 데이터(TGA·PBS·Chemist·NSW)를 기반으로 "
+    "아래 9개 필드를 한국어로 작성해.\n\n"
+    "Block 2 — 수출 적합성 판정 근거 (5축):\n"
+    "  block2_market      : 시장/의료 현황 분석\n"
+    "  block2_regulatory  : TGA/ARTG 규제 분석 (등재번호·스케줄·면허 카테고리)\n"
+    "  block2_trade       : KAFTA 관세/무역 분석 (HS 코드별 관세율)\n"
+    "  block2_procurement : PBS/NSW 조달 경로 분석 (급여·DPMQ·공공조달)\n"
+    "  block2_channel     : 유통 채널 분석 (스폰서·브랜드 구조)\n\n"
+    "Block 3 — 시장 진출 전략 (4축):\n"
+    "  block3_channel     : 진입 채널 전략\n"
+    "  block3_pricing     : 가격 포지셔닝 전략 (PBS DPMQ 기준 FOB 역산 고려)\n"
+    "  block3_partners    : 파트너 발굴 전략 (스폰서·유통사 섭외)\n"
+    "  block3_risks       : 리스크 및 선결 조건 (TGA 등재 일정·GMP·환율·경쟁)\n\n"
+    "⚠️ 필수 규칙:\n"
+    "1. 각 필드는 **3~5문장**의 자연스러운 한국어로 작성.\n"
+    "2. **실제 데이터의 숫자/값을 반드시 인용**: ARTG 번호, PBS item code, "
+    "DPMQ 가격, 소매가, 스폰서명 등 제공된 값은 본문에 명시적으로 포함.\n"
+    "3. 데이터에 없는 내용은 업계 일반 지식 기반으로 보수적으로만 언급 (단정 금지).\n"
+    "4. '생성 예정', 'TBD', '추후 분석', '데이터 부족' 같은 플레이스홀더 문구 금지.\n"
+    "5. 모든 9개 필드를 반드시 채워서 반환."
+)
+
+
+def _claude_blocks_schema():
+    """Pydantic 모델을 지연 로드(임포트 부담 줄이기)."""
+    from pydantic import BaseModel, Field
+
+    class ReportBlocks(BaseModel):
+        block2_market: str = Field(description="시장·의료 관점 분석")
+        block2_regulatory: str = Field(description="규제 관점 분석")
+        block2_trade: str = Field(description="무역 관점 분석")
+        block2_procurement: str = Field(description="조달 관점 분석")
+        block2_channel: str = Field(description="유통 관점 분석")
+        block3_channel: str = Field(description="진입 채널 전략")
+        block3_pricing: str = Field(description="가격 포지셔닝 전략")
+        block3_partners: str = Field(description="파트너·스폰서 전략")
+        block3_risks: str = Field(description="리스크·선결 조건")
+
+    return ReportBlocks
+
+
+def _row_summary_for_llm(row: dict[str, Any]) -> dict[str, Any]:
+    """LLM 프롬프트에 넣을 21개 지정 컬럼 + product_name_ko 를 추려서 반환."""
+    keys = [
+        "product_name_ko",                                              # 품목 식별용
+        "artg_status", "artg_number", "tga_schedule", "tga_sponsor",    # TGA (4)
+        "pbs_listed", "pbs_item_code", "pbs_price_aud", "pbs_dpmq",
+        "pbs_patient_charge", "pbs_brand_name", "pbs_innovator",
+        "pbs_formulary",                                                # PBS (8)
+        "retail_price_aud", "price_source_name",                        # Chemist (2)
+        "export_viable", "reason_code", "nsw_note",                     # 판정/NSW (3)
+        "inn_normalized", "dosage_form", "strength", "hs_code_6",       # 품목 메타 (4)
+    ]
+    return {k: row.get(k) for k in keys}
+
+
+# ───────────────────────────────────────────────────────────────────
+# [비용 절감 운영 · 2026-04-15] Claude Haiku 블록 호출을 OpenAI 로 임시 전환.
+# 시연 영상 녹화 전에 아래 주석 블록을 해제하고, generate_report 엔드포인트에서
+# _openai_generate_blocks → _claude_generate_blocks 로 한 줄만 교체하면 됨.
+# ───────────────────────────────────────────────────────────────────
+# def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]:
+#     """Anthropic SDK 로 Claude Haiku 4.5 호출. structured output 으로 9 필드 파싱."""
+#     import anthropic
+#
+#     ReportBlocks = _claude_blocks_schema()
+#     client_anthropic = anthropic.Anthropic(api_key=api_key)
+#
+#     import json as _json
+#     user_content = (
+#         "다음 품목의 크롤링 데이터를 기반으로 9개 블록을 생성해주세요.\n\n"
+#         "```json\n"
+#         + _json.dumps(_row_summary_for_llm(row), ensure_ascii=False, indent=2)
+#         + "\n```"
+#     )
+#
+#     response = client_anthropic.messages.parse(
+#         model=_CLAUDE_MODEL,
+#         max_tokens=4096,
+#         system=_CLAUDE_SYSTEM_PROMPT,
+#         messages=[{"role": "user", "content": user_content}],
+#         output_format=ReportBlocks,
+#     )
+#     parsed = response.parsed_output
+#     if parsed is None:
+#         stop_reason = getattr(response, "stop_reason", "unknown")
+#         raise HTTPException(
+#             status_code=502,
+#             detail=f"Claude 응답 파싱 실패 (stop_reason={stop_reason})",
+#         )
+#     return parsed.model_dump()
+
+
+def _openai_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]:
+    """OpenAI gpt-4o-mini 로 9 블록 생성. structured output 자동 파싱 (Pydantic)."""
+    from openai import OpenAI
+    import json as _json
+
+    ReportBlocks = _claude_blocks_schema()
+    client_openai = OpenAI(api_key=api_key)
+
+    user_content = (
+        "다음 품목의 크롤링 데이터를 기반으로 9개 블록을 생성해주세요.\n\n"
+        "```json\n"
+        + _json.dumps(_row_summary_for_llm(row), ensure_ascii=False, indent=2)
+        + "\n```"
+    )
+
+    completion = client_openai.beta.chat.completions.parse(
+        model=_OPENAI_MODEL,
+        messages=[
+            {"role": "system", "content": _CLAUDE_SYSTEM_PROMPT},
+            {"role": "user", "content": user_content},
+        ],
+        response_format=ReportBlocks,
+        temperature=0.4,
+    )
+    message = completion.choices[0].message
+    if message.refusal:
+        raise HTTPException(
+            status_code=502,
+            detail=f"OpenAI 거부: {message.refusal[:200]}",
+        )
+    parsed = message.parsed
+    if parsed is None:
+        raise HTTPException(status_code=502, detail="OpenAI 응답 파싱 실패")
+    return parsed.model_dump()
+
+
+_PPLX_CATEGORIES: list[tuple[str, str, str]] = [
+    (
+        "macro",
+        "거시·시장 분석",
+        "Australia pharmaceutical market size, sales, healthcare spending, and "
+        "pharma import trends (2024-2025). Return the single most authoritative "
+        "government or industry report URL.",
+    ),
+    (
+        "regulatory",
+        "규제 분석",
+        "Australia TGA (Therapeutic Goods Administration) ARTG registration process, "
+        "GMP PIC/S compliance, and import requirements for pharmaceutical products "
+        "similar to {inn}. Return the single most authoritative official TGA source URL.",
+    ),
+    (
+        "pricing",
+        "가격·조달 분석",
+        "Australia PBS (Pharmaceutical Benefits Scheme) DPMQ pricing mechanism and "
+        "KAFTA Korea-Australia FTA tariff rates for HS 3004 pharmaceuticals (context: {inn}). "
+        "Return the single most authoritative PBS or DFAT official source URL.",
+    ),
+]
+
+
+def _perplexity_top1(query: str, api_key: str) -> dict[str, Any] | None:
+    """Perplexity sonar 1회 호출 → citations 에서 최상단 1개만 꺼낸다."""
+    try:
+        r = httpx.post(
+            "https://api.perplexity.ai/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "sonar",
+                "messages": [{"role": "user", "content": query}],
+                "return_citations": True,
+            },
+            timeout=30.0,
+        )
+        if r.status_code != 200:
+            return None
+        data = r.json()
+    except Exception:
+        return None
+
+    # answer summary (한국어 1문장) — content 를 짧게 잘라 snippet 으로 사용
+    content = ""
+    try:
+        content = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
+    except Exception:
+        content = ""
+    snippet = (content.strip().replace("\n", " "))[:220] if content else None
+
+    citations = data.get("citations") or data.get("search_results") or []
+    for c in citations:
+        if isinstance(c, str) and c.startswith("http"):
+            return {"url": c, "title": None, "snippet": snippet, "source": "perplexity"}
+        if isinstance(c, dict):
+            url = c.get("url")
+            if isinstance(url, str) and url.startswith("http"):
+                return {
+                    "url": url,
+                    "title": c.get("title"),
+                    "snippet": c.get("snippet") or snippet,
+                    "source": "perplexity",
+                }
+    return None
+
+
+# ── 신뢰도 계산 ─────────────────────────────────────────────────────
+# 원래 아는 정보(품목명·INN·HS·제형·함량)는 신뢰도에서 제외. 실 크롤링으로 가져와야
+# 하는 7개 필드만 체크해서 "수집 성공률" 을 confidence 로 재정의.
+_CONFIDENCE_FIELDS: list[tuple[str, str]] = [
+    ("ARTG",       "artg_status"),
+    ("PBS가격",    "pbs_price_aud"),
+    ("스폰서",     "tga_sponsor"),
+    ("소매가",     "retail_price_aud"),
+    ("TGA스케줄",  "tga_schedule"),
+    ("NSW조달",    "nsw_contract_value_aud"),
+    ("DPMQ",       "pbs_dpmq"),
+]
+
+
+def _field_collected(col: str, value: Any) -> bool:
+    """필드별 '수집 성공' 판정."""
+    if value is None:
+        return False
+    if col == "artg_status":
+        return isinstance(value, str) and value.strip() != "" and value != "not_registered"
+    if col == "tga_schedule":
+        return isinstance(value, str) and value.strip().upper() in ("S2", "S3", "S4", "S8")
+    if col == "tga_sponsor":
+        return isinstance(value, str) and bool(value.strip())
+    # 가격/금액 류 — 양수면 수집 성공
+    if col in ("pbs_price_aud", "retail_price_aud", "nsw_contract_value_aud", "pbs_dpmq"):
+        try:
+            return float(value) > 0
+        except (TypeError, ValueError):
+            return False
+    return bool(value)
+
+
+def _compute_confidence_breakdown(row: dict[str, Any]) -> dict[str, Any]:
+    """7개 크롤링 필드 기반 신뢰도 + 체크리스트 반환."""
+    checklist: list[dict[str, Any]] = []
+    hits = 0
+    for label, col in _CONFIDENCE_FIELDS:
+        ok = _field_collected(col, row.get(col))
+        checklist.append({"label": label, "column": col, "collected": ok})
+        if ok:
+            hits += 1
+    total = len(_CONFIDENCE_FIELDS)
+    ratio = (hits / total) if total else 0.0
+    return {
+        "confidence": round(ratio, 3),
+        "hits": hits,
+        "total": total,
+        "checklist": checklist,
+    }
+
+
+def _perplexity_fetch_refs(row: dict[str, Any], api_key: str) -> list[dict[str, Any]]:
+    """3개 카테고리(거시/규제/가격) 별로 각 1개씩 = 총 3개 공신력 있는 출처 반환."""
+    inn = row.get("inn_normalized") or row.get("product_name_ko") or "pharmaceutical products"
+    refs: list[dict[str, Any]] = []
+    for cat_id, cat_label, query_template in _PPLX_CATEGORIES:
+        query = query_template.format(inn=inn)
+        top = _perplexity_top1(query, api_key)
+        if top:
+            top["category"] = cat_label
+            top["category_id"] = cat_id
+            refs.append(top)
+    return refs
+
+
+@app.post("/api/report/generate")
+def generate_report(payload: dict[str, Any]) -> JSONResponse:
+    """product_id 의 boundary 데이터를 읽어 LLM 으로 Block2/3 + Perplexity refs 를 생성하고
+    australia 테이블에 UPDATE 한다. 공통 6컬럼(id, product_id, market_segment,
+    fob_estimated_usd, confidence, crawled_at) 은 건드리지 않는다."""
+    product_id = str(payload.get("product_id") or "").strip()
+    if not product_id:
+        raise HTTPException(status_code=400, detail="product_id is required")
+
+    # [비용 절감 운영] ANTHROPIC_API_KEY 대신 OPENAI_API_KEY 사용.
+    # 시연 영상 녹화 시 Claude 블록 주석 해제 후 이 변수를 anthropic_key 로 되돌리면 됨.
+    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    perplexity_key = os.environ.get("PERPLEXITY_API_KEY", "").strip()
+    if not openai_key:
+        raise HTTPException(
+            status_code=500,
+            detail="OPENAI_API_KEY 환경변수가 필요합니다 (.env 확인).",
+        )
+
+    # 1) DB 에서 품목 조회
+    try:
+        client_sb = get_supabase_client()
+        resp = (
+            client_sb.table(TABLE_NAME)
+            .select("*")
+            .eq("product_id", product_id)
+            .limit(1)
+            .execute()
+        )
+        rows = resp.data or []
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"supabase error: {exc}")
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"not found: {product_id}")
+    row = rows[0]
+
+    # 2) LLM 호출 (9 블록) — 시연 시 _claude_generate_blocks 로 교체
+    blocks = _openai_generate_blocks(row, openai_key)
+
+    # 3) Perplexity 호출 — 거시/규제/가격 3개 카테고리당 각 1개씩, 총 3개 공신력 URL
+    refs: list[dict[str, Any]] = []
+    if perplexity_key:
+        refs = _perplexity_fetch_refs(row, perplexity_key)
+
+    # 4) Supabase UPDATE — 공통 6컬럼 제외
+    from datetime import datetime, timezone
+    generated_at = datetime.now(timezone.utc).isoformat()
+    update_data: dict[str, Any] = {
+        **blocks,
+        "perplexity_refs": refs if refs else None,
+        "llm_model": _OPENAI_MODEL,    # 시연 시 _CLAUDE_MODEL 로 복귀
+        "llm_generated_at": generated_at,
+    }
+    try:
+        client_sb.table(TABLE_NAME).update(update_data).eq(
+            "product_id", product_id
+        ).execute()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"supabase update failed: {exc}",
+        )
+
+    # 5) 신뢰도 재계산 (원래 아는 정보 제외, 7개 크롤링 필드만)
+    conf_meta = _compute_confidence_breakdown(row)
+
+    # 6) 프론트 메타바 렌더용 — DOM 스크래핑 폐기 대체
+    meta = {
+        "product_name_ko": row.get("product_name_ko"),
+        "inn_normalized":  row.get("inn_normalized"),
+        "strength":        row.get("strength"),
+        "dosage_form":     row.get("dosage_form"),
+        "hs_code_6":       row.get("hs_code_6"),
+        "pricing_case":    row.get("pricing_case"),
+        "export_viable":   row.get("export_viable"),
+        "reason_code":     row.get("reason_code"),
+        "confidence":      conf_meta["confidence"],
+        "confidence_breakdown": conf_meta,
+    }
+
+    return JSONResponse(content={
+        "ok": True,
+        "product_id": product_id,
+        "llm_model": _OPENAI_MODEL,
+        "llm_generated_at": generated_at,
+        "blocks": blocks,
+        "refs_count": len(refs),
+        "refs": refs,
+        "meta": meta,
     })

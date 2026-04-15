@@ -200,6 +200,7 @@ def build_product_summary(
         "nsw_supplier_name": nsw.get("supplier_name"),
         "nsw_contract_date": nsw.get("contract_date"),
         "nsw_source_url": nsw.get("nsw_source_url"),
+        "nsw_note": nsw.get("nsw_note"),
         "retail_price_aud": retail_aud,
         "price_source_name": price_name,
         "price_source_url": price_url,

@@ -54,6 +54,7 @@ _ALLOWED_COLUMNS: frozenset[str] = frozenset(
         "nsw_supplier_name",
         "nsw_contract_date",
         "nsw_source_url",
+        "nsw_note",
         "fob_local_ref_aud",
         "fob_conservative_usd",
         "fob_base_usd",

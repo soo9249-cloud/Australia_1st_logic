@@ -25,12 +25,22 @@ def _search_url(query: str) -> str:
     return f"{_BASE}/notices/search?mode=regular&query={quote(query)}&noticeTypes=can%2Capp"
 
 
-def _empty_row(source_url: str) -> dict[str, Any]:
+_NSW_NOT_FOUND_TEMPLATE = (
+    "NSW 주정부 조달 해당없음 — NSW 공공조달은 병원용 의약품"
+    "(항생제/마취제/수액류) 중심이며, {inn}는 PBS 채널을 통해 약국에서 공급됨"
+)
+
+
+def _empty_row(source_url: str, search_term: str = "") -> dict[str, Any]:
+    """결과 없음 상태. nsw_source_url 은 채우고 나머지 3 필드는 None.
+    nsw_note 는 화면/보고서에 표시될 안내문 (품목 의존 메시지 아님)."""
+    inn = (search_term or "해당 품목").strip() or "해당 품목"
     return {
         "contract_value_aud": None,
-        "supplier_name": None,           # buy.nsw 컨텍스트에서는 발주 Agency 명을 매핑
-        "contract_date": None,           # Publish date (DD-MMM-YYYY)
+        "supplier_name": None,
+        "contract_date": None,
         "nsw_source_url": source_url,
+        "nsw_note": _NSW_NOT_FOUND_TEMPLATE.format(inn=inn),
     }
 
 
@@ -109,10 +119,11 @@ def _parse_first_block(markdown: str) -> dict[str, Any] | None:
 
 
 def fetch_buynsw(search_term: str) -> dict[str, Any]:
-    """buy.nsw.gov.au 에서 첫 노티스의 발주처·금액·날짜를 추출한다."""
+    """buy.nsw.gov.au 에서 첫 노티스의 발주처·금액·날짜를 추출한다.
+    매칭 없으면 nsw_source_url 만 채운 dict + 일반 안내 nsw_note 를 반환한다."""
     q = (search_term or "").strip()
     canonical = _search_url(q) if q else f"{_BASE}/notices/search"
-    empty = _empty_row(canonical)
+    empty = _empty_row(canonical, q)
     if not q:
         return empty
 
@@ -134,11 +145,13 @@ def fetch_buynsw(search_term: str) -> dict[str, Any]:
     if not parsed:
         return empty
 
+    # 매칭 성공 — nsw_note 는 None (안내문 대신 실제 Agency 정보 표시)
     return {
         "contract_value_aud": parsed["contract_value_aud"],
         "supplier_name": parsed["supplier_name"],
         "contract_date": parsed["contract_date"],
         "nsw_source_url": canonical,
+        "nsw_note": None,
     }
 
 

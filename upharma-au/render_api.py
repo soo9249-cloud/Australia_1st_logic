@@ -15,7 +15,7 @@ _CRAWLER_DIR = _BASE_DIR / "crawler"
 if str(_CRAWLER_DIR) not in sys.path:
     sys.path.insert(0, str(_CRAWLER_DIR))
 
-# .env 자동 로드 (uvicorn 으로 뜰 때 프로세스 env 에 OPENAI_API_KEY 등이 반영되도록)
+# .env 자동 로드 (uvicorn 으로 뜰 때 프로세스 env 에 ANTHROPIC_API_KEY 등이 반영되도록)
 try:
     from dotenv import load_dotenv
     # project root (upharma-au 의 부모) 의 .env 를 탐색
@@ -267,13 +267,10 @@ def get_exchange() -> JSONResponse:
 
 
 # ── LLM 보고서 생성 ─────────────────────────────────────────────────
-# [비용 절감 운영] Claude Haiku 4.5 를 OpenAI gpt-4o-mini 로 임시 교체.
-#   · 시연 영상 녹화 직전에 Claude 블록(_claude_generate_blocks) 주석 해제 후
-#     엔드포인트에서 _openai_generate_blocks 를 _claude_generate_blocks 로 교체만 하면 됨.
-#   · _ALLOWED_COLUMNS 와 DB 스키마는 동일. 프론트도 변경 불필요.
+# Claude Haiku 4.5 가 보고서 두뇌. 크롤링된 Supabase row 의 수치를 한국어로 해석.
+# 프롬프트는 보고서체(~함/~임) + 마크다운 금지 + 실제 수치 인용 강제 + block4 번호 형식까지 명시.
 
-_CLAUDE_MODEL = "claude-haiku-4-5-20251001"   # 시연용 — 지금은 미사용
-_OPENAI_MODEL = "gpt-4o-mini"                 # 실사용 모델
+_CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 
 _CLAUDE_SYSTEM_PROMPT = (
     "너는 한국 제약회사의 호주 수출 전문 애널리스트임. "
@@ -354,76 +351,53 @@ def _row_summary_for_llm(row: dict[str, Any]) -> dict[str, Any]:
     return {k: row.get(k) for k in keys}
 
 
-# ───────────────────────────────────────────────────────────────────
-# [비용 절감 운영 · 2026-04-15] Claude Haiku 블록 호출을 OpenAI 로 임시 전환.
-# 시연 영상 녹화 전에 아래 주석 블록을 해제하고, generate_report 엔드포인트에서
-# _openai_generate_blocks → _claude_generate_blocks 로 한 줄만 교체하면 됨.
-# ───────────────────────────────────────────────────────────────────
-# def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]:
-#     """Anthropic SDK 로 Claude Haiku 4.5 호출. structured output 으로 9 필드 파싱."""
-#     import anthropic
-#
-#     ReportBlocks = _claude_blocks_schema()
-#     client_anthropic = anthropic.Anthropic(api_key=api_key)
-#
-#     import json as _json
-#     user_content = (
-#         "다음 품목의 크롤링 데이터를 기반으로 9개 블록을 생성해주세요.\n\n"
-#         "```json\n"
-#         + _json.dumps(_row_summary_for_llm(row), ensure_ascii=False, indent=2)
-#         + "\n```"
-#     )
-#
-#     response = client_anthropic.messages.parse(
-#         model=_CLAUDE_MODEL,
-#         max_tokens=4096,
-#         system=_CLAUDE_SYSTEM_PROMPT,
-#         messages=[{"role": "user", "content": user_content}],
-#         output_format=ReportBlocks,
-#     )
-#     parsed = response.parsed_output
-#     if parsed is None:
-#         stop_reason = getattr(response, "stop_reason", "unknown")
-#         raise HTTPException(
-#             status_code=502,
-#             detail=f"Claude 응답 파싱 실패 (stop_reason={stop_reason})",
-#         )
-#     return parsed.model_dump()
-
-
-def _openai_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]:
-    """OpenAI gpt-4o-mini 로 9 블록 생성. structured output 자동 파싱 (Pydantic)."""
-    from openai import OpenAI
+def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]:
+    """Anthropic Claude Haiku 4.5 호출. Pydantic structured output 으로 10 필드 파싱.
+    크롤링 row 의 수치/필드를 읽어 한국어 보고서체 블록을 생성한다."""
+    import anthropic
     import json as _json
 
     ReportBlocks = _claude_blocks_schema()
-    client_openai = OpenAI(api_key=api_key)
+    client_anthropic = anthropic.Anthropic(api_key=api_key)
 
     user_content = (
-        "다음 품목의 크롤링 데이터를 기반으로 9개 블록을 생성해주세요.\n\n"
+        "다음 품목의 크롤링 데이터를 해석하여 10개 블록을 보고서체(~함/~임)로 작성하라.\n"
+        "실제 숫자/문자열 값(ARTG 번호, DPMQ, PBS item code, 스폰서명 등)을 본문에 반드시 인용.\n\n"
         "```json\n"
         + _json.dumps(_row_summary_for_llm(row), ensure_ascii=False, indent=2)
         + "\n```"
     )
 
-    completion = client_openai.beta.chat.completions.parse(
-        model=_OPENAI_MODEL,
-        messages=[
-            {"role": "system", "content": _CLAUDE_SYSTEM_PROMPT},
-            {"role": "user", "content": user_content},
-        ],
-        response_format=ReportBlocks,
-        temperature=0.4,
+    response = client_anthropic.messages.parse(
+        model=_CLAUDE_MODEL,
+        max_tokens=4096,
+        system=_CLAUDE_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_content}],
+        output_format=ReportBlocks,
     )
-    message = completion.choices[0].message
-    if message.refusal:
+
+    # 비용 모니터링용 — 실제 토큰 사용량을 서버 로그에 찍는다
+    try:
+        usage = response.usage
+        in_tok = getattr(usage, "input_tokens", 0)
+        out_tok = getattr(usage, "output_tokens", 0)
+        # Haiku 4.5 단가: 입력 $1/1M, 출력 $5/1M (2026 기준)
+        est_cost = in_tok * 1e-6 + out_tok * 5e-6
+        print(
+            f"[Claude Haiku] input={in_tok} output={out_tok} "
+            f"est_cost=${est_cost:.5f} (product={row.get('product_id')})",
+            flush=True,
+        )
+    except Exception:
+        pass
+
+    parsed = response.parsed_output
+    if parsed is None:
+        stop_reason = getattr(response, "stop_reason", "unknown")
         raise HTTPException(
             status_code=502,
-            detail=f"OpenAI 거부: {message.refusal[:200]}",
+            detail=f"Claude 응답 파싱 실패 (stop_reason={stop_reason})",
         )
-    parsed = message.parsed
-    if parsed is None:
-        raise HTTPException(status_code=502, detail="OpenAI 응답 파싱 실패")
     return parsed.model_dump()
 
 
@@ -573,14 +547,12 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
     if not product_id:
         raise HTTPException(status_code=400, detail="product_id is required")
 
-    # [비용 절감 운영] ANTHROPIC_API_KEY 대신 OPENAI_API_KEY 사용.
-    # 시연 영상 녹화 시 Claude 블록 주석 해제 후 이 변수를 anthropic_key 로 되돌리면 됨.
-    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     perplexity_key = os.environ.get("PERPLEXITY_API_KEY", "").strip()
-    if not openai_key:
+    if not anthropic_key:
         raise HTTPException(
             status_code=500,
-            detail="OPENAI_API_KEY 환경변수가 필요합니다 (.env 확인).",
+            detail="ANTHROPIC_API_KEY 환경변수가 필요합니다 (.env 확인).",
         )
 
     # 1) DB 에서 품목 조회
@@ -600,8 +572,8 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
         raise HTTPException(status_code=404, detail=f"not found: {product_id}")
     row = rows[0]
 
-    # 2) LLM 호출 (9 블록) — 시연 시 _claude_generate_blocks 로 교체
-    blocks = _openai_generate_blocks(row, openai_key)
+    # 2) Claude Haiku 4.5 호출 — 크롤링 row 해석 → 10개 블록 생성
+    blocks = _claude_generate_blocks(row, anthropic_key)
 
     # 3) Perplexity 호출 — 거시/규제/가격 3개 카테고리당 각 1개씩, 총 3개 공신력 URL
     refs: list[dict[str, Any]] = []
@@ -614,7 +586,7 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
     update_data: dict[str, Any] = {
         **blocks,
         "perplexity_refs": refs if refs else None,
-        "llm_model": _OPENAI_MODEL,    # 시연 시 _CLAUDE_MODEL 로 복귀
+        "llm_model": _CLAUDE_MODEL,
         "llm_generated_at": generated_at,
     }
     try:
@@ -647,7 +619,7 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
     return JSONResponse(content={
         "ok": True,
         "product_id": product_id,
-        "llm_model": _OPENAI_MODEL,
+        "llm_model": _CLAUDE_MODEL,
         "llm_generated_at": generated_at,
         "blocks": blocks,
         "refs_count": len(refs),

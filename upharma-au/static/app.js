@@ -300,61 +300,130 @@ async function runCrawl(mode){
   }
 }
 
-/* 보고서 생성 */
-const reportStore=[];
-async function generateReport(n){
-  const names={1:"1공정 시장조사 보고서",2:"2공정 수출전략 보고서",3:"3공정 유망 바이어 보고서"};
-  const btn=document.getElementById("genBtn"+n);
+/* ═══════════════════════════════════════════════════════════════
+ *  3단계 워크플로우:
+ *    Step 1. runAnalysis(1)         — Claude + Perplexity 호출, 블록/레퍼런스만 렌더
+ *    Step 2. generateReportPreview(1) — A4 미리보기 렌더 (LLM 재호출 없음)
+ *    Step 3. printReport() / saveReport(1) — 인쇄 / DB 저장 (이미 분리되어 있음)
+ *
+ *  Step 1 결과는 _currentAnalysisData 전역에 캐시해서 Step 2 에서 재사용.
+ * ═══════════════════════════════════════════════════════════════ */
+const reportStore = [];
+let _currentAnalysisData = null;  // Step 1 결과 캐시 (Step 2 에서 사용)
 
-  if(n===1){
-    // 1공정 — 실제 Claude Haiku + Perplexity 호출
-    const sel = document.getElementById("prodSel");
-    const idx = sel ? sel.value : "";
-    const productId = idx !== "" ? PRODUCT_IDS[parseInt(idx)] : null;
+async function runAnalysis(n){
+  // Step 1 — 시장분석 실행: 크롤링 row → Claude + Perplexity 호출
+  const names = {1:"1공정 시장분석",2:"2공정 수출전략",3:"3공정 유망 바이어"};
+  const btn = document.getElementById("genBtn"+n);
 
-    if(!productId){
-      alert("품목을 먼저 선택하고 크롤링한 뒤 보고서를 산출하세요.");
-      return;
-    }
-
-    if(btn){btn.textContent="⚙️ Claude Haiku 생성 중... (10~30초)";btn.disabled=true;}
-    showToast("🤖 Claude + Perplexity 호출 중 — 잠시만 기다리세요");
-
-    let apiData = null;
-    try{
-      const res = await fetch("/api/report/generate", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({product_id: productId}),
-      });
-      if(res.ok) {
-        apiData = await res.json();
-      } else {
-        const err = await res.json().catch(()=>({}));
-        showToast("⚠ 생성 실패: " + (err.detail || res.status) + " — 플레이스홀더로 표시");
-      }
-    }catch(e){
-      showToast("⚠ 네트워크 오류 — 플레이스홀더로 표시");
-    }
-
-    if(btn){btn.textContent="📄 "+names[n]+" 산출";btn.disabled=false;}
-    setStep1(5);
-    buildReportCards(apiData);
-    const pv=document.getElementById("rptPreview1");
-    pv.style.display="block";
-    pv.scrollIntoView({behavior:"smooth",block:"start"});
-    if(apiData && apiData.ok){
-      showToast("✅ 보고서 생성 완료 ("+apiData.refs_count+"개 레퍼런스)");
-    }
-  } else {
-    // 2/3 공정은 현재 데모 — 기존 동작 유지
+  if(n !== 1){
+    // 2/3 공정은 현재 데모 — 기존 동작 유지 (즉시 보고서 표시)
     if(btn){btn.textContent="생성 중...";btn.disabled=true;}
     setTimeout(()=>{
       if(btn){btn.textContent="📄 "+names[n]+" 산출";btn.disabled=false;}
       const sb=document.getElementById("saveBtn"+n);
       if(sb) sb.style.display="inline-flex";
     },1400);
+    return;
   }
+
+  // 1공정 — 실제 Claude Haiku + Perplexity 호출
+  const sel = document.getElementById("prodSel");
+  const idx = sel ? sel.value : "";
+  const productId = idx !== "" ? PRODUCT_IDS[parseInt(idx)] : null;
+
+  if(!productId){
+    alert("품목을 먼저 선택하고 크롤링한 뒤 분석을 실행하세요.");
+    return;
+  }
+
+  if(btn){btn.textContent="⚙️ Claude + Perplexity 호출 중... (40~60초)";btn.disabled=true;}
+  showToast("🤖 시장분석 진행 중 — 잠시만 기다리세요");
+
+  let apiData = null;
+  try{
+    const res = await fetch("/api/report/generate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({product_id: productId}),
+    });
+    if(res.ok) {
+      apiData = await res.json();
+    } else {
+      const err = await res.json().catch(()=>({}));
+      showToast("⚠ 분석 실패: " + (err.detail || res.status));
+    }
+  }catch(e){
+    showToast("⚠ 네트워크 오류");
+  }
+
+  if(btn){btn.textContent="📊 "+names[n]+" 실행";btn.disabled=false;}
+  setStep1(5);
+  _currentAnalysisData = apiData;
+
+  try {
+    // Step 1 렌더: 메타바 + 블록 카드 + 레퍼런스 카드 (A4 미리보기 제외)
+    renderAnalysisBlocks(apiData);
+    const pv = document.getElementById("rptPreview1");
+    pv.style.display = "block";
+    // A4 미리보기 영역은 아직 숨김 (Step 2 에서 열림)
+    const a4View = document.getElementById("a4PreviewView");
+    if(a4View) a4View.style.display = "none";
+    // Step 2 버튼 영역 노출
+    const step2Panel = document.getElementById("step2Panel");
+    if(step2Panel) step2Panel.style.display = "flex";
+    // 다크바의 A4 PDF / DB 저장 버튼은 Step 2 완료 전까지 비활성
+    _setPreviewButtonsEnabled(false);
+    pv.scrollIntoView({behavior:"smooth",block:"start"});
+
+    if(apiData && apiData.ok){
+      showToast("✅ 시장분석 완료 — 내용 확인 후 [보고서 미리보기] 눌러주세요");
+    } else if (!apiData) {
+      showToast("⚠ API 응답 없음 — Network 탭 확인 필요");
+    }
+  } catch (renderErr) {
+    console.error("[renderAnalysisBlocks 에러]", renderErr);
+    showToast("⚠ 렌더링 오류: " + (renderErr.message || renderErr));
+    const pv = document.getElementById("rptPreview1");
+    if (pv) pv.style.display = "block";
+  }
+}
+
+function generateReportPreview(n){
+  // Step 2 — A4 미리보기만 생성 (LLM 재호출 없음)
+  if(n !== 1) return;
+  if(!_currentAnalysisData){
+    alert("먼저 [1공정 시장분석 실행] 버튼으로 분석을 돌려주세요.");
+    return;
+  }
+  try {
+    renderA4Preview(_currentAnalysisData);
+    const a4View = document.getElementById("a4PreviewView");
+    if(a4View){
+      a4View.style.display = "block";
+      a4View.scrollIntoView({behavior:"smooth",block:"start"});
+    }
+    _setPreviewButtonsEnabled(true);
+    showToast("✅ A4 미리보기 준비 완료 — 우측 다크바에서 PDF/저장 선택");
+  } catch(e){
+    console.error("[renderA4Preview 에러]", e);
+    showToast("⚠ 미리보기 렌더 오류: " + (e.message || e));
+  }
+}
+
+function _setPreviewButtonsEnabled(enabled){
+  // 다크바의 A4 PDF / DB 저장 버튼 활성/비활성
+  const buttons = document.querySelectorAll("#rptPreview1 [data-preview-btn]");
+  buttons.forEach(b => {
+    b.disabled = !enabled;
+    b.style.opacity = enabled ? "1" : "0.4";
+    b.style.cursor = enabled ? "pointer" : "not-allowed";
+  });
+}
+
+// 기존 코드와의 호환을 위해 generateReport(n) 을 runAnalysis 로 위임
+async function generateReport(n){
+  return runAnalysis(n);
 }
 
 /* A4 PDF 출력 — #rptA4 를 body 직속으로 임시 이동 후 window.print(), 끝나면 원위치.
@@ -501,16 +570,25 @@ function buildReportCards(apiData){
     {num:"④", title:"KAFTA",                       badge:"활성",       color:"green"},
     {num:"⑤", title:"Customs Regulations",         badge:"확인 필요",  color:"gray"},
   ];
+  // 안전한 파서: 번호 기호로 split → 각 조각에서 콜론 뒤 본문만 추출
+  // 이전 정규식 RegExp("u" flag + 유니코드 문자 클래스) 가 일부 환경에서
+  // 런타임 SyntaxError 를 내던 것을 예방하기 위해 split 기반으로 재작성.
   const parseBlock4 = (txt) => {
-    if (!txt) return REG_META.map(m => ({...m, impact: "생성 실패"}));
-    const result = [];
-    for (const m of REG_META) {
-      // "① TGA Act 1989: 본문내용" 패턴에서 본문만 추출
-      const re = new RegExp(m.num + "\\s*[^:：]*[:：]\\s*([^\\n①②③④⑤]+)", "u");
-      const mt = txt.match(re);
-      result.push({...m, impact: mt ? mt[1].trim() : "본문 파싱 실패"});
+    if (!txt || typeof txt !== "string") {
+      return REG_META.map(m => ({...m, impact: "생성 데이터 없음"}));
     }
-    return result;
+    // "\\n" 이 문자열로 들어올 경우도 방어 (LLM 이 이스케이프 된 개행을 섞는 경우)
+    const normalized = txt.replace(/\\n/g, "\n");
+    const parts = normalized.split(/([①②③④⑤])/);
+    const byNum = {};
+    for (let i = 1; i < parts.length; i += 2) {
+      const num = parts[i];
+      const body = (parts[i+1] || "").trim();
+      // "TGA Act 1989: 본문내용" 에서 콜론(:, :) 뒤만 impact
+      const colonMatch = body.match(/^[^:：]*[:：]\s*/);
+      byNum[num] = colonMatch ? body.slice(colonMatch[0].length).trim() : body;
+    }
+    return REG_META.map(m => ({...m, impact: byNum[m.num] || "본문 없음"}));
   };
   const regsParsed = parseBlock4(blocks.block4_regulatory);
   const block4=`
@@ -565,36 +643,70 @@ function buildReportCards(apiData){
       ${r.snippet ? `<div style="font-size:11.5px;color:var(--muted);line-height:1.5;">${_escapeHtml(r.snippet)}</div>` : ""}
     </div>`).join("") + refsFooter;
 
-  document.getElementById("a4Date").textContent=dateStr;
-  document.getElementById("a4MetabarInner").textContent=document.getElementById("rptMetabar").textContent;
-  document.getElementById("a4Footer").textContent=document.getElementById("rptFooter").textContent;
+  // A4 미리보기는 Step 2 (generateReportPreview) 에서 따로 처리
+  // — Step 1(분석 실행) 에서는 여기까지만 렌더됨
+}
+
+/* ───── Step 1 전용: 블록 + 레퍼런스 카드만 렌더 (A4 제외) ───── */
+function renderAnalysisBlocks(apiData){
+  // buildReportCards 는 이미 "블록 + 레퍼런스 카드" 까지만 렌더하도록 위에서 수정됨.
+  // 여기는 얇은 알리아스.
+  buildReportCards(apiData);
+}
+
+/* ───── Step 2 전용: A4 미리보기 영역 렌더 ───── */
+function renderA4Preview(apiData){
+  if(!apiData) return;
+  const blocks = apiData.blocks || {};
+  const apiRefs = Array.isArray(apiData.refs) ? apiData.refs : [];
+  const meta = apiData.meta || {};
+  const rawHs = meta.hs_code_6 || "";
+  const prodHs = rawHs.length >= 6 ? `${rawHs.slice(0,4)}.${rawHs.slice(4,6)}` : (rawHs || "—");
+  const ev = String(meta.export_viable || "").toLowerCase();
+  const viable = ev === "viable" ? "가능" : ev === "conditional" ? "조건부"
+              : ev === "not_viable" ? "불가" : "분석 중";
+  const confPct = meta.confidence != null ? Math.round(Number(meta.confidence)*100) + "%" : "—";
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0,10);
+
+  const a4Date = document.getElementById("a4Date");
+  const a4MetabarInner = document.getElementById("a4MetabarInner");
+  const a4Footer = document.getElementById("a4Footer");
+  const rptMetabar = document.getElementById("rptMetabar");
+  const rptFooter = document.getElementById("rptFooter");
+  if(a4Date) a4Date.textContent = dateStr;
+  if(a4MetabarInner && rptMetabar) a4MetabarInner.textContent = rptMetabar.textContent;
+  if(a4Footer && rptFooter) a4Footer.textContent = rptFooter.textContent;
 
   const b2 = (label, v) => `${label}: ${v || "—"}`;
-  const a4rows=[
-    ["1. 수출 적합 판정", `판정: ${viable} · HS ${prodHs} · 신뢰도: ${conf}`],
+  const a4rows = [
+    ["1. 수출 적합 판정", `판정: ${viable} · HS ${prodHs} · 신뢰도: ${confPct}`],
     ["2. 판정 근거",
-      b2("① 시장/의료",   blocks.block2_market)      + "\n" +
-      b2("② 규제",        blocks.block2_regulatory)  + "\n" +
-      b2("③ 무역",        blocks.block2_trade)       + "\n" +
-      b2("④ 조달",        blocks.block2_procurement) + "\n" +
-      b2("⑤ 유통",        blocks.block2_channel)],
+      b2("① 시장/의료",    blocks.block2_market)      + "\n" +
+      b2("② 규제",         blocks.block2_regulatory)  + "\n" +
+      b2("③ 무역",         blocks.block2_trade)       + "\n" +
+      b2("④ 조달",         blocks.block2_procurement) + "\n" +
+      b2("⑤ 유통",         blocks.block2_channel)],
     ["3. 시장 진출 전략",
-      b2("① 진입 채널",   blocks.block3_channel)  + "\n" +
-      b2("② 가격 포지셔닝", blocks.block3_pricing) + "\n" +
+      b2("① 진입 채널",    blocks.block3_channel)  + "\n" +
+      b2("② 가격 포지셔닝", blocks.block3_pricing)  + "\n" +
       b2("③ 파트너 발굴",  blocks.block3_partners) + "\n" +
       b2("④ 리스크·조건",  blocks.block3_risks)],
-    ["4. 규제 체크포인트", "① Therapeutic Goods Act 1989 — ARTG 등재 의무\n② GMP PIC/S 상호인정 — 실사 면제 가능\n③ PBS National Health Act — 가격 통제 수반\n④ KAFTA — 관세 0% 활성\n⑤ Customs Regulations — 항암제 수입 확인"],
+    ["4. 규제 체크포인트", blocks.block4_regulatory || "LLM 생성 실패"],
     ["5. 근거 및 출처", apiRefs.length
-      ? apiRefs.map((r,i) => `${i+1}. ${r.title || r.url}`).join("\n")
-      : "TGA ARTG · PBS API v3 · Chemist Warehouse · NSW Health Procurement · Perplexity 논문"],
+      ? apiRefs.map((r,i) => `${i+1}. ${r.title || r.url || ""}`).join("\n")
+      : "TGA ARTG · PBS API v3 · Chemist Warehouse · NSW Health Procurement"],
   ];
-  document.getElementById("a4Blocks").innerHTML=a4rows.map(([h,v])=>`
-    <div style="border:1px solid #e2e8f0;">
-      <div style="background:#e2e8f0;padding:5px 8px;font-size:9.5px;font-weight:700;color:#1e293b;">${h}</div>
-      <table style="width:100%;border-collapse:collapse;">
-        <tr><td style="padding:7px 8px;font-size:9.5px;white-space:pre-line;color:#334155;">${v}</td></tr>
-      </table>
-    </div>`).join("");
+  const a4Blocks = document.getElementById("a4Blocks");
+  if(a4Blocks){
+    a4Blocks.innerHTML = a4rows.map(([h,v])=>`
+      <div style="border:1px solid #e2e8f0;">
+        <div style="background:#e2e8f0;padding:5px 8px;font-size:9.5px;font-weight:700;color:#1e293b;">${h}</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:7px 8px;font-size:9.5px;white-space:pre-line;color:#334155;">${v}</td></tr>
+        </table>
+      </div>`).join("");
+  }
 }
 
 /* 보고서 저장 — POST /api/reports → GET 재조회 */

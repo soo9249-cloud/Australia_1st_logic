@@ -1776,6 +1776,28 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
         dispatch_result = dispatch_by_pricing_case(seed, fx_aud_to_krw=fx_krw)
 
         if dispatch_result.get("logic") == "blocked":
+            # blocked 품목도 "시도 이력"을 p2 결과 테이블에 남긴다.
+            try:
+                sb_client_blocked = get_supabase_client()
+                blocked_upsert = {
+                    "product_id": product_id,
+                    "segment": segment,
+                    "logic": "blocked",
+                    "verdict": f"수출 차단: {dispatch_result.get('blocked_reason', 'unknown')}",
+                    "pricing_case": seed.get("pricing_case"),
+                    "warnings": [w for w in (dispatch_result.get("warnings") or []) if w],
+                    "disclaimer": dispatch_result.get("disclaimer"),
+                    "llm_model": _CLAUDE_MODEL,
+                }
+                sb_client_blocked.table("australia_p2_results").upsert(
+                    blocked_upsert,
+                    on_conflict="product_id,segment",
+                ).execute()
+                print(f"[P2 Supabase] BLOCKED UPSERT OK: {product_id} / {segment}", flush=True)
+            except Exception as sb_exc:
+                print(f"[P2 Supabase BLOCKED UPSERT error] {sb_exc}", flush=True)
+                # Supabase 실패는 비치명적 — 파이프라인은 계속 진행
+
             # blocked 품목은 시나리오 없이 경고만 반환
             with _p2_lock:
                 _p2_state["status"] = "done"
@@ -1872,6 +1894,49 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
             "pdf": None,  # 아래에서 render_p2_pdf 시도 후 갱신
         }
 
+        # ── Step 5.5: Supabase 저장 ──
+        with _p2_lock:
+            _p2_state["step_label"] = "⑤-2 Supabase 저장 중…"
+        try:
+            sb_client = get_supabase_client()
+            upsert_data = {
+                "product_id": product_id,
+                "segment": segment,
+                "ref_price_text": ref_text,
+                "ref_price_aud": float(ref_aud) if ref_aud is not None else None,
+                "verdict": row.get("export_viable") or row.get("reason_code"),
+                "logic": logic,
+                "pricing_case": seed.get("pricing_case"),
+                "fob_penetration_aud": round(agg.get("fob_aud", 0), 4) if agg else None,
+                "fob_reference_aud": round(avg.get("fob_aud", 0), 4) if avg else None,
+                "fob_premium_aud": round(cons.get("fob_aud", 0), 4) if cons else None,
+                "fob_penetration_krw": round(agg.get("fob_krw", 0), 2) if agg else None,
+                "fob_reference_krw": round(avg.get("fob_krw", 0), 2) if avg else None,
+                "fob_premium_krw": round(cons.get("fob_krw", 0), 2) if cons else None,
+                "fx_aud_to_krw": fx_rates.get("aud_krw"),
+                "fx_aud_to_usd": fx_rates.get("aud_usd"),
+                "formula_str": formula_str,
+                "block_extract": p2_blocks.get("block_extract"),
+                "block_fob_intro": p2_blocks.get("block_fob_intro"),
+                "scenario_penetration": p2_blocks.get("scenario_penetration"),
+                "scenario_reference": p2_blocks.get("scenario_reference"),
+                "scenario_premium": p2_blocks.get("scenario_premium"),
+                "block_strategy": p2_blocks.get("block_strategy"),
+                "block_risks": p2_blocks.get("block_risks"),
+                "block_positioning": p2_blocks.get("block_positioning"),
+                "warnings": [w for w in (dispatch_result.get("warnings") or []) if w],
+                "disclaimer": dispatch_result.get("disclaimer"),
+                "llm_model": _CLAUDE_MODEL,
+            }
+            sb_client.table("australia_p2_results").upsert(
+                upsert_data,
+                on_conflict="product_id,segment",
+            ).execute()
+            print(f"[P2 Supabase] UPSERT OK: {product_id} / {segment}", flush=True)
+        except Exception as sb_exc:
+            print(f"[P2 Supabase UPSERT error] {sb_exc}", flush=True)
+            # Supabase 실패는 비치명적 — 파이프라인은 계속 진행
+
         # ── Step 6: PDF 생성 (선택) ──
         with _p2_lock:
             _p2_state["step_label"] = "⑥ PDF 보고서 생성 중…"
@@ -1883,6 +1948,14 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
             pdf_path = _REPORTS_DIR / pdf_name
             render_p2_pdf(row, seed, dispatch_result, p2_blocks, fx_rates, pdf_path)
             frontend_result["pdf"] = pdf_name
+            # Supabase에 pdf_filename 업데이트
+            try:
+                sb_client_pdf = get_supabase_client()
+                sb_client_pdf.table("australia_p2_results").update(
+                    {"pdf_filename": pdf_name}
+                ).eq("product_id", product_id).eq("segment", segment).execute()
+            except Exception:
+                pass
         except Exception as pdf_exc:
             print(f"[render_p2_pdf error] {pdf_exc}", flush=True)
             # PDF 실패는 치명적이지 않음 — pdf=None 으로 반환

@@ -933,11 +933,12 @@ async function loadExchange(){
   const mainEl=document.getElementById("fx-main");
   if(mainEl) mainEl.innerHTML=audKrw.toFixed(2)+'<span style="font-size:14px;margin-left:4px;color:var(--muted);font-weight:700;">원</span>';
 
-  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
-  set("fx-usd-krw", usdKrw!=null?usdKrw.toFixed(2)+"원":"—");
-  set("fx-aud-usd", audUsd.toFixed(4)+"$");
-  set("fx-aud-jpy", audJpy!=null?audJpy.toFixed(4)+"¥":"—");
-  set("fx-aud-cny", audCny!=null?audCny.toFixed(4)+"¥":"—");
+  const suffix=(v,u)=>v+'<span style="font-size:11px;margin-left:3px;color:var(--muted);font-weight:700;">'+u+'</span>';
+  const setH=(id,html)=>{const el=document.getElementById(id);if(el)el.innerHTML=html;};
+  setH("fx-usd-krw", usdKrw!=null?suffix(usdKrw.toFixed(2),"원"):"—");
+  setH("fx-aud-usd", suffix(audUsd.toFixed(4),"USD"));
+  setH("fx-aud-jpy", audJpy!=null?suffix(audJpy.toFixed(2),"엔"):"—");
+  setH("fx-aud-cny", audCny!=null?suffix(audCny.toFixed(4),"위안"):"—");
 
   const tsEl=document.getElementById("fxTimestamp");
   if(tsEl){

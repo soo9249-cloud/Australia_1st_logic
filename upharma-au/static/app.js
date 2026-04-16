@@ -364,27 +364,26 @@ async function runAnalysis(n){
   _currentAnalysisData = apiData;
 
   try {
-    // Step 1 렌더: 메타바 + 블록 카드 + 레퍼런스 카드 (A4 미리보기 제외)
+    // 분석 결과 + A4 미리보기를 한 번에 렌더 (단일 플로우)
     renderAnalysisBlocks(apiData);
     const pv = document.getElementById("rptPreview1");
     pv.style.display = "block";
-    // A4 미리보기 영역은 아직 숨김 (Step 2 에서 열림)
+
+    // A4 미리보기 자동 생성 (과거 Step 2 버튼 제거)
+    renderA4Preview(apiData);
     const a4View = document.getElementById("a4PreviewView");
-    if(a4View) a4View.style.display = "none";
-    // Step 2 버튼 영역 노출
-    const step2Panel = document.getElementById("step2Panel");
-    if(step2Panel) step2Panel.style.display = "flex";
-    // 다크바의 A4 PDF / DB 저장 버튼은 Step 2 완료 전까지 비활성
-    _setPreviewButtonsEnabled(false);
+    if(a4View) a4View.style.display = "block";
+
+    _setPreviewButtonsEnabled(true);
     pv.scrollIntoView({behavior:"smooth",block:"start"});
 
     if(apiData && apiData.ok){
-      showToast("✅ 시장분석 완료 — 내용 확인 후 [보고서 미리보기] 눌러주세요");
+      showToast("✅ 시장분석 완료 — PDF 다운로드 준비됨");
     } else if (!apiData) {
       showToast("⚠ API 응답 없음 — Network 탭 확인 필요");
     }
   } catch (renderErr) {
-    console.error("[renderAnalysisBlocks 에러]", renderErr);
+    console.error("[render 에러]", renderErr);
     showToast("⚠ 렌더링 오류: " + (renderErr.message || renderErr));
     const pv = document.getElementById("rptPreview1");
     if (pv) pv.style.display = "block";
@@ -392,7 +391,7 @@ async function runAnalysis(n){
 }
 
 function generateReportPreview(n){
-  // Step 2 — A4 미리보기만 생성 (LLM 재호출 없음)
+  // 하위 호환용 — 이제 runAnalysis 에서 자동 호출됨
   if(n !== 1) return;
   if(!_currentAnalysisData){
     alert("먼저 [1공정 시장분석 실행] 버튼으로 분석을 돌려주세요.");
@@ -406,11 +405,19 @@ function generateReportPreview(n){
       a4View.scrollIntoView({behavior:"smooth",block:"start"});
     }
     _setPreviewButtonsEnabled(true);
-    showToast("✅ A4 미리보기 준비 완료 — 우측 다크바에서 PDF/저장 선택");
   } catch(e){
     console.error("[renderA4Preview 에러]", e);
     showToast("⚠ 미리보기 렌더 오류: " + (e.message || e));
   }
+}
+
+async function reanalyze(){
+  // 재분석 — LLM만 다시 호출 (크롤링·품목 재선택 없음)
+  if(!_currentAnalysisData){
+    showToast("먼저 1공정 시장분석을 실행하세요.");
+    return;
+  }
+  await runAnalysis(1);
 }
 
 function _setPreviewButtonsEnabled(enabled){
@@ -457,6 +464,34 @@ function saveAndDownload(){
   setTimeout(()=>printReport(),300);
 }
 
+// block4_regulatory 는 "① TGA Act 1989: 내용\n② GMP PIC/S: 내용\n..." 형식
+// 5개 법령으로 파싱 → 각 항목 [법령명 / 이 품목 영향] 2열 테이블
+const REG_META = [
+  {num:"①", title:"Therapeutic Goods Act 1989", badge:"핵심 장벽", color:"orange"},
+  {num:"②", title:"GMP (PIC/S 상호인정)",        badge:"유리",       color:"green"},
+  {num:"③", title:"PBS (National Health Act 1953)", badge:"공공조달", color:"blue"},
+  {num:"④", title:"KAFTA",                       badge:"활성",       color:"green"},
+  {num:"⑤", title:"Customs Regulations",         badge:"확인 필요",  color:"gray"},
+];
+// 안전한 파서: 번호 기호로 split → 각 조각에서 콜론 뒤 본문만 추출
+// 이전 정규식 RegExp("u" flag + 유니코드 문자 클래스) 가 일부 환경에서
+// 런타임 SyntaxError 를 내던 것을 예방하기 위해 split 기반으로 재작성.
+function parseBlock4(txt){
+  if (!txt || typeof txt !== "string") {
+    return REG_META.map(m => ({...m, impact: "생성 데이터 없음"}));
+  }
+  const normalized = txt.replace(/\\n/g, "\n");
+  const parts = normalized.split(/([①②③④⑤])/);
+  const byNum = {};
+  for (let i = 1; i < parts.length; i += 2) {
+    const num = parts[i];
+    const body = (parts[i+1] || "").trim();
+    const colonMatch = body.match(/^[^:：]*[:：]\s*/);
+    byNum[num] = colonMatch ? body.slice(colonMatch[0].length).trim() : body;
+  }
+  return REG_META.map(m => ({...m, impact: byNum[m.num] || "본문 없음"}));
+}
+
 function buildReportCards(apiData){
   // apiData: { ok, blocks, refs, llm_model, llm_generated_at, meta } | null
   const blocks  = (apiData && apiData.blocks)  || {};
@@ -472,14 +507,11 @@ function buildReportCards(apiData){
   const rawHs    = meta.hs_code_6 || "";
   const prodHs   = rawHs.length >= 6 ? `${rawHs.slice(0,4)}.${rawHs.slice(4,6)}` : (rawHs || "—");
 
-  // 수출 적합 판정 (신호등)
+  // 수출 적합 판정 (신호등) — 색 원형만, 텍스트·이모지 없음
   const ev = String(meta.export_viable || "").toLowerCase();
-  const viable = ev === "viable" ? "가능"
-               : ev === "conditional" ? "조건부"
-               : ev === "not_viable" ? "불가" : "분석 중";
-  const viableColor = ev === "viable" ? "green"
-                    : ev === "conditional" ? "orange"
-                    : ev === "not_viable" ? "red" : "gray";
+  const viableColorHex = ev === "viable" ? "#27ae60"
+                       : ev === "conditional" ? "#f39c12"
+                       : ev === "not_viable" ? "#e74c3c" : "#94a3b8";
 
   // 신뢰도 — 7개 크롤링 필드 기반 서버 재계산값
   const cb = meta.confidence_breakdown || {checklist:[], hits:0, total:0};
@@ -494,7 +526,6 @@ function buildReportCards(apiData){
 
   const caseGrade = ev === "viable" ? "A" : ev === "conditional" ? "B" : "C";
   const now = new Date();
-  const dateStr = now.toISOString().slice(0,10);
 
   // 메타바 — 2줄 구조 (1줄: 기본 정보, 2줄: 신뢰도 산정 근거)
   document.getElementById("rptMetabar").innerHTML = `
@@ -516,13 +547,7 @@ function buildReportCards(apiData){
       </div>
       <div style="margin-bottom:10px;">
         <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;">핵심 판정</div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="width:48px;height:48px;border-radius:50%;background:${viableColor==="green"?"#27ae60":viableColor==="orange"?"#f39c12":"#e74c3c"};
-            display:flex;align-items:center;justify-content:center;font-size:20px;">
-            ${viableColor==="green"?"🟢":viableColor==="orange"?"🟡":"🔴"}
-          </div>
-          <span class="bdg ${viableColor}" style="font-size:16px;padding:8px 18px;">${viable}</span>
-        </div>
+        <div style="width:36px;height:36px;border-radius:50%;background:${viableColorHex};"></div>
       </div>
     </div>`;
 
@@ -563,35 +588,6 @@ function buildReportCards(apiData){
       </div>
     </div>`;
 
-  // block4_regulatory 는 "① TGA Act 1989: 내용\n② GMP PIC/S: 내용\n..." 형식
-  // 5개 법령으로 파싱 → 각 항목 [법령명 / 이 품목 영향] 2열 테이블
-  const REG_META = [
-    {num:"①", title:"Therapeutic Goods Act 1989", badge:"핵심 장벽", color:"orange"},
-    {num:"②", title:"GMP (PIC/S 상호인정)",        badge:"유리",       color:"green"},
-    {num:"③", title:"PBS (National Health Act 1953)", badge:"공공조달", color:"blue"},
-    {num:"④", title:"KAFTA",                       badge:"활성",       color:"green"},
-    {num:"⑤", title:"Customs Regulations",         badge:"확인 필요",  color:"gray"},
-  ];
-  // 안전한 파서: 번호 기호로 split → 각 조각에서 콜론 뒤 본문만 추출
-  // 이전 정규식 RegExp("u" flag + 유니코드 문자 클래스) 가 일부 환경에서
-  // 런타임 SyntaxError 를 내던 것을 예방하기 위해 split 기반으로 재작성.
-  const parseBlock4 = (txt) => {
-    if (!txt || typeof txt !== "string") {
-      return REG_META.map(m => ({...m, impact: "생성 데이터 없음"}));
-    }
-    // "\\n" 이 문자열로 들어올 경우도 방어 (LLM 이 이스케이프 된 개행을 섞는 경우)
-    const normalized = txt.replace(/\\n/g, "\n");
-    const parts = normalized.split(/([①②③④⑤])/);
-    const byNum = {};
-    for (let i = 1; i < parts.length; i += 2) {
-      const num = parts[i];
-      const body = (parts[i+1] || "").trim();
-      // "TGA Act 1989: 본문내용" 에서 콜론(:, :) 뒤만 impact
-      const colonMatch = body.match(/^[^:：]*[:：]\s*/);
-      byNum[num] = colonMatch ? body.slice(colonMatch[0].length).trim() : body;
-    }
-    return REG_META.map(m => ({...m, impact: byNum[m.num] || "본문 없음"}));
-  };
   const regsParsed = parseBlock4(blocks.block4_regulatory);
   const block4=`
     <div style="background:var(--card);border:1px solid rgba(23,63,120,.08);border-radius:18px;padding:18px;">
@@ -680,58 +676,173 @@ function renderAnalysisBlocks(apiData){
   buildReportCards(apiData);
 }
 
-/* ───── Step 2 전용: A4 미리보기 영역 렌더 ───── */
+/* ───── Step 2 전용: A4 미리보기 영역 렌더 (SG 팀 레이아웃 준수) ───── */
 function renderA4Preview(apiData){
   if(!apiData) return;
   const blocks = apiData.blocks || {};
   const apiRefs = Array.isArray(apiData.refs) ? apiData.refs : [];
   const meta = apiData.meta || {};
-  const rawHs = meta.hs_code_6 || "";
-  const prodHs = rawHs.length >= 6 ? `${rawHs.slice(0,4)}.${rawHs.slice(4,6)}` : (rawHs || "—");
+
+  const esc = _escapeHtml;
+  const prodName = meta.product_name_ko || "—";
+  const prodInn  = meta.inn_normalized  || "—";
+  const prodStr  = meta.strength        || "";
+  const prodForm = meta.dosage_form     || "";
+  const rawHs    = meta.hs_code_6 || "";
+  const prodHs   = rawHs.length >= 6 ? `${rawHs.slice(0,4)}.${rawHs.slice(4,6)}` : (rawHs || "—");
+
   const ev = String(meta.export_viable || "").toLowerCase();
   const viable = ev === "viable" ? "가능" : ev === "conditional" ? "조건부"
               : ev === "not_viable" ? "불가" : "분석 중";
   const confPct = meta.confidence != null ? Math.round(Number(meta.confidence)*100) + "%" : "—";
+  const caseGrade = ev === "viable" ? "A" : ev === "conditional" ? "B" : "C";
   const now = new Date();
   const dateStr = now.toISOString().slice(0,10);
 
   const a4Date = document.getElementById("a4Date");
   const a4MetabarInner = document.getElementById("a4MetabarInner");
   const a4Footer = document.getElementById("a4Footer");
-  const rptMetabar = document.getElementById("rptMetabar");
   const rptFooter = document.getElementById("rptFooter");
   if(a4Date) a4Date.textContent = dateStr;
-  if(a4MetabarInner && rptMetabar) a4MetabarInner.textContent = rptMetabar.textContent;
+  if(a4MetabarInner){
+    const strForm = [prodStr, prodForm].filter(Boolean).join(" ");
+    a4MetabarInner.textContent =
+      `${prodName} — ${prodInn}${strForm ? " · " + strForm : ""} | HS CODE: ${prodHs}`;
+  }
   if(a4Footer && rptFooter) a4Footer.textContent = rptFooter.textContent;
 
-  const b2 = (label, v) => `${label}: ${v || "—"}`;
-  const a4rows = [
-    ["1. 수출 적합 판정", `판정: ${viable} · HS ${prodHs} · 신뢰도: ${confPct}`],
-    ["2. 판정 근거",
-      b2("① 시장/의료",    blocks.block2_market)      + "\n" +
-      b2("② 규제",         blocks.block2_regulatory)  + "\n" +
-      b2("③ 무역",         blocks.block2_trade)       + "\n" +
-      b2("④ 조달",         blocks.block2_procurement) + "\n" +
-      b2("⑤ 유통",         blocks.block2_channel)],
-    ["3. 시장 진출 전략",
-      b2("① 진입 채널",    blocks.block3_channel)  + "\n" +
-      b2("② 가격 포지셔닝", blocks.block3_pricing)  + "\n" +
-      b2("③ 파트너 발굴",  blocks.block3_partners) + "\n" +
-      b2("④ 리스크·조건",  blocks.block3_risks)],
-    ["4. 규제 체크포인트", blocks.block4_regulatory || "LLM 생성 실패"],
-    ["5. 근거 및 출처", apiRefs.length
-      ? apiRefs.map((r,i) => `${i+1}. ${r.title || r.url || ""}`).join("\n")
-      : "TGA ARTG · PBS API v3 · Chemist Warehouse · NSW Health Procurement"],
+  // ── 2열 테이블 (카테고리 | 내용) 헬퍼
+  const kvTable = (rows) => `
+    <table class="a4-tbl">
+      <tbody>
+        ${rows.map(([k,v]) => `
+          <tr>
+            <th>${esc(k)}</th>
+            <td>${esc(v || "—")}</td>
+          </tr>`).join("")}
+      </tbody>
+    </table>`;
+
+  // ── 섹션 1: 수출 적합 판정
+  const sec1 = `
+    <div class="a4-section">
+      <div class="a4-section-title">1. 수출 적합 판정</div>
+      ${kvTable([
+        ["판정",    `${viable} · HS ${prodHs} · Case ${caseGrade} · 신뢰도 ${confPct}`],
+      ])}
+    </div>`;
+
+  // ── 섹션 2: 판정 근거 (5축 유지)
+  const sec2 = `
+    <div class="a4-section">
+      <div class="a4-section-title">2. 판정 근거</div>
+      ${kvTable([
+        ["시장 / 의료", blocks.block2_market],
+        ["규제",        blocks.block2_regulatory],
+        ["무역",        blocks.block2_trade],
+        ["조달",        blocks.block2_procurement],
+        ["유통",        blocks.block2_channel],
+      ])}
+    </div>`;
+
+  // ── 섹션 3: 시장 진출 전략 (4축 유지)
+  const sec3 = `
+    <div class="a4-section">
+      <div class="a4-section-title">3. 시장 진출 전략</div>
+      ${kvTable([
+        ["진입 채널 권고", blocks.block3_channel],
+        ["가격 포지셔닝",  blocks.block3_pricing],
+        ["파트너 발굴",    blocks.block3_partners],
+        ["리스크 + 조건",  blocks.block3_risks],
+      ])}
+    </div>`;
+
+  // ── 섹션 4: 규제 체크포인트 (block4_regulatory 파싱 → 5법령 2열 테이블)
+  const regsParsed = parseBlock4(blocks.block4_regulatory);
+  const sec4 = `
+    <div class="a4-section">
+      <div class="a4-section-title">4. 규제 체크포인트</div>
+      ${kvTable(regsParsed.map(r => [`${r.num} ${r.title}`, r.impact]))}
+    </div>`;
+
+  // ── 섹션 5-1: 학술 논문 테이블 (No | 논문 제목 / 출처 | 한국어 요약)
+  const sourceLabel = (src) => {
+    if(src === "semantic_scholar") return "Semantic Scholar";
+    if(src === "pubmed")           return "PubMed";
+    if(src === "perplexity")       return "Perplexity";
+    return src || "출처";
+  };
+  const refsForTable = apiRefs.length > 0 ? apiRefs : [];
+  const papersRows = refsForTable.map((r, i) => {
+    const title = r.title || (r.url || "").replace(/^https?:\/\//,"").slice(0,90) || "(제목 없음)";
+    const urlLine = r.url ? `<div class="a4-refs-url">${esc(r.url)}</div>` : "";
+    const srcLine = r.source ? `<div class="a4-refs-src">[${esc(sourceLabel(r.source))}]</div>` : "";
+    const summary = r.korean_summary || r.tldr || r.abstract || r.snippet || "—";
+    return `
+      <tr>
+        <td class="col-no">${i+1}</td>
+        <td>
+          <div class="a4-refs-title">${esc(title)}</div>
+          ${srcLine}
+          ${urlLine}
+        </td>
+        <td class="col-summary">${esc(summary)}</td>
+      </tr>`;
+  }).join("");
+  const sec5_1 = `
+    <div class="a4-subsection-title">5-1. 추천 논문 · 하이브리드 학술 검색</div>
+    ${refsForTable.length > 0 ? `
+      <table class="a4-refs-tbl">
+        <thead>
+          <tr>
+            <th class="col-no">No.</th>
+            <th>논문 제목 / 출처</th>
+            <th class="col-summary">한국어 요약</th>
+          </tr>
+        </thead>
+        <tbody>${papersRows}</tbody>
+      </table>`
+      : `<div class="a4-refs-empty">학술 API 호출 전 또는 결과 없음</div>`}`;
+
+  // ── 섹션 5-2: 사용된 DB/기관 테이블 (호주 데이터 소스)
+  const sourcesStatic = [
+    {name:"TGA ARTG",           desc:"호주 치료제 등록부(ARTG) — 등록번호·스폰서·스케줄 조회", link:"https://www.tga.gov.au/products/australian-register-therapeutic-goods-artg"},
+    {name:"PBS Schedule",       desc:"호주 의약품 급여제도 공개 스케줄 — item code·DPMQ·innovator 지위", link:"https://www.pbs.gov.au"},
+    {name:"Chemist Warehouse",  desc:"호주 최대 약국 체인 소매가 참조", link:"https://www.chemistwarehouse.com.au"},
+    {name:"NSW Health Procurement", desc:"뉴사우스웨일스주 공공조달 계약 공시", link:"https://buy.nsw.gov.au"},
+    {name:"KUP_PIPELINE",       desc:"한국유나이티드제약 내부 파이프라인 DB — 품목 식별자·HS·메타", link:"내부 데이터"},
+    {name:"하이브리드 학술 API", desc:"Semantic Scholar → PubMed → Perplexity 순 폴백 학술 검색", link:"내부 데이터"},
   ];
+  const sec5_2 = `
+    <div class="a4-subsection-title">5-2. 사용된 DB/기관</div>
+    <table class="a4-refs-tbl">
+      <thead>
+        <tr>
+          <th style="width:26%;">DB/기관명</th>
+          <th>설명</th>
+          <th style="width:28%;">링크</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sourcesStatic.map(s => `
+          <tr>
+            <td><strong>${esc(s.name)}</strong></td>
+            <td>${esc(s.desc)}</td>
+            <td class="a4-refs-url">${esc(s.link)}</td>
+          </tr>`).join("")}
+      </tbody>
+    </table>`;
+
+  const sec5 = `
+    <div class="a4-section">
+      <div class="a4-section-title">5. 근거 및 출처</div>
+      ${sec5_1}
+      ${sec5_2}
+    </div>`;
+
   const a4Blocks = document.getElementById("a4Blocks");
   if(a4Blocks){
-    a4Blocks.innerHTML = a4rows.map(([h,v])=>`
-      <div style="border:1px solid #e2e8f0;">
-        <div style="background:#e2e8f0;padding:5px 8px;font-size:9.5px;font-weight:700;color:#1e293b;">${h}</div>
-        <table style="width:100%;border-collapse:collapse;">
-          <tr><td style="padding:7px 8px;font-size:9.5px;white-space:pre-line;color:#334155;">${v}</td></tr>
-        </table>
-      </div>`).join("");
+    a4Blocks.innerHTML = sec1 + sec2 + sec3 + sec4 + sec5;
   }
 }
 
@@ -933,10 +1044,10 @@ async function loadExchange(){
   const mainEl=document.getElementById("fx-main");
   if(mainEl) mainEl.innerHTML=audKrw.toFixed(2)+'<span style="font-size:14px;margin-left:4px;color:var(--muted);font-weight:700;">원</span>';
 
-  const suffix=(v,u)=>v+'<span style="font-size:11px;margin-left:3px;color:var(--muted);font-weight:700;">'+u+'</span>';
+  const suffix=(v,u)=>v+'<span style="font-size:14px;margin-left:4px;color:var(--muted);font-weight:700;">'+u+'</span>';
   const setH=(id,html)=>{const el=document.getElementById(id);if(el)el.innerHTML=html;};
-  setH("fx-usd-krw", usdKrw!=null?suffix(usdKrw.toFixed(2),"₩"):"—");
-  setH("fx-aud-usd", suffix(audUsd.toFixed(4),"$"));
+  setH("fx-usd-krw", usdKrw!=null?suffix(usdKrw.toFixed(2),"원"):"—");
+  setH("fx-aud-usd", suffix(audUsd.toFixed(4),"US$"));
   setH("fx-aud-jpy", audJpy!=null?suffix(audJpy.toFixed(2),"¥"):"—");
   setH("fx-aud-cny", audCny!=null?suffix(audCny.toFixed(4),"元"):"—");
 

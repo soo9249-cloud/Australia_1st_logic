@@ -592,6 +592,40 @@ select:focus{ box-shadow:0 0 0 3px rgba(23,63,120,.15); }
   box-shadow:inset 1px 0 0 rgba(23,63,120,.08);
 }
 
+/* ── 보고서 미리보기 (세로 스택 · SG 팀 레이아웃) ───────── */
+.rpt-body-stack{
+  display:flex; flex-direction:column; gap:14px;
+  background:var(--shell);
+  border-radius:0 0 14px 14px;
+  padding:18px;
+  box-shadow:inset 0 0 0 1px rgba(23,63,120,.08);
+}
+.rpt-reanalyze-row{
+  display:flex; justify-content:flex-start;
+  padding:4px 0;
+}
+.btn-reanalyze{
+  height:36px; padding:0 18px;
+  background:var(--card);
+  border:1px solid rgba(23,63,120,.15);
+  border-radius:10px;
+  font-size:12.5px; font-weight:700;
+  color:var(--navy); cursor:pointer;
+  font-family:inherit;
+  transition:background .15s, border-color .15s;
+}
+.btn-reanalyze:hover{
+  background:var(--inner);
+  border-color:rgba(23,63,120,.3);
+}
+.rpt-a4-full{
+  display:none;
+  background:#e8ecf2;
+  border-radius:14px;
+  padding:18px;
+  box-shadow:inset 0 0 0 1px rgba(23,63,120,.08);
+}
+
 .rpt-refs-card{
   background:var(--card);
   border-radius:16px;
@@ -641,15 +675,80 @@ select:focus{ box-shadow:0 0 0 3px rgba(23,63,120,.15); }
 }
 .a4-date{ font-size:9px; color:#64748b; }
 .a4-metabar{
-  background:#2c3e50; color:#fff;
-  padding:8px 10px; font-size:9px;
-  margin-bottom:14px; line-height:1.5;
-  border-radius:3px;
+  background:#1e3a5f; color:#fff;
+  padding:9px 14px; font-size:10px;
+  margin-bottom:16px; line-height:1.5;
+  border-radius:2px; font-weight:600;
+  letter-spacing:.01em;
 }
-.a4-blocks{ display:flex; flex-direction:column; gap:10px; }
+.a4-blocks{ display:flex; flex-direction:column; gap:14px; }
 .a4-footer{
   margin-top:12px; font-size:8px; color:#94a3b8;
   border-top:1px solid #e2e8f0; padding-top:8px;
+}
+
+/* A4 · 섹션 · 테이블 (SG 팀 레이아웃 준수) */
+.a4-section{ margin-bottom:4px; }
+.a4-section-title{
+  font-size:12px; font-weight:700; color:#0f172a;
+  margin-bottom:7px; padding-left:2px;
+}
+.a4-subsection-title{
+  font-size:10.5px; font-weight:700; color:#0f172a;
+  margin:10px 0 5px; padding-left:2px;
+}
+.a4-tbl{
+  width:100%; border-collapse:collapse;
+  font-size:10px;
+  border-top:1px solid #cbd5e1;
+}
+.a4-tbl th{
+  background:#f1f5f9; color:#334155;
+  font-size:9.5px; font-weight:700;
+  text-align:left; padding:8px 10px;
+  width:110px; vertical-align:top;
+  border-bottom:1px solid #e2e8f0;
+  border-right:1px solid #e2e8f0;
+  white-space:nowrap;
+}
+.a4-tbl td{
+  padding:8px 10px; color:#1e293b;
+  line-height:1.65;
+  border-bottom:1px solid #e2e8f0;
+  vertical-align:top;
+  white-space:pre-line;
+  word-break:keep-all;
+}
+.a4-refs-tbl{
+  width:100%; border-collapse:collapse;
+  font-size:9.5px;
+  border-top:1px solid #cbd5e1;
+}
+.a4-refs-tbl thead th{
+  background:#1e3a5f; color:#fff;
+  font-size:9px; font-weight:700;
+  text-align:left; padding:7px 9px;
+  border-bottom:1px solid #cbd5e1;
+  border-right:1px solid rgba(255,255,255,.15);
+}
+.a4-refs-tbl thead th:last-child{ border-right:0; }
+.a4-refs-tbl tbody td{
+  padding:7px 9px; color:#1e293b;
+  line-height:1.55;
+  border-bottom:1px solid #e2e8f0;
+  border-right:1px solid #e2e8f0;
+  vertical-align:top;
+}
+.a4-refs-tbl tbody td:last-child{ border-right:0; }
+.a4-refs-tbl .col-no{ width:32px; text-align:center; color:#64748b; }
+.a4-refs-tbl .col-summary{ width:40%; }
+.a4-refs-title{ font-weight:600; color:#0f172a; margin-bottom:3px; }
+.a4-refs-src{ font-size:8.5px; color:#64748b; margin-bottom:2px; }
+.a4-refs-url{ font-size:8.5px; color:#3b82f6; word-break:break-all; }
+.a4-refs-empty{
+  padding:10px; font-size:9.5px; color:#94a3b8;
+  border:1px dashed #cbd5e1; border-radius:3px;
+  text-align:center;
 }
 
 .rpt-footer-bar{

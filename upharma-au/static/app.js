@@ -987,6 +987,7 @@ let _p2AiSeg = 'public';
 let _p2SelectedReportId = '';
 let _p2AiSelectedReportId = '';
 let _p2UploadedReportFilename = '';
+let _p2ManualUploadedFilename = ''; // 직접 입력 탭 전용 업로드 파일명 (AI 탭과 독립)
 let _p2AiPollTimer = null;
 let _p2Manual = _makeP2Defaults();
 let _p2LastScenarios = null;
@@ -1017,6 +1018,16 @@ function initP2Strategy() {
   if (manualSelect) {
     manualSelect.addEventListener('change', (e) => {
       _p2SelectedReportId = e.target.value || '';
+      if (_p2SelectedReportId) {
+        // 보고서를 선택하면 업로드한 파일은 해제 (AI 탭과 동일한 패턴)
+        _p2ManualUploadedFilename = '';
+        const upEl = document.getElementById('p2-manual-upload-status');
+        if (upEl) upEl.style.display = 'none';
+        const upText = document.getElementById('p2-manual-upload-text');
+        if (upText) upText.textContent = 'PDF 파일 선택';
+        const fileInput = document.getElementById('p2-manual-pdf-file');
+        if (fileInput) fileInput.value = '';
+      }
       _renderP2ReportBrief();
       _p2FillBaseFromReport();
       _renderP2Manual();
@@ -1124,6 +1135,63 @@ async function handleP2FileSelect(inputEl) {
     const aiSelect = document.getElementById('p2-ai-report-select');
     if (aiSelect) aiSelect.value = '';
     if (statusEl) statusEl.textContent = `업로드 완료: ${data.filename}`;
+  } catch (err) {
+    if (statusEl) statusEl.textContent = `업로드 실패: ${err.message}`;
+  }
+}
+
+/* ── 직접 입력 탭 PDF 업로드 (AI 파이프라인 탭과 동일 UI·독립 상태) ──
+ * AI 탭과 별개 상태: 사용자가 두 탭을 오가도 업로드 정보가 섞이지 않음.
+ * 업로드 파일명에서 품목을 유추해 GST 자동 전환에도 반영.
+ */
+async function handleP2ManualFileSelect(inputEl) {
+  const file = inputEl?.files?.[0];
+  const statusEl = document.getElementById('p2-manual-upload-status');
+  const textEl = document.getElementById('p2-manual-upload-text');
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.pdf')) {
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.textContent = 'PDF 파일만 업로드 가능합니다.';
+    }
+    return;
+  }
+
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.textContent = '업로드 중…';
+  }
+  if (textEl) textEl.textContent = file.name;
+
+  try {
+    const arr = await file.arrayBuffer();
+    const bytes = new Uint8Array(arr);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+    const contentB64 = btoa(binary);
+
+    const res = await fetch('/api/p2/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: file.name, content_b64: contentB64 }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.filename) throw new Error(data.detail || `HTTP ${res.status}`);
+
+    _p2ManualUploadedFilename = data.filename;
+    // 보고서 선택을 해제하고 업로드 파일을 주 기준으로 사용
+    _p2SelectedReportId = '';
+    const reportSelect = document.getElementById('p2-report-select');
+    if (reportSelect) reportSelect.value = '';
+
+    // 파일명에서 품목 유추 → GST 자동 전환
+    const g = _p2ApplyGstForReport(file.name);
+    _renderP2Manual();
+
+    if (statusEl) {
+      const gstNote = g.kind === 'otc' ? ' · OTC 10% 자동 적용' : ' · 처방약 GST 면제 자동 적용';
+      statusEl.textContent = `업로드 완료: ${data.filename}${gstNote}`;
+    }
   } catch (err) {
     if (statusEl) statusEl.textContent = `업로드 실패: ${err.message}`;
   }

@@ -41,6 +41,38 @@ _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 from au_crawler import main as run_crawler  # type: ignore
 from db.supabase_insert import TABLE_NAME, get_supabase_client  # type: ignore
 
+
+# ─────────────────────────────────────────────────────────────────────
+# 선택적 외부 라이브러리 가용성 프로브 (dep 하나 빠져도 서버 기동은 성공)
+# - anthropic, openai, yfinance, reportlab: 누락 시 해당 엔드포인트만 503
+# - stage2 / supabase / httpx / fastapi 는 필수(없으면 서버 기동 자체 실패)
+# ─────────────────────────────────────────────────────────────────────
+def _probe_optional_dep(modname: str) -> tuple[bool, str]:
+    try:
+        __import__(modname)
+        return True, ""
+    except Exception as _e:  # ImportError · 내부 초기화 실패 모두 포괄
+        return False, f"{type(_e).__name__}: {_e}"
+
+
+_ANTHROPIC_AVAILABLE, _ANTHROPIC_ERR = _probe_optional_dep("anthropic")
+_OPENAI_AVAILABLE, _OPENAI_ERR = _probe_optional_dep("openai")
+_YFINANCE_AVAILABLE, _YFINANCE_ERR = _probe_optional_dep("yfinance")
+_REPORTLAB_AVAILABLE, _REPORTLAB_ERR = _probe_optional_dep("reportlab")
+
+_DEPS_STATUS: dict[str, dict[str, Any]] = {
+    "anthropic": {"ok": _ANTHROPIC_AVAILABLE, "required_by": ["/api/report/generate", "/api/p2/pipeline"], "error": _ANTHROPIC_ERR},
+    "openai":    {"ok": _OPENAI_AVAILABLE,    "required_by": ["/api/report/generate (refs 요약, 선택)"], "error": _OPENAI_ERR},
+    "yfinance":  {"ok": _YFINANCE_AVAILABLE,  "required_by": ["/api/exchange (선택, 미설치 시 fallback)"], "error": _YFINANCE_ERR},
+    "reportlab": {"ok": _REPORTLAB_AVAILABLE, "required_by": ["/api/report/generate (PDF 저장, 선택)"], "error": _REPORTLAB_ERR},
+}
+
+# 서버 기동 시점에 dep 상태를 stdout 에 한 번만 찍어서 Render/uvicorn 로그에 남긴다
+for _modname, _info in _DEPS_STATUS.items():
+    _mark = "OK" if _info["ok"] else "MISSING"
+    print(f"[deps-probe] {_modname}: {_mark}" + (f" — {_info['error']}" if not _info["ok"] else ""), flush=True)
+
+
 app = FastAPI(title="UPharma Export AI · Australia")
 
 app.mount(
@@ -67,8 +99,29 @@ def index(request: Request) -> HTMLResponse:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> dict[str, Any]:
+    """서버·필수 모듈·선택 의존성 상태 요약.
+    uvicorn 이 떠 있으면 필수 의존성(fastapi/httpx/supabase) 은 이미 통과한 상태이므로,
+    나머지 선택 의존성(anthropic/openai/yfinance/reportlab) 의 설치 여부만 노출한다.
+    """
+    deps = {name: info["ok"] for name, info in _DEPS_STATUS.items()}
+    all_optional_ok = all(deps.values())
+    return {
+        "status": "ok",
+        "optional_deps": deps,
+        "optional_deps_all_installed": all_optional_ok,
+        "stage2_ok": _STAGE2_OK if "_STAGE2_OK" in globals() else None,
+        "hint": None if all_optional_ok else "pip install -r upharma-au/requirements.txt",
+    }
+
+
+@app.get("/health/deps")
+def health_deps() -> dict[str, Any]:
+    """선택 의존성 상세 — 설치 안 된 경우 에러 메시지와 어떤 엔드포인트가 영향을 받는지."""
+    return {
+        "ok": all(info["ok"] for info in _DEPS_STATUS.values()),
+        "deps": _DEPS_STATUS,
+    }
 
 
 @app.post("/api/crawl")
@@ -965,6 +1018,16 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
     if not product_id:
         raise HTTPException(status_code=400, detail="product_id is required")
 
+    # Dep 방어: anthropic 미설치 시 503 으로 명확히 알려주기 (500 ModuleNotFoundError 대신)
+    if not _ANTHROPIC_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "AI 엔진(anthropic) 미설치 — `pip install -r upharma-au/requirements.txt` 실행 후 재시도. "
+                f"(probe error: {_ANTHROPIC_ERR})"
+            ),
+        )
+
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     perplexity_key = os.environ.get("PERPLEXITY_API_KEY", "").strip()
     openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
@@ -1063,6 +1126,426 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
         "meta": meta,
         "pdf": pdf_name,
     })
+
+
+# ============================================================================
+# §P2. 2공정 FOB 역산 API (Stage2)
+#   - stage2/fob_calculator.py (logic A/B + dispatch) 로 계산
+#   - stage2/fob_reference_seeds.json 이 8품목 시드 제공
+#   - crawler 모듈과는 완전 분리 (역산 공식은 stage2 내 자체 보관)
+# ============================================================================
+
+import json as _json
+
+# 지연 import: stage2 모듈 로드 실패해도 서버 기동은 가능
+try:
+    from stage2.fob_calculator import (  # type: ignore
+        DEFAULT_FX_AUD_TO_KRW,
+        calculate_fob_logic_a,
+        calculate_fob_logic_b,
+        calculate_three_scenarios,
+        dispatch_by_pricing_case,
+        get_disclaimer_text,
+    )
+    _STAGE2_OK = True
+    _STAGE2_ERR = ""
+except Exception as _stage2_err:  # noqa: BLE001
+    _STAGE2_OK = False
+    _STAGE2_ERR = str(_stage2_err)
+
+
+_STAGE2_SEEDS_PATH = _BASE_DIR / "stage2" / "fob_reference_seeds.json"
+# au_products.json 은 UI 친화 메타(product_name 등)를 보강하기 위해 옵션으로 읽는다
+_AU_PRODUCTS_PATH = _BASE_DIR / "crawler" / "au_products.json"
+
+
+def _load_stage2_seeds() -> list[dict[str, Any]]:
+    if not _STAGE2_SEEDS_PATH.is_file():
+        return []
+    try:
+        with open(_STAGE2_SEEDS_PATH, encoding="utf-8") as f:
+            data = _json.load(f)
+        seeds = data.get("seeds") if isinstance(data, dict) else data
+        return seeds if isinstance(seeds, list) else []
+    except Exception:
+        return []
+
+
+def _load_au_products_meta() -> dict[str, dict[str, Any]]:
+    """au_products.json → {product_id: {...}} 로 인덱싱."""
+    if not _AU_PRODUCTS_PATH.is_file():
+        return {}
+    try:
+        with open(_AU_PRODUCTS_PATH, encoding="utf-8") as f:
+            data = _json.load(f)
+        items = data.get("products") if isinstance(data, dict) else data
+        if not isinstance(items, list):
+            return {}
+        return {str(p.get("product_id")): p for p in items if isinstance(p, dict)}
+    except Exception:
+        return {}
+
+
+@app.get("/api/stage2/seeds")
+def stage2_seeds() -> JSONResponse:
+    """8개 품목 시드 목록 — UI 드롭다운용 컴팩트 필드만 반환."""
+    if not _STAGE2_OK:
+        raise HTTPException(status_code=503, detail=f"stage2 module load failed: {_STAGE2_ERR}")
+
+    seeds = _load_stage2_seeds()
+    meta_by_id = _load_au_products_meta()
+
+    def _first_num(v: Any) -> float | None:
+        if isinstance(v, (int, float)):
+            return float(v)
+        if isinstance(v, list):
+            nums = [float(x) for x in v if isinstance(x, (int, float))]
+            if nums:
+                return sum(nums) / len(nums)
+        return None
+
+    out: list[dict[str, Any]] = []
+    for s in seeds:
+        pid = str(s.get("product_id", ""))
+        meta = meta_by_id.get(pid, {})
+        product_name = (
+            meta.get("product_name_ko")
+            or meta.get("product_name")
+            or meta.get("brand_name")
+            or pid.replace("au-", "").split("-")[0].capitalize()
+        )
+        out.append({
+            "product_id": pid,
+            "product_name": product_name,
+            "pricing_case": s.get("pricing_case"),
+            "pbs_section": s.get("pbs_section"),
+            "pbs_status": s.get("pbs_status"),
+            "aemp_aud": _first_num(s.get("reference_aemp_aud")),
+            "dpmq_aud": _first_num(s.get("reference_dpmq_aud")),
+            "retail_aud": _first_num(s.get("reference_retail_aud")),
+            "retail_source": s.get("reference_retail_source"),
+            "pbac_superiority_required": bool(s.get("pbac_superiority_required")),
+            "commercial_withdrawal_year": s.get("commercial_withdrawal_year"),
+            "hospital_channel_only": bool(s.get("hospital_channel_only")),
+            "confidence_score": s.get("confidence_score"),
+            "notes": s.get("notes", ""),
+        })
+    return JSONResponse(content={"ok": True, "count": len(out), "seeds": out})
+
+
+def _seed_by_id(product_id: str) -> dict[str, Any] | None:
+    for s in _load_stage2_seeds():
+        if str(s.get("product_id")) == product_id:
+            return s
+    return None
+
+
+def _scenarios_dict_to_list(scenarios: dict[str, dict[str, float]]) -> list[dict[str, Any]]:
+    """dispatch_by_pricing_case() 가 돌려준 {name: {...}} 를 프론트용 리스트로 변환."""
+    order = ["aggressive", "average", "conservative"]
+    label_ko = {
+        "aggressive":   "공격적인 시나리오",
+        "average":      "평균 시나리오",
+        "conservative": "보수 시나리오",
+    }
+    out: list[dict[str, Any]] = []
+    for name in order:
+        if name not in scenarios:
+            continue
+        sc = scenarios[name]
+        out.append({
+            "name": name,
+            "label": label_ko[name],
+            "importer_margin_pct": sc.get("importer_margin_pct"),
+            "fob_aud": sc.get("fob_aud"),
+            "fob_krw": sc.get("fob_krw"),
+            "aemp_aud": sc.get("aemp_aud"),
+            "retail_aud": sc.get("retail_aud"),
+            "pre_gst_aud": sc.get("pre_gst_aud"),
+            "pre_pharmacy_aud": sc.get("pre_pharmacy_aud"),
+            "pre_wholesale_aud": sc.get("pre_wholesale_aud"),
+        })
+    return out
+
+
+@app.post("/api/stage2/calculate")
+def stage2_calculate(payload: dict[str, Any]) -> JSONResponse:
+    """Manual 탭에서 사용자가 조정한 값을 받아 3 시나리오 FOB 반환.
+
+    입력:
+      {
+        "product_id": "au-hydrine-004" | None,
+        "logic": "A" | "B",
+        "segment": "public" | "private",
+        "overrides": {
+           "base_aemp": 31.92,
+           "importer_margin": 20,
+           "base_retail": 48.95,
+           "pharmacy_margin": 30,
+           "wholesale_margin": 10,
+           "gst": 10,
+           ...
+        },
+        "fx_aud_to_krw": 900.0  # optional
+      }
+
+    로직:
+      - product_id 가 withdrawal seed → blocked 응답 (scenarios=[])
+      - 그 외엔 seed 플래그를 참고해 경고만 모으고, 계산은 overrides 를 최우선으로 사용
+        (seed 기준으로만 돌리려면 빈 overrides 를 보내면 dispatch_by_pricing_case 결과가 그대로 쓰임)
+    """
+    if not _STAGE2_OK:
+        raise HTTPException(status_code=503, detail=f"stage2 module load failed: {_STAGE2_ERR}")
+
+    product_id = (payload.get("product_id") or "").strip() or None
+    logic = (payload.get("logic") or "A").upper().strip()
+    if logic not in ("A", "B"):
+        raise HTTPException(status_code=400, detail="logic must be 'A' or 'B'")
+
+    overrides = payload.get("overrides") or {}
+    if not isinstance(overrides, dict):
+        raise HTTPException(status_code=400, detail="overrides must be object")
+
+    try:
+        fx = float(payload.get("fx_aud_to_krw") or DEFAULT_FX_AUD_TO_KRW)
+    except (TypeError, ValueError):
+        fx = DEFAULT_FX_AUD_TO_KRW
+
+    seed = _seed_by_id(product_id) if product_id else None
+    warnings: list[str] = []
+
+    # Withdrawal 품목은 어떤 override 도 받지 않고 차단
+    if seed and seed.get("pricing_case") == "ESTIMATE_withdrawal":
+        base = dispatch_by_pricing_case(seed, fx_aud_to_krw=fx)
+        return JSONResponse(content={
+            "ok": True,
+            "logic": "blocked",
+            "scenarios": [],
+            "inputs": base.get("inputs", {}),
+            "warnings": [w for w in base.get("warnings", []) if w],
+            "disclaimer": base.get("disclaimer", ""),
+            "blocked_reason": base.get("blocked_reason", "commercial_withdrawal"),
+        })
+
+    # Seed 플래그 기반 공통 경고 수집 (override 계산 결과에도 붙여줌)
+    if seed:
+        if seed.get("pbac_superiority_required"):
+            warnings.append(
+                "복합제/신규 등재 품목: PBAC(호주 의약품급여자문위원회) 임상우월성 입증 필요 (등재 지연·거절 리스크)."
+            )
+        if seed.get("hospital_channel_only"):
+            warnings.append(
+                "약국 유통 없음 → Hospital tender(병원 공급 입찰)/HealthShare NSW 병원조달 루트 전용. "
+                "FOB ±20% 변동성 가능."
+            )
+        if seed.get("section_19a_flag"):
+            warnings.append("호주 미등재 성분 → Section 19A(일시수입 특례) 경로 전용.")
+        if seed.get("restricted_benefit"):
+            warnings.append("PBS Restricted Benefit(처방 적응증 제한) — 적용 환자군 좁음.")
+        confidence = seed.get("confidence_score")
+        if isinstance(confidence, (int, float)) and confidence < 0.7:
+            warnings.append(f"confidence_score {confidence:.2f} — FOB 결과는 예비 참고치.")
+
+    try:
+        if logic == "A":
+            aemp = float(overrides.get("base_aemp") or 0.0)
+            if aemp <= 0 and seed:
+                # seed 기본값으로 폴백
+                base = dispatch_by_pricing_case(seed, fx_aud_to_krw=fx)
+                scenarios_list = _scenarios_dict_to_list(base.get("scenarios", {}))
+                return JSONResponse(content={
+                    "ok": True,
+                    "logic": base.get("logic"),
+                    "scenarios": scenarios_list,
+                    "inputs": base.get("inputs", {}),
+                    "warnings": [w for w in (base.get("warnings", []) + warnings) if w],
+                    "disclaimer": base.get("disclaimer", get_disclaimer_text("A")),
+                    "blocked_reason": base.get("blocked_reason"),
+                })
+            if aemp <= 0:
+                raise HTTPException(status_code=400, detail="Logic A: base_aemp (>0) 필요")
+
+            margin_default = float(overrides.get("importer_margin") or 20.0)
+            # 사용자가 입력한 단일 margin 을 average 로 고정하되,
+            # 공격(-10)/보수(+10) 범위 제한은 seed 의 typical band 를 따른다
+            presets = {
+                "aggressive":   max(0.0, margin_default - 10.0),
+                "average":      margin_default,
+                "conservative": margin_default + 10.0,
+            }
+            scenarios = calculate_three_scenarios(
+                logic="A", aemp_aud=aemp, fx_aud_to_krw=fx, presets_pct=presets
+            )
+            return JSONResponse(content={
+                "ok": True,
+                "logic": "A",
+                "scenarios": _scenarios_dict_to_list(scenarios),
+                "inputs": {
+                    "product_id": product_id,
+                    "aemp_aud": aemp,
+                    "importer_margin_pct_center": margin_default,
+                    "fx_aud_to_krw": fx,
+                    "presets_pct": presets,
+                },
+                "warnings": warnings,
+                "disclaimer": get_disclaimer_text("A"),
+                "blocked_reason": None,
+            })
+
+        # logic == "B"
+        retail = float(overrides.get("base_retail") or 0.0)
+        if retail <= 0 and seed:
+            base = dispatch_by_pricing_case(seed, fx_aud_to_krw=fx)
+            scenarios_list = _scenarios_dict_to_list(base.get("scenarios", {}))
+            return JSONResponse(content={
+                "ok": True,
+                "logic": base.get("logic"),
+                "scenarios": scenarios_list,
+                "inputs": base.get("inputs", {}),
+                "warnings": [w for w in (base.get("warnings", []) + warnings) if w],
+                "disclaimer": base.get("disclaimer", get_disclaimer_text("B")),
+                "blocked_reason": base.get("blocked_reason"),
+            })
+        if retail <= 0:
+            raise HTTPException(status_code=400, detail="Logic B: base_retail (>0) 필요")
+
+        gst_pct = float(overrides.get("gst") or 10.0)
+        pharmacy_pct = float(overrides.get("pharmacy_margin") or 30.0)
+        wholesale_pct = float(overrides.get("wholesale_margin") or 10.0)
+        margin_default = float(overrides.get("importer_margin") or 20.0)
+        presets = {
+            "aggressive":   max(0.0, margin_default - 5.0),
+            "average":      margin_default,
+            "conservative": margin_default + 10.0,
+        }
+        scenarios = calculate_three_scenarios(
+            logic="B",
+            retail_aud=retail,
+            fx_aud_to_krw=fx,
+            presets_pct=presets,
+            logic_b_kwargs={
+                "gst_pct": gst_pct,
+                "pharmacy_margin_pct": pharmacy_pct,
+                "wholesale_margin_pct": wholesale_pct,
+            },
+        )
+        return JSONResponse(content={
+            "ok": True,
+            "logic": "B",
+            "scenarios": _scenarios_dict_to_list(scenarios),
+            "inputs": {
+                "product_id": product_id,
+                "retail_aud": retail,
+                "gst_pct": gst_pct,
+                "pharmacy_margin_pct": pharmacy_pct,
+                "wholesale_margin_pct": wholesale_pct,
+                "importer_margin_pct_center": margin_default,
+                "fx_aud_to_krw": fx,
+                "presets_pct": presets,
+            },
+            "warnings": warnings,
+            "disclaimer": get_disclaimer_text("B"),
+            "blocked_reason": None,
+        })
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"FOB 계산 오류: {e}") from e
+
+
+# ═══════════════════════════════════════════════════════════════
+#  2공정 AI 파이프라인 스텁 엔드포인트
+#  (AI 엔진(Haiku) 연동은 다음 단계에서 구현. 현재는 업로드만 동작.)
+# ═══════════════════════════════════════════════════════════════
+
+# 2공정 업로드 PDF 저장 디렉토리
+_P2_UPLOADS_DIR = _BASE_DIR / "reports" / "_p2_uploads"
+_P2_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@app.post("/api/p2/upload")
+async def p2_upload_pdf(payload: dict[str, Any]) -> JSONResponse:
+    """2공정 AI/직접입력 탭에서 사용자가 직접 올린 PDF를 저장.
+
+    요청: {filename: str, content_b64: str (base64)}
+    응답: {ok: true, filename: str, size_bytes: int}
+
+    저장 위치: reports/_p2_uploads/{timestamp}_{safe_name}.pdf
+    다음 단계에서 /api/p2/pipeline 이 이 파일을 읽어 Haiku로 분석.
+    """
+    import base64
+    import re
+    import time
+
+    raw_name = str(payload.get("filename") or "").strip()
+    content_b64 = str(payload.get("content_b64") or "")
+    if not raw_name or not content_b64:
+        raise HTTPException(status_code=400, detail="filename 과 content_b64 필수")
+    if not raw_name.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="PDF 파일만 업로드 가능")
+
+    try:
+        content = base64.b64decode(content_b64)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"base64 디코딩 실패: {e}") from e
+
+    # 파일명 안전화 (경로 구분자·특수문자 제거)
+    safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", raw_name)
+    # 너무 길면 잘라내기
+    if len(safe_name) > 100:
+        safe_name = safe_name[-100:]
+    ts = int(time.time())
+    stored_name = f"{ts}_{safe_name}"
+    target = _P2_UPLOADS_DIR / stored_name
+
+    try:
+        target.write_bytes(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"파일 저장 실패: {e}") from e
+
+    return JSONResponse({
+        "ok": True,
+        "filename": stored_name,
+        "original_name": raw_name,
+        "size_bytes": len(content),
+    })
+
+
+@app.get("/api/p2/pipeline/status")
+async def p2_pipeline_status() -> JSONResponse:
+    """AI 파이프라인 상태 조회. 현재는 대기 상태만 반환 (엔진 미구현)."""
+    return JSONResponse({
+        "status": "idle",
+        "step_label": "AI 엔진(Haiku) 연결 대기 중 — fob_calculator 연동 예정",
+    })
+
+
+@app.post("/api/p2/pipeline")
+def p2_pipeline_stub(payload: dict[str, Any]) -> JSONResponse:
+    """AI 파이프라인 실행 — Haiku 엔진 연동 전. 업로드된 PDF → Haiku 추출 → fob_calculator 실행 예정."""
+    # Haiku 엔진 실구현 시 이 체크가 맨 위로 이동됨. 지금은 스텁이지만 미리 dep 상태를 노출.
+    if not _ANTHROPIC_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "AI 엔진(anthropic) 미설치 — `pip install -r upharma-au/requirements.txt` 실행 후 재시도. "
+                f"(probe error: {_ANTHROPIC_ERR})"
+            ),
+        )
+    raise HTTPException(status_code=501, detail="AI 파이프라인 실행은 준비 중입니다. (Haiku 엔진 연동 후 가용)")
+
+
+@app.get("/api/p2/pipeline/result")
+def p2_pipeline_result_stub() -> JSONResponse:
+    raise HTTPException(status_code=501, detail="AI 파이프라인 결과는 준비 중입니다.")
+
+
+@app.post("/api/p2/report")
+def p2_report_stub(payload: dict[str, Any]) -> JSONResponse:
+    raise HTTPException(status_code=501, detail="PDF 생성은 준비 중입니다.")
 
 
 # ═══════════════════════════════════════════════════════════════

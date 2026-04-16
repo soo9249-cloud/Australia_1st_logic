@@ -372,16 +372,33 @@
       ══════════════════════════════════════════════════════════════ -->
       <div id="p2-manual-tab" class="p2-tab-content" style="display:none;">
 
-        <!-- 보고서 선택 -->
+        <!-- 보고서 선택 · 파일 업로드 (AI 파이프라인 탭과 통일) -->
         <div class="selector-card">
           <div class="selector-label">1공정 보고서 참조 (선택)</div>
+
+          <!-- 저장된 보고서 -->
           <div class="selector-row">
-            <select id="p2-report-select">
+            <select id="p2-report-select" style="flex:1;">
               <option value="">보고서를 선택하세요</option>
             </select>
           </div>
-          <div id="p2-report-brief" class="p2-brief-wrap">
-            <p class="p2-brief-empty">보고서를 선택하면 가격 정보가 자동으로 반영됩니다.</p>
+
+          <!-- 구분선 -->
+          <div class="p2-or-divider">또는 PDF 직접 업로드</div>
+
+          <!-- 파일 업로드 -->
+          <div class="p2-upload-area" id="p2-manual-upload-area">
+            <input type="file" id="p2-manual-pdf-file" accept=".pdf" style="display:none;"
+                   onchange="handleP2ManualFileSelect(this)">
+            <label for="p2-manual-pdf-file" class="p2-upload-label">
+              <span class="p2-upload-icon">📄</span>
+              <span id="p2-manual-upload-text">PDF 파일 선택</span>
+            </label>
+          </div>
+          <div id="p2-manual-upload-status" class="p2-note" style="display:none;"></div>
+
+          <div id="p2-report-brief" class="p2-brief-wrap" style="margin-top:12px;">
+            <p class="p2-brief-empty">보고서를 선택하거나 PDF를 업로드하면 가격 정보가 자동으로 반영됩니다.</p>
           </div>
         </div>
 

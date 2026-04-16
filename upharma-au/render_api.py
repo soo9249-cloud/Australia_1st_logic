@@ -213,43 +213,76 @@ _FX_FALLBACK: dict[str, Any] = {"aud_krw": 893.0, "aud_usd": 0.6412, "updated": 
 
 @app.get("/api/news")
 def get_news() -> JSONResponse:
-    """SerpAPI google_news 로 호주 의약품 뉴스 4건. 키 없거나 실패 시 mock."""
-    api_key = os.environ.get("SERPAPI_KEY", "").strip()
+    """Perplexity sonar 로 호주 제약·규제·건강 뉴스 4건. 키 없거나 실패 시 mock."""
+    api_key = os.environ.get("PERPLEXITY_API_KEY", "").strip()
     if not api_key:
         return JSONResponse(content=_MOCK_NEWS)
     try:
-        r = httpx.get(
-            "https://serpapi.com/search",
-            params={
-                "engine": "google_news",
-                "q": "Australia TGA PBS pharmaceutical",
-                "gl": "au",
-                "hl": "en",
-                "num": 4,
-                "api_key": api_key,
+        r = httpx.post(
+            "https://api.perplexity.ai/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
             },
-            timeout=12.0,
+            json={
+                "model": "sonar",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a news aggregator. Return EXACTLY 5 recent news items "
+                            "as a JSON array. Each item: {\"title\": string, \"source\": string, \"date\": string (YYYY-MM-DD)}. "
+                            "No markdown, no explanation, ONLY the JSON array."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            "Find the 5 most recent news articles (last 30 days) about: "
+                            "Australia pharmaceutical industry, TGA regulations, PBS policy, "
+                            "healthcare legislation, public health trends, disease outbreaks. "
+                            "Prioritize official government sources and major news outlets."
+                        ),
+                    },
+                ],
+                "return_citations": True,
+            },
+            timeout=20.0,
         )
         if r.status_code != 200:
             return JSONResponse(content=_MOCK_NEWS)
-        payload = r.json()
+        data = r.json()
     except Exception:
         return JSONResponse(content=_MOCK_NEWS)
 
-    results = payload.get("news_results") or []
-    items: list[dict[str, Any]] = []
-    for it in results[:4]:
+    import json as _json
+    content = ""
+    try:
+        content = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
+    except Exception:
+        return JSONResponse(content=_MOCK_NEWS)
+
+    citations = data.get("citations") or []
+    link_list = [c if isinstance(c, str) else (c.get("url") if isinstance(c, dict) else "") for c in citations]
+
+    try:
+        start = content.index("[")
+        end = content.rindex("]") + 1
+        items = _json.loads(content[start:end])
+    except Exception:
+        return JSONResponse(content=_MOCK_NEWS)
+
+    result: list[dict[str, Any]] = []
+    for i, it in enumerate(items[:5]):
         if not isinstance(it, dict):
             continue
-        src = it.get("source")
-        src_name = src.get("name") if isinstance(src, dict) else src
-        items.append({
-            "title": it.get("title"),
-            "source": src_name,
-            "date": it.get("date"),
-            "link": it.get("link"),
+        result.append({
+            "title": it.get("title", ""),
+            "source": it.get("source", ""),
+            "date": it.get("date", ""),
+            "link": link_list[i] if i < len(link_list) else "",
         })
-    return JSONResponse(content=items if items else _MOCK_NEWS)
+    return JSONResponse(content=result if result else _MOCK_NEWS)
 
 
 @app.get("/api/exchange")

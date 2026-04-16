@@ -282,6 +282,8 @@ async function runCrawl(mode){
   if(pending) pending.remove();
   if(prod){
     renderCrawlCard(prod);
+    // 크롤링 성공 → 자동으로 1공정 시장분석 이어서 실행
+    await runAnalysis(1);
   } else {
     // 폴백도 없고 API 도 실패한 경우 — 에러 카드 재삽입
     const stack=document.getElementById("crawlStack");

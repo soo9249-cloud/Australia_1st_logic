@@ -198,18 +198,7 @@
       <div class="empty-state" id="crawlEmpty">품목 선택 후 크롤링 실행하세요.</div>
     </div>
 
-    <!-- Step 1. 시장분석 실행 -->
-    <div class="report-action-area">
-      <div>
-        <div class="ra-text">1공정 시장분석 실행</div>
-        <div class="ra-sub">Claude + Perplexity 호출 — 크롤링 데이터 기반 해석 + 논문 출처 수집 (약 40~60초)</div>
-      </div>
-      <div class="ra-btns">
-        <button class="btn-gen" id="genBtn1" onclick="runAnalysis(1)" disabled><svg class="btn-icon" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7"/><line x1="15.2" y1="15.2" x2="21" y2="21"/><line x1="7" y1="12" x2="7" y2="10"/><line x1="10" y1="12" x2="10" y2="7"/><line x1="13" y1="12" x2="13" y2="9"/></svg>1공정 시장분석 실행</button>
-      </div>
-    </div>
-
-    <!-- 보고서 미리보기 -->
+    <!-- 보고서 미리보기 (진출 적합 분석 한 번으로 크롤링→분석→PDF까지 자동 진행) -->
     <div id="rptPreview1" style="display:none;margin-top:20px;">
       <div class="rpt-dark-bar">
         <div id="rptMetabar" class="rpt-metabar">품목명 · INN · 함량·제형 · HS코드 · Case · confidence</div>

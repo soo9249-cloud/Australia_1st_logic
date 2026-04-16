@@ -147,7 +147,9 @@ function renderCrawlCard(p){
   if(em) em.remove();
   crawlCount++;
   document.getElementById("crawlCount").textContent=crawlCount;
-  document.getElementById("genBtn1").disabled=false;
+  // genBtn1 은 레이아웃 개편으로 제거됨 — null 방어만 하고 스킵
+  const _genBtn1 = document.getElementById("genBtn1");
+  if(_genBtn1) _genBtn1.disabled=false;
 
   const now=new Date();
   const t=now.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});

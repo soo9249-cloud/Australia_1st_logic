@@ -340,7 +340,7 @@ async function runAnalysis(n){
   }
 
   if(btn){btn.textContent="⚙️ Claude + Perplexity 호출 중... (40~60초)";btn.disabled=true;}
-  showToast("🤖 시장분석 진행 중 — 잠시만 기다리세요");
+  showToast('<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>시장분석 진행중...');
 
   let apiData = null;
   try{
@@ -507,11 +507,25 @@ function buildReportCards(apiData){
   const rawHs    = meta.hs_code_6 || "";
   const prodHs   = rawHs.length >= 6 ? `${rawHs.slice(0,4)}.${rawHs.slice(4,6)}` : (rawHs || "—");
 
-  // 수출 적합 판정 (신호등) — 색 원형만, 텍스트·이모지 없음
+  // 수출 적합 판정 (신호등) — SVG 3원형 하우징 + 색 배지
   const ev = String(meta.export_viable || "").toLowerCase();
-  const viableColorHex = ev === "viable" ? "#27ae60"
-                       : ev === "conditional" ? "#f39c12"
-                       : ev === "not_viable" ? "#e74c3c" : "#94a3b8";
+  const viable = ev === "viable" ? "가능"
+               : ev === "conditional" ? "조건부"
+               : ev === "not_viable" ? "불가" : "분석 중";
+  const viableColor = ev === "viable" ? "green"
+                    : ev === "conditional" ? "orange"
+                    : ev === "not_viable" ? "red" : "gray";
+  const dim = 0.22;
+  const opRed    = ev === "not_viable"  ? 1 : dim;
+  const opYellow = ev === "conditional" ? 1 : dim;
+  const opGreen  = ev === "viable"      ? 1 : dim;
+  const trafficLightSvg = `
+    <svg viewBox="0 0 28 68" width="30" height="72" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="24" height="64" rx="7" fill="#1e293b"/>
+      <circle cx="14" cy="15" r="6.5" fill="#e74c3c" opacity="${opRed}"/>
+      <circle cx="14" cy="34" r="6.5" fill="#f39c12" opacity="${opYellow}"/>
+      <circle cx="14" cy="53" r="6.5" fill="#27ae60" opacity="${opGreen}"/>
+    </svg>`;
 
   // 신뢰도 — 7개 크롤링 필드 기반 서버 재계산값
   const cb = meta.confidence_breakdown || {checklist:[], hits:0, total:0};
@@ -547,7 +561,10 @@ function buildReportCards(apiData){
       </div>
       <div style="margin-bottom:10px;">
         <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;">핵심 판정</div>
-        <div style="width:36px;height:36px;border-radius:50%;background:${viableColorHex};"></div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          ${trafficLightSvg}
+          <span class="bdg ${viableColor}" style="font-size:16px;padding:8px 18px;">${viable}</span>
+        </div>
       </div>
     </div>`;
 
@@ -951,7 +968,8 @@ function delRpt(id){
 
 let toastTimer;
 function showToast(msg){
-  const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
+  // HTML 지원 — 호출부에서 SVG 아이콘 주입 가능 (모든 호출은 내부 하드코딩이라 XSS 無)
+  const t=document.getElementById("toast");t.innerHTML=msg;t.classList.add("show");
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),2400);
 }
 

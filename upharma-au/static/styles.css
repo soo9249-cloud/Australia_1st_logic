@@ -856,6 +856,11 @@ select:focus{ box-shadow:0 0 0 3px rgba(23,63,120,.15); }
   opacity:1; transform:translateX(-50%) translateY(0);
   pointer-events:auto;
 }
+.toast-icon{
+  width:14px; height:14px;
+  display:inline-block; vertical-align:-2px;
+  margin-right:7px;
+}
 
 /* ── 스크롤바 ────────────────────────────────────────────── */
 ::-webkit-scrollbar      { width:6px; height:6px; }

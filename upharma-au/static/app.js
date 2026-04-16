@@ -994,14 +994,14 @@ let _p2LastScenarios = null;
 function _makeP2Defaults() {
   return {
     public: [
-      { key: 'base_price', label: '기준 입찰가', value: 0, type: 'abs_input', unit: 'SGD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '경쟁사 입찰가 또는 목표 기준가', rationale: '공공 채널은 입찰 경쟁이 강해 기준가 설정이 핵심입니다.' },
-      { key: 'exchange', label: '환율 (USD→SGD)', value: 1.0, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'USD 입력 시 적용, SGD면 1.0 유지', rationale: '실시간 환율을 반영해 환차 리스크를 줄입니다.' },
+      { key: 'base_price', label: '기준 입찰가', value: 0, type: 'abs_input', unit: 'AUD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '경쟁사 입찰가 또는 목표 기준가', rationale: '공공 채널은 입찰 경쟁이 강해 기준가 설정이 핵심입니다.' },
+      { key: 'exchange', label: '환율 (USD→AUD)', value: 1.0, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'USD 입력 시 적용, AUD면 1.0 유지', rationale: '실시간 환율을 반영해 환차 리스크를 줄입니다.' },
       { key: 'pub_ratio', label: '공공 수출가 산출 비율', value: 30, type: 'pct_mult', unit: '%', step: 1, min: 10, max: 60, enabled: true, fixed: false, expanded: false, hint: '기준가 대비 최종 반영 비율', rationale: '입찰·유통·파트너 마진을 반영한 목표 비율입니다.' },
     ],
     private: [
-      { key: 'base_het', label: '민간 기준가 (HET/HNA)', value: 0, type: 'abs_input', unit: 'SGD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '소매/입고 기준 가격', rationale: '민간 시장은 소매 가격 구조 역산이 중요합니다.' },
-      { key: 'exchange', label: '환율 (USD→SGD)', value: 1.0, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'USD 입력 시 적용', rationale: '실시간 환율 반영으로 가격 정합성을 유지합니다.' },
-      { key: 'gst', label: 'GST 공제 (÷1.09)', value: 9, type: 'gst_fixed', unit: '%', step: 0, min: 9, max: 9, enabled: true, fixed: true, expanded: false, hint: '싱가포르 GST 9% 고정', rationale: '민간 소비자 가격에서 세금을 분리합니다.' },
+      { key: 'base_het', label: '민간 기준가 (HET/HNA)', value: 0, type: 'abs_input', unit: 'AUD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '소매/입고 기준 가격', rationale: '민간 시장은 소매 가격 구조 역산이 중요합니다.' },
+      { key: 'exchange', label: '환율 (USD→AUD)', value: 1.0, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'USD 입력 시 적용', rationale: '실시간 환율 반영으로 가격 정합성을 유지합니다.' },
+      { key: 'gst', label: 'GST 공제 (÷1.10)', value: 10, type: 'gst_fixed', unit: '%', step: 0, min: 10, max: 10, enabled: true, fixed: true, expanded: false, hint: '호주 GST 10% 고정', rationale: '민간 소비자 가격에서 세금을 분리합니다.' },
       { key: 'retail', label: '소매 마진율', value: 40, type: 'pct_deduct', unit: '%', step: 1, min: 10, max: 60, enabled: true, fixed: false, expanded: false, hint: '체인/약국 마진 차감', rationale: '채널별 마진 차이를 반영합니다.' },
       { key: 'partner', label: '파트너사 마진', value: 20, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 40, enabled: true, fixed: false, expanded: false, hint: '현지 파트너 수수료', rationale: '현지 영업·등록 비용을 포함합니다.' },
       { key: 'distribution', label: '유통 마진', value: 15, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 40, enabled: true, fixed: false, expanded: false, hint: '물류/도매 비용', rationale: '유통 구조별 고정비를 반영합니다.' },
@@ -1080,8 +1080,8 @@ function setP2AiSeg(seg) {
   const desc = document.getElementById('p2-ai-seg-desc');
   if (desc) {
     desc.textContent = _p2AiSeg === 'public'
-      ? '공공 시장: ALPS 조달청 채널 · 27개 공공기관 통합구매 기준'
-      : '민간 시장: 병원·약국·체인 채널 중심 유통 구조 기준';
+      ? '공공 시장: PBS 공공급여 채널 · 주별 병원조달(HealthShare NSW 등) 기준'
+      : '민간 시장: Chemist Warehouse 등 약국 체인 · 소매 유통 구조 기준';
   }
 }
 
@@ -1224,10 +1224,10 @@ function _renderP2AiResult(data) {
   if (resultSection) resultSection.style.display = '';
 
   _setText('p2r-product-name', extracted.product_name || '미상');
-  _setText('p2r-ref-price-text', extracted.ref_price_text || (extracted.ref_price_sgd ? `SGD ${Number(extracted.ref_price_sgd).toFixed(2)}` : '추출값 없음'));
+  _setText('p2r-ref-price-text', extracted.ref_price_text || (extracted.ref_price_aud ? `AUD ${Number(extracted.ref_price_aud).toFixed(2)}` : '추출값 없음'));
   _setText('p2r-verdict', extracted.verdict || '미상');
-  _setText('p2r-exchange', rates.sgd_krw ? `1 SGD = ${Number(rates.sgd_krw).toFixed(2)} KRW` : '환율 정보 없음');
-  _setText('p2r-final-price', `SGD ${Number(analysis.final_price_sgd || 0).toFixed(2)}`);
+  _setText('p2r-exchange', rates.aud_krw ? `1 AUD = ${Number(rates.aud_krw).toFixed(2)} KRW` : '환율 정보 없음');
+  _setText('p2r-final-price', `AUD ${Number(analysis.final_price_aud || 0).toFixed(2)}`);
   _setText('p2r-formula', analysis.formula_str || '산정 공식 없음');
   _setText('p2r-rationale', analysis.rationale || '산정 이유 없음');
 
@@ -1240,7 +1240,7 @@ function _renderP2AiResult(data) {
           <div class="p2-scenario p2-scenario--${cls}">
             <div class="p2-scenario-top">
               <span class="p2-scenario-name">${_escHtml(String(s.name || `시나리오 ${idx + 1}`))}</span>
-              <span class="p2-scenario-price">SGD ${Number(s.price_sgd || 0).toFixed(2)}</span>
+              <span class="p2-scenario-price">AUD ${Number(s.price_aud || 0).toFixed(2)}</span>
             </div>
             <div class="p2-scenario-reason">${_escHtml(String(s.reason || ''))}</div>
           </div>`;
@@ -1262,19 +1262,19 @@ function _renderP2AiResult(data) {
 function _p2FillExchangeRate() {
   const rates = window._exchangeRates;
   if (!rates) return;
-  const sgdUsd = Number(rates.sgd_usd);
-  if (!sgdUsd || sgdUsd <= 0) return;
-  const usdToSgd = Number((1 / sgdUsd).toFixed(4));
+  const audUsd = Number(rates.aud_usd);
+  if (!audUsd || audUsd <= 0) return;
+  const usdToAud = Number((1 / audUsd).toFixed(4));
   ['public', 'private'].forEach((seg) => {
     const opt = _p2Manual[seg].find((x) => x.key === 'exchange');
-    if (opt) opt.value = usdToSgd;
+    if (opt) opt.value = usdToAud;
   });
 }
 
 function _p2FillBaseFromReport() {
   const report = _getP2SelectedReport();
   if (!report) return;
-  const hint = _extractSgdHint(report.price_hint || report.price_positioning_pbs || '');
+  const hint = _extractAudHint(report.price_hint || report.price_positioning_pbs || '');
   if (!Number.isNaN(hint) && hint > 0) {
     const pub = _p2Manual.public.find((x) => x.key === 'base_price');
     const pri = _p2Manual.private.find((x) => x.key === 'base_het');
@@ -1314,11 +1314,12 @@ function _getP2SelectedReport() {
   return _loadReports().find((r) => String(r.id) === String(_p2SelectedReportId)) || null;
 }
 
-function _extractSgdHint(text) {
+function _extractAudHint(text) {
   const src = String(text || '');
-  const mRange = src.match(/SGD\s*([0-9]+(?:\.[0-9]+)?)\s*[~\-–]\s*([0-9]+(?:\.[0-9]+)?)/i);
+  // AUD 12.34  /  A$12.34  /  $12.34 (Chemist Warehouse 표기) 셋 다 인식
+  const mRange = src.match(/(?:AUD|A\$|\$)\s*([0-9]+(?:\.[0-9]+)?)\s*[~\-–]\s*([0-9]+(?:\.[0-9]+)?)/i);
   if (mRange) return (Number(mRange[1]) + Number(mRange[2])) / 2;
-  const mSingle = src.match(/SGD\s*([0-9]+(?:\.[0-9]+)?)/i);
+  const mSingle = src.match(/(?:AUD|A\$|\$)\s*([0-9]+(?:\.[0-9]+)?)/i);
   if (mSingle) return Number(mSingle[1]);
   return NaN;
 }
@@ -1359,17 +1360,17 @@ function _calcP2Manual() {
     const ex = Number(options.find((x) => x.key === 'exchange')?.value || 1);
     const ratio = Number(options.find((x) => x.key === 'pub_ratio')?.value || 30);
     let price = base * ex * (ratio / 100);
-    const parts = [`SGD ${base.toFixed(2)}`, `× ${ex.toFixed(4)}`, `× ${ratio}%`];
+    const parts = [`AUD ${base.toFixed(2)}`, `× ${ex.toFixed(4)}`, `× ${ratio}%`];
     options.forEach((opt) => {
       if (opt.type === 'pct_add_custom') {
         price *= (1 + Number(opt.value) / 100);
         parts.push(`× (1+${Number(opt.value).toFixed(1)}%)`);
       } else if (opt.type === 'abs_add_custom') {
         price += Number(opt.value);
-        parts.push(`+ SGD ${Number(opt.value).toFixed(2)}`);
+        parts.push(`+ AUD ${Number(opt.value).toFixed(2)}`);
       }
     });
-    return { kup: Math.max(price, 0), formulaStr: `${parts.join('  ')}  =  KUP  SGD ${Math.max(price, 0).toFixed(2)}` };
+    return { kup: Math.max(price, 0), formulaStr: `${parts.join('  ')}  =  KUP  AUD ${Math.max(price, 0).toFixed(2)}` };
   }
 
   let price = 0;
@@ -1377,13 +1378,13 @@ function _calcP2Manual() {
   options.forEach((opt) => {
     if (opt.key === 'base_het') {
       price = Number(opt.value);
-      parts.push(`SGD ${price.toFixed(2)}`);
+      parts.push(`AUD ${price.toFixed(2)}`);
     } else if (opt.key === 'exchange' && Number(opt.value) !== 1) {
       price *= Number(opt.value);
       parts.push(`× ${Number(opt.value).toFixed(4)}`);
     } else if (opt.type === 'gst_fixed') {
-      price /= 1.09;
-      parts.push('÷ 1.09');
+      price /= 1.10;
+      parts.push('÷ 1.10');
     } else if (opt.type === 'pct_deduct') {
       price *= (1 - Number(opt.value) / 100);
       parts.push(`× (1−${Number(opt.value).toFixed(1)}%)`);
@@ -1392,10 +1393,10 @@ function _calcP2Manual() {
       parts.push(`× (1+${Number(opt.value).toFixed(1)}%)`);
     } else if (opt.type === 'abs_add_custom') {
       price += Number(opt.value);
-      parts.push(`+ SGD ${Number(opt.value).toFixed(2)}`);
+      parts.push(`+ AUD ${Number(opt.value).toFixed(2)}`);
     }
   });
-  return { kup: Math.max(price, 0), formulaStr: `${(parts.join('  ') || 'SGD 0.00')}  =  KUP  SGD ${Math.max(price, 0).toFixed(2)}` };
+  return { kup: Math.max(price, 0), formulaStr: `${(parts.join('  ') || 'AUD 0.00')}  =  KUP  AUD ${Math.max(price, 0).toFixed(2)}` };
 }
 
 function _renderP2Manual() {
@@ -1446,13 +1447,13 @@ function _p2OptionCardHtml(opt) {
   const canStep = !isInput && !isFixed && opt.step > 0;
 
   let valDisplay = '';
-  if (isFixed) valDisplay = '÷ 1.09 고정';
+  if (isFixed) valDisplay = '÷ 1.10 고정';
   else if (opt.type === 'pct_mult') valDisplay = `× ${Number(opt.value).toFixed(0)}%`;
   else if (opt.type === 'pct_deduct') valDisplay = `× (1−${Number(opt.value).toFixed(0)}%)`;
   else if (opt.type === 'pct_add_custom') valDisplay = `× (1+${Number(opt.value).toFixed(1)}%)`;
-  else if (opt.unit === 'SGD') valDisplay = `SGD ${Number(opt.value).toFixed(2)}`;
+  else if (opt.unit === 'AUD') valDisplay = `AUD ${Number(opt.value).toFixed(2)}`;
   else if (opt.unit === 'rate') valDisplay = `× ${Number(opt.value).toFixed(4)}`;
-  else valDisplay = `+ SGD ${Number(opt.value).toFixed(2)}`;
+  else valDisplay = `+ AUD ${Number(opt.value).toFixed(2)}`;
 
   const inputVal = opt.unit === 'rate' ? Number(opt.value).toFixed(4) : Number(opt.value).toFixed(2);
   return `
@@ -1523,7 +1524,7 @@ function _renderP2CustomAddSection() {
       <select class="p2-custom-type-select" id="p2c-type">
         <option value="pct_deduct">% 차감</option>
         <option value="pct_add_custom">% 가산</option>
-        <option value="abs_add_custom">SGD 가산</option>
+        <option value="abs_add_custom">AUD 가산</option>
       </select>
       <input class="p2-custom-input" id="p2c-val" type="number" placeholder="값" step="0.1" min="0" max="999" style="width:80px;flex:0 0 80px">
       <button class="p2-add-custom-btn" id="p2c-add" type="button">+ 추가</button>
@@ -1538,7 +1539,7 @@ function _renderP2CustomAddSection() {
       label,
       value: val,
       type,
-      unit: type === 'abs_add_custom' ? 'SGD' : '%',
+      unit: type === 'abs_add_custom' ? 'AUD' : '%',
       step: type === 'abs_add_custom' ? 0.1 : 1,
       min: 0,
       max: type === 'abs_add_custom' ? 9999 : 100,
@@ -1571,7 +1572,7 @@ function _p2ScenarioHtml(agg, avg, cons, aggReason, avgReason, consReason) {
     <div class="p2-scenario p2-scenario--${cls}">
       <div class="p2-scenario-top">
         <span class="p2-scenario-name">${_escHtml(name)}</span>
-        <span class="p2-scenario-price">SGD ${Number(price).toFixed(2)}</span>
+        <span class="p2-scenario-price">AUD ${Number(price).toFixed(2)}</span>
       </div>
       <div class="p2-scenario-reason">${_escHtml(reason)}</div>
     </div>`;

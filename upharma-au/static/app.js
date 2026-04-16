@@ -545,7 +545,10 @@ function buildReportCards(apiData){
     </div>`;
   const footerText=`생성일: ${now.toLocaleString("ko-KR")} · UPharma Export AI · 이 보고서는 자동 생성 초안이며 전문가 검토가 필요합니다.`;
   const rptFooterEl=document.getElementById("rptFooter");
-  if(rptFooterEl) rptFooterEl.textContent=footerText;
+  if(rptFooterEl){
+    rptFooterEl.textContent=footerText;
+    rptFooterEl.style.display="block";
+  }
   const a4FooterEl=document.getElementById("a4Footer");
   if(a4FooterEl) a4FooterEl.textContent=footerText;
 

@@ -246,11 +246,8 @@ async function runCrawl(mode){
     return;
   }
 
-  // 진출 적합 분석 시작 — 크롤링 결과 영역 노출 (초기엔 숨김 상태)
-  document.querySelectorAll(".crawl-head, #crawlStack").forEach(el => {
-    el.style.display = "";
-  });
-
+  // 진출 적합 분석 시작 — 모든 결과 영역은 계속 숨김 유지.
+  // 파이프라인(크롤링→분석→논문→PDF) 완료 후 한 번에 노출한다.
   setStep1(2);
   const pending = renderPendingCard(label);
   setTimeout(()=>setStep1(3),800);
@@ -287,10 +284,18 @@ async function runCrawl(mode){
   if(pending) pending.remove();
   if(prod){
     renderCrawlCard(prod);
-    // 크롤링 성공 → 자동으로 1공정 시장분석 이어서 실행
+    // 크롤링 성공 → 자동으로 1공정 시장분석 이어서 실행 (이때까지도 UI는 숨김 유지)
     await runAnalysis(1);
+    // 파이프라인 전체 완료 → 크롤링 결과 + 보고서 + PDF 를 동시에 노출
+    document.querySelectorAll(".crawl-head, #crawlStack").forEach(el => { el.style.display = ""; });
+    const pvDone = document.getElementById("rptPreview1");
+    if(pvDone){
+      pvDone.style.display = "block";
+      document.querySelector(".crawl-head").scrollIntoView({behavior:"smooth",block:"start"});
+    }
   } else {
-    // 폴백도 없고 API 도 실패한 경우 — 에러 카드 재삽입
+    // 폴백도 없고 API 도 실패한 경우 — 에러 카드 재삽입 + 크롤링 영역 노출
+    document.querySelectorAll(".crawl-head, #crawlStack").forEach(el => { el.style.display = ""; });
     const stack=document.getElementById("crawlStack");
     const err=document.createElement("div");
     err.className="crawl-card has-error";
@@ -371,18 +376,15 @@ async function runAnalysis(n){
   _currentAnalysisData = apiData;
 
   try {
-    // 분석 결과 + A4 미리보기를 한 번에 렌더 (단일 플로우)
+    // 분석 결과 + A4 미리보기 렌더 — 단, rptPreview1 은 여기서 노출하지 않는다.
+    // runCrawl 이 파이프라인 전체가 끝난 뒤 한 번에 보여줄 것.
     renderAnalysisBlocks(apiData);
-    const pv = document.getElementById("rptPreview1");
-    pv.style.display = "block";
 
-    // A4 미리보기 자동 생성 (과거 Step 2 버튼 제거)
     renderA4Preview(apiData);
     const a4View = document.getElementById("a4PreviewView");
     if(a4View) a4View.style.display = "block";
 
     _setPreviewButtonsEnabled(true);
-    pv.scrollIntoView({behavior:"smooth",block:"start"});
 
     if(apiData && apiData.ok){
       showToast("✅ 시장분석 완료 — PDF 다운로드 준비됨");

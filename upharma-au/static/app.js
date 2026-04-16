@@ -593,18 +593,11 @@ function buildReportCards(apiData){
       </div>
     </div>`;
 
-  // 리스크·조건 셀: block3_risks + block4_regulatory 규제 항목들을 하나로 병합
-  const regsParsedForRisks = parseBlock4(blocks.block4_regulatory);
-  const regsInlineText = regsParsedForRisks
-    .map(r => `${r.num} ${r.title}: ${r.impact}`)
-    .join("\n");
-  const risksMerged = `${blocks.block3_risks || "⚙️ 생성 실패"}\n\n[규제 체크포인트]\n${regsInlineText}`;
-
   const strats=[
     {k:"진입 채널 전략",  v: blocks.block3_channel  || "⚙️ 생성 실패", em:true},
     {k:"가격 포지셔닝",   v: blocks.block3_pricing  || "⚙️ 생성 실패"},
     {k:"파트너 발굴",     v: blocks.block3_partners || "⚙️ 생성 실패"},
-    {k:"리스크·조건",     v: risksMerged},
+    {k:"리스크·조건",     v: blocks.block3_risks    || "⚙️ 생성 실패"},
   ];
   const block3=`
     <div style="background:var(--card);border:1px solid rgba(23,63,120,.08);border-radius:18px;padding:18px;">
@@ -626,9 +619,9 @@ function buildReportCards(apiData){
                               : (cat||"").startsWith("가격") ? "green"
                               : "gray";
   const sourceBadge = (src) => {
-    if(src === "semantic_scholar") return "🎓 Semantic Scholar";
-    if(src === "pubmed")           return "🔬 PubMed";
-    if(src === "perplexity")       return "🔎 Perplexity";
+    if(src === "semantic_scholar") return "Semantic Scholar";
+    if(src === "pubmed")           return "PubMed";
+    if(src === "perplexity")       return "Perplexity";
     return src || "출처";
   };
   const refsFallback = [
@@ -758,12 +751,7 @@ function renderA4Preview(apiData){
       ])}
     </div>`;
 
-  // ── 섹션 3: 시장 진출 전략 (4축) — 리스크+조건 셀에 규제 체크포인트 병합
-  const regsParsedA4 = parseBlock4(blocks.block4_regulatory);
-  const regsInlineA4 = regsParsedA4
-    .map(r => `${r.num} ${r.title}: ${r.impact}`)
-    .join("\n");
-  const risksMergedA4 = `${blocks.block3_risks || "—"}\n\n[규제 체크포인트]\n${regsInlineA4}`;
+  // ── 섹션 3: 시장 진출 전략 (4축)
   const sec3 = `
     <div class="a4-section">
       <div class="a4-section-title">3. 시장 진출 전략</div>
@@ -771,7 +759,7 @@ function renderA4Preview(apiData){
         ["진입 채널 권고", blocks.block3_channel],
         ["가격 포지셔닝",  blocks.block3_pricing],
         ["파트너 발굴",    blocks.block3_partners],
-        ["리스크 + 조건",  risksMergedA4],
+        ["리스크 + 조건",  blocks.block3_risks],
       ])}
     </div>`;
 

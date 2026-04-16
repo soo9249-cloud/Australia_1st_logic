@@ -165,7 +165,7 @@ body{
 .irow-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
 
 /* ── 체크리스트 (메인탭 · 정적) ───────────────────────────── */
-.todo-list{ display:flex; flex-direction:column; gap:7px; }
+.todo-list{ display:flex; flex-direction:column; gap:7px; margin-bottom:12px; }
 /* ── To-Do 리스트 (SG 스타일) ─────────────────────────────── */
 .todo-item{
   display:flex; align-items:center; gap:10px;

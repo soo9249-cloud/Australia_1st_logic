@@ -586,9 +586,9 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]
 # 출력: 8개 한국어 보고서체 블록
 #   - block_extract        : 추출정보 요약 (품목·참고가·TGA/PBS 판정)
 #   - block_fob_intro      : 3시나리오 FOB 메타 해설 (왜 이 가격대가 나오는지)
-#   - scenario_penetration : "저가 진입(Penetration)" 시나리오 reason 1~2문장
-#   - scenario_reference   : "기준가(Reference)" 시나리오 reason 1~2문장
-#   - scenario_premium     : "프리미엄(Premium)" 시나리오 reason 1~2문장
+#   - scenario_penetration : "저가 진입 시나리오(Penetration Pricing)" reason 1~2문장
+#   - scenario_reference   : "기준가 기반 시나리오(Reference Pricing)" reason 1~2문장
+#   - scenario_premium     : "프리미엄 시나리오(Premium Pricing)" reason 1~2문장
 #   - block_strategy       : 권장 진입 전략 (채널·파트너·타이밍)
 #   - block_risks          : 리스크 요약 (규제·환율·경쟁)
 #   - block_positioning    : 경쟁사 포지셔닝 해설
@@ -604,9 +604,12 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "  block_extract        : 1문단(3~5문장). 제품명·참고가(AEMP 또는 retail)·TGA/PBS 판정 요약.\n"
     "  block_fob_intro      : 1문단(3~5문장). 왜 본 품목이 Logic A(AEMP) 또는 Logic B(Private) 로 역산되는지, "
     "                         3시나리오 가격대(AUD 범위)를 한 줄로 언급.\n"
-    "  scenario_penetration : 저가 진입 전략 근거 1~2문장. (수입상 마진 10% 전제 = 시장 점유율 확보 목적.)\n"
-    "  scenario_reference   : 기준가 전략 근거 1~2문장. (마진 20% 전제 = 경쟁 브랜드 PBS 평균대 진입.)\n"
-    "  scenario_premium     : 프리미엄 전략 근거 1~2문장. (마진 30% 전제 = 제형·품질 차별화 포지셔닝.)\n"
+    "  scenario_penetration : '저가 진입 시나리오 (Penetration Pricing)' 근거 1~2문장.\n"
+    "    — 경쟁사보다 낮은 가격으로 수출, 초기 시장점유율 빠르게 확대 후 필요 시 가격 인상. (수입상 마진 10% 전제.)\n"
+    "  scenario_reference   : '기준가 기반 시나리오 (Reference Pricing)' 근거 1~2문장.\n"
+    "    — 타깃 시장의 경쟁사 가격이나 시장 평균 가격을 준거로 자사 FOB 설정, 협상 기반 마련. (마진 20% 전제.)\n"
+    "  scenario_premium     : '프리미엄 시나리오 (Premium Pricing)' 근거 1~2문장.\n"
+    "    — 제품 혁신성·고품질 강조, 경쟁제품보다 높은 가격 책정으로 고마진 추구, 고객층 차별화. (마진 30% 전제.)\n"
     "  block_strategy       : 1문단(3~5문장). 권장 진입 채널(PBS/Private/Hospital)·파트너 발굴·타이밍.\n"
     "  block_risks          : 1문단(3~5문장). 규제(TGA/PBAC/Section 19A 등)·환율·경쟁 리스크.\n"
     "  block_positioning    : 1문단(3~5문장). 경쟁사 브랜드(seed.competitor_brands_on_pbs) 대비 포지셔닝.\n\n"
@@ -645,9 +648,9 @@ def _claude_p2_blocks_schema():
     class P2Blocks(BaseModel):
         block_extract: str = Field(description="추출정보 요약 (보고서체 ~함/~임)")
         block_fob_intro: str = Field(description="3시나리오 FOB 메타 해설 (보고서체)")
-        scenario_penetration: str = Field(description="저가 진입(Penetration) 시나리오 근거 1~2문장, fob_aud 인용 필수")
-        scenario_reference: str = Field(description="기준가(Reference) 시나리오 근거 1~2문장, fob_aud 인용 필수")
-        scenario_premium: str = Field(description="프리미엄(Premium) 시나리오 근거 1~2문장, fob_aud 인용 필수")
+        scenario_penetration: str = Field(description="저가 진입 시나리오(Penetration Pricing) 근거 1~2문장, fob_aud 인용 필수")
+        scenario_reference: str = Field(description="기준가 기반 시나리오(Reference Pricing) 근거 1~2문장, fob_aud 인용 필수")
+        scenario_premium: str = Field(description="프리미엄 시나리오(Premium Pricing) 근거 1~2문장, fob_aud 인용 필수")
         block_strategy: str = Field(description="권장 진입 전략 (보고서체 ~함/~임)")
         block_risks: str = Field(description="리스크 요약 (보고서체 ~함/~임)")
         block_positioning: str = Field(description="경쟁사 포지셔닝 (보고서체 ~함/~임)")
@@ -1690,19 +1693,234 @@ async def p2_upload_pdf(payload: dict[str, Any]) -> JSONResponse:
     })
 
 
+# ── 2공정 AI 파이프라인 상태 관리 ──────────────────────────────
+# 단일 사용자 도구이므로 모듈 레벨 dict 로 상태 추적 (동시 실행 X).
+import threading as _threading
+import re as _re
+
+_p2_state: dict[str, Any] = {
+    "status": "idle",       # idle / running / done / error
+    "step_label": "",
+    "result": None,         # 완료 시 프론트 기대 스키마
+    "error_detail": None,
+}
+_p2_lock = _threading.Lock()
+
+
+def _extract_product_id_from_filename(filename: str) -> str | None:
+    """au_report_{product_id}_{timestamp}.pdf → product_id 추출.
+    예: au_report_au-hydrine-004_20260416_120000.pdf → au-hydrine-004
+    """
+    m = _re.match(r"au_report_(.+?)_\d{8}_\d{6}\.pdf$", filename)
+    return m.group(1) if m else None
+
+
+def _fetch_exchange_rates_simple() -> dict[str, float | None]:
+    """환율 간이 조회 — yfinance → exchangerate-api → fallback. dict 반환."""
+    try:
+        import yfinance as yf
+        data = yf.download(
+            tickers=["AUDKRW=X", "AUDUSD=X"],
+            period="2d", interval="1d",
+            group_by="ticker", progress=False,
+            auto_adjust=False, threads=True,
+        )
+        krw_closes = data["AUDKRW=X"]["Close"].dropna()
+        usd_closes = data["AUDUSD=X"]["Close"].dropna()
+        if not krw_closes.empty and not usd_closes.empty:
+            return {
+                "aud_krw": round(float(krw_closes.iloc[-1]), 2),
+                "aud_usd": round(float(usd_closes.iloc[-1]), 4),
+            }
+    except Exception:
+        pass
+    try:
+        r = httpx.get("https://api.exchangerate-api.com/v4/latest/AUD", timeout=10.0)
+        if r.status_code == 200:
+            rates = r.json().get("rates", {})
+            return {
+                "aud_krw": float(rates.get("KRW", 893.0)),
+                "aud_usd": float(rates.get("USD", 0.64)),
+            }
+    except Exception:
+        pass
+    return {"aud_krw": 893.0, "aud_usd": 0.64}
+
+
+def _p2_pipeline_worker(product_id: str, segment: str) -> None:
+    """백그라운드 스레드: Supabase row 조회 → seed 매칭 → FOB 계산 → Haiku 블록 생성 → 결과 조립."""
+    try:
+        # ── Step 1: Supabase row 조회 ──
+        with _p2_lock:
+            _p2_state["step_label"] = "① Supabase 품목 데이터 조회 중…"
+        client_sb = get_supabase_client()
+        resp = client_sb.table(TABLE_NAME).select("*").eq("product_id", product_id).limit(1).execute()
+        rows = getattr(resp, "data", None)
+        if not rows:
+            raise ValueError(f"Supabase 조회 실패: product_id={product_id!r} 미존재")
+        row = rows[0]
+
+        # ── Step 2: seed 매칭 ──
+        with _p2_lock:
+            _p2_state["step_label"] = "② FOB 시드 매칭 중…"
+        seeds = _load_stage2_seeds()
+        seed = next((s for s in seeds if s.get("product_id") == product_id), None)
+        if not seed:
+            raise ValueError(f"fob_reference_seeds.json 에 {product_id!r} 시드 없음")
+
+        # ── Step 3: FOB 3시나리오 계산 ──
+        with _p2_lock:
+            _p2_state["step_label"] = "③ FOB 3시나리오 역산 중…"
+        fx_rates = _fetch_exchange_rates_simple()
+        fx_krw = fx_rates.get("aud_krw") or 893.0
+        dispatch_result = dispatch_by_pricing_case(seed, fx_aud_to_krw=fx_krw)
+
+        if dispatch_result.get("logic") == "blocked":
+            # blocked 품목은 시나리오 없이 경고만 반환
+            with _p2_lock:
+                _p2_state["status"] = "done"
+                _p2_state["step_label"] = "완료 (blocked)"
+                _p2_state["result"] = {
+                    "extracted": {
+                        "product_name": row.get("product_name_ko") or product_id,
+                        "ref_price_text": "해당 없음 (규제 차단)",
+                        "ref_price_aud": None,
+                        "verdict": f"수출 차단: {dispatch_result.get('blocked_reason', 'unknown')}",
+                    },
+                    "analysis": {
+                        "final_price_aud": 0,
+                        "formula_str": "N/A (blocked)",
+                        "rationale": " ".join(dispatch_result.get("warnings") or []),
+                        "scenarios": [],
+                    },
+                    "exchange_rates": fx_rates,
+                    "pdf": None,
+                }
+            return
+
+        # ── Step 4: Haiku 블록 생성 ──
+        with _p2_lock:
+            _p2_state["step_label"] = "④ AI(Haiku) 수출 전략 분석 중…"
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        if not anthropic_key:
+            raise ValueError("ANTHROPIC_API_KEY 환경변수 미설정")
+        p2_blocks = _haiku_p2_blocks(row, seed, dispatch_result, segment, anthropic_key)
+
+        # ── Step 5: 결과 조립 (프론트 기대 스키마) ──
+        with _p2_lock:
+            _p2_state["step_label"] = "⑤ 결과 조립 중…"
+
+        scenarios_raw = dispatch_result.get("scenarios", {})
+        agg = scenarios_raw.get("aggressive", {})
+        avg = scenarios_raw.get("average", {})
+        cons = scenarios_raw.get("conservative", {})
+
+        # 참고가 텍스트 조립
+        if seed.get("reference_aemp_aud") is not None:
+            ref_val = seed["reference_aemp_aud"]
+            if isinstance(ref_val, list):
+                ref_text = "AEMP " + " / ".join(f"AUD {v}" for v in ref_val)
+                ref_aud = sum(float(v) for v in ref_val) / len(ref_val)
+            else:
+                ref_text = f"AEMP AUD {ref_val}"
+                ref_aud = float(ref_val)
+        elif seed.get("reference_retail_aud") is not None:
+            ref_aud = float(seed["reference_retail_aud"])
+            src = seed.get("reference_retail_source") or "소매가"
+            ref_text = f"{src} AUD {ref_aud}"
+        else:
+            ref_text = "참고가 미확보"
+            ref_aud = None
+
+        # Logic A 공식 vs Logic B 공식
+        logic = dispatch_result.get("logic", "?")
+        if logic == "A":
+            formula_str = "FOB = AEMP ÷ (1 + 수입상 마진%)"
+        else:
+            formula_str = "FOB = 소매가 ÷ (1+GST) ÷ (1+약국마진) ÷ (1+도매마진) ÷ (1+수입상마진)"
+
+        frontend_result = {
+            "extracted": {
+                "product_name": row.get("product_name_ko") or product_id,
+                "ref_price_text": ref_text,
+                "ref_price_aud": ref_aud,
+                "verdict": row.get("export_viable") or row.get("reason_code") or "조건부",
+            },
+            "analysis": {
+                "final_price_aud": round(avg.get("fob_aud", 0), 2),
+                "formula_str": formula_str,
+                "rationale": p2_blocks.get("block_fob_intro", ""),
+                "scenarios": [
+                    {
+                        "name": "저가 진입 시나리오 (Penetration Pricing)",
+                        "price_aud": round(agg.get("fob_aud", 0), 2),
+                        "reason": p2_blocks.get("scenario_penetration", ""),
+                    },
+                    {
+                        "name": "기준가 기반 시나리오 (Reference Pricing)",
+                        "price_aud": round(avg.get("fob_aud", 0), 2),
+                        "reason": p2_blocks.get("scenario_reference", ""),
+                    },
+                    {
+                        "name": "프리미엄 시나리오 (Premium Pricing)",
+                        "price_aud": round(cons.get("fob_aud", 0), 2),
+                        "reason": p2_blocks.get("scenario_premium", ""),
+                    },
+                ],
+            },
+            "exchange_rates": fx_rates,
+            "pdf": None,  # 아래에서 render_p2_pdf 시도 후 갱신
+        }
+
+        # ── Step 6: PDF 생성 (선택) ──
+        with _p2_lock:
+            _p2_state["step_label"] = "⑥ PDF 보고서 생성 중…"
+        try:
+            from report_generator import render_p2_pdf
+            from datetime import datetime as _dt
+            _ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+            pdf_name = f"au_p2_report_{product_id}_{_ts}.pdf"
+            pdf_path = _REPORTS_DIR / pdf_name
+            render_p2_pdf(row, seed, dispatch_result, p2_blocks, fx_rates, pdf_path)
+            frontend_result["pdf"] = pdf_name
+        except Exception as pdf_exc:
+            print(f"[render_p2_pdf error] {pdf_exc}", flush=True)
+            # PDF 실패는 치명적이지 않음 — pdf=None 으로 반환
+
+        with _p2_lock:
+            _p2_state["status"] = "done"
+            _p2_state["step_label"] = "완료"
+            _p2_state["result"] = frontend_result
+
+    except Exception as exc:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[P2 Pipeline Error] {exc}\n{tb}", flush=True)
+        with _p2_lock:
+            _p2_state["status"] = "error"
+            _p2_state["step_label"] = f"오류: {exc}"
+            _p2_state["error_detail"] = str(exc)
+
+
 @app.get("/api/p2/pipeline/status")
 async def p2_pipeline_status() -> JSONResponse:
-    """AI 파이프라인 상태 조회. 현재는 대기 상태만 반환 (엔진 미구현)."""
-    return JSONResponse({
-        "status": "idle",
-        "step_label": "AI 엔진(Haiku) 연결 대기 중 — fob_calculator 연동 예정",
-    })
+    """AI 파이프라인 상태 조회."""
+    with _p2_lock:
+        return JSONResponse({
+            "status": _p2_state["status"],
+            "step_label": _p2_state["step_label"],
+        })
 
 
 @app.post("/api/p2/pipeline")
-def p2_pipeline_stub(payload: dict[str, Any]) -> JSONResponse:
-    """AI 파이프라인 실행 — Haiku 엔진 연동 전. 업로드된 PDF → Haiku 추출 → fob_calculator 실행 예정."""
-    # Haiku 엔진 실구현 시 이 체크가 맨 위로 이동됨. 지금은 스텁이지만 미리 dep 상태를 노출.
+def p2_pipeline(payload: dict[str, Any]) -> JSONResponse:
+    """2공정 AI 파이프라인 실행.
+
+    요청: {report_filename: str, market: "public"|"private"}
+    - report_filename 에서 product_id 추출 → Supabase row 조회 → seed → FOB → Haiku → 결과 조립
+    - 백그라운드 스레드에서 처리, 즉시 {status: "started"} 반환
+    - 프론트는 GET /api/p2/pipeline/status 로 폴링 → done 시 GET /api/p2/pipeline/result 호출
+    """
     if not _ANTHROPIC_AVAILABLE:
         raise HTTPException(
             status_code=503,
@@ -1711,17 +1929,75 @@ def p2_pipeline_stub(payload: dict[str, Any]) -> JSONResponse:
                 f"(probe error: {_ANTHROPIC_ERR})"
             ),
         )
-    raise HTTPException(status_code=501, detail="AI 파이프라인 실행은 준비 중입니다. (Haiku 엔진 연동 후 가용)")
+    if not _STAGE2_OK:
+        raise HTTPException(status_code=503, detail=f"stage2 모듈 로드 실패: {_STAGE2_ERR}")
+
+    # 이미 실행 중이면 중복 방지
+    with _p2_lock:
+        if _p2_state["status"] == "running":
+            return JSONResponse({"status": "already_running", "step_label": _p2_state["step_label"]})
+
+    report_filename = str(payload.get("report_filename") or "").strip()
+    segment = str(payload.get("market") or "public").strip()
+    if segment not in ("public", "private"):
+        segment = "public"
+
+    # 파일명에서 product_id 추출
+    product_id = _extract_product_id_from_filename(report_filename)
+    if not product_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"report_filename 에서 product_id 추출 불가: {report_filename!r}. "
+                   "형식: au_report_{{product_id}}_YYYYMMDD_HHMMSS.pdf",
+        )
+
+    # 상태 초기화 & 백그라운드 실행
+    with _p2_lock:
+        _p2_state["status"] = "running"
+        _p2_state["step_label"] = "파이프라인 시작…"
+        _p2_state["result"] = None
+        _p2_state["error_detail"] = None
+
+    worker = _threading.Thread(
+        target=_p2_pipeline_worker,
+        args=(product_id, segment),
+        daemon=True,
+    )
+    worker.start()
+
+    return JSONResponse({"status": "started", "product_id": product_id, "segment": segment})
 
 
 @app.get("/api/p2/pipeline/result")
-def p2_pipeline_result_stub() -> JSONResponse:
-    raise HTTPException(status_code=501, detail="AI 파이프라인 결과는 준비 중입니다.")
+def p2_pipeline_result() -> JSONResponse:
+    """AI 파이프라인 완료 결과 반환. status=done 일 때만 유효."""
+    with _p2_lock:
+        if _p2_state["status"] != "done":
+            raise HTTPException(
+                status_code=409,
+                detail=f"파이프라인 미완료 (status={_p2_state['status']})",
+            )
+        result = _p2_state["result"]
+        # 결과 반환 후 상태를 idle 로 리셋 (재실행 가능)
+        _p2_state["status"] = "idle"
+        _p2_state["step_label"] = ""
+    if result is None:
+        raise HTTPException(status_code=500, detail="결과가 비어 있습니다.")
+    # _p2_blocks / _dispatch / _seed 는 내부용이므로 프론트에는 제외
+    frontend_keys = {"extracted", "analysis", "exchange_rates", "pdf"}
+    return JSONResponse({k: v for k, v in result.items() if k in frontend_keys})
 
 
 @app.post("/api/p2/report")
-def p2_report_stub(payload: dict[str, Any]) -> JSONResponse:
-    raise HTTPException(status_code=501, detail="PDF 생성은 준비 중입니다.")
+def p2_report(payload: dict[str, Any]) -> JSONResponse:
+    """2공정 PDF 보고서 재생성 (파이프라인 완료 후 별도 PDF 생성 요청).
+    body: {product_id: str, segment?: str}
+    기존 파이프라인 결과가 없으면 전체 파이프라인을 다시 실행해야 합니다.
+    """
+    raise HTTPException(
+        status_code=501,
+        detail="단독 PDF 재생성은 미구현. POST /api/p2/pipeline 으로 전체 파이프라인 실행 시 PDF 가 자동 생성됩니다.",
+    )
 
 
 # ═══════════════════════════════════════════════════════════════

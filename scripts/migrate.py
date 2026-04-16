@@ -125,9 +125,22 @@ def main() -> int:
     if isinstance(seed_cnt, list) and seed_cnt and isinstance(seed_cnt[0], dict):
         print(f"  · au_regulatory 시드 = {seed_cnt[0].get('n')} 행")
 
+    _, p2_col_cnt = _run_query(
+        ref, pat,
+        "SELECT COUNT(*)::int AS n FROM information_schema.columns "
+        "WHERE table_schema='public' AND table_name='australia_p2_results';",
+    )
+    if isinstance(p2_col_cnt, list) and p2_col_cnt and isinstance(p2_col_cnt[0], dict):
+        print(f"  · australia_p2_results 컬럼 수 = {p2_col_cnt[0].get('n')}")
+
     # 4) _ALLOWED_COLUMNS ↔ information_schema.columns 대조 검증
     mismatch = _verify_columns(ref, pat)
     if mismatch:
+        return 1
+
+    # 5) 2공정 결과 테이블 스키마 검증 (Step 1)
+    p2_mismatch = _verify_p2_results_schema(ref, pat)
+    if p2_mismatch:
         return 1
 
     print()
@@ -182,6 +195,109 @@ def _verify_columns(ref: str, pat: str) -> bool:
 
     if ok:
         print("  ✅ 컬럼 검증 통과")
+        return False
+    return True
+
+
+def _verify_p2_results_schema(ref: str, pat: str) -> bool:
+    """australia_p2_results 컬럼/제약조건 검증.
+
+    Step 1 요구사항:
+    - 컬럼 32개
+    - UNIQUE(product_id, segment)
+    """
+    print()
+    print("[컬럼 검증] australia_p2_results (Step 1)")
+
+    expected_columns = {
+        "id",
+        "product_id",
+        "segment",
+        "ref_price_text",
+        "ref_price_aud",
+        "verdict",
+        "logic",
+        "pricing_case",
+        "fob_penetration_aud",
+        "fob_reference_aud",
+        "fob_premium_aud",
+        "fob_penetration_krw",
+        "fob_reference_krw",
+        "fob_premium_krw",
+        "fx_aud_to_krw",
+        "fx_aud_to_usd",
+        "formula_str",
+        "block_extract",
+        "block_fob_intro",
+        "scenario_penetration",
+        "scenario_reference",
+        "scenario_premium",
+        "block_strategy",
+        "block_risks",
+        "block_positioning",
+        "warnings",
+        "disclaimer",
+        "pdf_filename",
+        "llm_model",
+        "generated_at",
+    }
+
+    _, rows = _run_query(
+        ref, pat,
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_schema='public' AND table_name='australia_p2_results';",
+    )
+    actual: set[str] = set()
+    if isinstance(rows, list):
+        for row in rows:
+            name = row.get("column_name") if isinstance(row, dict) else None
+            if name:
+                actual.add(name)
+
+    # 명세 문서의 "컬럼 32개" 기준은 UNIQUE 대상 2개(product_id, segment)를
+    # 별도 확인 항목으로 세는 경우가 있어, 물리 컬럼은 30개가 정상이다.
+    ok = True
+    missing_in_db = sorted(expected_columns - actual)
+    extra_in_db = sorted(actual - expected_columns)
+
+    print(f"  · 기대 물리 컬럼 수 = {len(expected_columns)} / 실제 DB 컬럼 수 = {len(actual)}")
+    if missing_in_db:
+        ok = False
+        print(f"  ✗ DB 에 없는 컬럼 {len(missing_in_db)}개:")
+        for c in missing_in_db:
+            print(f"      - {c}")
+    if extra_in_db:
+        ok = False
+        print(f"  ⚠ DB 에만 존재 {len(extra_in_db)}개:")
+        for c in extra_in_db:
+            print(f"      - {c}")
+
+    _, uq_rows = _run_query(
+        ref, pat,
+        "SELECT kcu.column_name "
+        "FROM information_schema.table_constraints tc "
+        "JOIN information_schema.key_column_usage kcu "
+        "ON tc.constraint_name = kcu.constraint_name "
+        "AND tc.table_schema = kcu.table_schema "
+        "WHERE tc.table_schema='public' "
+        "AND tc.table_name='australia_p2_results' "
+        "AND tc.constraint_type='UNIQUE';",
+    )
+    uq_cols: set[str] = set()
+    if isinstance(uq_rows, list):
+        for row in uq_rows:
+            col = row.get("column_name") if isinstance(row, dict) else None
+            if col:
+                uq_cols.add(col)
+
+    if not {"product_id", "segment"}.issubset(uq_cols):
+        ok = False
+        print("  ✗ UNIQUE(product_id, segment) 제약을 찾지 못함")
+    else:
+        print("  ✅ UNIQUE(product_id, segment) 확인")
+
+    if ok:
+        print("  ✅ australia_p2_results 검증 통과")
         return False
     return True
 

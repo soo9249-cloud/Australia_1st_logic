@@ -12,6 +12,8 @@
 --   2) australia_history   — 매 크롤링마다 전체 스냅샷 누적
 --   3) australia_buyers    — 3공정 바이어 후보 (AHP PSI 5축 점수)
 --   4) reports             — 1/2/3공정 산출 보고서 파일 메타
+--   5) australia_p2_results — 2공정 AI 파이프라인 결과 저장 (품목×세그먼트 1행)
+--   6) au_regulatory       — 호주 규제 체크포인트 시드 데이터
 
 
 -- ════════════════════════════════════════════════════════════
@@ -248,7 +250,58 @@ CREATE INDEX IF NOT EXISTS idx_reports_created_at ON reports(created_at DESC);
 
 
 -- ════════════════════════════════════════════════════════════
--- 5) au_regulatory — 호주 규제 체크포인트 시드 데이터
+-- 5) australia_p2_results — 2공정 수출 전략 제안 결과
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS australia_p2_results (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  segment TEXT NOT NULL CHECK (segment IN ('public', 'private')),
+
+  -- 추출정보
+  ref_price_text TEXT,
+  ref_price_aud NUMERIC(10,2),
+  verdict TEXT,
+
+  -- FOB 역산 결과
+  logic TEXT,                          -- 'A' | 'B' | 'blocked'
+  pricing_case TEXT,                   -- 'DIRECT' | 'COMPONENT_SUM' | 'ESTIMATE_private' 등
+  fob_penetration_aud NUMERIC(10,4),   -- 저가 진입 (Penetration) FOB
+  fob_reference_aud NUMERIC(10,4),     -- 기준가 (Reference) FOB = final_price
+  fob_premium_aud NUMERIC(10,4),       -- 프리미엄 (Premium) FOB
+  fob_penetration_krw NUMERIC(12,2),
+  fob_reference_krw NUMERIC(12,2),
+  fob_premium_krw NUMERIC(12,2),
+  fx_aud_to_krw NUMERIC(10,2),
+  fx_aud_to_usd NUMERIC(10,4),
+  formula_str TEXT,
+
+  -- Haiku AI 블록 (8필드)
+  block_extract TEXT,
+  block_fob_intro TEXT,
+  scenario_penetration TEXT,
+  scenario_reference TEXT,
+  scenario_premium TEXT,
+  block_strategy TEXT,
+  block_risks TEXT,
+  block_positioning TEXT,
+
+  -- 메타
+  warnings JSONB DEFAULT '[]'::jsonb,
+  disclaimer TEXT,
+  pdf_filename TEXT,
+  llm_model TEXT DEFAULT 'claude-haiku-4-5-20251001',
+  generated_at TIMESTAMPTZ DEFAULT now(),
+
+  UNIQUE(product_id, segment)
+);
+
+CREATE INDEX IF NOT EXISTS idx_p2_results_product
+  ON australia_p2_results(product_id);
+
+
+-- ════════════════════════════════════════════════════════════
+-- 6) au_regulatory — 호주 규제 체크포인트 시드 데이터
 -- ════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS au_regulatory (

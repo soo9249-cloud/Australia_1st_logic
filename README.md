@@ -456,7 +456,7 @@ FOB (AUD) = Retail
 
 ---
 
-## 6. Supabase 스키마 — 5 테이블
+## 6. Supabase 스키마 — 6 테이블
 
 ### 1) `australia` — 1·2공정 통합 (73컬럼)
 
@@ -488,9 +488,13 @@ FOB (AUD) = Retail
 
 ### 4) `reports` — 1/2/3공정 산출 보고서 메타
 
-### 5) `au_regulatory` — 호주 규제 체크포인트 시드 5행 (`title UNIQUE + ON CONFLICT DO NOTHING`)
+### 5) `australia_p2_results` — 2공정 수출 전략 제안 결과 (품목×세그먼트 1행)
 
-> **2공정 계산 결과 저장 테이블은 아직 설계 중** — 다음 단계에서 추가 예정.
+- 핵심 제약: `UNIQUE(product_id, segment)`
+- 세그먼트 제약: `segment IN ('public', 'private')`
+- 인덱스: `idx_p2_results_product (product_id)`
+
+### 6) `au_regulatory` — 호주 규제 체크포인트 시드 5행 (`title UNIQUE + ON CONFLICT DO NOTHING`)
 
 ---
 

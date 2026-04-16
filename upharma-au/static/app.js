@@ -314,7 +314,7 @@ let _currentAnalysisData = null;  // Step 1 결과 캐시 (Step 2 에서 사용)
 async function runAnalysis(n){
   // Step 1 — 시장분석 실행: 크롤링 row → Claude + Perplexity 호출
   const names = {1:"1공정 시장분석",2:"2공정 수출전략",3:"3공정 유망 바이어"};
-  const ICON_CHART = '<svg class="btn-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>';
+  const ICON_CHART = '<svg class="btn-icon" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7"/><line x1="15.2" y1="15.2" x2="21" y2="21"/><line x1="7" y1="12" x2="7" y2="10"/><line x1="10" y1="12" x2="10" y2="7"/><line x1="13" y1="12" x2="13" y2="9"/></svg>';
   const ICON_FILE  = '<svg class="btn-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>';
   const btn = document.getElementById("genBtn"+n);
 

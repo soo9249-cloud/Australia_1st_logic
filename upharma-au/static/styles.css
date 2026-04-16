@@ -175,7 +175,15 @@ body{
 .todo-check{
   width:22px; height:22px; border-radius:50%;
   background:#fff; box-shadow:var(--sh2);
-  flex-shrink:0;
+  flex-shrink:0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .15s;
+}
+.todo-check.done{
+  background:var(--green); box-shadow:none;
+}
+.todo-check.done::after{
+  content:'✓'; color:#fff; font-size:13px; font-weight:900;
 }
 .todo-label{ font-size:13px; font-weight:700; color:var(--text); flex:1; }
 .todo-auto-badge{

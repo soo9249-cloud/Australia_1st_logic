@@ -94,6 +94,7 @@
             <h3>시장 신호 · 뉴스</h3>
             <p>호주 의약품 시장 주요 동향 · 실시간</p>
           </div>
+          <button class="btn-fx-refresh" onclick="loadNews()">↻ 새로고침</button>
         </div>
         <div class="irow"><div class="tit">TGA approves fast-track for PIC/S generics</div><div class="sub">TGA.gov.au · 2025-07-14</div></div>
         <div class="irow"><div class="tit">Australia pharma imports from Korea up 11%</div><div class="sub">Austrade · 2025-07-13</div></div>
@@ -108,22 +109,22 @@
         </div>
         <div class="todo-list">
           <div class="todo-item">
-            <div class="todo-check"></div>
+            <div class="todo-check done" onclick="this.classList.toggle('done')"></div>
             <span class="todo-label">1공정 · 시장조사 분석</span>
             <span class="todo-auto-badge">자동</span>
           </div>
           <div class="todo-item">
-            <div class="todo-check"></div>
+            <div class="todo-check done" onclick="this.classList.toggle('done')"></div>
             <span class="todo-label">보고서 생성</span>
             <span class="todo-auto-badge">자동</span>
           </div>
           <div class="todo-item">
-            <div class="todo-check"></div>
+            <div class="todo-check" onclick="this.classList.toggle('done')"></div>
             <span class="todo-label">2공정 · 수출전략 수립</span>
             <span class="todo-auto-badge">예정</span>
           </div>
           <div class="todo-item">
-            <div class="todo-check"></div>
+            <div class="todo-check" onclick="this.classList.toggle('done')"></div>
             <span class="todo-label">3공정 · 바이어 발굴</span>
             <span class="todo-auto-badge">예정</span>
           </div>

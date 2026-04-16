@@ -594,7 +594,7 @@ function buildReportCards(apiData){
     </div>`;
 
   const strats=[
-    {k:"진입 채널 전략",  v: blocks.block3_channel  || "⚙️ 생성 실패", em:true},
+    {k:"진입 채널 전략",  v: blocks.block3_channel  || "⚙️ 생성 실패"},
     {k:"가격 포지셔닝",   v: blocks.block3_pricing  || "⚙️ 생성 실패"},
     {k:"파트너 발굴",     v: blocks.block3_partners || "⚙️ 생성 실패"},
     {k:"리스크·조건",     v: blocks.block3_risks    || "⚙️ 생성 실패"},
@@ -604,7 +604,7 @@ function buildReportCards(apiData){
       <div style="font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:14px;letter-spacing:.04em;">● 시장 진출 전략</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
         ${strats.map(s=>`
-          <div style="background:var(--inner);border-radius:12px;padding:14px;${s.em?"border-left:3px solid var(--orange);":""}">
+          <div style="background:var(--inner);border-radius:12px;padding:14px;">
             <div style="font-size:11.5px;font-weight:800;color:var(--navy);margin-bottom:8px;">${s.k}</div>
             <div style="font-size:12.5px;color:var(--text);line-height:1.6;white-space:pre-line;">${_escapeHtml(s.v)}</div>
           </div>`).join("")}

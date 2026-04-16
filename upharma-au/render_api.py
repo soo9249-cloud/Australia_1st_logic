@@ -230,7 +230,7 @@ def get_news() -> JSONResponse:
                     {
                         "role": "system",
                         "content": (
-                            "You are a news aggregator. Return EXACTLY 5 recent news items "
+                            "You are a news aggregator. Return EXACTLY 6 recent news items "
                             "as a JSON array. Each item: {\"title\": string, \"source\": string, \"date\": string (YYYY-MM-DD)}. "
                             "No markdown, no explanation, ONLY the JSON array."
                         ),
@@ -238,9 +238,12 @@ def get_news() -> JSONResponse:
                     {
                         "role": "user",
                         "content": (
-                            "Find the 5 most recent news articles (last 30 days) about: "
+                            "Find the 6 most recent news articles from the LAST 24 HOURS ONLY about: "
                             "Australia pharmaceutical industry, TGA regulations, PBS policy, "
                             "healthcare legislation, public health trends, disease outbreaks. "
+                            "Only include articles published within the last 24 hours. "
+                            "For each item, include the direct article URL as a 'link' field. "
+                            "Format: {\"title\": str, \"source\": str, \"date\": str (YYYY-MM-DD), \"link\": str}. "
                             "Prioritize official government sources and major news outlets."
                         ),
                     },
@@ -273,14 +276,17 @@ def get_news() -> JSONResponse:
         return JSONResponse(content=_MOCK_NEWS)
 
     result: list[dict[str, Any]] = []
-    for i, it in enumerate(items[:5]):
+    for i, it in enumerate(items[:6]):
         if not isinstance(it, dict):
             continue
+        link = it.get("link") or it.get("url") or ""
+        if not link and i < len(link_list):
+            link = link_list[i]
         result.append({
             "title": it.get("title", ""),
             "source": it.get("source", ""),
             "date": it.get("date", ""),
-            "link": link_list[i] if i < len(link_list) else "",
+            "link": link,
         })
     return JSONResponse(content=result if result else _MOCK_NEWS)
 

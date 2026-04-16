@@ -873,7 +873,7 @@ async function loadNews(){
 
   // 기존 .irow 4개 제거 후 새로 4개 삽입
   card.querySelectorAll(".irow").forEach(el=>el.remove());
-  items.slice(0,4).forEach(n=>{
+  items.slice(0,6).forEach(n=>{
     const div=document.createElement("div");
     div.className="irow";
     const link=n.link?` href="${_escapeHtml(n.link)}" target="_blank" rel="noopener"`:"";

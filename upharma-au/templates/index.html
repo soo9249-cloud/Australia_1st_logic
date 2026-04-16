@@ -228,14 +228,191 @@
 
   </div><!-- /p1 -->
 
-  <!-- ══════════ 2공정 (준비 중) ══════════ -->
+  <!-- ══════════════════════════════════════════════════════════════════════
+       2공정 · 수출전략   (팀원 싱가포르 프로젝트 `Biya121/1st_logic_initial`에서 이식 — 2026-04-16)
+       ▸ AI 파이프라인 탭 : 보고서 → 가격 추출 → 계산 → 시나리오 → PDF
+       ▸ 직접 입력 탭     : 사용자 옵션 기반 수동 산정
+       ▸ 코드 내 "SGD", "ALPS 조달청" 등 싱가포르 참조는 팀원 원본 그대로 유지
+         (호주 용어로의 교체는 추후 별도 작업)
+  ══════════════════════════════════════════════════════════════════════ -->
   <div id="p2" class="page">
-    <div class="empty-page">
-      <div class="ep-icon">🚧</div>
-      <div class="ep-msg">2공정 · 수출전략은 준비 중입니다</div>
-      <div class="ep-sub">추후 업데이트 예정</div>
-    </div>
-  </div>
+    <div id="p2-wrap" style="max-width:1080px;margin:0 auto;">
+
+      <!-- ── 모드 선택 ─────────────────────────────────────────────── -->
+      <div class="selector-card" style="margin-bottom:14px;">
+        <div class="p2-tab-row">
+          <button class="p2-tab-btn on" id="p2-tab-ai"     type="button" onclick="switchP2Tab('ai')">AI 파이프라인</button>
+          <button class="p2-tab-btn"    id="p2-tab-manual" type="button" onclick="switchP2Tab('manual')">직접 입력</button>
+        </div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:10px;" id="p2-tab-desc">
+          1공정 보고서를 기준으로 가격 정보를 추출해 최종 권고가를 자동 산정합니다.
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════════
+           탭 A: AI 파이프라인
+      ══════════════════════════════════════════════════════════════ -->
+      <div id="p2-ai-tab" class="p2-tab-content">
+
+        <!-- 보고서 선택 / 시장 선택 / 실행 -->
+        <div class="selector-card">
+          <div class="selector-label">보고서 선택</div>
+
+          <!-- 저장된 보고서 -->
+          <div class="selector-row">
+            <select id="p2-ai-report-select" style="flex:1;">
+              <option value="">저장된 1공정 보고서를 선택하세요.</option>
+            </select>
+          </div>
+
+          <!-- 구분선 -->
+          <div class="p2-or-divider">또는 PDF 직접 업로드</div>
+
+          <!-- 파일 업로드 -->
+          <div class="p2-upload-area" id="p2-upload-area">
+            <input type="file" id="p2-pdf-file" accept=".pdf" style="display:none;"
+                   onchange="handleP2FileSelect(this)">
+            <label for="p2-pdf-file" class="p2-upload-label">
+              <span class="p2-upload-icon">📄</span>
+              <span id="p2-upload-text">PDF 파일 선택</span>
+            </label>
+          </div>
+          <div id="p2-upload-status" class="p2-note" style="display:none;"></div>
+          <div class="selector-label" style="margin-top:14px;">시장 선택 및 분석 실행</div>
+          <div class="selector-row" style="flex-wrap:wrap;gap:12px;">
+            <div class="p2-seg-row" style="margin-bottom:0;flex:1;min-width:200px;">
+              <button class="p2-seg-btn on" id="p2-ai-seg-public"  type="button"
+                      onclick="setP2AiSeg('public')">공공 시장</button>
+              <button class="p2-seg-btn"    id="p2-ai-seg-private" type="button"
+                      onclick="setP2AiSeg('private')">민간 시장</button>
+            </div>
+            <button class="btn-analyze" id="btn-p2-ai-run" type="button" onclick="runP2AiPipeline()">
+              <span id="p2-ai-run-icon">▶</span> AI 가격 분석 실행
+            </button>
+          </div>
+          <div id="p2-ai-seg-desc" class="p2-note" style="margin-top:10px;">
+            공공 시장: ALPS 조달청 채널 · 27개 공공기관 통합구매 기준
+          </div>
+        </div>
+
+        <!-- 진행 상태 (분석 시작 후 표시) -->
+        <div class="selector-card" id="p2-ai-progress-card" style="display:none;">
+          <div class="selector-label">진행 상태</div>
+          <div class="p2-progress-text" id="p2-ai-step-label-text">분석 중…</div>
+        </div>
+
+        <!-- ── 결과 (분석 완료 시에만 표시) ── -->
+        <div id="p2-ai-result-section" style="display:none;">
+
+          <!-- 추출된 가격 정보 -->
+          <div class="result-card visible" id="p2-extracted-card" style="display:block;margin-bottom:14px;">
+            <div class="card-title"><div class="card-title-dot"></div> 추출 가격 정보</div>
+            <div class="basis-grid" id="p2-extracted-grid">
+              <div class="basis-item">
+                <div class="basis-label">제품명</div>
+                <div class="basis-value" id="p2r-product-name">—</div>
+              </div>
+              <div class="basis-item">
+                <div class="basis-label">참조가 (원문)</div>
+                <div class="basis-value" id="p2r-ref-price-text">—</div>
+              </div>
+              <div class="basis-item">
+                <div class="basis-label">수출 적합성 판정</div>
+                <div class="basis-value" id="p2r-verdict">—</div>
+              </div>
+              <div class="basis-item">
+                <div class="basis-label">환율 (실시간)</div>
+                <div class="basis-value" id="p2r-exchange">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 최종 산정가 + 공식 -->
+          <div class="result-card visible" id="p2-final-card" style="display:block;margin-bottom:14px;">
+            <div class="card-title"><div class="card-title-dot"></div> 최종 산정가 · 산정 공식</div>
+            <div class="p2-final-price-block">
+              <div class="p2-final-label">권고 수출가</div>
+              <div class="p2-final-price" id="p2r-final-price">SGD —</div>
+            </div>
+            <div class="p2-formula-wrap" style="margin-top:14px;">
+              <div class="p2-formula-text" id="p2r-formula">—</div>
+            </div>
+          </div>
+
+          <!-- 시나리오 3개 -->
+          <div class="result-card visible" id="p2-scenarios-card" style="display:block;margin-bottom:14px;">
+            <div class="card-title"><div class="card-title-dot"></div> 가격 시나리오</div>
+            <div id="p2r-scenarios" class="p2-scenarios"></div>
+          </div>
+
+          <!-- 산정 이유 -->
+          <div class="result-card visible" id="p2-rationale-card" style="display:block;margin-bottom:14px;">
+            <div class="card-title"><div class="card-title-dot"></div> 산정 이유</div>
+            <div class="basis-value" id="p2r-rationale" style="line-height:1.8;">—</div>
+          </div>
+
+          <!-- 다운로드 -->
+          <div class="report-card visible" id="p2-report-dl-card" style="display:block;margin-bottom:14px;">
+            <div class="card-title"><div class="card-title-dot"></div> 보고서 다운로드</div>
+            <div id="p2-report-dl-state">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="report-loading-spinner" id="p2-dl-spinner"></span>
+                <span style="font-size:13px;color:var(--muted);">PDF 생성 중…</span>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /p2-ai-result-section -->
+
+      </div><!-- /p2-ai-tab -->
+
+      <!-- ══════════════════════════════════════════════════════════════
+           탭 B: 직접 입력
+      ══════════════════════════════════════════════════════════════ -->
+      <div id="p2-manual-tab" class="p2-tab-content" style="display:none;">
+
+        <!-- 보고서 선택 -->
+        <div class="selector-card">
+          <div class="selector-label">1공정 보고서 참조 (선택)</div>
+          <div class="selector-row">
+            <select id="p2-report-select">
+              <option value="">보고서를 선택하세요</option>
+            </select>
+          </div>
+          <div id="p2-report-brief" class="p2-brief-wrap">
+            <p class="p2-brief-empty">보고서를 선택하면 가격 정보가 자동으로 반영됩니다.</p>
+          </div>
+        </div>
+
+        <!-- 시장 선택 -->
+        <div class="selector-card">
+          <div class="selector-label">시장 선택</div>
+          <div class="p2-seg-row">
+            <button class="p2-seg-btn on" data-p2-manual-seg="public"  type="button">공공 시장</button>
+            <button class="p2-seg-btn"    data-p2-manual-seg="private" type="button">민간 시장</button>
+          </div>
+
+          <!-- 옵션 목록 -->
+          <div id="p2-manual-options" style="margin-top:12px;"></div>
+          <div id="p2-manual-removed" class="p2-removed"></div>
+          <div id="p2-custom-add-section"></div>
+        </div>
+
+        <!-- 계산 공식 + 시나리오 -->
+        <div class="selector-card">
+          <div class="selector-label">계산 공식</div>
+          <div id="p2-formula-preview" class="p2-formula-text">—</div>
+
+          <div class="selector-label" style="margin-top:18px;">시나리오 산정</div>
+          <div id="p2-manual-scenarios" class="p2-scenarios"></div>
+
+          <div id="p2-manual-pdf-section" class="p2-pdf-section"></div>
+        </div>
+
+      </div><!-- /p2-manual-tab -->
+
+    </div><!-- /p2-wrap -->
+  </div><!-- /p2 -->
 
   <!-- ══════════ 3공정 (준비 중) ══════════ -->
   <div id="p3" class="page">

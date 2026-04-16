@@ -935,10 +935,10 @@ async function loadExchange(){
 
   const suffix=(v,u)=>v+'<span style="font-size:11px;margin-left:3px;color:var(--muted);font-weight:700;">'+u+'</span>';
   const setH=(id,html)=>{const el=document.getElementById(id);if(el)el.innerHTML=html;};
-  setH("fx-usd-krw", usdKrw!=null?suffix(usdKrw.toFixed(2),"원"):"—");
-  setH("fx-aud-usd", suffix(audUsd.toFixed(4),"USD"));
-  setH("fx-aud-jpy", audJpy!=null?suffix(audJpy.toFixed(2),"엔"):"—");
-  setH("fx-aud-cny", audCny!=null?suffix(audCny.toFixed(4),"위안"):"—");
+  setH("fx-usd-krw", usdKrw!=null?suffix(usdKrw.toFixed(2),"₩"):"—");
+  setH("fx-aud-usd", suffix(audUsd.toFixed(4),"$"));
+  setH("fx-aud-jpy", audJpy!=null?suffix(audJpy.toFixed(2),"¥"):"—");
+  setH("fx-aud-cny", audCny!=null?suffix(audCny.toFixed(4),"元"):"—");
 
   const tsEl=document.getElementById("fxTimestamp");
   if(tsEl){

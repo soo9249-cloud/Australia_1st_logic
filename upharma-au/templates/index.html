@@ -83,7 +83,8 @@
           <div class="irow" style="margin:0;"><div style="font-size:10.5px;color:var(--muted);margin-bottom:3px;">USD / AUD</div><div style="font-size:15px;font-weight:900;color:var(--navy);">0.6412</div></div>
           <div class="irow" style="margin:0;"><div style="font-size:10.5px;color:var(--muted);margin-bottom:3px;">KRW / USD</div><div style="font-size:15px;font-weight:900;color:var(--navy);">1,393원</div></div>
         </div>
-        <div style="font-size:10.5px;color:var(--muted);margin-top:10px;">⚙️ 연동: yfinance · 한은 ECOS</div>
+        <div id="fxTimestamp" style="font-size:10.5px;color:var(--muted);margin-top:10px;">조회: —</div>
+        <button class="btn-fx-refresh" onclick="loadExchange()">↻ 환율 새로고침</button>
       </article>
 
       <!-- 뉴스 (h3 "시장 신호" 포함 · .irow · app.js loadNews 훅) -->
@@ -126,6 +127,10 @@
             <span class="todo-label">3공정 · 바이어 발굴</span>
             <span class="todo-auto-badge">예정</span>
           </div>
+        </div>
+        <div class="todo-add-row">
+          <input id="todoInput" class="todo-add-input" placeholder="항목 추가 후 Enter…" onkeydown="if(event.key==='Enter')addTodoItem()"/>
+          <button class="btn-todo-add" onclick="addTodoItem()">+ 추가</button>
         </div>
       </article>
 

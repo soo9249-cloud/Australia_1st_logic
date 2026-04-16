@@ -885,6 +885,23 @@ async function loadNews(){
   });
 }
 
+function addTodoItem(){
+  const inp=document.getElementById("todoInput");
+  if(!inp) return;
+  const text=inp.value.trim();
+  if(!text) return;
+  const list=document.querySelector(".todo-list");
+  if(!list) return;
+  const div=document.createElement("div");
+  div.className="todo-item";
+  div.innerHTML=`<div class="todo-check"></div><span class="todo-label">${_escapeHtml(text)}</span>`;
+  div.querySelector(".todo-check").addEventListener("click",function(){
+    this.classList.toggle("done");
+  });
+  list.appendChild(div);
+  inp.value="";
+}
+
 async function loadExchange(){
   let d=null;
   try{
@@ -924,6 +941,14 @@ async function loadExchange(){
       const krwEl=innerIrows[1].lastElementChild;
       if(krwEl) krwEl.textContent=krwUsd.toLocaleString("ko-KR")+"원";
     }
+  }
+
+  const tsEl=document.getElementById("fxTimestamp");
+  if(tsEl){
+    const now=new Date();
+    const h=now.getHours();
+    const m=String(now.getMinutes()).padStart(2,"0");
+    tsEl.textContent=`조회: ${h>=12?"오후":"오전"} ${h%12||12}:${m}`;
   }
 }
 

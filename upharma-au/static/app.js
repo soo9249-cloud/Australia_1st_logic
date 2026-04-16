@@ -918,37 +918,26 @@ async function loadExchange(){
   }catch(e){return;}
   if(!d || d.aud_krw==null || d.aud_usd==null) return;
 
-  const audKrw=Math.round(Number(d.aud_krw));
+  const audKrw=Number(d.aud_krw);
   const audUsd=Number(d.aud_usd);
-  const krwUsd=audUsd>0?Math.round(audKrw/audUsd):null;
+  const usdKrw=audUsd>0?(audKrw/audUsd):null;
+  const audJpy=d.aud_jpy!=null?Number(d.aud_jpy):null;
+  const audCny=d.aud_cny!=null?Number(d.aud_cny):null;
 
   const card=_findCardByH3("환율");
   if(!card) return;
 
-  // 부제 (1 AUD = XXX원)
   const subP=card.querySelector(".sec p");
-  if(subP) subP.textContent=`1 AUD = ${audKrw}원 · FOB 역산 기준`;
+  if(subP) subP.textContent=`1 AUD = ${audKrw.toFixed(2)}원 · FOB 역산 기준`;
 
-  // 큰 KRW/AUD 숫자 — font-size:30px 인 div
-  const bigDiv=[...card.children].find(el=>{
-    const st=el.getAttribute("style")||"";
-    return st.includes("font-size:30px");
-  });
-  if(bigDiv){
-    bigDiv.innerHTML=audKrw+
-      '<span style="font-size:14px;margin-left:3px;color:var(--muted);font-weight:700;">원</span>';
-  }
+  const mainEl=document.getElementById("fx-main");
+  if(mainEl) mainEl.innerHTML=audKrw.toFixed(2)+'<span style="font-size:14px;margin-left:4px;color:var(--muted);font-weight:700;">원</span>';
 
-  // 하단 USD/AUD · KRW/USD 두 .irow
-  const innerIrows=card.querySelectorAll(".irow");
-  if(innerIrows.length>=2){
-    const usdEl=innerIrows[0].lastElementChild;
-    if(usdEl) usdEl.textContent=audUsd.toFixed(4);
-    if(krwUsd!=null){
-      const krwEl=innerIrows[1].lastElementChild;
-      if(krwEl) krwEl.textContent=krwUsd.toLocaleString("ko-KR")+"원";
-    }
-  }
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  set("fx-usd-krw", usdKrw!=null?usdKrw.toFixed(2)+"원":"—");
+  set("fx-aud-usd", audUsd.toFixed(4)+"$");
+  set("fx-aud-jpy", audJpy!=null?audJpy.toFixed(4)+"¥":"—");
+  set("fx-aud-cny", audCny!=null?audCny.toFixed(4)+"¥":"—");
 
   const tsEl=document.getElementById("fxTimestamp");
   if(tsEl){

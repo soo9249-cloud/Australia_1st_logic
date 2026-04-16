@@ -309,11 +309,15 @@ def get_exchange() -> JSONResponse:
     rates = data.get("rates") or {}
     krw = rates.get("KRW")
     usd = rates.get("USD")
+    jpy = rates.get("JPY")
+    cny = rates.get("CNY")
     if krw is None or usd is None:
         return JSONResponse(content=_FX_FALLBACK)
     return JSONResponse(content={
         "aud_krw": float(krw),
         "aud_usd": float(usd),
+        "aud_jpy": float(jpy) if jpy else None,
+        "aud_cny": float(cny) if cny else None,
         "updated": data.get("date") or "",
     })
 

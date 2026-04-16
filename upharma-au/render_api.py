@@ -580,6 +580,182 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]
 
 
 # ═══════════════════════════════════════════════════════════════
+# 2공정(수출 전략 제안서) — Haiku 어댑터
+# ───────────────────────────────────────────────────────────────
+# 입력: 1공정 row(Supabase) + Stage 2 seed + fob_calculator dispatch_result + segment
+# 출력: 8개 한국어 보고서체 블록
+#   - block_extract        : 추출정보 요약 (품목·참고가·TGA/PBS 판정)
+#   - block_fob_intro      : 3시나리오 FOB 메타 해설 (왜 이 가격대가 나오는지)
+#   - scenario_penetration : "저가 진입(Penetration)" 시나리오 reason 1~2문장
+#   - scenario_reference   : "기준가(Reference)" 시나리오 reason 1~2문장
+#   - scenario_premium     : "프리미엄(Premium)" 시나리오 reason 1~2문장
+#   - block_strategy       : 권장 진입 전략 (채널·파트너·타이밍)
+#   - block_risks          : 리스크 요약 (규제·환율·경쟁)
+#   - block_positioning    : 경쟁사 포지셔닝 해설
+# ═══════════════════════════════════════════════════════════════
+
+_CLAUDE_P2_SYSTEM_PROMPT = (
+    "당신은 한국유나이티드제약(주)의 호주 수출 전략 시니어 애널리스트임. "
+    "주어진 품목의 (1) 1공정 크롤링 row, (2) Stage 2 시드(규제·참고가), "
+    "(3) fob_calculator 가 이미 계산한 3시나리오 FOB 결과를 종합해 "
+    "'수출 전략 제안서'에 들어갈 한국어 보고서체 블록 8개를 작성함.\n\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    "【필드 정의】\n"
+    "  block_extract        : 1문단(3~5문장). 제품명·참고가(AEMP 또는 retail)·TGA/PBS 판정 요약.\n"
+    "  block_fob_intro      : 1문단(3~5문장). 왜 본 품목이 Logic A(AEMP) 또는 Logic B(Private) 로 역산되는지, "
+    "                         3시나리오 가격대(AUD 범위)를 한 줄로 언급.\n"
+    "  scenario_penetration : 저가 진입 전략 근거 1~2문장. (수입상 마진 10% 전제 = 시장 점유율 확보 목적.)\n"
+    "  scenario_reference   : 기준가 전략 근거 1~2문장. (마진 20% 전제 = 경쟁 브랜드 PBS 평균대 진입.)\n"
+    "  scenario_premium     : 프리미엄 전략 근거 1~2문장. (마진 30% 전제 = 제형·품질 차별화 포지셔닝.)\n"
+    "  block_strategy       : 1문단(3~5문장). 권장 진입 채널(PBS/Private/Hospital)·파트너 발굴·타이밍.\n"
+    "  block_risks          : 1문단(3~5문장). 규제(TGA/PBAC/Section 19A 등)·환율·경쟁 리스크.\n"
+    "  block_positioning    : 1문단(3~5문장). 경쟁사 브랜드(seed.competitor_brands_on_pbs) 대비 포지셔닝.\n\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    "【어투 규칙 — 절대 준수】\n"
+    "- 보고서 문체: 종결어미 '~함', '~임', '~됨', '~가능함', '~필요함'만 사용.\n"
+    "- 금지 종결어미: '~입니다', '~합니다', '~있습니다', '~해요', '~이에요' 일체 금지.\n"
+    "- 마크다운 금지: **굵게**, *기울임*, # 제목, - 리스트, `코드`, [링크]() 전부 X.\n"
+    "- 이모지·특수 기호 장식 금지.\n\n"
+    "【환각 방지 규칙 — 최우선】\n"
+    "- 제공된 JSON(row/seed/dispatch) 에 없는 숫자·법령·브랜드는 **창작 금지**.\n"
+    "- dispatch.scenarios 의 fob_aud 숫자는 scenario_* 필드 본문에 **반드시 소수점 2자리로 인용**.\n"
+    "- pricing_case / pbs_section / pbs_status / flags 값을 논리 전개에 활용하되 값 자체를 정확히 읽음.\n"
+    "- 모르는 사실은 '제공 데이터 범위 외로 별도 검증 필요함' 으로 명시.\n\n"
+    "【품질 규칙】\n"
+    "1. block_extract · block_fob_intro · block_strategy · block_risks · block_positioning 각 3~5문장 (문장 40~100자).\n"
+    "2. scenario_* 3개는 각각 1~2문장 (60~140자), 반드시 fob_aud 값 인용.\n"
+    "3. segment='public'(PBS/공공) 이면 PBS AEMP/DPMQ 기반 논리, 'private' 이면 소매가 역산·비급여 채널 논리로 각각 다르게 작성.\n"
+    "4. 'TBD', '추후', '데이터 부족' 같은 플레이스홀더 금지.\n"
+    "5. 8개 필드 모두 반드시 채움.\n\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    "【Few-shot 좋은 예시 — scenario_penetration】\n"
+    "입력: fob_aud=26.50, product=Hydrine, pricing_case=DIRECT, pbs_section=85\n"
+    '  "Hydrine FOB AUD 26.50(수입상 마진 10% 전제)로 PBS General Schedule 내 제네릭 경쟁 가격대 하단에 '
+    "진입, 초기 처방 점유율 확보를 우선함. 제조원가 대비 마진은 제한적이나 채널 확보 후 물량 확대 가능함.\"\n\n"
+    "【Few-shot 나쁜 예시 — 금지】\n"
+    '  "저가로 진입하면 좋습니다. 마진이 낮아요." '
+    "→ FOB 숫자 미인용, 보고서체 위반, 근거 빈약. 절대 이렇게 작성 금지."
+)
+
+
+def _claude_p2_blocks_schema():
+    """2공정용 Pydantic 스키마를 지연 로드."""
+    from pydantic import BaseModel, Field
+
+    class P2Blocks(BaseModel):
+        block_extract: str = Field(description="추출정보 요약 (보고서체 ~함/~임)")
+        block_fob_intro: str = Field(description="3시나리오 FOB 메타 해설 (보고서체)")
+        scenario_penetration: str = Field(description="저가 진입(Penetration) 시나리오 근거 1~2문장, fob_aud 인용 필수")
+        scenario_reference: str = Field(description="기준가(Reference) 시나리오 근거 1~2문장, fob_aud 인용 필수")
+        scenario_premium: str = Field(description="프리미엄(Premium) 시나리오 근거 1~2문장, fob_aud 인용 필수")
+        block_strategy: str = Field(description="권장 진입 전략 (보고서체 ~함/~임)")
+        block_risks: str = Field(description="리스크 요약 (보고서체 ~함/~임)")
+        block_positioning: str = Field(description="경쟁사 포지셔닝 (보고서체 ~함/~임)")
+
+    return P2Blocks
+
+
+def _row_summary_for_p2(row: dict[str, Any]) -> dict[str, Any]:
+    """2공정 Haiku 프롬프트에 넣을 핵심 컬럼 subset. (1공정 전체 row 대비 슬림)"""
+    keys = [
+        "product_name_ko", "inn_normalized", "dosage_form", "strength",
+        "artg_status", "artg_number", "tga_schedule", "tga_sponsor",
+        "pbs_listed", "pbs_item_code", "pbs_price_aud", "pbs_dpmq",
+        "pbs_brand_name", "retail_price_aud", "price_source_name",
+        "export_viable", "reason_code",
+    ]
+    return {k: row.get(k) for k in keys}
+
+
+def _haiku_p2_blocks(
+    row: dict[str, Any],
+    seed: dict[str, Any],
+    dispatch_result: dict[str, Any],
+    segment: str,
+    api_key: str,
+) -> dict[str, str]:
+    """Claude Haiku 4.5 를 호출해 2공정(수출 전략 제안서) 용 8개 블록을 생성.
+
+    Args:
+        row               : Supabase australia 테이블 row (1공정 크롤링 결과)
+        seed              : fob_reference_seeds.json 단일 엔트리 (규제·참고가 수기시드)
+        dispatch_result   : fob_calculator.dispatch_by_pricing_case() 반환 dict
+                             (logic / scenarios / inputs / warnings / disclaimer / blocked_reason)
+        segment           : "public" | "private" — 공공(PBS) vs 민간 채널 프레이밍
+        api_key           : ANTHROPIC_API_KEY
+
+    Returns:
+        dict[str, str] — 8개 필드 (block_extract / block_fob_intro / scenario_* x3 /
+                                   block_strategy / block_risks / block_positioning)
+    """
+    import anthropic
+    import json as _json
+
+    if dispatch_result.get("logic") == "blocked":
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"본 품목은 FOB 역산이 불가(blocked_reason={dispatch_result.get('blocked_reason')}). "
+                "수출 전략 제안서 생성 불가 — Stage 2 warnings 확인 필요."
+            ),
+        )
+
+    P2Blocks = _claude_p2_blocks_schema()
+    client_anthropic = anthropic.Anthropic(api_key=api_key)
+
+    user_content = (
+        "다음 품목의 (1) 1공정 row, (2) Stage 2 seed, (3) fob_calculator dispatch 결과를 종합해 "
+        "수출 전략 제안서용 8개 블록을 보고서체(~함/~임) 로 작성하라.\n"
+        "scenario_* 3개는 dispatch.scenarios 안의 fob_aud 값을 반드시 소수점 2자리로 인용.\n"
+        f"segment={segment!r} 기준으로 공공/민간 채널 프레이밍 구분.\n\n"
+        "```json\n"
+        + _json.dumps(
+            {
+                "row": _row_summary_for_p2(row),
+                "seed": seed,
+                "dispatch": dispatch_result,
+                "segment": segment,
+            },
+            ensure_ascii=False,
+            indent=2,
+            default=str,
+        )
+        + "\n```"
+    )
+
+    response = client_anthropic.messages.parse(
+        model=_CLAUDE_MODEL,
+        max_tokens=3072,
+        system=_CLAUDE_P2_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_content}],
+        output_format=P2Blocks,
+    )
+
+    # 비용 모니터링
+    try:
+        usage = response.usage
+        in_tok = getattr(usage, "input_tokens", 0)
+        out_tok = getattr(usage, "output_tokens", 0)
+        est_cost = in_tok * 1e-6 + out_tok * 5e-6
+        print(
+            f"[Claude Haiku P2] input={in_tok} output={out_tok} "
+            f"est_cost=${est_cost:.5f} (product={row.get('product_id')}, segment={segment})",
+            flush=True,
+        )
+    except Exception:
+        pass
+
+    parsed = response.parsed_output
+    if parsed is None:
+        stop_reason = getattr(response, "stop_reason", "unknown")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Claude 2공정 응답 파싱 실패 (stop_reason={stop_reason})",
+        )
+    return parsed.model_dump()
+
+
+# ═══════════════════════════════════════════════════════════════
 # 하이브리드 논문 검색: Semantic Scholar → PubMed → Perplexity 순 폴백
 # ═══════════════════════════════════════════════════════════════
 

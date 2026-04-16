@@ -905,6 +905,21 @@ async function loadExchange(){
   const mainEl=document.getElementById("fx-main");
   if(mainEl) mainEl.innerHTML=audKrw.toFixed(2)+'<span style="font-size:14px;margin-left:4px;color:var(--muted);font-weight:700;">원</span>';
 
+  // 전일 대비 % 변동 뱃지 (yfinance 응답에 pct_change 있을 때만)
+  const chgEl=document.getElementById("fx-chg");
+  if(chgEl){
+    if(d.pct_change!=null && !Number.isNaN(Number(d.pct_change))){
+      const pct=Number(d.pct_change);
+      const sign=pct>=0?"▲ +":"▼ −";
+      const color=pct>=0?"green":"orange";
+      chgEl.className=`bdg ${color}`;
+      chgEl.textContent=`${sign}${Math.abs(pct).toFixed(2)}% 전일 대비`;
+      chgEl.style.display="inline-flex";
+    } else {
+      chgEl.style.display="none";
+    }
+  }
+
   const suffix=(v,u)=>v+'<span style="font-size:14px;margin-left:4px;color:var(--muted);font-weight:700;">'+u+'</span>';
   const setH=(id,html)=>{const el=document.getElementById(id);if(el)el.innerHTML=html;};
   setH("fx-usd-krw", usdKrw!=null?suffix(usdKrw.toFixed(2),"원"):"—");

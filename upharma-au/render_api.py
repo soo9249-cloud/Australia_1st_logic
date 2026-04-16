@@ -301,7 +301,56 @@ def get_news() -> JSONResponse:
 
 @app.get("/api/exchange")
 def get_exchange() -> JSONResponse:
-    """exchangerate-api.com 무료 엔드포인트로 AUD 기준 환율 조회. 실패 시 fallback."""
+    """yfinance 로 AUD 기준 환율 + 전일 대비 % 변동 조회.
+    티커: AUDKRW=X, AUDUSD=X, AUDJPY=X, AUDCNY=X
+    2일치 종가(Close)를 가져와 최근 거래일 - 직전 거래일 대비 변동률 계산.
+    yfinance 실패 시 exchangerate-api.com 로 폴백 (pct_change 미포함).
+    """
+    try:
+        import yfinance as yf
+        tickers = {
+            "aud_krw": "AUDKRW=X",
+            "aud_usd": "AUDUSD=X",
+            "aud_jpy": "AUDJPY=X",
+            "aud_cny": "AUDCNY=X",
+        }
+        data = yf.download(
+            tickers=list(tickers.values()),
+            period="5d",          # 주말·공휴일 대비 여유
+            interval="1d",
+            group_by="ticker",
+            progress=False,
+            auto_adjust=False,
+            threads=True,
+        )
+        result: dict[str, Any] = {}
+        pct_change: float | None = None
+        for key, ticker in tickers.items():
+            try:
+                closes = data[ticker]["Close"].dropna()
+                if closes.empty:
+                    continue
+                today_close = float(closes.iloc[-1])
+                result[key] = today_close
+                if key == "aud_krw" and len(closes) >= 2:
+                    yesterday_close = float(closes.iloc[-2])
+                    if yesterday_close > 0:
+                        pct_change = (today_close - yesterday_close) / yesterday_close * 100.0
+            except (KeyError, IndexError, ValueError, TypeError):
+                continue
+
+        if "aud_krw" in result and "aud_usd" in result:
+            from datetime import datetime as _dt
+            result["updated"] = _dt.now().isoformat()
+            if pct_change is not None:
+                result["pct_change"] = pct_change
+            return JSONResponse(content=result)
+        # yfinance 응답 부족 → fallback
+        raise RuntimeError("yfinance returned incomplete rates")
+    except Exception as exc:
+        print(f"[yfinance fx error] {exc} → exchangerate-api fallback", flush=True)
+
+    # ── 폴백: exchangerate-api.com ──
     try:
         r = httpx.get("https://api.exchangerate-api.com/v4/latest/AUD", timeout=10.0)
         if r.status_code != 200:

@@ -354,7 +354,7 @@ a.news-item:hover .tit{ color:var(--navy2); }
   box-shadow:none;
 }
 
-.todo-label{ font-size:11px; color:var(--muted); text-align:center; }
+.todo-step .todo-label{ font-size:11px; color:var(--muted); text-align:center; }
 .todo-step.active .todo-label{ color:var(--navy); font-weight:600; }
 .todo-step.done   .todo-label{ color:var(--green); }
 

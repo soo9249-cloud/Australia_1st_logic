@@ -231,19 +231,23 @@ def get_news() -> JSONResponse:
                         "role": "system",
                         "content": (
                             "You are a news aggregator. Return EXACTLY 6 recent news items "
-                            "as a JSON array. Each item: {\"title\": string, \"source\": string, \"date\": string (YYYY-MM-DD)}. "
+                            "as a JSON array. Each item must have: "
+                            "{\"title\": string, \"source\": string, \"date\": string (YYYY-MM-DD), \"link\": string}. "
+                            "CRITICAL: The 'link' field MUST be the DIRECT URL to the specific article page "
+                            "where the user can READ that article — NOT the homepage or main site URL. "
+                            "Example: 'https://www.pharmainfocus.com.au/news/article-slug-123' NOT 'https://www.pharmainfocus.com.au'. "
                             "No markdown, no explanation, ONLY the JSON array."
                         ),
                     },
                     {
                         "role": "user",
                         "content": (
-                            "Find the 6 most recent news articles from the LAST 24 HOURS ONLY about: "
+                            "Find the 6 most recent news articles from the LAST 24 HOURS about: "
                             "Australia pharmaceutical industry, TGA regulations, PBS policy, "
                             "healthcare legislation, public health trends, disease outbreaks. "
-                            "Only include articles published within the last 24 hours. "
-                            "For each item, include the direct article URL as a 'link' field. "
-                            "Format: {\"title\": str, \"source\": str, \"date\": str (YYYY-MM-DD), \"link\": str}. "
+                            "For EACH item you MUST provide the DIRECT URL to that specific article page "
+                            "(the full URL path where the article text can be read, NOT the site homepage). "
+                            "If you cannot find the direct article URL, skip that article and find another one. "
                             "Prioritize official government sources and major news outlets."
                         ),
                     },

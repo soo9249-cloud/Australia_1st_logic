@@ -166,31 +166,32 @@ body{
 
 /* ── 체크리스트 (메인탭 · 정적) ───────────────────────────── */
 .todo-list{ display:flex; flex-direction:column; gap:7px; }
+/* ── To-Do 리스트 (SG 스타일) ─────────────────────────────── */
 .todo-item{
   display:flex; align-items:center; gap:10px;
   padding:10px 12px; border-radius:12px;
   background:var(--inner);
+  cursor:pointer;
+  transition:background .15s, opacity .2s;
   user-select:none;
-  transition:background .15s;
 }
-.todo-item.checked{
-  background:rgba(45,152,112,.08);
-}
+.todo-item:hover{ background:rgba(23,63,120,.07); }
+.todo-item.done{ opacity:.62; }
 .todo-check{
   width:22px; height:22px; border-radius:50%;
   background:#fff; box-shadow:var(--sh2);
-  flex-shrink:0; cursor:pointer;
+  flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
-  transition:background .15s, box-shadow .15s;
+  transition:background .2s, box-shadow .2s;
+  font-size:11px; font-weight:800; color:transparent;
 }
-.todo-check.done{
-  background:#5bb98c; box-shadow:none;
+.todo-check::after{ content:'✓'; }
+.todo-item.done .todo-check{
+  background:var(--green); color:#fff;
+  box-shadow:0 2px 8px rgba(45,152,112,.25);
 }
-.todo-check.done::after{
-  content:'✓'; color:#fff; font-size:12px; font-weight:900;
-}
-.todo-label{ font-size:13px; font-weight:700; color:var(--text); flex:1; transition:all .15s; }
-.todo-item.checked .todo-label{
+.todo-label{ font-size:13px; font-weight:700; color:var(--text); flex:1; }
+.todo-item.done .todo-label{
   text-decoration:line-through; color:var(--muted);
 }
 .todo-auto-badge{
@@ -199,35 +200,48 @@ body{
   padding:2px 7px; border-radius:999px; flex-shrink:0;
 }
 
-/* ── 체크리스트 항목 추가 ──────────────────────────────────── */
-.todo-add-row{
-  display:flex; gap:8px; margin-top:10px;
+/* ── 체크리스트 항목 추가 (SG 스타일) ─────────────────────── */
+.todo-add-row{ display:flex; gap:8px; margin-top:6px; }
+.todo-input{
+  flex:1; height:36px; padding:0 12px;
+  border-radius:10px; background:#fff;
+  color:var(--text); font-size:13px;
+  outline:none; box-shadow:var(--sh2);
+  transition:box-shadow .15s; font-family:inherit;
 }
-.todo-add-input{
-  flex:1; padding:10px 14px; border:0; border-radius:10px;
-  background:var(--inner); color:var(--text);
-  font-size:13px; font-family:inherit; outline:none;
-  box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.85);
-}
-.todo-add-input:focus{ box-shadow:inset 0 0 0 1.5px #000, 0 0 0 3px rgba(0,0,0,.15); }
-.todo-add-input::placeholder{ color:var(--muted); }
+.todo-input:focus{ box-shadow:0 0 0 3px rgba(23,63,120,.15); }
+.todo-input::placeholder{ color:var(--muted); }
 .btn-todo-add{
-  padding:8px 16px; border:0; border-radius:10px;
+  height:36px; padding:0 14px; border:0; border-radius:10px;
   background:var(--navy); color:#fff;
-  font-size:12.5px; font-weight:800;
+  font-size:12px; font-weight:800;
   cursor:pointer; white-space:nowrap; font-family:inherit;
+  transition:background .15s;
 }
 .btn-todo-add:hover{ background:var(--navy2); }
 
-/* ── 환율 새로고침 ────────────────────────────────────────── */
-.btn-fx-refresh{
-  margin-top:10px; padding:8px 16px;
-  border:1.5px solid rgba(23,63,120,.25); border-radius:10px;
-  background:#fff; color:var(--navy);
-  font-size:12px; font-weight:800;
-  cursor:pointer; font-family:inherit;
+/* ── 환율 섹션 (SG 스타일) ────────────────────────────────── */
+#main .g3 .card:first-child{
+  display:flex; flex-direction:column;
 }
-.btn-fx-refresh:hover{ background:var(--inner); }
+.exchange-section{
+  margin-top:auto; padding-top:14px;
+}
+.btn-refresh{
+  height:34px; padding:0 14px; border-radius:10px;
+  background:rgba(23,63,120,.07); color:var(--navy);
+  font-size:12px; font-weight:800;
+  cursor:pointer; display:inline-flex;
+  align-items:center; gap:6px;
+  transition:background .15s; margin-top:10px;
+}
+.btn-refresh:hover{ background:rgba(23,63,120,.13); }
+.btn-refresh:disabled{ opacity:.5; cursor:not-allowed; }
+
+/* ── 뉴스 링크 호버 (SG 스타일) ──────────────────────────── */
+a.news-item{ display:block; text-decoration:none; color:inherit; }
+a.news-item:hover{ background:rgba(23,63,120,.08); cursor:pointer; }
+a.news-item:hover .tit{ color:var(--navy2); }
 
 /* ── 신약 분석 폼 (1공정 · frontend_fin 맞춤) ─────────────── */
 .custom-form{
@@ -239,10 +253,10 @@ body{
   background:#eaeef5; color:var(--text);
   font-size:13px; font-family:inherit;
   outline:none;
-  box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.85);
+  box-shadow:var(--sh3);
   transition:box-shadow .15s;
 }
-.custom-input:focus{ box-shadow:inset 0 0 0 1.5px #000, 0 0 0 3px rgba(0,0,0,.15); }
+.custom-input:focus{ box-shadow:0 0 0 3px rgba(23,63,120,.15); }
 .custom-input::placeholder{ color:var(--muted); }
 
 /* ── 메인 KPI 카드 ────────────────────────────────────────── */
@@ -385,11 +399,11 @@ select, #prodSel{
   background-repeat:no-repeat;
   background-position:right 14px center;
   appearance:none; cursor:pointer; outline:none;
-  box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.85);
+  box-shadow:var(--sh3);
   transition:box-shadow .15s;
   font-family:inherit;
 }
-select:focus{ box-shadow:inset 0 0 0 1.5px #000, 0 0 0 3px rgba(0,0,0,.15); }
+select:focus{ box-shadow:0 0 0 3px rgba(23,63,120,.15); }
 
 .manual-fields{
   display:grid; grid-template-columns:repeat(5,1fr); gap:8px;

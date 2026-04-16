@@ -83,23 +83,24 @@
           <div class="irow" style="margin:0;"><div style="font-size:10.5px;color:var(--muted);margin-bottom:3px;">USD / AUD</div><div style="font-size:15px;font-weight:900;color:var(--navy);">0.6412</div></div>
           <div class="irow" style="margin:0;"><div style="font-size:10.5px;color:var(--muted);margin-bottom:3px;">KRW / USD</div><div style="font-size:15px;font-weight:900;color:var(--navy);">1,393원</div></div>
         </div>
-        <div id="fxTimestamp" style="font-size:10.5px;color:var(--muted);margin-top:10px;">조회: —</div>
-        <button class="btn-fx-refresh" onclick="loadExchange()">↻ 환율 새로고침</button>
+        <div class="exchange-section">
+          <div id="fxTimestamp" style="font-size:10.5px;color:var(--muted);">조회: —</div>
+          <button class="btn-refresh" onclick="loadExchange()">↻ 환율 새로고침</button>
+        </div>
       </article>
 
-      <!-- 뉴스 (h3 "시장 신호" 포함 · .irow · app.js loadNews 훅) -->
+      <!-- 뉴스 (h3 "시장 신호" 포함 · loadNews 훅) -->
       <article class="card">
         <div class="sec">
           <div>
             <h3>시장 신호 · 뉴스</h3>
             <p>호주 의약품 시장 주요 동향 · 실시간</p>
           </div>
-          <button class="btn-fx-refresh" onclick="loadNews()">↻ 새로고침</button>
+          <button class="btn-refresh" onclick="loadNews()" style="margin-top:0;">↻ 새로고침</button>
         </div>
-        <div class="irow"><div class="tit">TGA approves fast-track for PIC/S generics</div><div class="sub">TGA.gov.au · 2025-07-14</div></div>
-        <div class="irow"><div class="tit">Australia pharma imports from Korea up 11%</div><div class="sub">Austrade · 2025-07-13</div></div>
-        <div class="irow"><div class="tit">PBS listing reforms: what exporters need to know</div><div class="sub">Dept. of Health · 2025-07-12</div></div>
-        <div class="irow"><div class="tit">KAFTA 10주년 — 한-호주 의약품 교역 현황</div><div class="sub">KITA · 2025-07-10</div></div>
+        <div id="news-list">
+          <div class="irow" style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0;">뉴스 로드 중…</div>
+        </div>
       </article>
 
       <!-- 체크리스트 카드 (정적·장식) -->
@@ -107,30 +108,31 @@
         <div class="sec">
           <div><h3>공정 진행 체크리스트</h3></div>
         </div>
-        <div class="todo-list">
-          <div class="todo-item checked">
-            <div class="todo-check done" onclick="toggleTodo(this)"></div>
+        <div class="todo-list" id="todoList">
+          <div class="todo-item done" onclick="toggleTodo(this)">
+            <div class="todo-check"></div>
             <span class="todo-label">1공정 · 시장조사 분석</span>
             <span class="todo-auto-badge">자동</span>
           </div>
-          <div class="todo-item">
-            <div class="todo-check" onclick="toggleTodo(this)"></div>
+          <div class="todo-item" onclick="toggleTodo(this)">
+            <div class="todo-check"></div>
             <span class="todo-label">보고서 생성</span>
             <span class="todo-auto-badge">자동</span>
           </div>
-          <div class="todo-item">
-            <div class="todo-check" onclick="toggleTodo(this)"></div>
+          <div class="todo-item" onclick="toggleTodo(this)">
+            <div class="todo-check"></div>
             <span class="todo-label">2공정 · 수출전략 수립</span>
             <span class="todo-auto-badge">예정</span>
           </div>
-          <div class="todo-item">
-            <div class="todo-check" onclick="toggleTodo(this)"></div>
+          <div class="todo-item" onclick="toggleTodo(this)">
+            <div class="todo-check"></div>
             <span class="todo-label">3공정 · 바이어 발굴</span>
             <span class="todo-auto-badge">예정</span>
           </div>
         </div>
+        <div id="todoCustomList"></div>
         <div class="todo-add-row">
-          <input id="todoInput" class="todo-add-input" placeholder="항목 추가 후 Enter…" onkeydown="if(event.key==='Enter')addTodoItem()"/>
+          <input id="todoInput" class="todo-input" placeholder="항목 추가 후 Enter…" onkeydown="if(event.key==='Enter'){event.preventDefault();addTodoItem()}"/>
           <button class="btn-todo-add" onclick="addTodoItem()">+ 추가</button>
         </div>
       </article>

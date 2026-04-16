@@ -859,6 +859,8 @@ function _findCardByH3(keyword){
 }
 
 async function loadNews(){
+  const list=document.getElementById("news-list");
+  if(!list) return;
   let items=[];
   try{
     const res=await fetch("/api/news");
@@ -866,28 +868,30 @@ async function loadNews(){
     const body=await res.json();
     items=Array.isArray(body)?body:(body.items||[]);
   }catch(e){return;}
-  if(!items.length) return;
+  if(!items.length){ list.innerHTML='<div class="irow" style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0;">뉴스를 불러올 수 없습니다.</div>'; return; }
 
-  const card=_findCardByH3("시장 신호");
-  if(!card) return;
-
-  // 기존 .irow 4개 제거 후 새로 4개 삽입
-  card.querySelectorAll(".irow").forEach(el=>el.remove());
+  list.innerHTML="";
   items.slice(0,6).forEach(n=>{
-    const div=document.createElement("div");
-    div.className="irow";
-    const link=n.link?` href="${_escapeHtml(n.link)}" target="_blank" rel="noopener"`:"";
     const sub=[_escapeHtml(n.source||""),_escapeHtml(n.date||"")].filter(Boolean).join(" · ");
-    div.innerHTML=`
-      <div class="tit"><a${link} style="color:inherit;text-decoration:none;">${_escapeHtml(n.title||"—")}</a></div>
-      <div class="sub">${sub}</div>`;
-    card.appendChild(div);
+    if(n.link){
+      const a=document.createElement("a");
+      a.className="irow news-item";
+      a.href=n.link;
+      a.target="_blank";
+      a.rel="noopener";
+      a.innerHTML=`<div class="tit">${_escapeHtml(n.title||"—")}</div><div class="sub">${sub}</div>`;
+      list.appendChild(a);
+    }else{
+      const div=document.createElement("div");
+      div.className="irow";
+      div.innerHTML=`<div class="tit">${_escapeHtml(n.title||"—")}</div><div class="sub">${sub}</div>`;
+      list.appendChild(div);
+    }
   });
 }
 
 function toggleTodo(el){
   el.classList.toggle("done");
-  el.closest(".todo-item").classList.toggle("checked");
 }
 
 function addTodoItem(){
@@ -895,11 +899,12 @@ function addTodoItem(){
   if(!inp) return;
   const text=inp.value.trim();
   if(!text) return;
-  const list=document.querySelector(".todo-list");
+  const list=document.getElementById("todoCustomList");
   if(!list) return;
   const div=document.createElement("div");
   div.className="todo-item";
-  div.innerHTML=`<div class="todo-check" onclick="toggleTodo(this)"></div><span class="todo-label">${_escapeHtml(text)}</span>`;
+  div.setAttribute("onclick","toggleTodo(this)");
+  div.innerHTML=`<div class="todo-check"></div><span class="todo-label">${_escapeHtml(text)}</span>`;
   list.appendChild(div);
   inp.value="";
 }

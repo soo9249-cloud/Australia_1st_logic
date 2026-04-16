@@ -47,10 +47,19 @@ app.mount(
 templates = Jinja2Templates(directory=str(_BASE_DIR / "templates"))
 
 
+def _static_version() -> str:
+    # styles.css / app.js 중 최신 mtime → 정적 자원 캐시 무효화 키
+    paths = [_BASE_DIR / "static" / "styles.css", _BASE_DIR / "static" / "app.js"]
+    try:
+        return str(int(max(p.stat().st_mtime for p in paths if p.is_file())))
+    except ValueError:
+        return "0"
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
     # Starlette 최신 API: (request, name) 순서. 구 API 의 ("name", {"request": request}) 는 TypeError.
-    return templates.TemplateResponse(request, "index.html")
+    return templates.TemplateResponse(request, "index.html", {"static_v": _static_version()})
 
 
 @app.get("/health")

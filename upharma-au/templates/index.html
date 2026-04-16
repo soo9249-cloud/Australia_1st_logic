@@ -257,12 +257,12 @@
 
         <!-- 보고서 선택 / 시장 선택 / 실행 -->
         <div class="selector-card">
-          <div class="selector-label">보고서 선택</div>
+          <div class="selector-label">1공정 보고서 선택</div>
 
           <!-- 저장된 보고서 -->
           <div class="selector-row">
             <select id="p2-ai-report-select" style="flex:1;">
-              <option value="">저장된 1공정 보고서를 선택하세요.</option>
+              <option value="">보고서를 선택하세요</option>
             </select>
           </div>
 
@@ -372,9 +372,9 @@
       ══════════════════════════════════════════════════════════════ -->
       <div id="p2-manual-tab" class="p2-tab-content" style="display:none;">
 
-        <!-- 보고서 선택 · 파일 업로드 (AI 파이프라인 탭과 통일) -->
+        <!-- 보고서 선택 · 파일 업로드 · 시장 선택 (AI 탭과 동일 구조) -->
         <div class="selector-card">
-          <div class="selector-label">1공정 보고서 참조 (선택)</div>
+          <div class="selector-label">1공정 보고서 선택</div>
 
           <!-- 저장된 보고서 -->
           <div class="selector-row">
@@ -400,25 +400,25 @@
           <div id="p2-report-brief" class="p2-brief-wrap" style="margin-top:12px;">
             <p class="p2-brief-empty">보고서를 선택하거나 PDF를 업로드하면 가격 정보가 자동으로 반영됩니다.</p>
           </div>
-        </div>
 
-        <!-- 시장 선택 -->
-        <div class="selector-card">
-          <div class="selector-label">시장 선택</div>
+          <div class="selector-label" style="margin-top:14px;">시장 선택</div>
           <div class="p2-seg-row">
             <button class="p2-seg-btn on" data-p2-manual-seg="public"  type="button">공공 시장</button>
             <button class="p2-seg-btn"    data-p2-manual-seg="private" type="button">민간 시장</button>
           </div>
+          <div id="p2-manual-seg-desc" class="p2-note" style="margin-top:10px;">
+            공공 시장: PBS 공공급여 채널 · 주별 병원조달(HealthShare NSW 등) 기준
+          </div>
+        </div>
 
-          <!-- 옵션 목록 -->
+        <!-- 옵션 목록 + 계산 공식 + 시나리오 -->
+        <div class="selector-card">
+          <div class="selector-label">가격 항목 설정</div>
           <div id="p2-manual-options" style="margin-top:12px;"></div>
           <div id="p2-manual-removed" class="p2-removed"></div>
           <div id="p2-custom-add-section"></div>
-        </div>
 
-        <!-- 계산 공식 + 시나리오 -->
-        <div class="selector-card">
-          <div class="selector-label">계산 공식</div>
+          <div class="selector-label" style="margin-top:18px;">계산 공식</div>
           <div id="p2-formula-preview" class="p2-formula-text">—</div>
 
           <div class="selector-label" style="margin-top:18px;">시나리오 산정</div>

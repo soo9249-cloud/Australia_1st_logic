@@ -1051,6 +1051,13 @@ function initP2Strategy() {
       _p2ManualSeg = btn.getAttribute('data-p2-manual-seg') || 'public';
       document.querySelectorAll('[data-p2-manual-seg]').forEach((x) => x.classList.remove('on'));
       btn.classList.add('on');
+      // 시장 설명문 갱신 (AI 탭과 동일 문구)
+      const manualDesc = document.getElementById('p2-manual-seg-desc');
+      if (manualDesc) {
+        manualDesc.textContent = _p2ManualSeg === 'public'
+          ? '공공 시장: PBS 공공급여 채널 · 주별 병원조달(HealthShare NSW 등) 기준'
+          : '민간 시장: Chemist Warehouse 등 약국 체인 · 소매 유통 구조 기준';
+      }
       _renderP2Manual();
     });
   });

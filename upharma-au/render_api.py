@@ -27,11 +27,15 @@ except ImportError:
 
 import httpx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 from starlette.responses import HTMLResponse
+
+# 보고서 PDF 저장 디렉토리
+_REPORTS_DIR = _BASE_DIR / "reports"
+_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # crawler 내부 코드 (수정하지 않고 import 만)
 from au_crawler import main as run_crawler  # type: ignore
@@ -985,6 +989,20 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
         "confidence_breakdown": conf_meta,
     }
 
+    # 8) PDF 보고서 생성 (reportlab) — 서버 디스크 reports/ 에 저장
+    pdf_name: str | None = None
+    try:
+        from report_generator import render_pdf
+        from datetime import datetime as _dt
+        _ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+        pdf_name = f"au_report_{product_id}_{_ts}.pdf"
+        pdf_path = _REPORTS_DIR / pdf_name
+        render_pdf(row, blocks, refs, meta, pdf_path)
+    except Exception as exc:
+        # PDF 실패는 치명적이지 않음 — 응답은 내보내되 pdf_name 은 None
+        print(f"[render_pdf error] {exc}", flush=True)
+        pdf_name = None
+
     return JSONResponse(content={
         "ok": True,
         "product_id": product_id,
@@ -994,4 +1012,36 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
         "refs_count": len(refs),
         "refs": refs,
         "meta": meta,
+        "pdf": pdf_name,
     })
+
+
+# ═══════════════════════════════════════════════════════════════
+#  PDF 다운로드 / 인라인 미리보기 엔드포인트
+# ═══════════════════════════════════════════════════════════════
+
+
+@app.get("/api/report/download")
+def download_report(name: str | None = None, inline: int = 0) -> FileResponse:
+    """reports/ 디렉토리의 PDF 를 반환.
+    - inline=1: Content-Disposition: inline → 브라우저 iframe 에서 PDF 뷰어로 표시
+    - inline=0(기본): attachment → 파일 다운로드
+    name 미지정 시 가장 최신 파일 반환.
+    """
+    if name:
+        target = _REPORTS_DIR / Path(name).name
+        if not target.is_file():
+            raise HTTPException(status_code=404, detail=f"not found: {name}")
+    else:
+        pdfs = sorted(_REPORTS_DIR.glob("au_report_*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if not pdfs:
+            raise HTTPException(status_code=404, detail="생성된 PDF 가 없습니다. POST /api/report/generate 먼저 실행")
+        target = pdfs[0]
+
+    disp = "inline" if inline else "attachment"
+    return FileResponse(
+        str(target),
+        media_type="application/pdf",
+        filename=target.name,
+        content_disposition_type=disp,
+    )

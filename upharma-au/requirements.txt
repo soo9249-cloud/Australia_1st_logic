@@ -10,3 +10,4 @@ uvicorn[standard]
 jinja2
 anthropic
 pydantic
+reportlab>=4.0

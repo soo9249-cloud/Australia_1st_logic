@@ -202,9 +202,6 @@
     <div id="rptPreview1" style="display:none;margin-top:20px;">
       <div class="rpt-dark-bar">
         <div id="rptMetabar" class="rpt-metabar">품목명 · INN · 함량·제형 · HS코드 · Case · confidence</div>
-        <div class="rpt-dark-actions">
-          <button data-preview-btn onclick="printReport()" disabled class="btn-preview-pdf"><svg class="btn-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>PDF 다운로드</button>
-        </div>
       </div>
       <div class="rpt-body-stack">
         <div id="rptBlocks"></div>
@@ -216,17 +213,13 @@
           <button class="btn-reanalyze" onclick="reanalyze()">↺ 재분석</button>
         </div>
         <div id="a4PreviewView" class="rpt-a4-full">
-          <div class="a4-header">● PDF 보고서 · A4 미리보기</div>
-          <div id="rptA4" class="a4-sheet">
-            <div class="a4-title-block">
-              <div class="a4-brand">KOREA UNITED PHARM INC.</div>
-              <div class="a4-title">호주 수출 시장조사 보고서</div>
-              <div id="a4Date" class="a4-date"></div>
-            </div>
-            <div id="a4MetabarInner" class="a4-metabar"></div>
-            <div id="a4Blocks" class="a4-blocks"></div>
-            <div id="a4Footer" class="a4-footer"></div>
-          </div>
+          <div class="a4-header">● PDF 보고서</div>
+          <a id="pdfDownloadBtn" class="btn-pdf-download" href="#" download>
+            <svg class="btn-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            PDF 보고서 다운로드
+          </a>
+          <div id="pdfPreviewFilename" class="pdf-preview-filename"></div>
+          <iframe id="pdfPreviewFrame" class="pdf-preview-frame" title="PDF 미리보기" src="about:blank"></iframe>
         </div>
       </div>
     </div>

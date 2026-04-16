@@ -682,166 +682,28 @@ function renderAnalysisBlocks(apiData){
   buildReportCards(apiData);
 }
 
-/* ───── Step 2 전용: A4 미리보기 영역 렌더 (SG 팀 레이아웃 준수) ───── */
+/* ───── Step 2: 실제 .pdf 파일을 iframe 에 임베드 + 다운로드 버튼 세팅 ───── */
 function renderA4Preview(apiData){
   if(!apiData) return;
-  const blocks = apiData.blocks || {};
-  const apiRefs = Array.isArray(apiData.refs) ? apiData.refs : [];
-  const meta = apiData.meta || {};
+  const pdfName = apiData.pdf || null;
+  const dlBtn = document.getElementById("pdfDownloadBtn");
+  const frame = document.getElementById("pdfPreviewFrame");
+  const fnEl  = document.getElementById("pdfPreviewFilename");
 
-  const esc = _escapeHtml;
-  const prodName = meta.product_name_ko || "—";
-  const prodInn  = meta.inn_normalized  || "—";
-  const prodStr  = meta.strength        || "";
-  const prodForm = meta.dosage_form     || "";
-  const rawHs    = meta.hs_code_6 || "";
-  const prodHs   = rawHs.length >= 6 ? `${rawHs.slice(0,4)}.${rawHs.slice(4,6)}` : (rawHs || "—");
-
-  const ev = String(meta.export_viable || "").toLowerCase();
-  const viable = ev === "viable" ? "가능" : ev === "conditional" ? "조건부"
-              : ev === "not_viable" ? "불가" : "분석 중";
-  const confPct = meta.confidence != null ? Math.round(Number(meta.confidence)*100) + "%" : "—";
-  const caseGrade = ev === "viable" ? "A" : ev === "conditional" ? "B" : "C";
-  const now = new Date();
-  const dateStr = now.toISOString().slice(0,10);
-
-  const a4Date = document.getElementById("a4Date");
-  const a4MetabarInner = document.getElementById("a4MetabarInner");
-  const a4Footer = document.getElementById("a4Footer");
-  const rptFooter = document.getElementById("rptFooter");
-  if(a4Date) a4Date.textContent = dateStr;
-  if(a4MetabarInner){
-    const strForm = [prodStr, prodForm].filter(Boolean).join(" ");
-    a4MetabarInner.textContent =
-      `${prodName} — ${prodInn}${strForm ? " · " + strForm : ""} | HS CODE: ${prodHs}`;
+  if(!pdfName){
+    if(dlBtn) dlBtn.style.display = "none";
+    if(fnEl)  fnEl.textContent = "⚠ PDF 생성 실패 — 서버 로그 확인";
+    if(frame) frame.src = "about:blank";
+    return;
   }
-  if(a4Footer && rptFooter) a4Footer.textContent = rptFooter.textContent;
 
-  // ── 2열 테이블 (카테고리 | 내용) 헬퍼
-  const kvTable = (rows) => `
-    <table class="a4-tbl">
-      <tbody>
-        ${rows.map(([k,v]) => `
-          <tr>
-            <th>${esc(k)}</th>
-            <td>${esc(v || "—")}</td>
-          </tr>`).join("")}
-      </tbody>
-    </table>`;
-
-  // ── 섹션 1: 수출 적합 판정
-  const sec1 = `
-    <div class="a4-section">
-      <div class="a4-section-title">1. 수출 적합 판정</div>
-      ${kvTable([
-        ["판정",    `${viable} · HS ${prodHs} · Case ${caseGrade} · 신뢰도 ${confPct}`],
-      ])}
-    </div>`;
-
-  // ── 섹션 2: 판정 근거 (5축 유지)
-  const sec2 = `
-    <div class="a4-section">
-      <div class="a4-section-title">2. 판정 근거</div>
-      ${kvTable([
-        ["시장 / 의료", blocks.block2_market],
-        ["규제",        blocks.block2_regulatory],
-        ["무역",        blocks.block2_trade],
-        ["조달",        blocks.block2_procurement],
-        ["유통",        blocks.block2_channel],
-      ])}
-    </div>`;
-
-  // ── 섹션 3: 시장 진출 전략 (4축)
-  const sec3 = `
-    <div class="a4-section">
-      <div class="a4-section-title">3. 시장 진출 전략</div>
-      ${kvTable([
-        ["진입 채널 권고", blocks.block3_channel],
-        ["가격 포지셔닝",  blocks.block3_pricing],
-        ["파트너 발굴",    blocks.block3_partners],
-        ["리스크 + 조건",  blocks.block3_risks],
-      ])}
-    </div>`;
-
-  // ── 섹션 5-1: 학술 논문 테이블 (No | 논문 제목 / 출처 | 한국어 요약)
-  const sourceLabel = (src) => {
-    if(src === "semantic_scholar") return "Semantic Scholar";
-    if(src === "pubmed")           return "PubMed";
-    if(src === "perplexity")       return "Perplexity";
-    return src || "출처";
-  };
-  const refsForTable = apiRefs.length > 0 ? apiRefs : [];
-  const papersRows = refsForTable.map((r, i) => {
-    const title = r.title || (r.url || "").replace(/^https?:\/\//,"").slice(0,90) || "(제목 없음)";
-    const urlLine = r.url ? `<div class="a4-refs-url">${esc(r.url)}</div>` : "";
-    const srcLine = r.source ? `<div class="a4-refs-src">[${esc(sourceLabel(r.source))}]</div>` : "";
-    const summary = r.korean_summary || r.tldr || r.abstract || r.snippet || "—";
-    return `
-      <tr>
-        <td class="col-no">${i+1}</td>
-        <td>
-          <div class="a4-refs-title">${esc(title)}</div>
-          ${srcLine}
-          ${urlLine}
-        </td>
-        <td class="col-summary">${esc(summary)}</td>
-      </tr>`;
-  }).join("");
-  const sec5_1 = `
-    <div class="a4-subsection-title">4-1. 추천 논문</div>
-    ${refsForTable.length > 0 ? `
-      <table class="a4-refs-tbl">
-        <thead>
-          <tr>
-            <th class="col-no">No.</th>
-            <th>논문 제목 / 출처</th>
-            <th class="col-summary">한국어 요약</th>
-          </tr>
-        </thead>
-        <tbody>${papersRows}</tbody>
-      </table>`
-      : `<div class="a4-refs-empty">학술 API 호출 전 또는 결과 없음</div>`}`;
-
-  // ── 섹션 5-2: 사용된 DB/기관 테이블 (호주 데이터 소스)
-  const sourcesStatic = [
-    {name:"TGA ARTG",           desc:"호주 치료제 등록부(ARTG) — 등록번호·스폰서·스케줄 조회", link:"https://www.tga.gov.au/products/australian-register-therapeutic-goods-artg"},
-    {name:"PBS Schedule",       desc:"호주 의약품 급여제도 공개 스케줄 — item code·DPMQ·innovator 지위", link:"https://www.pbs.gov.au"},
-    {name:"Chemist Warehouse",  desc:"호주 최대 약국 체인 소매가 참조", link:"https://www.chemistwarehouse.com.au"},
-    {name:"NSW Health Procurement", desc:"뉴사우스웨일스주 공공조달 계약 공시", link:"https://buy.nsw.gov.au"},
-    {name:"KUP_PIPELINE",       desc:"한국유나이티드제약 내부 파이프라인 DB — 품목 식별자·HS·메타", link:"내부 데이터"},
-    {name:"하이브리드 학술 API", desc:"Semantic Scholar → PubMed → Perplexity 순 폴백 학술 검색", link:"내부 데이터"},
-  ];
-  const sec5_2 = `
-    <div class="a4-subsection-title">4-2. 사용된 DB/기관</div>
-    <table class="a4-refs-tbl">
-      <thead>
-        <tr>
-          <th style="width:26%;">DB/기관명</th>
-          <th>설명</th>
-          <th style="width:28%;">링크</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${sourcesStatic.map(s => `
-          <tr>
-            <td><strong>${esc(s.name)}</strong></td>
-            <td>${esc(s.desc)}</td>
-            <td class="a4-refs-url">${esc(s.link)}</td>
-          </tr>`).join("")}
-      </tbody>
-    </table>`;
-
-  const sec5 = `
-    <div class="a4-section">
-      <div class="a4-section-title">4. 근거 및 출처</div>
-      ${sec5_1}
-      ${sec5_2}
-    </div>`;
-
-  const a4Blocks = document.getElementById("a4Blocks");
-  if(a4Blocks){
-    a4Blocks.innerHTML = sec1 + sec2 + sec3 + sec5;
+  const q = `name=${encodeURIComponent(pdfName)}`;
+  if(dlBtn){
+    dlBtn.href = `/api/report/download?${q}`;
+    dlBtn.style.display = "inline-flex";
   }
+  if(fnEl)  fnEl.textContent = pdfName;
+  if(frame) frame.src = `/api/report/download?${q}&inline=1`;
 }
 
 /* 보고서 저장 — POST /api/reports → GET 재조회 */

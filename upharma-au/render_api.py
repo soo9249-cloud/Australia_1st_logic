@@ -1698,6 +1698,12 @@ async def p2_upload_pdf(payload: dict[str, Any]) -> JSONResponse:
 import threading as _threading
 import re as _re
 
+def _dt_now_utc() -> str:
+    """UTC 현재 시각 ISO 문자열. UPSERT 시 generated_at 갱신용."""
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
+
 _p2_state: dict[str, Any] = {
     "status": "idle",       # idle / running / done / error
     "step_label": "",
@@ -1927,6 +1933,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
                 "warnings": [w for w in (dispatch_result.get("warnings") or []) if w],
                 "disclaimer": dispatch_result.get("disclaimer"),
                 "llm_model": _CLAUDE_MODEL,
+                "generated_at": _dt_now_utc(),
             }
             sb_client.table("australia_p2_results").upsert(
                 upsert_data,

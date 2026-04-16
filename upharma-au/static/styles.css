@@ -756,6 +756,7 @@ select:focus{ box-shadow:0 0 0 3px rgba(23,63,120,.15); }
   background:var(--inner); border-radius:10px;
   font-size:11px; color:var(--muted);
 }
+.rpt-footer-bar:empty{ display:none; }
 
 /* ── 테이블 (2·3공정) ────────────────────────────────────── */
 .tbl-wrap{ overflow-x:auto; border-radius:12px; }

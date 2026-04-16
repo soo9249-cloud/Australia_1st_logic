@@ -1271,6 +1271,37 @@ function _p2FillExchangeRate() {
   });
 }
 
+/* ── 품목별 GST 분류 ──────────────────────────────────────────
+ * 호주 GST 규정: 처방의약품(S4/S8)은 GST-free(0%), OTC·건강기능식품은 10% 과세
+ * Rx (GST 0%): Hydrine, Sereterol, Gadvoa, Rosumeg, Atmeg, Ciloduo, Gastiin CR
+ * OTC (GST 10%): Omethyl (Omega-3 건강기능식품)
+ */
+function _p2ClassifyGst(report) {
+  // report.report_title, report.product 또는 문자열 받기
+  const src = (report && typeof report === 'object')
+    ? String(report.report_title || report.product || report.product_name || '')
+    : String(report || '');
+  const s = src.toLowerCase();
+  // OTC/건강기능식품 판정 — Omethyl 또는 omega-3 키워드
+  const isOtc = /omethyl|omega\s*-?\s*3|오메가|omacor/i.test(s);
+  return isOtc
+    ? { rate: 10, kind: 'otc', label: 'GST 공제 (÷1.10) · OTC 10%', hint: '호주 GST 10% (Omega-3 건강기능식품은 과세)' }
+    : { rate: 0,  kind: 'rx',  label: 'GST 공제 (면제) · 처방약 0%', hint: '호주 처방약(S4/S8)은 GST-free — 공제 없음' };
+}
+
+function _p2ApplyGstForReport(report) {
+  const g = _p2ClassifyGst(report);
+  const opt = _p2Manual.private.find((x) => x.key === 'gst');
+  if (!opt) return g;
+  opt.value = g.rate;
+  opt.min = g.rate;
+  opt.max = g.rate;
+  opt.label = g.label;
+  opt.hint = g.hint;
+  opt.enabled = g.rate > 0; // 처방약은 GST-free이므로 공제 비활성화
+  return g;
+}
+
 function _p2FillBaseFromReport() {
   const report = _getP2SelectedReport();
   if (!report) return;
@@ -1281,6 +1312,8 @@ function _p2FillBaseFromReport() {
     if (pub) pub.value = hint;
     if (pri) pri.value = hint;
   }
+  // 품목별 GST 자동 전환 (처방약 0% / OTC 10%)
+  _p2ApplyGstForReport(report);
 }
 
 function _syncP2ReportsOptions() {
@@ -1383,8 +1416,14 @@ function _calcP2Manual() {
       price *= Number(opt.value);
       parts.push(`× ${Number(opt.value).toFixed(4)}`);
     } else if (opt.type === 'gst_fixed') {
-      price /= 1.10;
-      parts.push('÷ 1.10');
+      const rate = Number(opt.value) || 0;
+      if (rate > 0) {
+        const divisor = 1 + rate / 100;
+        price /= divisor;
+        parts.push(`÷ ${divisor.toFixed(2)} (GST ${rate}%)`);
+      } else {
+        parts.push('GST 면제 (처방약)');
+      }
     } else if (opt.type === 'pct_deduct') {
       price *= (1 - Number(opt.value) / 100);
       parts.push(`× (1−${Number(opt.value).toFixed(1)}%)`);
@@ -1447,7 +1486,10 @@ function _p2OptionCardHtml(opt) {
   const canStep = !isInput && !isFixed && opt.step > 0;
 
   let valDisplay = '';
-  if (isFixed) valDisplay = '÷ 1.10 고정';
+  if (isFixed) {
+    const rate = Number(opt.value) || 0;
+    valDisplay = rate > 0 ? `÷ ${(1 + rate / 100).toFixed(2)} 고정 (GST ${rate}%)` : 'GST 면제 (처방약 0%)';
+  }
   else if (opt.type === 'pct_mult') valDisplay = `× ${Number(opt.value).toFixed(0)}%`;
   else if (opt.type === 'pct_deduct') valDisplay = `× (1−${Number(opt.value).toFixed(0)}%)`;
   else if (opt.type === 'pct_add_custom') valDisplay = `× (1+${Number(opt.value).toFixed(1)}%)`;

@@ -1,4 +1,11 @@
 {
+  "_schema_version": "1.1",
+  "_schema_notes": {
+    "purpose": "크롤러 전용 정적 설정. PBS/TGA/Healthylife 검색어와 제품 기본 메타데이터만 포함. 역산 시드·플래그는 stage2/fob_reference_seeds.json으로 분리.",
+    "pricing_case": "au_crawler.py와 utils/evidence.py가 evidence 생성 분기에 사용하는 공통 메타. DIRECT(PBS 등재) | COMPONENT_SUM(복합제) | ESTIMATE_private | ESTIMATE_withdrawal | ESTIMATE_substitute | ESTIMATE_hospital",
+    "market_segment": "public(PBS 경로) | private(소매) | hospital(병원조달)",
+    "_removed_fields": "pbs_section/pbs_status/pbs_code/section_19a_flag/efc_applicable/pbac_superiority_required/commercial_withdrawal_flag/hospital_channel_only/restricted_benefit/reference_aemp_aud/reference_dpmq_aud/reference_retail_aud/competitor_brands_on_pbs/confidence_score/notes 는 전부 stage2/fob_reference_seeds.json으로 이동됨"
+  },
   "products": [
     {
       "product_id": "au-omethyl-001",
@@ -8,10 +15,11 @@
       "strength": "2g",
       "dosage_form": "capsule",
       "hs_code_6": "300490",
-      "pricing_case": "ESTIMATE",
+      "pricing_case": "ESTIMATE_private",
       "pbs_search_terms": ["omega-3-acid ethyl esters", "omega 3 ethyl esters"],
       "tga_search_terms": ["omega-3-acid ethyl esters", "Omethyl"],
-      "market_segment": "public"
+      "healthylife_slug": "omacor-1000mg-cap-28",
+      "market_segment": "private"
     },
     {
       "product_id": "au-gadvoa-002",
@@ -21,7 +29,7 @@
       "strength": "604.72mg",
       "dosage_form": "injection",
       "hs_code_6": "300640",
-      "pricing_case": "ESTIMATE",
+      "pricing_case": "ESTIMATE_hospital",
       "pbs_search_terms": ["gadobutrol"],
       "tga_search_terms": ["gadobutrol", "Gadvoa"],
       "market_segment": "hospital"
@@ -86,7 +94,7 @@
       "strength": "복합",
       "dosage_form": "tablet",
       "hs_code_6": "300490",
-      "pricing_case": "ESTIMATE",
+      "pricing_case": "ESTIMATE_withdrawal",
       "pbs_search_terms": ["cilostazol", "rosuvastatin"],
       "tga_search_terms": ["cilostazol", "rosuvastatin", "Ciloduo"],
       "market_segment": "public"
@@ -99,7 +107,7 @@
       "strength": "15mg",
       "dosage_form": "tablet",
       "hs_code_6": "300490",
-      "pricing_case": "ESTIMATE",
+      "pricing_case": "ESTIMATE_substitute",
       "pbs_search_terms": ["mosapride", "mosapride citrate"],
       "tga_search_terms": ["mosapride", "Gastiin"],
       "market_segment": "public"

@@ -579,11 +579,18 @@ function buildReportCards(apiData){
       </div>
     </div>`;
 
+  // 리스크·조건 셀: block3_risks + block4_regulatory 규제 항목들을 하나로 병합
+  const regsParsedForRisks = parseBlock4(blocks.block4_regulatory);
+  const regsInlineText = regsParsedForRisks
+    .map(r => `${r.num} ${r.title}: ${r.impact}`)
+    .join("\n");
+  const risksMerged = `${blocks.block3_risks || "⚙️ 생성 실패"}\n\n[규제 체크포인트]\n${regsInlineText}`;
+
   const strats=[
     {k:"진입 채널 전략",  v: blocks.block3_channel  || "⚙️ 생성 실패", em:true},
     {k:"가격 포지셔닝",   v: blocks.block3_pricing  || "⚙️ 생성 실패"},
     {k:"파트너 발굴",     v: blocks.block3_partners || "⚙️ 생성 실패"},
-    {k:"리스크·조건",     v: blocks.block3_risks    || "⚙️ 생성 실패"},
+    {k:"리스크·조건",     v: risksMerged},
   ];
   const block3=`
     <div style="background:var(--card);border:1px solid rgba(23,63,120,.08);border-radius:18px;padding:18px;">
@@ -592,29 +599,12 @@ function buildReportCards(apiData){
         ${strats.map(s=>`
           <div style="background:var(--inner);border-radius:12px;padding:14px;${s.em?"border-left:3px solid var(--orange);":""}">
             <div style="font-size:11.5px;font-weight:800;color:var(--navy);margin-bottom:8px;">${s.k}</div>
-            <div style="font-size:12.5px;color:var(--text);line-height:1.6;">${s.v}</div>
+            <div style="font-size:12.5px;color:var(--text);line-height:1.6;white-space:pre-line;">${_escapeHtml(s.v)}</div>
           </div>`).join("")}
       </div>
     </div>`;
 
-  const regsParsed = parseBlock4(blocks.block4_regulatory);
-  const block4=`
-    <div style="background:var(--card);border:1px solid rgba(23,63,120,.08);border-radius:18px;padding:18px;">
-      <div style="font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:14px;letter-spacing:.04em;">● 규제 체크포인트 — 이 품목 수출 시 실무 영향</div>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        ${regsParsed.map(r=>`
-          <div style="background:var(--inner);border-radius:12px;padding:12px 14px;
-            display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-            <div style="flex:1;">
-              <div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:3px;">${r.num} ${_escapeHtml(r.title)}</div>
-              <div style="font-size:12px;color:var(--text);line-height:1.6;">${_escapeHtml(r.impact)}</div>
-            </div>
-            <span class="bdg ${r.color}" style="flex-shrink:0;">${_escapeHtml(r.badge)}</span>
-          </div>`).join("")}
-      </div>
-    </div>`;
-
-  document.getElementById("rptBlocks").innerHTML=block1+block2+block3+block4;
+  document.getElementById("rptBlocks").innerHTML=block1+block2+block3;
 
   // 하이브리드 레퍼런스 렌더: korean_summary 우선 + venue + citationCount + source 뱃지
   const categoryColor = (cat) => (cat||"").startsWith("거시") ? "blue"
@@ -754,7 +744,12 @@ function renderA4Preview(apiData){
       ])}
     </div>`;
 
-  // ── 섹션 3: 시장 진출 전략 (4축 유지)
+  // ── 섹션 3: 시장 진출 전략 (4축) — 리스크+조건 셀에 규제 체크포인트 병합
+  const regsParsedA4 = parseBlock4(blocks.block4_regulatory);
+  const regsInlineA4 = regsParsedA4
+    .map(r => `${r.num} ${r.title}: ${r.impact}`)
+    .join("\n");
+  const risksMergedA4 = `${blocks.block3_risks || "—"}\n\n[규제 체크포인트]\n${regsInlineA4}`;
   const sec3 = `
     <div class="a4-section">
       <div class="a4-section-title">3. 시장 진출 전략</div>
@@ -762,16 +757,8 @@ function renderA4Preview(apiData){
         ["진입 채널 권고", blocks.block3_channel],
         ["가격 포지셔닝",  blocks.block3_pricing],
         ["파트너 발굴",    blocks.block3_partners],
-        ["리스크 + 조건",  blocks.block3_risks],
+        ["리스크 + 조건",  risksMergedA4],
       ])}
-    </div>`;
-
-  // ── 섹션 4: 규제 체크포인트 (block4_regulatory 파싱 → 5법령 2열 테이블)
-  const regsParsed = parseBlock4(blocks.block4_regulatory);
-  const sec4 = `
-    <div class="a4-section">
-      <div class="a4-section-title">4. 규제 체크포인트</div>
-      ${kvTable(regsParsed.map(r => [`${r.num} ${r.title}`, r.impact]))}
     </div>`;
 
   // ── 섹션 5-1: 학술 논문 테이블 (No | 논문 제목 / 출처 | 한국어 요약)
@@ -799,7 +786,7 @@ function renderA4Preview(apiData){
       </tr>`;
   }).join("");
   const sec5_1 = `
-    <div class="a4-subsection-title">5-1. 추천 논문 · 하이브리드 학술 검색</div>
+    <div class="a4-subsection-title">4-1. 추천 논문</div>
     ${refsForTable.length > 0 ? `
       <table class="a4-refs-tbl">
         <thead>
@@ -823,7 +810,7 @@ function renderA4Preview(apiData){
     {name:"하이브리드 학술 API", desc:"Semantic Scholar → PubMed → Perplexity 순 폴백 학술 검색", link:"내부 데이터"},
   ];
   const sec5_2 = `
-    <div class="a4-subsection-title">5-2. 사용된 DB/기관</div>
+    <div class="a4-subsection-title">4-2. 사용된 DB/기관</div>
     <table class="a4-refs-tbl">
       <thead>
         <tr>
@@ -844,14 +831,14 @@ function renderA4Preview(apiData){
 
   const sec5 = `
     <div class="a4-section">
-      <div class="a4-section-title">5. 근거 및 출처</div>
+      <div class="a4-section-title">4. 근거 및 출처</div>
       ${sec5_1}
       ${sec5_2}
     </div>`;
 
   const a4Blocks = document.getElementById("a4Blocks");
   if(a4Blocks){
-    a4Blocks.innerHTML = sec1 + sec2 + sec3 + sec4 + sec5;
+    a4Blocks.innerHTML = sec1 + sec2 + sec3 + sec5;
   }
 }
 

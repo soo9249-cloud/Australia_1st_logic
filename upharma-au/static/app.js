@@ -507,7 +507,7 @@ function buildReportCards(apiData){
   const rawHs    = meta.hs_code_6 || "";
   const prodHs   = rawHs.length >= 6 ? `${rawHs.slice(0,4)}.${rawHs.slice(4,6)}` : (rawHs || "—");
 
-  // 수출 적합 판정 (신호등) — SVG 3원형 하우징 + 색 배지
+  // 수출 적합 판정 (신호등) — 원본: 색 원형 div + 이모지 🟢/🟡/🔴 + 색 배지
   const ev = String(meta.export_viable || "").toLowerCase();
   const viable = ev === "viable" ? "가능"
                : ev === "conditional" ? "조건부"
@@ -515,17 +515,6 @@ function buildReportCards(apiData){
   const viableColor = ev === "viable" ? "green"
                     : ev === "conditional" ? "orange"
                     : ev === "not_viable" ? "red" : "gray";
-  const dim = 0.22;
-  const opRed    = ev === "not_viable"  ? 1 : dim;
-  const opYellow = ev === "conditional" ? 1 : dim;
-  const opGreen  = ev === "viable"      ? 1 : dim;
-  const trafficLightSvg = `
-    <svg viewBox="0 0 28 68" width="30" height="72" xmlns="http://www.w3.org/2000/svg">
-      <rect x="2" y="2" width="24" height="64" rx="7" fill="#1e293b"/>
-      <circle cx="14" cy="15" r="6.5" fill="#e74c3c" opacity="${opRed}"/>
-      <circle cx="14" cy="34" r="6.5" fill="#f39c12" opacity="${opYellow}"/>
-      <circle cx="14" cy="53" r="6.5" fill="#27ae60" opacity="${opGreen}"/>
-    </svg>`;
 
   // 신뢰도 — 7개 크롤링 필드 기반 서버 재계산값
   const cb = meta.confidence_breakdown || {checklist:[], hits:0, total:0};
@@ -561,8 +550,11 @@ function buildReportCards(apiData){
       </div>
       <div style="margin-bottom:10px;">
         <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;">핵심 판정</div>
-        <div style="display:flex;align-items:center;gap:14px;">
-          ${trafficLightSvg}
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:48px;height:48px;border-radius:50%;background:${viableColor==="green"?"#27ae60":viableColor==="orange"?"#f39c12":"#e74c3c"};
+            display:flex;align-items:center;justify-content:center;font-size:20px;">
+            ${viableColor==="green"?"🟢":viableColor==="orange"?"🟡":"🔴"}
+          </div>
           <span class="bdg ${viableColor}" style="font-size:16px;padding:8px 18px;">${viable}</span>
         </div>
       </div>

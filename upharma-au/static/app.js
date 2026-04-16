@@ -246,6 +246,11 @@ async function runCrawl(mode){
     return;
   }
 
+  // 진출 적합 분석 시작 — 크롤링 결과 영역 노출 (초기엔 숨김 상태)
+  document.querySelectorAll(".crawl-head, #crawlStack").forEach(el => {
+    el.style.display = "";
+  });
+
   setStep1(2);
   const pending = renderPendingCard(label);
   setTimeout(()=>setStep1(3),800);

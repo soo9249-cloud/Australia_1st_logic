@@ -189,12 +189,12 @@
       <select id="m_type" style="display:none;"><option value=""></option></select>
     </div>
 
-    <!-- 크롤링 결과 -->
-    <div class="crawl-head">
+    <!-- 크롤링 결과 (UI에서는 숨김 — runCrawl 이 DOM 조작 시 필요해 구조만 유지) -->
+    <div class="crawl-head" style="display:none;">
       <div class="crawl-head-title">크롤링 결과 <span id="crawlCount">0</span>건</div>
       <div class="crawl-head-sub">최신순 · 4개 이상 스크롤</div>
     </div>
-    <div class="crawl-stack" id="crawlStack">
+    <div class="crawl-stack" id="crawlStack" style="display:none;">
       <div class="empty-state" id="crawlEmpty">품목 선택 후 크롤링 실행하세요.</div>
     </div>
 

@@ -885,6 +885,11 @@ async function loadNews(){
   });
 }
 
+function toggleTodo(el){
+  el.classList.toggle("done");
+  el.closest(".todo-item").classList.toggle("checked");
+}
+
 function addTodoItem(){
   const inp=document.getElementById("todoInput");
   if(!inp) return;
@@ -894,10 +899,7 @@ function addTodoItem(){
   if(!list) return;
   const div=document.createElement("div");
   div.className="todo-item";
-  div.innerHTML=`<div class="todo-check"></div><span class="todo-label">${_escapeHtml(text)}</span>`;
-  div.querySelector(".todo-check").addEventListener("click",function(){
-    this.classList.toggle("done");
-  });
+  div.innerHTML=`<div class="todo-check" onclick="toggleTodo(this)"></div><span class="todo-label">${_escapeHtml(text)}</span>`;
   list.appendChild(div);
   inp.value="";
 }

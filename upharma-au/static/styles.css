@@ -171,21 +171,28 @@ body{
   padding:10px 12px; border-radius:12px;
   background:var(--inner);
   user-select:none;
+  transition:background .15s;
+}
+.todo-item.checked{
+  background:rgba(45,152,112,.08);
 }
 .todo-check{
   width:22px; height:22px; border-radius:50%;
   background:#fff; box-shadow:var(--sh2);
   flex-shrink:0; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
-  transition:background .15s;
+  transition:background .15s, box-shadow .15s;
 }
 .todo-check.done{
-  background:var(--green); box-shadow:none;
+  background:#5bb98c; box-shadow:none;
 }
 .todo-check.done::after{
-  content:'✓'; color:#fff; font-size:13px; font-weight:900;
+  content:'✓'; color:#fff; font-size:12px; font-weight:900;
 }
-.todo-label{ font-size:13px; font-weight:700; color:var(--text); flex:1; }
+.todo-label{ font-size:13px; font-weight:700; color:var(--text); flex:1; transition:all .15s; }
+.todo-item.checked .todo-label{
+  text-decoration:line-through; color:var(--muted);
+}
 .todo-auto-badge{
   font-size:10px; color:var(--muted); font-weight:700;
   background:rgba(23,63,120,.05);

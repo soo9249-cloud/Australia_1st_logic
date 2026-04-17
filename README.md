@@ -787,7 +787,7 @@ taskkill /PID <PID> /F
 python scripts/deploy_render.py
 ```
 
-**Render — 루트만 쓰기:** `requirements.txt` 는 **저장소 루트**(README 와 같은 위치) **한 곳**만 둔다. `render.yaml` 에 **`rootDir: .`** 를 두어 서비스 빌드 루트를 **Git 리포지토리 루트**로 고정하고, `pip install -r requirements.txt` 가 그 파일을 읽게 한다. 앱 코드는 `startCommand` 의 `--app-dir upharma-au` 로 지정한다. 예전에 대시보드에서 Root Directory 를 `upharma-au` 로만 잡아 두었으면 루트 파일이 빌드에 안 들어가 실패하므로, **`render.yaml` 이 반영되도록 Blueprint 를 저장·동기화**하거나 Settings 에서 Root Directory 를 비운다. Python 버전은 `.python-version` 과 `render.yaml` 의 `PYTHON_VERSION` 으로 맞춘다.
+**Render — `requirements.txt` 한 곳(저장소 최상위):** 로컬·GitHub Actions 도 **루트의 `requirements.txt`** 만 쓴다. Render 대시보드에서 **Root Directory** 를 `upharma-au` 로 두면 [Monorepo 규칙](https://render.com/docs/monorepo-support) 때문에 **그 밖에 있는 루트 `requirements.txt` 가 빌드 트리에 포함되지 않아** `pip install -r requirements.txt` 가 실패할 수 있다. 그래서 `render.yaml` 빌드 단계는 (1) 로컬에 `requirements.txt` 가 있으면 그걸 쓰고, (2) 없으면 Render 가 넣어 주는 `RENDER_GIT_REPO_SLUG`·`RENDER_GIT_COMMIT` 으로 **GitHub raw 에서 같은 커밋의 `requirements.txt`** 를 받아 설치한다(저장소가 **공개**일 때). 비공개 저장소면 raw 가 막히므로 Root Directory 를 비우거나 별도 토큰 전략이 필요하다. 기동은 루트면 `--app-dir upharma-au`, Root 가 `upharma-au` 면 그대로 `uvicorn render_api:app` 이 되도록 `render.yaml` 에 분기해 두었다. Python 버전은 `.python-version` 과 `render.yaml` 의 `PYTHON_VERSION` 으로 맞춘다.
 
 ### 11.8 전체 실행 흐름 요약
 

@@ -42,12 +42,12 @@
 const INN_MAP = {
   'au-hydrine-004':   'Hydroxycarbamide 500mg',
   'au-gadvoa-002':    'Gadobutrol 604.72mg',
-  'au-sereterol-003': 'Fluticasone / Salmeterol',
+  'au-sereterol-003': 'Fluticasone / Salmeterol (250/50·500/50 DPI)',
   'au-omethyl-001':   'Omega-3 EE 2g',
   'au-rosumeg-005':   'Rosuvastatin + Omega-3',
   'au-atmeg-006':     'Atorvastatin + Omega-3',
   'au-ciloduo-007':   'Cilostazol + Rosuvastatin',
-  'au-gastiin-008':   'Mosapride CR',
+  'au-gastiin-008':   'Mosapride CR (서방형) 15mg',
 };
 
 /**
@@ -455,21 +455,66 @@ let _p2LastScenarios = null;
 let _p2ManualCalculated = false;
 
 function _makeP2Defaults() {
+  // 호주 기본값 (stage2/fob_calculator.py DEFAULT_* 상수 맞춤):
+  //   GST_PCT               = 10%  (처방약은 _p2ClassifyGst 로 자동 0% 전환)
+  //   PHARMACY_MARGIN_PCT   = 30%
+  //   WHOLESALE_MARGIN_B    = 10%
+  //   IMPORTER_MARGIN       = 20%  (average 시나리오 기준)
+  // 화폐: USD 메인 (AUD 원본은 loadExchange.window._exchangeRates.aud_usd 로 환산)
   return {
     public: [
-      { key: 'base_price', label: '기준 입찰가', value: 0, type: 'abs_input', unit: 'SGD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '경쟁사 입찰가 또는 목표 기준가', rationale: '공공 채널은 입찰 경쟁이 강해 기준가 설정이 핵심입니다.' },
-      { key: 'exchange', label: '환율 (USD→SGD)', value: 1.0, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'USD 입력 시 적용, SGD면 1.0 유지', rationale: '실시간 환율을 반영해 환차 리스크를 줄입니다.' },
-      { key: 'pub_ratio', label: '공공 수출가 산출 비율', value: 30, type: 'pct_mult', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '기준가 대비 최종 반영 비율', rationale: '입찰·유통·파트너 마진을 반영한 목표 비율입니다.' },
+      { key: 'base_price', label: '기준 입찰가 (USD)', value: 0, type: 'abs_input', unit: 'USD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 PBS AEMP 또는 주별 병원조달 입찰가 참고', rationale: '호주 공공채널은 PBS 급여가격·HealthShare NSW 입찰가가 기준.' },
+      { key: 'exchange', label: '환율 (AUD→USD)', value: 0.65, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'AUD 입력 값을 USD 로 환산 (로드 시 실시간 aud_usd 반영)', rationale: '호주 AUD 기준가를 USD 로 맞춰 환차 위험을 줄입니다.' },
+      { key: 'pub_ratio', label: '공공 수출가 산출 비율', value: 30, type: 'pct_mult', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '기준가 대비 최종 반영 비율 (수입상 30% 기본)', rationale: 'PBS 급여·병원조달·파트너 마진을 반영한 목표 비율.' },
     ],
     private: [
-      { key: 'base_het', label: '민간 기준가 (HET/HNA)', value: 0, type: 'abs_input', unit: 'SGD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '소매/입고 기준 가격', rationale: '민간 시장은 소매 가격 구조 역산이 중요합니다.' },
-      { key: 'exchange', label: '환율 (USD→SGD)', value: 1.0, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'USD 입력 시 적용', rationale: '실시간 환율 반영으로 가격 정합성을 유지합니다.' },
-      { key: 'gst', label: 'GST 공제 (÷1.10)', value: 10, type: 'gst_fixed', unit: '%', step: 0, min: 0, max: 10, enabled: true, fixed: true, expanded: false, hint: '호주 GST — 처방약 0% · OTC/건강기능식품 10% (Stage 4 에서 _p2ClassifyGst 로 품목별 자동 전환)', rationale: '호주는 S4/S8 처방의약품 GST-free, Omethyl 등 OTC 만 10% 과세.' },
-      { key: 'retail', label: '소매 마진율', value: 40, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '체인/약국 마진 차감', rationale: '채널별 마진 차이를 반영합니다.' },
-      { key: 'partner', label: '파트너사 마진', value: 20, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '현지 파트너 수수료', rationale: '현지 영업·등록 비용을 포함합니다.' },
-      { key: 'distribution', label: '유통 마진', value: 15, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '물류/도매 비용', rationale: '유통 구조별 고정비를 반영합니다.' },
+      { key: 'base_het', label: '민간 기준가 (AUD 소매가 USD 환산)', value: 0, type: 'abs_input', unit: 'USD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: 'Chemist Warehouse × 1.20 (CHOICE 조사 기준) 또는 PBS DPMQ 를 USD 환산한 값', rationale: '호주 민간 시장은 Chemist/약국 체인 소매가를 USD 로 환산해 역산.' },
+      { key: 'exchange', label: '환율 (AUD→USD)', value: 0.65, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'AUD 입력 값을 USD 로 환산 (로드 시 실시간 aud_usd 반영)', rationale: '실시간 환율 반영으로 가격 정합성을 유지합니다.' },
+      { key: 'gst', label: 'GST 공제', value: 0, type: 'gst_fixed', unit: '%', step: 0, min: 0, max: 10, enabled: true, fixed: true, expanded: false, hint: '호주 GST — 처방약(S4/S8) 0% · OTC/건강기능식품 10%. 품목 선택 시 _p2ClassifyGst 로 자동 전환.', rationale: '호주는 S4/S8 처방의약품 GST-free, Omethyl(Omega-3) 등 OTC 만 10% 과세.' },
+      { key: 'pharmacy', label: '약국 마진율', value: 30, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 약국 체인 마진 (fob_calculator DEFAULT_PHARMACY_MARGIN_PCT = 30%)', rationale: 'Chemist Warehouse·Priceline 등 체인 마진 차감.' },
+      { key: 'wholesale', label: '도매 마진', value: 10, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 도매 유통 마진 (fob_calculator DEFAULT_WHOLESALE_MARGIN_B_PCT = 10%)', rationale: 'Sigma/API 등 호주 의약품 도매 마진.' },
+      { key: 'importer', label: '수입상 마진', value: 20, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 수입상 마진 (stage2 average 시나리오 = 20%)', rationale: '한국 제조사 ↔ 호주 수입상 사이 중간 마진.' },
     ],
   };
+}
+
+/**
+ * 호주 GST 품목별 자동 전환 (Stage 4 복원).
+ *
+ * 호주 규칙:
+ *   · S4/S8 처방의약품 → GST-free (0%)
+ *   · OTC · 건강기능식품 → 10%
+ *
+ * 호주 8 품목 중 Omethyl(Omega-3, OTC) 만 10%, 나머지 7개 처방약은 0%.
+ * product_id 문자열로 분류.
+ *
+ * @param {string} productId  호주 product_id (예: 'au-omethyl-001')
+ * @returns {number}          GST 세율 (0 또는 10)
+ */
+function _p2ClassifyGst(productId) {
+  const OTC_PRODUCT_IDS = new Set([
+    'au-omethyl-001',   // Omega-3 EE 2g — 건강기능식품 카테고리
+  ]);
+  return OTC_PRODUCT_IDS.has(String(productId || '')) ? 10 : 0;
+}
+
+/**
+ * 현재 선택된 보고서의 product_id 를 기반으로 _p2Manual.private GST 옵션 자동 업데이트.
+ * 직접입력 탭 보고서 드롭다운 onchange / AI 파이프라인 실행 직전에 호출.
+ *
+ * @param {object|null} report  _loadReports() 가 반환한 엔트리 ({product_id, ...})
+ */
+function _p2ApplyGstForReport(report) {
+  if (!report) return;
+  const productId = report.product_id || report.product || '';
+  const gstRate = _p2ClassifyGst(productId);
+  const gstOpt = _p2Manual.private.find((x) => x.key === 'gst');
+  if (gstOpt) {
+    gstOpt.value = gstRate;
+    gstOpt.hint = gstRate === 10
+      ? `호주 GST 10% — OTC/건강기능식품 (${productId})`
+      : `호주 GST 0% — 처방의약품 GST-free (${productId})`;
+  }
 }
 
 function initP2Strategy() {
@@ -480,6 +525,20 @@ function initP2Strategy() {
   if (aiSelect) {
     aiSelect.addEventListener('change', (e) => {
       _p2AiSelectedReportId = e.target.value || '';
+      // 선택 보고서의 product_id 로 GST 자동 전환 (AI 탭도 _p2Manual.private.gst 공유)
+      const report = _loadReports().find((r) => String(r.id) === String(_p2AiSelectedReportId));
+      _p2ApplyGstForReport(report);
+    });
+  }
+
+  const manualSelect = document.getElementById('p2-report-select');
+  if (manualSelect) {
+    manualSelect.addEventListener('change', (e) => {
+      _p2SelectedReportId = e.target.value || '';
+      const report = _getP2SelectedReport();
+      _p2ApplyGstForReport(report);
+      if (typeof _p2FillBaseFromReport === 'function') _p2FillBaseFromReport();
+      if (typeof _renderP2Manual === 'function') _renderP2Manual();
     });
   }
 
@@ -983,11 +1042,11 @@ function _p2FillExchangeRate() {
 function _p2FillBaseFromReport() {
   const report = _getP2SelectedReport();
   if (!report) return;
-  // 1순위: 저장된 숫자형 SGD 값 (pbs_dpmq_sgd_hint)
+  // 1순위: 저장된 숫자형 가격 힌트 (pbs_sgd_hint 키 — 보고서 생성 당시 저장된 AUD/USD 숫자, 단위는 보고서 구조에 의존)
   const numHint = report.pbs_sgd_hint;
   const hint = (numHint != null && !Number.isNaN(Number(numHint)) && Number(numHint) > 0)
     ? Number(numHint)
-    : _extractSgdHint(report.price_hint || '');
+    : _extractPriceHint(report.price_hint || '');
   if (!Number.isNaN(hint) && hint > 0) {
     const pub = _p2Manual.public.find((x) => x.key === 'base_price');
     const pri = _p2Manual.private.find((x) => x.key === 'base_het');
@@ -1026,19 +1085,28 @@ function _getP2SelectedReport() {
   return _loadReports().find((r) => String(r.id) === String(_p2SelectedReportId)) || null;
 }
 
-function _extractSgdHint(text) {
+function _extractPriceHint(text) {
+  // 호주 1공정 보고서 텍스트에서 가격 힌트 추출.
+  // 우선순위: AUD(호주 원본) > USD > $ 표기.
+  // 반환값은 입력 단위 그대로의 숫자 — 직접입력 탭은 USD 기준이라 AUD 검출 시 호출자가 환산해야 함.
   const src = String(text || '');
-  const mRange = src.match(/SGD\s*([0-9]+(?:\.[0-9]+)?)\s*[~\-–]\s*([0-9]+(?:\.[0-9]+)?)/i);
-  if (mRange) return (Number(mRange[1]) + Number(mRange[2])) / 2;
-  const mSingle = src.match(/SGD\s*([0-9]+(?:\.[0-9]+)?)/i);
-  if (mSingle) return Number(mSingle[1]);
-  // PBS 미등재 폴백: Haiku가 "$X.XX" 또는 "USD X.XX" 반환 시 근사값으로 사용
+  // ① AUD 범위 표기 (예: "AUD 30.00 ~ 45.00")
+  const mAudRange = src.match(/AUD\s*([0-9]+(?:\.[0-9]+)?)\s*[~\-–]\s*([0-9]+(?:\.[0-9]+)?)/i);
+  if (mAudRange) return (Number(mAudRange[1]) + Number(mAudRange[2])) / 2;
+  // ② AUD 단일 (예: "AUD 48.11", "1 AUD = ...")
+  const mAudSingle = src.match(/AUD\s*([0-9]+(?:\.[0-9]+)?)/i);
+  if (mAudSingle) return Number(mAudSingle[1]);
+  // ③ USD 표기 (직접입력 탭과 동일 단위)
   const mUsd = src.match(/(?:\$|USD\s+)([0-9]+(?:\.[0-9]+)?)/i);
   if (mUsd) return Number(mUsd[1]);
   return NaN;
 }
 
 function _calcP2Manual() {
+  // 호주 직접입력 탭 KUP(FOB) 산정 — USD 기준.
+  // 공공: base × exchange(AUD→USD) × ratio% + custom opts
+  // 민간: base ÷ (1+GST%) × (1−pharmacy%) × (1−wholesale%) × (1−importer%) + custom opts
+  //   GST 는 _p2ClassifyGst 로 품목별 자동 전환 (처방약 0%, OTC 10%).
   const seg = _p2ManualSeg;
   const options = _p2Manual[seg].filter((x) => x.enabled);
   if (seg === 'public') {
@@ -1046,43 +1114,53 @@ function _calcP2Manual() {
     const ex = Number(options.find((x) => x.key === 'exchange')?.value || 1);
     const ratio = Number(options.find((x) => x.key === 'pub_ratio')?.value || 30);
     let price = base * ex * (ratio / 100);
-    const parts = [`SGD ${base.toFixed(2)}`, `× ${ex.toFixed(4)}`, `× ${ratio}%`];
+    const parts = [`USD ${base.toFixed(2)}`, `× ${ex.toFixed(4)}`, `× ${ratio}%`];
     options.forEach((opt) => {
       if (opt.type === 'pct_add_custom') {
         price *= (1 + Number(opt.value) / 100);
         parts.push(`× (1+${Number(opt.value).toFixed(1)}%)`);
       } else if (opt.type === 'abs_add_custom') {
         price += Number(opt.value);
-        parts.push(`+ SGD ${Number(opt.value).toFixed(2)}`);
+        parts.push(`+ USD ${Number(opt.value).toFixed(2)}`);
       }
     });
-    return { kup: Math.max(price, 0), formulaStr: `${parts.join('  ')}  =  KUP  SGD ${Math.max(price, 0).toFixed(2)}` };
+    return { kup: Math.max(price, 0), formulaStr: `${parts.join('  ')}  =  KUP  USD ${Math.max(price, 0).toFixed(2)}` };
   }
 
+  // 민간 (Logic B) — 호주 fob_calculator.py 공식 맞춤:
+  //   FOB = Retail ÷ (1+GST) ÷ (1+pharmacy) ÷ (1+wholesale) ÷ (1+importer)
+  // 원본 싱가포르 로직은 (1-margin%) 차감 방식이었으나, 호주는 (1+margin) 나눗셈.
+  // 호환성 유지를 위해 pct_deduct 는 (1+margin) ÷ 로 해석.
   let price = 0;
   const parts = [];
   options.forEach((opt) => {
     if (opt.key === 'base_het') {
       price = Number(opt.value);
-      parts.push(`SGD ${price.toFixed(2)}`);
+      parts.push(`USD ${price.toFixed(2)}`);
     } else if (opt.key === 'exchange' && Number(opt.value) !== 1) {
       price *= Number(opt.value);
       parts.push(`× ${Number(opt.value).toFixed(4)}`);
     } else if (opt.type === 'gst_fixed') {
-      price /= 1.09;
-      parts.push('÷ 1.09');
+      // 호주 GST: 처방약 0% → ÷1.00, OTC 10% → ÷1.10. 동적 반영.
+      const gstRate = Number(opt.value) || 0;
+      const divisor = 1 + gstRate / 100;
+      price /= divisor;
+      parts.push(`÷ ${divisor.toFixed(2)} (GST ${gstRate}%)`);
     } else if (opt.type === 'pct_deduct') {
-      price *= (1 - Number(opt.value) / 100);
-      parts.push(`× (1−${Number(opt.value).toFixed(1)}%)`);
+      // 호주 공식 — 나눗셈 방식 (stage2 fob_calculator.calculate_fob_logic_b 와 일치)
+      const marginRate = Number(opt.value) || 0;
+      const divisor = 1 + marginRate / 100;
+      price /= divisor;
+      parts.push(`÷ ${divisor.toFixed(3)} (${opt.label || ''} ${marginRate}%)`);
     } else if (opt.type === 'pct_add_custom') {
       price *= (1 + Number(opt.value) / 100);
       parts.push(`× (1+${Number(opt.value).toFixed(1)}%)`);
     } else if (opt.type === 'abs_add_custom') {
       price += Number(opt.value);
-      parts.push(`+ SGD ${Number(opt.value).toFixed(2)}`);
+      parts.push(`+ USD ${Number(opt.value).toFixed(2)}`);
     }
   });
-  return { kup: Math.max(price, 0), formulaStr: `${(parts.join('  ') || 'SGD 0.00')}  =  KUP  SGD ${Math.max(price, 0).toFixed(2)}` };
+  return { kup: Math.max(price, 0), formulaStr: `${(parts.join('  ') || 'USD 0.00')}  =  FOB  USD ${Math.max(price, 0).toFixed(2)}` };
 }
 
 function _renderP2Manual() {
@@ -1115,9 +1193,9 @@ function _renderP2Manual() {
   const aggReason  = _p2ManualScenarioReason('aggressive',   _p2ManualSeg);
   const avgReason  = _p2ManualScenarioReason('average',      _p2ManualSeg);
   const consReason = _p2ManualScenarioReason('conservative', _p2ManualSeg);
-  const aggFormula  = `KUP SGD ${calc.kup.toFixed(2)} × 0.90 = SGD ${agg.toFixed(2)}`;
-  const avgFormula  = `KUP SGD ${avg.toFixed(2)} (기준가 그대로)`;
-  const consFormula = `KUP SGD ${calc.kup.toFixed(2)} × 1.10 = SGD ${cons.toFixed(2)}`;
+  const aggFormula  = `FOB USD ${calc.kup.toFixed(2)} × 0.90 = USD ${agg.toFixed(2)}`;
+  const avgFormula  = `FOB USD ${avg.toFixed(2)} (기준가 그대로)`;
+  const consFormula = `FOB USD ${calc.kup.toFixed(2)} × 1.10 = USD ${cons.toFixed(2)}`;
   _p2LastScenarios = { mode: 'manual', seg: _p2ManualSeg, base: calc.kup, agg, avg, cons, formulaStr: calc.formulaStr, aggReason, avgReason, consReason, aggFormula, avgFormula, consFormula, rationaleLines: [] };
 }
 
@@ -1129,7 +1207,7 @@ function _p2OptionCardHtml(opt) {
                  : opt.unit === '%'    ? Number(opt.value).toFixed(0)
                  :                       Number(opt.value).toFixed(2);
   // 단위 표시
-  const unitLabel = opt.unit === '%' ? '%' : opt.unit === 'rate' ? '' : 'SGD';
+  const unitLabel = opt.unit === '%' ? '%' : opt.unit === 'rate' ? '' : 'USD';
 
   return `
     <div class="p2-step-card">
@@ -1777,7 +1855,7 @@ function _pbsLineFromApi(result) {
   if (!Number.isNaN(audNum)) {
     const sNum = sgd != null && sgd !== '' ? Number(sgd) : NaN;
     let t = `DPMQ AUD ${audNum.toFixed(2)}`;
-    if (!Number.isNaN(sNum)) t += `, 참고 SGD ${sNum.toFixed(2)}`;
+    if (!Number.isNaN(sNum)) t += `, 참고 AUD ${sNum.toFixed(2)}`;
     return t;
   }
   const haiku = String(result.pbs_haiku_estimate || '').trim();

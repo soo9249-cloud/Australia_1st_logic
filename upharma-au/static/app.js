@@ -570,8 +570,8 @@ function setP2AiSeg(seg) {
   const desc = document.getElementById('p2-ai-seg-desc');
   if (desc) {
     desc.textContent = _p2AiSeg === 'public'
-      ? '공공 시장: ALPS 조달청 채널 · 27개 공공기관 통합구매 기준'
-      : '민간 시장: 병원·약국·체인 채널 중심 유통 구조 기준';
+      ? '공공 시장: PBS 공공급여 채널 · 주별 병원조달(HealthShare NSW 등) 기준'
+      : '민간 시장: Chemist Warehouse 등 약국 체인 · 소매 유통 구조 기준';
   }
 }
 

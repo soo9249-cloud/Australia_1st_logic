@@ -707,7 +707,8 @@ python scripts/deploy_render.py
 ```bash
 python -m venv venv                        # 가상환경 폴더 생성 (프로젝트당 1회)
 # venv 활성화 (쉘별로 위 표 또는 아래 11.2 참고)
-pip install -r upharma-au/requirements.txt
+# 아래 pip 는 저장소 루트(Australia_1st_logic/)에서 실행한다.
+pip install -r requirements.txt
 python scripts/migrate.py                  # Supabase 스키마 배포
 ```
 
@@ -791,7 +792,7 @@ python scripts/deploy_render.py
 ```
 (프로젝트 루트에서) venv 활성화 — PowerShell: .\venv\Scripts\Activate.ps1
   ↓
-pip install -r upharma-au/requirements.txt   (venv 최초 생성 직후 또는 requirements 갱신 시)
+pip install -r requirements.txt   (venv 최초 생성 직후 또는 requirements 갱신 시)
   ↓
 python scripts/migrate.py                     (스키마 변경 있을 때)
   ↓
@@ -810,12 +811,12 @@ uvicorn render_api:app --app-dir upharma-au --reload --port 8000
 
 ```powershell
 # Windows PowerShell
-python -m pip install -r upharma-au/requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ```bash
 # Git Bash · macOS · Linux
-python -m pip install -r upharma-au/requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ### 12.2 빠른 헬스체크
@@ -849,7 +850,7 @@ python -c "import requests, json; print(json.dumps(requests.get('http://127.0.0.
   "optional_deps": {"anthropic": false, "openai": true, "yfinance": true, "reportlab": true},
   "optional_deps_all_installed": false,
   "stage2_ok": true,
-  "hint": "pip install -r upharma-au/requirements.txt"
+  "hint": "pip install -r requirements.txt"
 }
 ```
 
@@ -862,7 +863,7 @@ python -c "import requests, json; print(json.dumps(requests.get('http://127.0.0.
   ```bash
   python -m pip install anthropic
   # 또는
-  python -m pip install -r upharma-au/requirements.txt
+  python -m pip install -r requirements.txt
   ```
 
 #### (b) `[yfinance fx error] No module named 'yfinance'`
@@ -880,7 +881,7 @@ python -c "import requests, json; print(json.dumps(requests.get('http://127.0.0.
 
 #### (d) `supabase` 관련 기동 실패
 - **원인:** `supabase-py` 미설치는 **필수 의존성**이라 서버 자체가 안 뜸
-- **해결:** `pip install -r upharma-au/requirements.txt` 로 전체 재설치. 개별 설치는 `python -m pip install supabase`
+- **해결:** `pip install -r requirements.txt` 로 전체 재설치. 개별 설치는 `python -m pip install supabase`
 
 #### (e) `PGRST204 Could not find column`
 - **원인:** `ALTER TABLE` 후 PostgREST 스키마 캐시가 리로드되지 않음

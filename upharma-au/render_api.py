@@ -114,7 +114,7 @@ def health() -> dict[str, Any]:
         "optional_deps": deps,
         "optional_deps_all_installed": all_optional_ok,
         "stage2_ok": _STAGE2_OK if "_STAGE2_OK" in globals() else None,
-        "hint": None if all_optional_ok else "pip install -r upharma-au/requirements.txt",
+        "hint": None if all_optional_ok else "pip install -r requirements.txt",
     }
 
 
@@ -1205,7 +1205,7 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
         raise HTTPException(
             status_code=503,
             detail=(
-                "AI 엔진(anthropic) 미설치 — `pip install -r upharma-au/requirements.txt` 실행 후 재시도. "
+                "AI 엔진(anthropic) 미설치 — `pip install -r requirements.txt` 실행 후 재시도. "
                 f"(probe error: {_ANTHROPIC_ERR})"
             ),
         )
@@ -2027,7 +2027,7 @@ def p2_pipeline(payload: dict[str, Any]) -> JSONResponse:
         raise HTTPException(
             status_code=503,
             detail=(
-                "AI 엔진(anthropic) 미설치 — `pip install -r upharma-au/requirements.txt` 실행 후 재시도. "
+                "AI 엔진(anthropic) 미설치 — `pip install -r requirements.txt` 실행 후 재시도. "
                 f"(probe error: {_ANTHROPIC_ERR})"
             ),
         )

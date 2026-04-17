@@ -1,13 +1,16 @@
 # Render.com 배포 스펙 — Python 웹서비스 1개 (FastAPI + Uvicorn)
 # render_api.py 가 브라우저 요청을 받아 crawler/ 를 실행하고 Supabase 에 저장한다.
 #
-# 정본: 저장소 루트 requirements.txt (로컬·GHA·문서 기준).
-# Render Root Directory 가 upharma-au 이면 루트 파일이 빌드에 안 들어가므로
-# upharma-au/requirements.txt 를 같은 내용으로 둔다. Root 를 비우면 루트 파일만 쓰면 된다.
+# requirements.txt 는 README 와 같이 저장소 루트에만 둔다(중복 파일 없음).
+# rootDir: . 는 Git 리포지토리 루트를 서비스 루트로 고정한다. (대시보드에서 upharma-au 로
+# 잡혀 있던 설정을 Blueprint 로 덮어써 루트 requirements.txt 가 빌드에 포함되게 함)
+# 첫 반영 후에도 루트가 안 바뀌면 대시보드 Settings → Root Directory 를 비우거나
+# Blueprint 동기화(Apply) 를 한 번 더 실행한다.
 
 services:
   - type: web
     name: upharma-au
+    rootDir: .
     env: python
     plan: free
     region: singapore

@@ -1,8 +1,10 @@
 # Render.com 배포 스펙 — Python 웹서비스 1개 (FastAPI + Uvicorn)
 # render_api.py 가 브라우저 요청을 받아 crawler/ 를 실행하고 Supabase 에 저장한다.
 #
-# Root Directory 가 (1) 저장소 루트 이거나 (2) upharma-au 인 경우 모두 동작하도록
-# 빌드/기동 명령을 분기한다. (대시보드에서 Root Directory 만 다르면 이전엔 빌드가 깨짐)
+# 필수: 서비스 Root Directory 는 저장소 루트(비움)이어야 한다.
+# Render 는 Root 가 upharma-au 이면 그 폴더 밖 파일을 빌드/런타임에 쓸 수 없어
+# 루트의 requirements.txt 를 열 수 없다. (상위 폴더 ../ 로 우회 불가 — 공식 문서)
+# rootDir 키는 생략(=저장소 루트). 대시보드에서 upharma-au 로 두었다면 비우고 저장.
 
 services:
   - type: web
@@ -10,9 +12,8 @@ services:
     env: python
     plan: free
     region: singapore
-    # 한 줄: Root Directory 가 루트면 ./requirements.txt, 가 upharma-au 면 ../requirements.txt
-    buildCommand: sh -c 'if [ -f requirements.txt ]; then pip install -r requirements.txt; elif [ -f ../requirements.txt ]; then pip install -r ../requirements.txt; else echo "requirements.txt not found"; exit 1; fi'
-    startCommand: sh -c 'if [ -f render_api.py ]; then exec uvicorn render_api:app --host 0.0.0.0 --port $PORT; else exec uvicorn render_api:app --app-dir upharma-au --host 0.0.0.0 --port $PORT; fi'
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn render_api:app --app-dir upharma-au --host 0.0.0.0 --port $PORT
     envVars:
       - key: SUPABASE_URL
         sync: false

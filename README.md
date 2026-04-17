@@ -982,6 +982,161 @@ NOTIFY pgrst, 'reload schema';
 - 복합 성분 DPMQ 합산 (`_merge_pbs_rows`) — 별도 과제
 - `pbs_manufacturer`/`pbs_brand_premium`/`competitor_brands` 컬럼을 실제로 Supabase 에 저장 — FOB 포지셔닝 분석 도입 시 SQL ALTER + `_ALLOWED_COLUMNS` 추가
 
+### 14.0c 2026-04-18 — 프론트엔드 UI/UX 싱가포르 통일 이식 (Stage 1~5)
+
+**배경**: 팀원 싱가포르 공통 템플릿(`Desktop/frontend_0417/`) 의 UI/UX 를 호주 프로젝트에 이식. 내용(데이터·API·백엔드) 은 호주 그대로, 화면 구조·레이아웃·컴포넌트는 싱가포르와 100% 통일.
+
+**범위 원칙**: 백엔드 파일 (`render_api.py`, `crawler/*`, `stage2/*`, Supabase 스키마) **0 수정**. 모든 변경은 `templates/index.html` + `static/styles.css` + `static/app.js` 3개 파일에만 한정.
+
+#### Stage 0 — 결정 확정 (5개)
+
+| # | 결정 | 결과 |
+|---|---|---|
+| Q1 | 매크로 지표 4카드 데이터 소스 | HTML 하드코딩 (IMF·ABS·BMI·IMF 수치) |
+| Q2 | API 키 배지 섹션 (/api/keys/status 호주 미지원) | 섹션 삭제 |
+| Q3 | 신약 분석 폼 (/api/pipeline/custom 호주 미지원) | 섹션 삭제 (8 품목 고정) |
+| Q4 | 호주 전용 기능 A/B/C/D/E/F 유지 여부 | A(A4 미리보기)·C(체크리스트)·D(크롤 스택) 삭제 / B(환율 상세)·E(직접입력 탭)·F(GST 자동 전환) 유지 |
+| Q5 | 로고 | 호주 `logo_1.png` / `logo_2.png` (fallback) 유지 |
+
+추가로 UI 표시 정책: 모든 가격 **USD 메인 + ≈ KRW 보조** (호주 AUD 는 프론트 파생 환산 — 백엔드 응답 키는 AUD 그대로 유지).
+
+#### Stage 1 — `static/styles.css` 신규 블록 append (+479 줄)
+
+공통 클래스는 건드리지 않고 frontend_0417 전용 블록만 파일 하단에 append. 호주 전용 클래스(a4-*, cc-*, crawl-*) 보존.
+
+- `:root` 1공정 호환 변수 5개 (`--ok`, `--ok-bg`, `--err`, `--err-bg`, `--warn-bg`)
+- `.flag-emoji` 국기 이모지
+- API 키 배지 5개 (Stage 0 Q2 에서 HTML 은 제거했지만 CSS 는 향후 재활성화 대비 유지)
+- `.entry-pathway`, `.btn-download`, `.btn-report-del`
+- 매크로 지표 4카드 (`.macro-grid`, `.macro-card`, `.macro-label`, `.macro-value`, `.macro-source`)
+- 지도+뉴스 그리드 + Leaflet (`.map-news-grid`, `.map-card-wrap`, `.sg-leaflet-map`, `.map-ocean/land/grid/gl`)
+- `.p1-result-note` 1공정 완료 노트
+- P2 3열 시나리오 카드 (`.p2-three-col`, `.p2-col`, `.p2-col--agg/avg/cons`, `.p2-col-rank-row`, `.p2-col-price`, `.p2-col-currency`, `.p2-col-sub`, `.p2-col-detail`, `.p2-col-input-row`, `.p2-col-input-label`, `.p2-col-input`, `.p2-col-foot-note`, `.p2-dist-*`)
+- P2 컬럼 커스텀 옵션 (`.p2-custom-opts`, `.p2c-opt-row`, `.p2c-opt-name`, `.p2c-opt-type-label`, `.p2c-opt-val`, `.p2c-opt-del`, `.p2c-add-row`, `.p2c-opt-name-input`, `.p2c-opt-type-select`, `.p2c-confirm-btn`, `.p2c-add-btn`)
+- 반응형 보강 (`.macro-grid`, `.map-news-grid`, `.p2-three-col` breakpoint)
+
+결과: `styles.css` 1,350 → **1,829 줄**.
+
+#### Stage 2 — `templates/index.html` 전면 교체 (+77 줄)
+
+호주 5 탭 구조 → 싱가포르 **1 페이지 아코디언** + 보고서 탭 2탭 체계로 교체. 호주 컨텍스트 치환 + Stage 0 결정 반영.
+
+**치환 내역**:
+- 🇸🇬 Singapore → 🇦🇺 Australia, sg-map → au-map, [1.3521, 103.8198] → [-33.8688, 151.2093] (시드니)
+- product_id 8개: SG_hydrine_hydroxyurea_500 등 → au-hydrine-004 / au-omethyl-001 / au-gadvoa-002 / au-sereterol-003 / au-rosumeg-005 / au-atmeg-006 / au-ciloduo-007 / au-gastiin-008
+- 규제 기관: HSA/NDF/MOH/GeBIZ/ALPS → TGA/PBS/NSW Health/HealthShare/Chemist Warehouse
+- SGD → USD (프론트 표시만. 백엔드 응답 AUD 유지)
+- 시나리오 라벨: 싱가포르 "공격적/평균/보수적" → 호주 확정본 "저가 진입 (Penetration) / 기준가 기반 (Reference) / 프리미엄 (Premium)" (CLAUDE.md §2공정 절대 규칙)
+
+**삭제 섹션**: A4 보고서 미리보기(rptA4·rptBlocks 등), 신약 분석 폼(m_name·m_inn 등), 크롤링 결과 스택, 체크리스트(todoList), 5탭 구조, API 키 배지
+
+**유지된 호주 전용**: 환율 상세 카드(fx-main·fx-usd-aud·fx-aud-krw, JPY/CNY 제거 · USD/KRW 메인 + USD/AUD·AUD/KRW 2페어), 2공정 직접입력 서브탭(p2-manual-*)
+
+**Leaflet 지도 추가**: CDN 2개 + 시드니 좌표 인라인 초기화 스크립트
+
+결과: `index.html` 463 → **540 줄**.
+
+#### Stage 3 — `static/app.js` 싱가포르 베이스 이식 + 호주 API 매핑 + 어댑터 (1,771 → 1,862 줄, 5체크리스트)
+
+Stage 3 은 5단계로 진행:
+
+**[1] `loadExchange()` 스키마 치환**
+- 싱가포르 DOM(`exchange-main-rate`, `exchange-sub`, `exchange-source`) → 호주 DOM(`fx-main`, `fx-usd-aud`, `fx-aud-krw`, `fx-chg`, `fxTimestamp`)
+- 응답 키: `sgd_krw/sgd_usd/sgd_jpy/sgd_cny` → `aud_krw/aud_usd/aud_jpy/aud_cny`
+- USD 파생: `usd_krw = aud_krw / aud_usd`, `usd_aud = 1 / aud_usd`
+- `pct_change` 는 AUD/KRW 기준 → 라벨 "AUD/KRW 전일" 명시해 오해 방지
+- `window._exchangeRates` 전역에 호주 원본 + 파생 2개 동시 저장 (2공정 재사용)
+
+**[2] 파이프라인 호출 전환** (싱가포르 비동기 폴링 → 호주 동기 2단 + /api/data 조회)
+- `POST /api/pipeline/{key}` → `POST /api/crawl {product_id}` (동기 블로킹)
+- `GET /status` 폴링 루프 **완전 제거** (호주는 동기라 불필요)
+- `GET /result` → `POST /api/report/generate` + `GET /api/data/{product_id}` (row 조회 추가)
+- `setProgress()` 4단계를 await 2회 경계에서 수동 업데이트 (db_load → analyze → refs·report done)
+- `pollPipeline()` 함수 삭제
+
+**[3] 싱가포르 잔재 텍스트 치환** (7 곳 핵심)
+- 파일 헤더 주석: "싱가포르 대시보드" → "호주 대시보드 (싱가포르 원본 베이스 이식)"
+- TODO_LS_KEY / REPORTS_LS_KEY: `sg_upharma_*` → `au_upharma_*`
+- typeLabel / option / unit: SGD → USD
+- GST 옵션 hint: "싱가포르 GST 9% 고정" → "호주 GST — 처방약 0% · OTC 10% (Stage 4 `_p2ClassifyGst` 복원 예정)"
+
+**[4] 추가 청소**
+- 1237 줄 "/" 오타 — 확인 결과 오타 없음 (Stage 2 파일 전체 교체로 해결됨)
+- LS 키 prefix `sg_` → `au_` 완료 (2 곳)
+
+**[5] 응답 구조 어댑터** (핵심)
+- 1공정 어댑터 `_auToRenderResult(auRow, blocks, meta)` 신규:
+  - 호주 3 응답 (australia row 73~75 컬럼 + Haiku blocks 10개 + meta) → 싱가포르 `renderResult()` shape 재포장
+  - 호주 원본 `_au_raw / _au_blocks / _au_meta` 로 전량 보존 (데이터 안 버림)
+  - export_viable 영어 → 한국어 판정 매핑 (viable → 적합 등)
+  - PBS 한 줄 요약 자동 생성 (PBS 등재 여부 + DPMQ + retail 추정 방법)
+- 2공정 렌더러 `_renderP2AiResult()` 내부 재작성:
+  - 호주 응답 `extracted.ref_price_aud / analysis.final_price_aud / scenarios[].price_aud / exchange_rates.aud_*` 직접 사용
+  - AUD → USD/KRW 파생 유틸 (`audToUsd`, `audToKrw`, `fmtUSD`, `fmtKRW`) 로컬 헬퍼
+  - 최종가·시나리오 카드: USD 메인 + ≈ KRW 보조 (1억/1만원 단위 자동 포맷)
+  - `_p2ScenarioRaw` 에 USD 값 + 원본 AUD 동시 보존 (`agg_aud/avg_aud/cons_aud` 신규 키)
+
+#### Stage 4 — 호주 전용 기능 복원 (1,862 → 1,940 줄, SGD 잔재 0)
+
+**Sereterol 강도 분리**: INN_MAP + HTML 드롭다운에 "(250/50·500/50 DPI)" 병기. product_id 는 단일 유지 (seed 에서 aemp [27.07, 36.65] 배열 처리).
+
+**Mosapride CR 한국어 병기**: "(서방형)" 추가.
+
+**GST 품목별 자동 전환** (신규 함수 2개):
+- `_p2ClassifyGst(productId)` — 호주 8 품목 중 Omethyl(OTC) 만 10%, 나머지 7 처방약 0%
+- `_p2ApplyGstForReport(report)` — 보고서 onchange 시 `_p2Manual.private.gst.value` 자동 갱신 + hint 문구 동적
+- `initP2Strategy()` 에 이벤트 리스너 연결 (AI 탭 + 직접입력 탭 모두)
+
+**2공정 직접입력 탭 전면 재설계** (SGD 18 곳 → USD 전부):
+- `_makeP2Defaults()` 옵션 배열 재설계 — 키 이름 호주 맥락 통일: `retail/partner/distribution` → `pharmacy/wholesale/importer` (fob_calculator.py DEFAULT_* 상수와 정확 일치)
+- 기본값: pharmacy 30%, wholesale 10%, importer 20%, gst 0% (처방 초기), exchange 0.65 (AUD→USD)
+- `_calcP2Manual()` 공식 재작성 — 싱가포르 차감 방식 `× (1-m%)` → 호주 나눗셈 방식 `÷ (1+m%)` (fob_calculator Logic B 공식과 일치)
+- GST 하드코딩 `÷ 1.09` → 동적 `÷ (1 + gstRate/100)` (0% 또는 10%)
+- 모든 formulaStr: `KUP SGD` → `FOB USD`
+- `_extractSgdHint` → `_extractPriceHint` 개명 + 정규식 AUD/USD/$ 우선순위
+
+#### Stage 5 — 통합 검증 (이번 세션 · 백엔드 0 영향 확인)
+
+**프론트 fetch 10 엔드포인트 ↔ 호주 render_api.py 엔드포인트 매칭 표**:
+
+| 프론트 fetch | render_api.py 위치 | 응답 매칭 |
+|---|---|---|
+| `GET /api/exchange` | 358 줄 | `{aud_krw, aud_usd, aud_jpy, aud_cny, updated, pct_change?, ok?}` ✓ |
+| `GET /api/news` | 274 줄 | `{items: [{title, source, date, link}]}` ✓ |
+| `POST /api/crawl` | 130 줄 | `{ok, product_id, exit_code}` ✓ |
+| `POST /api/report/generate` | 1194 줄 | `{ok, product_id, blocks, refs_count, refs, meta, pdf}` ✓ |
+| `GET /api/data/{pid}` | 162 줄 | australia row 전체 (73~75 컬럼) ✓ |
+| `POST /api/p2/upload` | 1651 줄 | `{ok, filename, size_bytes}` ✓ |
+| `POST /api/p2/pipeline` | 2017 줄 | `{status: 'started'}` ✓ |
+| `GET /api/p2/pipeline/status` | 2007 줄 | `{status, step_label}` ✓ |
+| `GET /api/p2/pipeline/result` | 2073 줄 | `{extracted, analysis, exchange_rates, pdf}` ✓ |
+| `POST /api/p2/report` | 2093 줄 | `{ok, pdf}` ✓ |
+
+**호주 백엔드 0 수정 확인**:
+- `render_api.py`, `crawler/*`, `stage2/*`, `Supabase 스키마`, `report_generator.py`, `au_products.json`, `fob_reference_seeds.json`, `render.yaml`, `requirements.txt`, GitHub Actions 모두 이번 이식 사이클에서 변경 없음
+
+**데이터 보존 확인**:
+- 호주 `australia` 73~75 컬럼 전체가 어댑터에서 접근 가능 (`_au_raw` 로 원본 보존)
+- 호주 백엔드 응답 키 (`aud_krw`, `aud_usd`, `ref_price_aud`, `final_price_aud`, `scenarios[].price_aud`) 그대로 수용 → 프론트에서 파생 환산만
+- CLAUDE.md 확정 시나리오 라벨 ("저가 진입/기준가 기반/프리미엄") 적용
+
+#### 최종 파일 상태 (2026-04-18 05:42)
+
+```
+static/styles.css       1,350 →  1,829 줄 (+ 479, frontend_0417 신규 블록 append)
+templates/index.html      463 →    540 줄 (+ 77,  싱가포르 1페이지 아코디언 + 호주 전용 유지)
+static/app.js           1,771 →  1,940 줄 (+ 169, 싱가포르 베이스 이식 후 호주화 · 어댑터 · Stage 4 복원 순 변동)
+```
+
+#### 이번 이식 사이클에 건드리지 않은 것
+
+- 호주 백엔드 파일 일체
+- 호주 Supabase 스키마
+- 호주 `au_products.json` / `fob_reference_seeds.json`
+- 호주 `crawler/db/supabase_insert.py` `_ALLOWED_COLUMNS`
+- GitHub Actions · Render 배포 설정
+- `report_generator.py` PDF 렌더러
+
 ### 14.1 2026-04-16 — 2공정(P2) UI/백엔드 전면 투입
 
 작업 일자 전부 2026-04-16 (목).

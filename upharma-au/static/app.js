@@ -1,5 +1,5 @@
 /**
- * UPharma Export AI — 싱가포르 대시보드 스크립트
+ * UPharma Export AI — 호주 대시보드 스크립트 (싱가포르 원본 베이스 이식)
  * ═══════════════════════════════════════════════════════════════
  *
  * 기능 목록:
@@ -26,7 +26,7 @@
  *   U4  PDF 카드 3가지 상태
  *   U6  재분석 버튼
  *   N1  탭 전환 (AU 프론트 기반)
- *   N2  환율 카드 (yfinance SGD/KRW)
+ *   N2  환율 카드 (호주 /api/exchange AUD 기준 응답 → USD/KRW 메인 파생 표시)
  *   N3  To-Do 리스트 (localStorage)
  *   N4  보고서 탭 자동 등록
  * ═══════════════════════════════════════════════════════════════
@@ -123,67 +123,87 @@ function _setMacro(valId, val, srcId, src) {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 async function loadExchange() {
-  const btn = document.getElementById('btn-exchange-refresh');
+  // 호주 /api/exchange 응답: { aud_krw, aud_usd, aud_jpy, aud_cny, updated, pct_change?, ok? }
+  //   · yfinance 성공 : ok 키 없음, pct_change 포함 (AUD/KRW 전일대비 %)
+  //   · 폴백(exchangerate-api.com) : ok:false, pct_change 없음
+  //
+  // 호주 UI 는 USD 기준 표시이므로 프론트에서 파생 환율 계산:
+  //   USD/KRW = aud_krw / aud_usd   → 메인 fx-main (28px)
+  //   USD/AUD = 1 / aud_usd          → 서브 fx-usd-aud
+  //   AUD/KRW = aud_krw              → 서브 fx-aud-krw (FOB 역산 참고용)
+  //   pct_change 는 AUD/KRW 기준 → fx-chg 에 표시하되 라벨로 "AUD/KRW 전일" 명시해 오해 방지
+  // JPY/CNY 는 응답에 포함되지만 호주 UI 에서 미사용 (Stage 1 Q2-c 결정)
+  const btn = document.querySelector('button.btn-refresh[onclick*="loadExchange"]');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ 조회 중…'; }
 
   try {
     const res  = await fetch('/api/exchange');
     const data = await res.json();
 
-    // P2 환율 자동 채움용 전역 저장
-    window._exchangeRates = data;
+    // 파생 환율 계산
+    const audUsd = Number(data.aud_usd) || 0;
+    const audKrw = Number(data.aud_krw) || 0;
+    const usdKrw = audUsd > 0 ? audKrw / audUsd : 0;
+    const usdAud = audUsd > 0 ? 1 / audUsd : 0;
+
+    // 전역 저장 (2공정 P2 에서 USD 환산·FOB 역산 재사용) + 호주 원본 키 보존
+    window._exchangeRates = {
+      ...data,
+      usd_krw: usdKrw,   // 파생 (USD→KRW 메인 표시·2공정 최종가 환산)
+      usd_aud: usdAud,   // 파생 (USD→AUD, 역환산용)
+    };
     if (typeof _p2FillExchangeRate === 'function') {
       _p2FillExchangeRate();
       if (typeof _renderP2Manual === 'function') _renderP2Manual();
     }
 
-    // 메인 숫자 (KRW/SGD)
-    const rateEl = document.getElementById('exchange-main-rate');
-    if (rateEl) {
-      const fmt = data.sgd_krw.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      rateEl.innerHTML = `${fmt}<span style="font-size:14px;margin-left:4px;color:var(--muted);font-weight:700;">원</span>`;
+    // 메인: USD / KRW (28px)
+    const mainEl = document.getElementById('fx-main');
+    if (mainEl && usdKrw > 0) {
+      const fmt = usdKrw.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      mainEl.innerHTML = `${fmt}<span style="font-size:14px;margin-left:4px;color:var(--muted);font-weight:700;">원</span>`;
     }
 
-    // 서브 그리드 (USD/KRW + SGD 연관 환율)
-    const subEl = document.getElementById('exchange-sub');
-    if (subEl) {
-      const fmtUsd = data.usd_krw.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const fmtSgdUsd = Number(data.sgd_usd).toFixed(4);
-      const fmtSgdJpy = Number(data.sgd_jpy).toFixed(4);
-      const fmtSgdCny = Number(data.sgd_cny).toFixed(4);
-      subEl.innerHTML = `
-        <div class="irow" style="margin:0">
-          <div style="font-size:10.5px;color:var(--muted);margin-bottom:3px;">USD / KRW</div>
-          <div style="font-size:15px;font-weight:900;color:var(--navy);">${fmtUsd}원</div>
-        </div>
-        <div class="irow" style="margin:0">
-          <div style="font-size:10.5px;color:var(--muted);margin-bottom:3px;">SGD / USD</div>
-          <div style="font-size:15px;font-weight:900;color:var(--navy);">${fmtSgdUsd}</div>
-        </div>
-        <div class="irow" style="margin:0">
-          <div style="font-size:10.5px;color:var(--muted);margin-bottom:3px;">SGD / JPY</div>
-          <div style="font-size:15px;font-weight:900;color:var(--navy);">${fmtSgdJpy}</div>
-        </div>
-        <div class="irow" style="margin:0">
-          <div style="font-size:10.5px;color:var(--muted);margin-bottom:3px;">SGD / CNY</div>
-          <div style="font-size:15px;font-weight:900;color:var(--navy);">${fmtSgdCny}</div>
-        </div>
-      `;
+    // 서브 1: USD / AUD
+    const usdAudEl = document.getElementById('fx-usd-aud');
+    if (usdAudEl && usdAud > 0) {
+      usdAudEl.textContent = usdAud.toFixed(4);
+    }
+
+    // 서브 2: AUD / KRW (FOB 역산 참고값)
+    const audKrwEl = document.getElementById('fx-aud-krw');
+    if (audKrwEl && audKrw > 0) {
+      audKrwEl.textContent = audKrw.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '원';
+    }
+
+    // 전일 대비 변동 (pct_change 는 AUD/KRW 기준 — 라벨로 명시해 오해 방지)
+    const chgEl = document.getElementById('fx-chg');
+    if (chgEl) {
+      if (typeof data.pct_change === 'number') {
+        const pct = data.pct_change;
+        const sign = pct > 0 ? '▲' : pct < 0 ? '▼' : '·';
+        const color = pct > 0 ? 'var(--green)' : pct < 0 ? 'var(--red)' : 'var(--muted)';
+        chgEl.style.display = 'inline-flex';
+        chgEl.style.color = color;
+        chgEl.textContent = `${sign} ${Math.abs(pct).toFixed(2)}% · AUD/KRW 전일`;
+      } else {
+        chgEl.style.display = 'none';
+      }
     }
 
     // 출처 + 조회 시각
-    const srcEl = document.getElementById('exchange-source');
-    if (srcEl) {
+    const tsEl = document.getElementById('fxTimestamp');
+    if (tsEl) {
       const now = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-      const fallbackNote = data.ok ? '' : ' · 폴백값';
-      srcEl.textContent = `조회: ${now}${fallbackNote}`;
+      const fallbackNote = data.ok === false ? ' · 폴백값' : '';
+      tsEl.textContent = `조회: ${now}${fallbackNote}`;
     }
   } catch (e) {
-    const srcEl = document.getElementById('exchange-source');
-    if (srcEl) srcEl.textContent = '환율 조회 실패 — 잠시 후 다시 시도해 주세요';
+    const tsEl = document.getElementById('fxTimestamp');
+    if (tsEl) tsEl.textContent = '환율 조회 실패 — 잠시 후 다시 시도해 주세요';
     console.warn('환율 로드 실패:', e);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '↺ 환율 새로고침'; }
+    if (btn) { btn.disabled = false; btn.textContent = '↻ 환율 새로고침'; }
   }
 }
 
@@ -192,7 +212,7 @@ async function loadExchange() {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 const TODO_FIXED_IDS = ['p1', 'rep', 'p2', 'p3'];
-const TODO_LS_KEY    = 'sg_upharma_todos_v1';
+const TODO_LS_KEY    = 'au_upharma_todos_v1';
 let _lastTodoAddAt   = 0;
 
 /** localStorage에서 todo 상태 읽기 */
@@ -318,7 +338,7 @@ function _renderCustomTodos(state) {
    §5. 보고서 탭 관리 (N4)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-const REPORTS_LS_KEY = 'sg_upharma_reports_v1';
+const REPORTS_LS_KEY = 'au_upharma_reports_v1';
 
 function _loadReports() {
   try   { return JSON.parse(localStorage.getItem(REPORTS_LS_KEY) || '[]'); }
@@ -444,7 +464,7 @@ function _makeP2Defaults() {
     private: [
       { key: 'base_het', label: '민간 기준가 (HET/HNA)', value: 0, type: 'abs_input', unit: 'SGD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '소매/입고 기준 가격', rationale: '민간 시장은 소매 가격 구조 역산이 중요합니다.' },
       { key: 'exchange', label: '환율 (USD→SGD)', value: 1.0, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'USD 입력 시 적용', rationale: '실시간 환율 반영으로 가격 정합성을 유지합니다.' },
-      { key: 'gst', label: 'GST 공제 (÷1.09)', value: 9, type: 'gst_fixed', unit: '%', step: 0, min: 9, max: 9, enabled: true, fixed: true, expanded: false, hint: '싱가포르 GST 9% 고정', rationale: '민간 소비자 가격에서 세금을 분리합니다.' },
+      { key: 'gst', label: 'GST 공제 (÷1.10)', value: 10, type: 'gst_fixed', unit: '%', step: 0, min: 0, max: 10, enabled: true, fixed: true, expanded: false, hint: '호주 GST — 처방약 0% · OTC/건강기능식품 10% (Stage 4 에서 _p2ClassifyGst 로 품목별 자동 전환)', rationale: '호주는 S4/S8 처방의약품 GST-free, Omethyl 등 OTC 만 10% 과세.' },
       { key: 'retail', label: '소매 마진율', value: 40, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '체인/약국 마진 차감', rationale: '채널별 마진 차이를 반영합니다.' },
       { key: 'partner', label: '파트너사 마진', value: 20, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '현지 파트너 수수료', rationale: '현지 영업·등록 비용을 포함합니다.' },
       { key: 'distribution', label: '유통 마진', value: 15, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '물류/도매 비용', rationale: '유통 구조별 고정비를 반영합니다.' },
@@ -723,7 +743,7 @@ function renderP2ColOptions(col, showAddForm) {
   if (!container) return;
   const opts = (_p2ColData[col] || { opts: [] }).opts;
 
-  const typeLabel = { pct_add: '% 가산', pct_deduct: '% 차감', abs_add: 'SGD 가산' };
+  const typeLabel = { pct_add: '% 가산', pct_deduct: '% 차감', abs_add: 'USD 가산' };
 
   let html = opts.map(opt => `
     <div class="p2c-opt-row">
@@ -741,7 +761,7 @@ function renderP2ColOptions(col, showAddForm) {
         <select class="p2c-opt-type-select" id="p2c-newtype-${col}">
           <option value="pct_deduct">% 차감</option>
           <option value="pct_add">% 가산</option>
-          <option value="abs_add">SGD 가산</option>
+          <option value="abs_add">USD 가산</option>
         </select>
         <input class="p2c-opt-val" type="number" placeholder="값" id="p2c-newval-${col}" step="0.1" min="0">
         <button class="p2c-confirm-btn" onclick="confirmP2ColOption('${col}')">✓</button>
@@ -1134,7 +1154,7 @@ function _renderP2CustomAddSection() {
       <select class="p2-custom-type-select" id="p2c-type">
         <option value="pct_deduct">% 차감</option>
         <option value="pct_add_custom">% 가산</option>
-        <option value="abs_add_custom">SGD 가산</option>
+        <option value="abs_add_custom">USD 가산</option>
       </select>
       <input class="p2-custom-input" id="p2c-val" type="number" placeholder="값" step="0.1" min="0" max="999" style="width:80px;flex:0 0 80px">
       <button class="p2-add-custom-btn" id="p2c-add" type="button">+ 추가</button>
@@ -1149,7 +1169,7 @@ function _renderP2CustomAddSection() {
       label,
       value: val,
       type,
-      unit: type === 'abs_add_custom' ? 'SGD' : '%',
+      unit: type === 'abs_add_custom' ? 'USD' : '%',
       step: type === 'abs_add_custom' ? 0.1 : 1,
       min: 0,
       max: type === 'abs_add_custom' ? 9999 : 100,
@@ -1301,83 +1321,108 @@ function resetProgress() {
  * 선택 품목 파이프라인 실행.
  * U6: 재분석 버튼도 이 함수를 호출.
  */
+/**
+ * 호주 1공정 파이프라인 — 2 단 동기 플로우
+ *
+ * 싱가포르는 POST /api/pipeline/{key} 가 비동기로 모든 단계를 서버에서 처리하고
+ * GET /status 폴링 + GET /result 로 결과를 받았음.
+ *
+ * 호주 render_api.py 는 동기 엔드포인트 2 개로 분리됨:
+ *   ① POST /api/crawl {product_id}
+ *        → au_crawler.main() 실행 (TGA·PBS·Chemist·NSW·Healthylife 크롤링)
+ *        → Supabase `australia` 테이블 upsert
+ *        → 완료까지 수 초 ~ 수십 초 블로킹 (SystemExit catch 구조)
+ *   ② POST /api/report/generate {product_id}
+ *        → Claude Haiku 로 block2/block3 생성 + 하이브리드 논문 검색 + PDF 생성
+ *        → 응답 JSON: { ok, product_id, row, blocks, refs_count, refs, meta, pdf }
+ *        → 동기, 완료까지 5~30 초 블로킹
+ *
+ * 프론트는 await 2 회 + 진행률 업데이트만 수행. 폴링 불필요.
+ */
 async function runPipeline() {
-  const productKey = document.getElementById('product-select').value;
-  _currentKey      = productKey;
+  const productId = document.getElementById('product-select').value;
+  _currentKey     = productId;
 
   // UI 초기화
   resetProgress();
   _hideP1Note();
-  document.getElementById('result-card').classList.remove('visible');
-  document.getElementById('papers-card').classList.remove('visible');
-  document.getElementById('report-card').classList.remove('visible');
-  document.getElementById('btn-analyze').disabled = true;
-  document.getElementById('btn-icon').textContent  = '⏳';
+  document.getElementById('result-card')?.classList.remove('visible');
+  document.getElementById('papers-card')?.classList.remove('visible');
+  document.getElementById('report-card')?.classList.remove('visible');
+  const analyzeBtn = document.getElementById('btn-analyze');
+  if (analyzeBtn) analyzeBtn.disabled = true;
+  const iconEl = document.getElementById('btn-icon');
+  if (iconEl) iconEl.textContent = '⏳';
 
   const reBtn = document.getElementById('btn-reanalyze');
   if (reBtn) reBtn.style.display = 'none';
 
-  // B2: db_load 단계 먼저 활성화
-  setProgress('db_load', 'running');
-
   try {
-    const res = await fetch(`/api/pipeline/${encodeURIComponent(productKey)}`, { method: 'POST' });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      console.error('파이프라인 오류:', d.detail || res.status);
+    // ① 크롤링 실행 (동기 · 블로킹)
+    setProgress('db_load', 'running');
+    _showReportLoading();
+    const r1 = await fetch('/api/crawl', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ product_id: productId }),
+    });
+    if (!r1.ok) {
+      const d1 = await r1.json().catch(() => ({}));
+      console.error('크롤링 실패:', d1.detail || r1.status);
       setProgress('db_load', 'error');
+      _showReportError();
       _resetBtn();
       return;
     }
-    _pollTimer = setInterval(() => pollPipeline(productKey), 2500);
+    setProgress('db_load', 'done');
+
+    // ② AI 분석 + 논문 검색 + PDF 생성 (동기)
+    setProgress('analyze', 'running');
+    const r2 = await fetch('/api/report/generate', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ product_id: productId }),
+    });
+    if (!r2.ok) {
+      const d2 = await r2.json().catch(() => ({}));
+      console.error('AI 분석/PDF 실패:', d2.detail || r2.status);
+      setProgress('analyze', 'error');
+      _showReportError();
+      _resetBtn();
+      return;
+    }
+    const reportData = await r2.json();
+    // reportData: { ok, product_id, row, blocks, refs_count, refs, meta, pdf }
+    // · row      : Supabase australia 테이블 1행 (호주 73~75 컬럼 원본)
+    // · blocks   : Claude Haiku 생성 block2_* / block3_* / block4_regulatory
+    // · refs     : 하이브리드 논문 검색 결과
+    // · meta     : confidence / confidence_breakdown
+    // · pdf      : 파일명 (GET /api/report/download?name=... 로 다운로드)
+    setProgress('analyze', 'done');
+    setProgress('refs',    'done');   // 호주는 논문 검색이 report/generate 내부에 포함
+    setProgress('report',  'done');
+
+    // ③ 결과 렌더링 — 체크리스트 [5] 에서 호주 row → 싱가포르 renderResult shape 어댑터 경유 예정.
+    //    Stage 3 현재: reportData.row 그대로 전달 (어댑터 함수는 아직 미구현).
+    renderResult(reportData.row, reportData.refs, reportData.pdf);
+    _resetBtn();
   } catch (e) {
-    console.error('요청 실패:', e);
+    console.error('파이프라인 요청 실패:', e);
     setProgress('db_load', 'error');
+    _showReportError();
     _resetBtn();
   }
 }
 
 function _resetBtn() {
-  document.getElementById('btn-analyze').disabled = false;
-  document.getElementById('btn-icon').textContent  = '▶';
+  const analyzeBtn = document.getElementById('btn-analyze');
+  if (analyzeBtn) analyzeBtn.disabled = false;
+  const iconEl = document.getElementById('btn-icon');
+  if (iconEl) iconEl.textContent = '▶';
 }
 
-/**
- * GET /api/pipeline/{product_key}/status 를 주기적으로 폴링.
- * 서버 step: init → db_load → analyze → refs → report → done
- */
-async function pollPipeline(productKey) {
-  try {
-    const res = await fetch(`/api/pipeline/${encodeURIComponent(productKey)}/status`);
-    const d   = await res.json();
-
-    if (d.status === 'idle') return;
-
-    // B2: 서버 step → 프론트 STEP_ORDER 매핑
-    if      (d.step === 'db_load')  { setProgress('db_load',  'running'); }
-    else if (d.step === 'analyze')  { setProgress('db_load',  'done'); setProgress('analyze', 'running'); }
-    else if (d.step === 'refs')     { setProgress('analyze',  'done'); setProgress('refs',    'running'); }
-    else if (d.step === 'report')   {
-      setProgress('refs', 'done'); setProgress('report', 'running');
-      _showReportLoading();
-    }
-
-    if (d.status === 'done') {
-      clearInterval(_pollTimer);
-      for (const s of STEP_ORDER) setProgress(s, 'done');
-      const r2   = await fetch(`/api/pipeline/${encodeURIComponent(productKey)}/result`);
-      const data = await r2.json();
-      renderResult(data.result, data.refs, data.pdf);
-      _resetBtn();
-    }
-
-    if (d.status === 'error') {
-      clearInterval(_pollTimer);
-      setProgress(STEP_ORDER.includes(d.step) ? d.step : 'analyze', 'error');
-      _resetBtn();
-    }
-  } catch (_) { /* 조용히 재시도 */ }
-}
+// pollPipeline() 제거됨 — 호주는 동기 엔드포인트라 폴링 불필요.
+// 기존 _pollTimer / STEP_ORDER 는 §1 상수 섹션에 남겨두되 미사용 (Stage 4 정리 대상).
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    §9. 신약 분석 파이프라인

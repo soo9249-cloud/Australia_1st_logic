@@ -94,36 +94,39 @@ Australia_1st_logic/
 
 ---
 
-## 현재 상태 및 남은 작업 (2026-04-17 기준)
+## 현재 상태 및 남은 작업 (2026-04-18 기준)
 
-### 폴더 합병 — 두 폴더 비교 필요
-- **메인 (작업 대상)**: `Australia_1st_logic/` ← 이 폴더. 2공정 AI 파이프라인 전체 구현이 여기에 있음.
-- **복사본 (크롤러 소스)**: `Australia_1st_logic - claudecoworkonly/` ← 같은 상위 폴더(Desktop)에 있음. 크롤러 개선이 여기에만 반영됨.
+### ✅ 완료된 작업 (2026-04-18 세션)
+1. 크롤러 합병 4개 항목 반영 완료 (render_api.py sys.path, pbs.py, chemist.py 옵션A, au_crawler.py healthylife)
+2. 소매가 추정 로직 4단계 구현 완료:
+   - Supabase ALTER (chemist_price_aud, retail_estimation_method 컬럼 추가)
+   - au_crawler.py `_estimate_retail_price()` — PBS→DPMQ / 미등재→Chemist×1.20 / fallback
+   - fob_calculator.py Logic B `crawler_row` 2순위 fallback
+   - render_api.py 연결 (`dispatch_by_pricing_case(seed, crawler_row=row)`)
+3. CSS 이식 완료 (styles.css +479줄 append, 기존 0줄 변경)
+4. HTML 전면 교체 완료 (Stage 1 — 싱가포르 아코디언 구조 + 호주 내용)
 
-UI/UX + 2공정 파이프라인은 메인이 정본. 크롤러 백엔드는 복사본이 더 최신.
-합병 작업 시 반드시 두 폴더를 모두 열어서 비교할 것.
+### 🔄 진행 중 — 프론트엔드 싱가포르 UI/UX 전면 이식
+소스: `frontend_0417/` (Desktop, 팀원이 만든 싱가포르 공통 템플릿)
+원칙: UI/UX는 싱가포르와 완전 통일, 내용만 호주. 백엔드 수정 가능.
 
-### ⚠️ 합병 미반영 항목 (복사본 → 메인으로 가져와야 함)
-아래 4개 파일은 복사본(`Australia_1st_logic - claudecoworkonly/upharma-au/`)에는 있지만 메인에 아직 반영 안 됨.
-복사본의 해당 함수/로직을 메인 파일에 머지할 것:
+- ✅ Stage 0: 결정 확정 (매크로 하드코딩, API키배지 삭제, 신약폼 삭제, 직접입력+GST 유지)
+- ✅ Stage 1: templates/index.html 전면 교체 (540줄)
+- 🔄 Stage 2: static/app.js 싱가포르 베이스 이식 + 호주 치환
+- ⬜ Stage 3: API 매핑 재작성 (호주 render_api.py 엔드포인트에 맞춤)
+- ⬜ Stage 4: 호주 전용 기능 재통합 (직접입력 탭, GST 로직)
+- ⬜ Stage 5: 로컬 통합 테스트 · 디버깅
+- ⬜ Stage 6: README 변경 이력 기록
 
-1. `crawler/au_crawler.py` — Healthylife 가격 fallback (복사본 344~364줄 부근. Chemist 가격 없거나 <$5이면 Healthylife로 대체)
-2. `crawler/sources/chemist.py` — Cloudflare 우회 강화 (`_is_cloudflare_blocked`, `_extract_first_price`, `_fetch_direct`, `_fetch_jina`)
-3. `crawler/sources/pbs.py` — `_safe_float()`, `_brand_premium_from_row()` 헬퍼 함수
-4. `render_api.py` — stage2 디렉토리 `sys.path` 추가 (복사본 17~19줄 부근, import 안정성)
-
-### 남은 작업 목록 (순서대로)
-1. **즉시**: Phase 5 — 로컬 uvicorn 동작 테스트 (8품목 중 2~3개 2공정 파이프라인 클릭스루, PDF 다운로드, Supabase 저장 확인)
-2. 크롤러 합병 미반영 4개 항목 반영
-3. 2공정 역산 로직 재검토/수정 — FOB 역산 공식·dispatch 로직 점검
-4. 직접입력 탭 UI/UX 개선 — 레이아웃·흐름 재설계
-5. PDF 보고서 양식 수정 — 실제 생성된 PDF 보면서 레이아웃·내용 조정
-6. 보고서 작성 프롬프트 설계 — Haiku에게 줄 보고서 생성 지시문 정교화
-7. README v2.6 갱신
+### 프론트 이식 완료 후 남은 작업
+1. Phase 5 — 로컬 uvicorn 동작 테스트
+2. 2공정 역산 로직 재검토/수정
+3. PDF 보고서 양식 수정
+4. 보고서 작성 프롬프트 설계 (Haiku 지시문)
+5. README v2.6 갱신
 
 ### 보류 중
 - Omethyl 크롤러 연동 — healthylife.py → au_crawler.py 연결 (retail_price_aud 채우기)
-- ALPS 조달청 문구 — 브라우저 캐시 문제로 추정
 
 ---
 

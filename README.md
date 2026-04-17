@@ -617,11 +617,27 @@ python scripts/deploy_render.py
 
 ## 11. 로컬 실행
 
+### 매 세션마다 (가상환경은 이미 만들어 둔 경우)
+
+**`python -m venv` 나 `pip install` 을 매번 할 필요는 없습니다.** 새 터미널을 열 때마다 **활성화(activate)** 만 하면 됩니다.
+
+프로젝트 루트(`Australia_1st_logic/`, 여기서 `dir` 시 `venv` 폴더가 보이는 위치)에서:
+
+| 쉘 | 프롬프트 뒤에 입력할 명령 (한 줄) |
+|---|---|
+| **PowerShell** | `.\venv\Scripts\Activate.ps1` |
+| **cmd** | `venv\Scripts\activate.bat` |
+| **Git Bash** | `source venv/Scripts/activate` |
+
+성공하면 프롬프트 앞에 `(venv)` 가 붙습니다. 이후 §11.3 의 `uvicorn` 으로 서버를 띄우면 됩니다.
+
+> **PowerShell** 에서 `Activate.ps1` 실행이 막히면(스크립트 실행 정책), **현재 사용자**에게만 허용: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` 를 한 번 실행한 뒤 다시 `.\venv\Scripts\Activate.ps1` 을 실행합니다.
+
 ### 11.1 최초 세팅 (1회)
 
 ```bash
-python -m venv venv                        # 가상환경 생성
-# venv 활성화 (쉘별로 아래 11.2 참고)
+python -m venv venv                        # 가상환경 폴더 생성 (프로젝트당 1회)
+# venv 활성화 (쉘별로 위 표 또는 아래 11.2 참고)
 pip install -r upharma-au/requirements.txt
 python scripts/migrate.py                  # Supabase 스키마 배포
 ```
@@ -704,9 +720,9 @@ python scripts/deploy_render.py
 ### 11.8 전체 실행 흐름 요약
 
 ```
-venv 활성화
+(프로젝트 루트에서) venv 활성화 — PowerShell: .\venv\Scripts\Activate.ps1
   ↓
-pip install -r upharma-au/requirements.txt   (최초 1회)
+pip install -r upharma-au/requirements.txt   (venv 최초 생성 직후 또는 requirements 갱신 시)
   ↓
 python scripts/migrate.py                     (스키마 변경 있을 때)
   ↓
@@ -859,6 +875,12 @@ NOTIFY pgrst, 'reload schema';
 ## 14. 변경 이력
 
 변경사항은 이 섹션에만 누적 기록합니다. 별도 변경 리포트 파일을 만들지 않습니다.
+
+### 14.0 2026-04-17 — 로컬 실행 문서 보강 (venv)
+
+- §11 상단에 **「매 세션마다」** 블록 추가: `python -m venv` / 전체 `pip install` 은 반복 불필요, **터미널마다 activate 만** 하면 됨을 명시
+- PowerShell 기준 한 줄 명령 `.\venv\Scripts\Activate.ps1` 을 표로 정리(프로젝트 루트 기준)
+- §11.8 요약 다이어그램에 PowerShell 활성화 예시 한 줄 포함
 
 ### 14.1 2026-04-16 — 2공정(P2) UI/백엔드 전면 투입
 

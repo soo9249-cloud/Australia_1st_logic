@@ -340,6 +340,29 @@ def main() -> None:
     retail_query = str(pbs_terms[0] if pbs_terms else product.get("inn_normalized") or "")
 
     chemist = fetch_chemist_price(retail_query)
+
+    # ── Healthylife 보강 (PBS 미등재 Private 처방약 참고가용) ───────────────
+    # 조건: au_products.json 에 healthylife_slug 가 지정된 품목에만 호출.
+    # 정책: Chemist 에서 값이 없거나 $5 미만(오매칭 의심)이면 Healthylife 결과로 대체.
+    # 대표 대상: Omethyl (OMACOR 1g 28캡 참고가, confidence 0.60)
+    hl_slug = product.get("healthylife_slug")
+    if hl_slug:
+        try:
+            from sources.healthylife import fetch_healthylife_price
+            hl = fetch_healthylife_price(str(hl_slug))
+        except Exception as _exc:  # 폴백 모듈 실패 시 무시, 기존 결과 유지
+            hl = None
+        if hl and isinstance(hl.get("price_aud"), (int, float)):
+            ch_price = chemist.get("retail_price_aud") if chemist else None
+            chemist_is_empty = (not isinstance(ch_price, (int, float))) or ch_price < 5.0
+            if chemist_is_empty:
+                chemist = {
+                    "retail_price_aud": float(hl["price_aud"]),
+                    "price_unit": "per pack",
+                    "price_source_name": hl.get("source") or "Healthylife",
+                    "price_source_url": hl.get("price_source_url") or "",
+                }
+
     nsw = fetch_buynsw(retail_query)
 
     summary = build_product_summary(

@@ -61,6 +61,8 @@ _ALLOWED_COLUMNS: frozenset[str] = frozenset(
         "fob_aggressive_usd",
         "fob_confidence",
         "retail_price_aud",
+        "chemist_price_aud",
+        "retail_estimation_method",
         "price_source_name",
         "price_source_url",
         "price_unit",

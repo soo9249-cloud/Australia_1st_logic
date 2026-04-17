@@ -80,23 +80,56 @@ def _row_matches_ingredient(row: dict[str, Any], needles: list[str]) -> bool:
     return any(n in blob for n in needles)
 
 
+def _safe_float(v: Any) -> float | None:
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, str):
+        s = v.strip().replace(",", "")
+        try:
+            return float(s)
+        except ValueError:
+            return None
+    return None
+
+
+def _brand_premium_from_row(row: dict[str, Any]) -> float | None:
+    """브랜드 프리미엄(최저가 브랜드 대비 추가 환자부담).
+
+    1순위: PBS API의 `brand_price_premium` / `therapeutic_group_premium` 필드
+    2순위: claimed_price(총약가 기준) - determined_price(AEMP) 차이로 추정 불가
+          (이 차이는 유통마진이지 브랜드 프리미엄이 아님 → 계산 포기, None 반환)
+    """
+    for key in ("brand_price_premium", "therapeutic_group_premium"):
+        v = _safe_float(row.get(key))
+        if v is not None and v > 0:
+            return v
+    return None
+
+
 def _row_to_result(row: dict[str, Any]) -> dict[str, Any]:
+    """PBS API row를 원본 필드 그대로 노출하는 dict로 변환.
+
+    계산·역산 일체 없음. DPMQ→AEMP 역산 같은 파생값은 2공정(stage2)에서 담당.
+    """
     raw_code = row.get("pbs_code")
     pbs_item = str(raw_code) if raw_code is not None else None
+
     return {
         "pbs_item_code": pbs_item,
         "pbs_listed": True,
         "pbs_price_aud": _price_from_row(row),
         "pbs_source_url": _pbs_public_url(pbs_item),
         "restriction_text": _restriction_from_row(row),
-        "pbs_dpmq": float(row["claimed_price"]) if row.get("claimed_price") else None,
-        "pbs_determined_price": float(row["determined_price"]) if row.get("determined_price") else None,
+        "pbs_dpmq": _safe_float(row.get("claimed_price")),
+        "pbs_determined_price": _safe_float(row.get("determined_price")),
         "pbs_pack_size": row.get("pack_size"),
         "pbs_pricing_quantity": row.get("pricing_quantity"),
         "pbs_benefit_type": row.get("benefit_type_code"),
         "pbs_program_code": row.get("program_code"),
         "pbs_brand_name": row.get("brand_name"),
         "pbs_innovator": row.get("innovator_indicator"),
+        "pbs_manufacturer": row.get("manufacturer_name") or row.get("mnfr_name"),
+        "pbs_brand_premium": _brand_premium_from_row(row),
         "pbs_first_listed_date": row.get("first_listed_date"),
         "pbs_repeats": row.get("number_of_repeats"),
         "pbs_formulary": row.get("formulary"),
@@ -151,12 +184,24 @@ def _filter_results(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         {
             "brand_name": r.get("pbs_brand_name"),
             "pbs_price_aud": r.get("pbs_price_aud"),
+            "pbs_dpmq": r.get("pbs_dpmq"),
+            "pbs_determined_price": r.get("pbs_determined_price"),
             "pbs_innovator": r.get("pbs_innovator"),
             "pbs_item_code": r.get("pbs_item_code"),
+            "pbs_manufacturer": r.get("pbs_manufacturer"),
+            "brand_premium": r.get("pbs_brand_premium"),
         }
         for r in rows
     ]
     chosen["pbs_brands"] = pbs_brands
+    # competitor_brands: 선정된 행을 제외한 경쟁 브랜드만. 2공정 FOB 분석에서
+    # 자사 브랜드 가격 포지셔닝 판단에 쓴다.
+    chosen_code = chosen.get("pbs_item_code")
+    chosen_brand = chosen.get("pbs_brand_name")
+    chosen["competitor_brands"] = [
+        b for b in pbs_brands
+        if not (b.get("pbs_item_code") == chosen_code and b.get("brand_name") == chosen_brand)
+    ]
     return [chosen]
 
 

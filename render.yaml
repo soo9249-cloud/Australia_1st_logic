@@ -1,9 +1,9 @@
 # Render.com 배포 스펙 — Python 웹서비스 1개 (FastAPI + Uvicorn)
 # render_api.py 가 브라우저 요청을 받아 crawler/ 를 실행하고 Supabase 에 저장한다.
 #
-# pip install -r requirements.txt 는 서비스 Root Directory 기준이다.
-# 루트에만 있던 requirements.txt 는 Root 가 upharma-au 일 때 빌드에 안 들어와 실패함.
-# upharma-au/requirements.txt 를 루트와 동일하게 두어 두 설정 모두 동작하게 한다.
+# 의존성 목록은 저장소 루트의 requirements.txt 한 곳(README 와 같은 위치)만 쓴다.
+# Render 서비스 Root Directory 는 비워 두어(=저장소 루트) 이 파일이 빌드에 포함되게 할 것.
+# Root 를 upharma-au 로 두면 루트 밖 파일은 빌드에 넣을 수 없어 pip 가 실패한다.
 
 services:
   - type: web

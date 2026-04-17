@@ -1782,11 +1782,13 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
             raise ValueError(f"fob_reference_seeds.json 에 {product_id!r} 시드 없음")
 
         # ── Step 3: FOB 3시나리오 계산 ──
+        # crawler_row=row 전달: seed.reference_retail_aud 미확보 시 Logic B 의 2순위로
+        # crawler_row.retail_price_aud(시장 추정가)를 참고가로 사용 (3단계 확장).
         with _p2_lock:
             _p2_state["step_label"] = "③ FOB 3시나리오 역산 중…"
         fx_rates = _fetch_exchange_rates_simple()
         fx_krw = fx_rates.get("aud_krw") or 893.0
-        dispatch_result = dispatch_by_pricing_case(seed, fx_aud_to_krw=fx_krw)
+        dispatch_result = dispatch_by_pricing_case(seed, fx_aud_to_krw=fx_krw, crawler_row=row)
 
         if dispatch_result.get("logic") == "blocked":
             # blocked 품목도 "시도 이력"을 p2 결과 테이블에 남긴다.
@@ -1850,7 +1852,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
         avg = scenarios_raw.get("average", {})
         cons = scenarios_raw.get("conservative", {})
 
-        # 참고가 텍스트 조립
+        # 참고가 텍스트 조립 — 우선순위: seed AEMP → seed retail → crawler retail → 미확보
         if seed.get("reference_aemp_aud") is not None:
             ref_val = seed["reference_aemp_aud"]
             if isinstance(ref_val, list):
@@ -1863,6 +1865,19 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
             ref_aud = float(seed["reference_retail_aud"])
             src = seed.get("reference_retail_source") or "소매가"
             ref_text = f"{src} AUD {ref_aud}"
+        elif dispatch_result.get("inputs", {}).get("retail_source") == "crawler":
+            # Logic B 에서 seed.reference_retail_aud 미확보 → crawler_row 참고가 사용
+            ref_aud = float(dispatch_result["inputs"]["retail_aud"])
+            cr_method = row.get("retail_estimation_method")
+            if cr_method == "pbs_dpmq":
+                ref_text = f"PBS DPMQ(최대처방량 총약가) AUD {ref_aud}"
+            elif cr_method == "chemist_markup":
+                ref_text = (
+                    f"시장 추정가 AUD {ref_aud} "
+                    f"(Chemist Warehouse × 1.20, CHOICE 조사 기준)"
+                )
+            else:
+                ref_text = f"시장 추정가 AUD {ref_aud} (크롤러 실시간)"
         else:
             ref_text = "참고가 미확보"
             ref_aud = None

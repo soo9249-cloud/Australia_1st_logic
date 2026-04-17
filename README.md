@@ -181,7 +181,7 @@ PRODUCT_FILTER=au-hydrine-004
 │ ⑤ buy.nsw.gov.au         sources/buynsw.py    ~20초           │
 └───────────────────────────────────────────────────────────────┘
         ↓ 각 소스 dict 를 한 dict 로 병합
-build_product_summary()  →  73컬럼 summary
+build_product_summary()  →  75컬럼 summary
         ↓
 supabase_insert.upsert_product()  →  australia (on_conflict=product_id)
 ```
@@ -249,18 +249,29 @@ supabase_insert.upsert_product()  →  australia (on_conflict=product_id)
 
 ### ④ Chemist Warehouse — `sources/chemist.py`
 
-호주 최대 민간 약국 체인. Cloudflare 보호를 받아서 **Jina Reader 로 우회**.
+호주 최저가 할인약국 체인. **Cloudflare 우회 2단계** 전략: 직접 호출 먼저 시도 → 차단 감지 시 Jina AI Reader 폴백.
 
-URL: `https://www.chemistwarehouse.com.au/search?query={INN}` → `https://r.jina.ai/...` 래핑
+URL: `https://www.chemistwarehouse.com.au/search?query={INN}`
 
 | 반환 필드 | 의미 | 예시 |
 |---|---|---|
-| `retail_price_aud` | 민간 소매가 (검색 결과 첫 양수 `$` 값) | `25.00` |
-| `price_source_name` | `"Chemist Warehouse"` | |
+| `retail_price_aud` | Chemist 크롤링 원본 가격 (검색 결과 첫 양수 `$` 값) | `37.90` |
+| `price_source_name` | **항상 `"Chemist Warehouse"` 고정** (경로 구분은 로그에만 — app.js 정확 매칭 호환) | |
 | `price_source_url` | 원본 검색 URL | |
 | `price_unit` | `"per pack"` | |
 
-**신뢰 검증** (`_chemist_retail_trustworthy`): PBS 가격의 15% 미만이거나 `$5` 미만이면 오매칭·부분파싱으로 간주 → **PBS 가격으로 폴백** (`price_source_name = "PBS"`).
+**호출 순서 (2단 폴백):**
+
+1. **직접 호출** (`_fetch_direct`) — `httpx.get` 으로 Chemist 서버 직격. `User-Agent`/`Accept-Language: en-AU`/timeout 15초. 정상 HTML 받으면 파싱.
+2. **Jina AI Reader 폴백** (`_fetch_jina`) — Cloudflare 차단 감지 시 `https://r.jina.ai/{원본 URL}` 로 우회 (timeout 30초).
+
+**Cloudflare 차단 감지** (`_is_cloudflare_blocked`): HTTP `403/503/520~527` 또는 본문에 `cloudflare` · `cf-ray` · `attention required` · `challenge-platform` · `checking your browser` · `just a moment` · `please enable javascript` 포함 시, 또는 `200` 응답이더라도 본문 길이 `< 1500` 바이트 + 차단 키워드 존재 시 즉시 Jina 폴백.
+
+**가격 추출** (`_extract_first_price`): 본문에서 `$XX.XX` 정규식으로 `0` 초과 첫 값만 픽업 (장바구니 `$0.00` 무시).
+
+**신뢰 검증** (`_chemist_retail_trustworthy`): PBS 가격의 15% 미만이거나 `$5` 미만이면 오매칭·부분파싱으로 간주 → Chemist 가격 버리고 `retail_price_aud = None`. 이 경우 Omethyl 처럼 `healthylife_slug` 지정된 품목은 ⑥ Healthylife 로 자동 폴백(아래 참고).
+
+> **주의:** 최종 `retail_price_aud` 컬럼 값은 **Chemist 원본이 아닌 시장 추정가**임 (PBS DPMQ 또는 Chemist × 1.20). 자세한 로직은 §4 최종 병합 아래 "소매가 추정" 섹션 참조.
 
 ### ⑤ buy.nsw.gov.au — `sources/buynsw.py`
 
@@ -277,9 +288,9 @@ URL: `https://buy.nsw.gov.au/notices/search?mode=regular&query={INN}&noticeTypes
 
 > **supplier_name** 필드는 호환성을 위한 이름으로, buy.nsw 문맥에서는 실제로 "공급자"가 아닌 **발주처(Agency)** 를 담습니다.
 
-### ⑥ Healthylife (독립 유틸리티) — `sources/healthylife.py`
+### ⑥ Healthylife (Chemist 폴백) — `sources/healthylife.py`
 
-> **중요:** 이 모듈은 `au_crawler.py` 의 메인 파이프라인에 **통합되어 있지 않습니다.** 별도 호출이 필요한 독립 유틸리티입니다. (`au_crawler` 는 ①~⑤ 만 import)
+> **통합 완료 (2026-04-17):** `au_crawler.py` 의 `main()` 에서 ④ Chemist 호출 직후 조건부 폴백으로 호출됨. `au_products.json` 에 `healthylife_slug` 가 지정된 품목만 대상 (현재 **Omethyl** 1개). Chemist 가격이 `None` 또는 `$5` 미만이면 Healthylife 결과로 `chemist` dict 전체가 치환됨 → 이후 파이프라인은 Healthylife 값을 Chemist 자리에 넣고 계속 진행.
 
 **목적:** PBS 미등재 Private 처방약 (대표적으로 **Omethyl**, Omega-3 제품) 의 소매 참고가 수집. Chemist Warehouse 가 해당 품목을 검색 결과에 노출하지 않을 때 보조 소스로 사용.
 
@@ -312,7 +323,18 @@ cd upharma-au/crawler
 python -m sources.healthylife       # __main__ 의 기본 slug = omacor-1000mg-cap-28
 ```
 
-**향후 통합 시 주의:** `au_crawler.build_product_summary` 에 편입할 때 `retail_price_aud` / `price_source_name` 컬럼을 덮어쓸지, 별도 `healthylife_price_aud` 컬럼으로 분리할지 스키마 결정 필요. 현재는 **통합되어 있지 않으므로 Supabase 저장 경로 없음**.
+**통합 방식 (현재):** `au_crawler.main()` 에서 ④ Chemist 호출 직후, `product.healthylife_slug` 지정 품목에 한해 `fetch_healthylife_price(slug)` 를 호출. 반환된 `price_aud` 가 숫자이고 Chemist 측 가격이 비어있거나 `$5` 미만이면 `chemist` dict 를 다음 구조로 덮어씀:
+
+```python
+chemist = {
+    "retail_price_aud": float(hl["price_aud"]),
+    "price_unit": "per pack",
+    "price_source_name": hl.get("source") or "Healthylife",
+    "price_source_url": hl.get("price_source_url") or "",
+}
+```
+
+이후 `build_product_summary` 는 Healthylife 가격을 Chemist 가격처럼 취급하여 소매가 추정 로직(다음 섹션)에 투입. 단 `price_source_name` 이 `"Chemist Warehouse"` 가 아니므로 app.js 의 정확 매칭에선 "해당없음" 으로 떨어질 수 있음 — 프론트 리팩토링 시 `retail_estimation_method` 기반 매칭으로 전환 필요.
 
 ### Jina Reader 사용 전략 (공통)
 
@@ -322,7 +344,7 @@ python -m sources.healthylife       # __main__ 의 기본 slug = omacor-1000mg-c
 |---|---|
 | TGA ARTG (①) | 검색 페이지가 JS 렌더 — 마크다운 프록시로 정적 파싱 |
 | PBS 웹 보강 (③) | 가격 표 HTML 이 복잡 — 마크다운으로 받아 정규식 파싱 간소화 |
-| Chemist Warehouse (④) | Cloudflare + SPA — 직접 요청 시 차단 |
+| Chemist Warehouse (④) | Cloudflare + SPA — **직접 호출 먼저 시도, 차단 감지 시 Jina 폴백** (2단 전략) |
 | buy.nsw.gov.au (⑤) | Angular SPA — `httpx` 직접 요청 시 빈 HTML |
 | Healthylife (⑥) | JSON API/HTML 실패 시 최후 폴백 |
 
@@ -333,10 +355,15 @@ python -m sources.healthylife       # __main__ 의 기본 slug = omacor-1000mg-c
 
 ### 최종 병합 — `build_product_summary`
 
-5개 소스 dict + `au_products.json` 의 품목 메타를 한 dict 로 합치고 73컬럼을 채움.
+5개 소스 dict + `au_products.json` 의 품목 메타를 한 dict 로 합치고 75컬럼을 채움.
 
 | 필드 | 의미 |
 |---|---|
+| `retail_price_aud` | **시장 추정 소매가** (PBS DPMQ 또는 Chemist × 1.20) — 자세한 로직은 다음 섹션 |
+| `chemist_price_aud` | **신규** Chemist Warehouse 원본 크롤링 가격 (오매칭·저가 배제 후, 참고용) |
+| `retail_estimation_method` | **신규** 추정 경로 — `"pbs_dpmq"` / `"chemist_markup"` / `None` |
+| `price_source_name` | `"PBS"` (DPMQ 경로) 또는 `"Chemist Warehouse"` (markup 경로) |
+| `price_source_url` | 선택된 출처의 URL |
 | `export_viable` / `reason_code` | 수출 적합 판정 |
 | `evidence_url` | 대표 증거 URL (ARTG 상세) |
 | `evidence_text` | 영어 원문 (Sponsor / ARTG status / PBS 제한 등) |
@@ -349,6 +376,32 @@ python -m sources.healthylife       # __main__ 의 기본 slug = omacor-1000mg-c
 | `pricing_case` | `DIRECT` / `COMPONENT_SUM` / `ESTIMATE_*` — 2공정 분기 기준 |
 | `fob_*` 5개 | **1공정 NULL** — 2공정에서 채움 |
 | `block2_*`, `block3_*`, `perplexity_refs`, `llm_*` | **1공정 NULL** — LLM 연동 후 채움 |
+
+### 소매가 추정 로직 — `_estimate_retail_price()` (2026-04-17 추가)
+
+`retail_price_aud` 컬럼은 **크롤링 원본 가격이 아니라 시장 추정가**. Chemist Warehouse(호주 최저가 체인) 는 일반 약국 평균 대비 `~20%` 낮은 것으로 알려져 있어(CHOICE 조사 기준), 그대로 쓰면 수출 전략의 소매가 기준이 과소평가됨. 아래 우선순위로 **시장 평균 소매가**를 추정:
+
+| 순위 | 조건 | `retail_price_aud` 값 | `retail_estimation_method` |
+|---|---|---|---|
+| 1 | `pbs_listed == True` + `pbs_dpmq > 0` | `pbs_dpmq` 그대로 | `"pbs_dpmq"` |
+| 2 | 1순위 실패 + Chemist 신뢰 가격 존재 | `chemist_price_aud × 1.20` | `"chemist_markup"` |
+| 3 | 1·2순위 실패 + `pbs_price_aud > 0` | `pbs_price_aud` 그대로 | `"pbs_dpmq"` |
+| 4 | 전부 없음 | `None` | `None` |
+
+**근거:**
+- **1순위 DPMQ** — PBS(호주 의약품 급여 제도) 등재 품목의 DPMQ(최대처방량 총약가) 는 이미 AEMP(정부 승인 출고가) + 도매 마크업 + 약국 마크업(15%) + 조제 수수료($8.88) 가 포함된 시장 소매가.
+- **2순위 Chemist × 1.20** — CHOICE(호주 소비자 단체) 시장조사 기준 일반 오프라인 약국 평균가가 Chemist Warehouse 대비 약 `+20%`. 환경변수 `RETAIL_MARKUP_MULTIPLIER` 로 배수 조정 가능 (기본 `1.20`).
+
+**환경변수 설정 (선택):**
+```bash
+# copy.env 또는 Render 환경변수
+RETAIL_MARKUP_MULTIPLIER=1.20    # 기본값. CHOICE 조사 업데이트 시 튜닝
+```
+
+**엣지케이스:**
+- Chemist 가격이 PBS 가격의 `15%` 미만이거나 `$5` 미만 → 오매칭으로 간주, `chemist_price_aud = None` (`_chemist_retail_trustworthy`)
+- PBS 등재지만 DPMQ 환자부담금 미만 — 그대로 DPMQ 사용(약국 총매출 정의상 일치)
+- 복합 성분 품목의 DPMQ 합산 — 현재 `_merge_pbs_rows` 는 첫 행만 취함 (별도 과제로 분리)
 
 ### `au-hydrine-004` 실측 예시
 
@@ -402,6 +455,20 @@ FOB (AUD) = Retail
           / (1 + wholesale_margin_pct / 100)← 도매 마진 공제 (기본 10%)
           / (1 + importer_margin_pct / 100) ← 수입상 마진 공제 (기본 20%)
 ```
+
+**Logic B 참고가 우선순위 (2026-04-17 확장):**
+
+`dispatch_by_pricing_case(seed, *, crawler_row=None)` 은 Logic B 입력 `Retail` 을 아래 순서로 결정:
+
+| 순위 | 출처 | 조건 | `inputs.retail_source` |
+|---|---|---|---|
+| 1 | `seed.reference_retail_aud` (수기 검증된 참고가) | `> 0` | `"seed"` |
+| 2 | `crawler_row.retail_price_aud` (시장 추정가, §4 소매가 추정 로직) | `> 0` | `"crawler"` |
+| 3 | 차단 | 1·2 모두 없음 | — (`blocked_reason=no_reference_price`) |
+
+2순위 사용 시 `warnings[]` 에 "소매 참고가 출처(크롤러 실시간): {method_label}. 수기 시드 미확보로 크롤러 추정가 사용" 문구 자동 추가. `method_label` 은 `retail_estimation_method` 에 따라 "PBS DPMQ(최대처방량 총약가)" 또는 "Chemist Warehouse × 1.20 (CHOICE 조사 기준 시장 평균)".
+
+**하위호환:** `crawler_row` 인자 생략 시 기존 호출(seed 기반)과 100% 동일하게 동작.
 
 ### 5.3 시나리오 프리셋
 
@@ -458,7 +525,7 @@ FOB (AUD) = Retail
 
 ## 6. Supabase 스키마 — 6 테이블
 
-### 1) `australia` — 1·2공정 통합 (73컬럼)
+### 1) `australia` — 1·2공정 통합 (75컬럼)
 
 | 섹션 | 컬럼 수 |
 |---|---|
@@ -466,13 +533,15 @@ FOB (AUD) = Retail
 | 품목 마스터 | 6 |
 | TGA ARTG | 7 |
 | PBS API + 웹 | 20 |
-| Chemist 소매 | 4 |
+| **민간 소매 (시장 추정)** — `retail_price_aud` · `chemist_price_aud` · `retail_estimation_method` · `price_source_name` · `price_source_url` · `price_unit` | 6 |
 | NSW Procurement | 4 |
 | 수출성 판정 | 2 |
 | 증거 (영/한) | 3 |
 | **2공정 FOB** (보수/기준/공격 시나리오) | 5 |
 | 메타 (`sites` JSONB 등) | 4 |
 | **LLM 블록** (Claude Haiku Block 2/3 + Perplexity + llm_meta) | 12 |
+
+> **2026-04-17 변경:** `retail_price_aud` 의미 재정의 (Chemist 원본 → 시장 추정가). Chemist 원본은 `chemist_price_aud` 로 분리, 추정 경로는 `retail_estimation_method` 로 추적. Supabase ALTER 는 `crawler/db/australia_table.sql` 하단의 멱등 블록 참고.
 
 ### 2) `australia_history` — 스냅샷 append-only
 
@@ -881,6 +950,37 @@ NOTIFY pgrst, 'reload schema';
 - §11 상단에 **「매 세션마다」** 블록 추가: `python -m venv` / 전체 `pip install` 은 반복 불필요, **터미널마다 activate 만** 하면 됨을 명시
 - PowerShell 기준 한 줄 명령 `.\venv\Scripts\Activate.ps1` 을 표로 정리(프로젝트 루트 기준)
 - §11.8 요약 다이어그램에 PowerShell 활성화 예시 한 줄 포함
+
+### 14.0b 2026-04-17 — 복사본 크롤러 합병 + 소매가 추정 로직 백엔드 설계
+
+**범위:** 백엔드만 — 프론트(app.js)/PDF(report_generator) 반영은 리팩토링 후 별도 사이클.
+
+**A. 복사본(`Australia_1st_logic - claudecoworkonly/`) 크롤러 개선 메인 합병 (커밋 `3c5f015`)**
+
+1. **`render_api.py`** — `stage2` 디렉토리 `sys.path.insert` 3줄 추가 (FOB 역산 모듈 import 안정성)
+2. **`crawler/sources/pbs.py`** — `_safe_float()` · `_brand_premium_from_row()` 헬퍼 + `pbs_manufacturer` · `pbs_brand_premium` · `competitor_brands` 신규 필드. `pbs_brands` 리스트 내부에도 `pbs_dpmq` · `pbs_determined_price` · `pbs_manufacturer` · `brand_premium` 확장 (최상위 신규 3필드는 `_ALLOWED_COLUMNS` 밖이라 silently drop — 향후 FOB 포지셔닝 분석에 필요해지면 SQL ALTER)
+3. **`crawler/sources/chemist.py`** — Cloudflare 우회 2단계 전략 (§4 ④ 참조). `price_source_name` 은 `"Chemist Warehouse"` 로 고정 (app.js 정확 매칭 호환, 옵션 A)
+4. **`crawler/au_crawler.py`** — Healthylife 가격 fallback 통합 (§4 ⑥ 참조)
+
+**B. 소매가 추정 로직 (1~4단계, 커밋 `c37fff2` + 후속)**
+
+배경: Chemist Warehouse 는 호주 최저가 체인이라 일반 시장 소매가 대비 `~20%` 낮음 (CHOICE 호주 소비자 단체 조사). 그대로 `retail_price_aud` 에 저장하면 FOB 역산의 Retail 기준값이 과소평가됨.
+
+| 단계 | 파일 | 변경 |
+|---|---|---|
+| 1 | `crawler/db/australia_table.sql` · `crawler/db/supabase_insert.py` | 신규 2컬럼 `chemist_price_aud` · `retail_estimation_method`. `_ALLOWED_COLUMNS` 화이트리스트 동기화. `australia` 테이블 컬럼 수 73 → 75 |
+| 2 | `crawler/au_crawler.py` | `_estimate_retail_price()` 헬퍼 + `RETAIL_MARKUP_MULTIPLIER` 환경변수 (기본 `1.20`). 3분기 우선순위: PBS DPMQ → Chemist × 1.20 → pbs_price_aud fallback. 반환 dict 2필드 추가 |
+| 3 | `stage2/fob_calculator.py` | `dispatch_by_pricing_case(seed, *, crawler_row=None)` 확장. Logic B 참고가 2순위 fallback (seed → crawler). `inputs.retail_source` 로 출처 구분 (`"seed"` / `"crawler"`). Logic A 및 하위호환 유지 |
+| 4 | `render_api.py` | `_p2_pipeline_worker()` Step 3 에서 `crawler_row=row` 전달. Step 5 `ref_text` 조립에 crawler 분기 추가 (`PBS DPMQ` / `Chemist × 1.20 (CHOICE 조사 기준)` / `크롤러 실시간`) |
+
+**환경변수 (선택):** `RETAIL_MARKUP_MULTIPLIER=1.20` — `copy.env` 참고.
+
+**스키마 배포:** Supabase SQL Editor 에 `crawler/db/australia_table.sql` 하단 ALTER 블록 재실행 (`IF NOT EXISTS` 로 멱등).
+
+**보류 항목:**
+- 5단계 PDF/UI 반영 — 프론트 리팩토링 사이클로 미룸
+- 복합 성분 DPMQ 합산 (`_merge_pbs_rows`) — 별도 과제
+- `pbs_manufacturer`/`pbs_brand_premium`/`competitor_brands` 컬럼을 실제로 Supabase 에 저장 — FOB 포지셔닝 분석 도입 시 SQL ALTER + `_ALLOWED_COLUMNS` 추가
 
 ### 14.1 2026-04-16 — 2공정(P2) UI/백엔드 전면 투입
 

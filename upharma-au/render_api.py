@@ -1714,10 +1714,14 @@ _p2_lock = _threading.Lock()
 
 
 def _extract_product_id_from_filename(filename: str) -> str | None:
-    """au_report_{product_id}_{timestamp}.pdf → product_id 추출.
-    예: au_report_au-hydrine-004_20260416_120000.pdf → au-hydrine-004
+    """업로드 접두사 포함 파일명에서도 product_id 를 안전 추출.
+
+    지원 예시:
+    - au_report_au-hydrine-004_20260416_120000.pdf
+    - 1776390947_au_report_au-hydrine-004_20260417_101321.pdf
     """
-    m = _re.match(r"au_report_(.+?)_\d{8}_\d{6}\.pdf$", filename)
+    name = Path(filename).name
+    m = _re.search(r"(?:\d+_)?au_report_(.+?)_\d{8}_\d{6}\.pdf$", name)
     return m.group(1) if m else None
 
 

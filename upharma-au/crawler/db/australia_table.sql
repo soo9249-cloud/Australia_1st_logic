@@ -68,11 +68,17 @@ CREATE TABLE IF NOT EXISTS australia (
   pbs_source_url        TEXT,
   pbs_web_source_url    TEXT,             -- NEW: fetch_pbs_web canonical URL
 
-  -- 민간 소매 (Chemist Warehouse)
-  retail_price_aud  DECIMAL,
-  price_source_name TEXT,
-  price_source_url  TEXT,
-  price_unit        TEXT,
+  -- 민간 소매 (시장 추정 소매가)
+  -- retail_price_aud: 시장 추정 소매가 — PBS 등재면 DPMQ(최대처방량 총약가),
+  --                   미등재면 Chemist Warehouse(호주 최저가 체인) × 1.20 (CHOICE 조사 기준)
+  -- chemist_price_aud: Chemist Warehouse 원본 크롤링 가격 (참고용)
+  -- retail_estimation_method: 'pbs_dpmq' | 'chemist_markup' | 'chemist_raw'
+  retail_price_aud         DECIMAL,
+  chemist_price_aud        DECIMAL,
+  retail_estimation_method TEXT,
+  price_source_name        TEXT,
+  price_source_url         TEXT,
+  price_unit               TEXT,
 
   -- buy.nsw.gov.au (NSW 주정부 공공조달 공고)     NEW: 4개 독립 컬럼 + nsw_note(안내문)
   nsw_contract_value_aud DECIMAL,
@@ -174,7 +180,10 @@ ALTER TABLE australia
   ADD COLUMN IF NOT EXISTS block4_regulatory           TEXT,
   ADD COLUMN IF NOT EXISTS perplexity_refs             JSONB,
   ADD COLUMN IF NOT EXISTS llm_model                   TEXT,
-  ADD COLUMN IF NOT EXISTS llm_generated_at            TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS llm_generated_at            TIMESTAMPTZ,
+  -- 소매가 추정 로직 (2026-04-17) — retail_price_aud 의미 재정의 + 신규 2 컬럼
+  ADD COLUMN IF NOT EXISTS chemist_price_aud           DECIMAL,
+  ADD COLUMN IF NOT EXISTS retail_estimation_method    TEXT;
 
 
 -- ════════════════════════════════════════════════════════════

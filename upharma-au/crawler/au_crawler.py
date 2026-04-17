@@ -18,6 +18,23 @@ from utils.scoring import AU_REQUIRED_FIELDS, completeness_score
 _CRAWLER_DIR = Path(__file__).resolve().parent
 
 
+def _retail_markup_multiplier() -> float:
+    """시장 추정 소매가 배수 — Chemist Warehouse(호주 최저가 체인) 원본 가격에 곱해
+    일반 약국 평균 소매가를 추정한다.
+
+    근거: CHOICE(호주 소비자 단체) 시장조사 — 일반 오프라인 약국 평균가가
+    Chemist Warehouse 대비 약 20% 높음. 환경변수 RETAIL_MARKUP_MULTIPLIER 로 덮어쓰기 가능.
+    """
+    try:
+        v = float((os.environ.get("RETAIL_MARKUP_MULTIPLIER") or "1.20").strip())
+        return v if v > 0 else 1.20
+    except ValueError:
+        return 1.20
+
+
+RETAIL_MARKUP_MULTIPLIER = _retail_markup_multiplier()
+
+
 def _chemist_retail_trustworthy(
     chemist: dict[str, Any],
     pbs_price: object,
@@ -35,6 +52,48 @@ def _chemist_retail_trustworthy(
         if r < float(pbs_price) * 0.15:
             return None, False
     return r, True
+
+
+def _estimate_retail_price(
+    pbs: dict[str, Any],
+    chemist_price_aud: float | None,
+) -> tuple[float | None, str | None]:
+    """시장 추정 소매가 산출. `retail_price_aud` 컬럼에 들어가는 최종 값.
+
+    Args:
+        pbs: PBS API/웹 결과 dict (pbs_listed, pbs_dpmq, pbs_price_aud 참조)
+        chemist_price_aud: `_chemist_retail_trustworthy()` 로 오매칭·저가 배제된
+                           Chemist Warehouse 원본 가격. 신뢰 불가 시 None.
+
+    Returns:
+        (retail_price_aud, retail_estimation_method)
+        method ∈ {'pbs_dpmq', 'chemist_markup', None}
+
+    우선순위:
+      1) PBS 등재 + pbs_dpmq > 0
+         → DPMQ(최대처방량 총약가) 그대로. DPMQ 는 이미 AEMP(정부 승인 출고가)
+           + 도매 마크업 + 약국 마크업 + 조제 수수료 포함된 시장 소매가.
+      2) Chemist 신뢰 가격 존재
+         → Chemist × RETAIL_MARKUP_MULTIPLIER (기본 1.20, CHOICE 조사 기준)
+      3) DPMQ 없지만 pbs_price_aud > 0 (PBS 요약 가격만 있는 경우)
+         → pbs_price_aud 그대로 (DPMQ-like 요약값)
+      4) 모두 없음 → (None, None)
+    """
+    pbs_listed = pbs.get("pbs_listed") is True
+    pbs_dpmq = pbs.get("pbs_dpmq")
+    pbs_price = pbs.get("pbs_price_aud")
+
+    if pbs_listed and isinstance(pbs_dpmq, (int, float)) and float(pbs_dpmq) > 0:
+        return round(float(pbs_dpmq), 2), "pbs_dpmq"
+
+    if chemist_price_aud is not None:
+        estimated = float(chemist_price_aud) * RETAIL_MARKUP_MULTIPLIER
+        return round(estimated, 2), "chemist_markup"
+
+    if isinstance(pbs_price, (int, float)) and float(pbs_price) > 0:
+        return round(float(pbs_price), 2), "pbs_dpmq"
+
+    return None, None
 
 
 def _tga_schedule_s2348_only(raw: object) -> str | None:
@@ -100,25 +159,25 @@ def build_product_summary(
 
     pbs_price = pbs.get("pbs_price_aud")
     cr_trusted, chemist_ok = _chemist_retail_trustworthy(chemist, pbs_price)
-    retail_aud: float | None
+    # chemist_price_aud: 오매칭·저가 배제된 Chemist Warehouse 원본 (신뢰 불가 시 None)
+    chemist_price_aud: float | None = cr_trusted
+
+    # 시장 추정 소매가 — PBS 등재면 DPMQ, 미등재면 Chemist × 1.20 (CHOICE 조사 기준)
+    retail_aud, retail_estimation_method = _estimate_retail_price(pbs, chemist_price_aud)
+
     price_url: str
     price_name: str
-    if chemist_ok and cr_trusted is not None:
-        retail_aud = cr_trusted
-        price_url = (chemist.get("price_source_url") or "") or (
-            pbs.get("pbs_source_url") or ""
-        )
-        price_name = chemist.get("price_source_name") or "Chemist Warehouse"
-    elif isinstance(pbs_price, (int, float)) and float(pbs_price) > 0:
-        retail_aud = float(pbs_price)
+    if retail_estimation_method == "pbs_dpmq":
+        price_name = "PBS"
         price_url = pbs.get("pbs_source_url") or ""
-        price_name = "PBS"
+    elif retail_estimation_method == "chemist_markup":
+        price_name = "Chemist Warehouse"
+        price_url = chemist.get("price_source_url") or ""
     else:
-        retail_aud = None
+        price_name = "PBS"
         price_url = (chemist.get("price_source_url") or "") or (
             pbs.get("pbs_source_url") or ""
         )
-        price_name = "PBS"
 
     chemist_url_for_sites = (
         (chemist.get("price_source_url") or "") if chemist_ok else ""
@@ -202,6 +261,8 @@ def build_product_summary(
         "nsw_source_url": nsw.get("nsw_source_url"),
         "nsw_note": nsw.get("nsw_note"),
         "retail_price_aud": retail_aud,
+        "chemist_price_aud": chemist_price_aud,
+        "retail_estimation_method": retail_estimation_method,
         "price_source_name": price_name,
         "price_source_url": price_url,
         "price_unit": (

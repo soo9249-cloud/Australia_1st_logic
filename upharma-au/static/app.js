@@ -804,51 +804,91 @@ function updateP2ColOption(col, optId, newVal) {
 }
 
 function _renderP2AiResult(data) {
+  // 호주 /api/p2/pipeline/result 응답 (render_api.py 1892~1923 줄):
+  //   extracted.{product_name, ref_price_text, ref_price_aud, verdict}
+  //   analysis.{final_price_aud, formula_str, rationale, scenarios[{name, price_aud, reason}]}
+  //   exchange_rates.{aud_krw, aud_usd}
+  //   pdf
+  //
+  // UI 표시 정책 (Stage 0 Q2 결정):
+  //   · 모든 가격은 USD 메인 + ≈ KRW 보조
+  //   · 원본 AUD 는 _p2ScenarioRaw + window._exchangeRates 에 보존 (디버깅·Stage 4 재계산용)
   const extracted = data?.extracted || {};
   const analysis = data?.analysis || {};
-  const rates = data?.exchange_rates || {};
+  // 응답의 exchange_rates 우선, 없으면 전역 fallback (loadExchange 저장본)
+  const rates = data?.exchange_rates || window._exchangeRates || {};
   const scenarios = Array.isArray(analysis.scenarios) ? analysis.scenarios : [];
   const resultSection = document.getElementById('p2-ai-result-section');
   if (resultSection) resultSection.style.display = '';
 
+  // AUD → USD/KRW 파생 환산 유틸
+  const audUsd = Number(rates.aud_usd) || 0;
+  const audKrw = Number(rates.aud_krw) || 0;
+  const usdKrw = audUsd > 0 ? audKrw / audUsd : 0;
+  const audToUsd = (aud) => (audUsd > 0 ? Number(aud || 0) * audUsd : 0);
+  const audToKrw = (aud) => Number(aud || 0) * audKrw;
+  const fmtUSD = (v) => `USD ${Number(v || 0).toFixed(2)}`;
+  const fmtKRW = (v) => {
+    const n = Number(v || 0);
+    if (n >= 1e8) return `${(n / 1e8).toFixed(2)}억원`;
+    if (n >= 1e4) return `${(n / 1e4).toFixed(1)}만원`;
+    return `${Math.round(n).toLocaleString('ko-KR')}원`;
+  };
+
   // 제품명
   _setText('p2r-product-name', extracted.product_name || '미상');
 
-  // 판정 배지 (1공정 스타일)
+  // 판정 배지 — 호주 export_viable('viable'/'conditional'/'not_viable') → 한국어
   const verdictEl = document.getElementById('p2r-verdict-badge');
   if (verdictEl) {
-    const v = extracted.verdict || '미상';
+    const evMap = { 'viable': '적합', 'conditional': '조건부', 'not_viable': '부적합' };
+    const v = evMap[extracted.verdict] || extracted.verdict || '미상';
     const vc = v === '적합' ? 'v-ok' : v === '부적합' ? 'v-err' : v !== '미상' ? 'v-warn' : 'v-none';
     verdictEl.className = `verdict-badge ${vc}`;
     verdictEl.textContent = v;
   }
 
-  // 참조 정보
+  // 참조가 — 호주는 AUD 기준. ref_price_text 우선, 없으면 AUD 원본 + USD 환산 표기
+  const refAud = Number(extracted.ref_price_aud) || 0;
   _setText('p2r-ref-price-text',
-    extracted.ref_price_text || (extracted.ref_price_sgd != null ? `SGD ${Number(extracted.ref_price_sgd).toFixed(2)}` : '추출값 없음'));
-  const krwRate = rates.sgd_krw;
-  const usdRate = rates.sgd_usd;
+    extracted.ref_price_text
+      || (refAud > 0 ? `AUD ${refAud.toFixed(2)} (≈ ${fmtUSD(audToUsd(refAud))})` : '추출값 없음'));
+
+  // 환율 표시 — USD/KRW 메인 + AUD/KRW 보조 (FOB 역산 참고값)
   let rateText = '환율 정보 없음';
-  if (krwRate) {
-    rateText = `1 SGD = ${Number(krwRate).toFixed(2)} KRW`;
-    if (usdRate) rateText += ` / ${Number(usdRate).toFixed(4)} USD`;
+  if (usdKrw > 0) {
+    rateText = `1 USD = ${usdKrw.toFixed(2)} KRW`;
+    if (audKrw > 0) rateText += ` · 1 AUD = ${audKrw.toFixed(2)} KRW`;
   }
   _setText('p2r-exchange', rateText);
 
-  // 최종 권고가
-  _setText('p2r-final-price', `SGD ${Number(analysis.final_price_sgd || 0).toFixed(2)}`);
+  // 최종 권고가 — USD 메인 + KRW 보조 (Q2-a 스타일)
+  const finalAud = Number(analysis.final_price_aud) || 0;
+  const finalUsd = audToUsd(finalAud);
+  const finalKrw = audToKrw(finalAud);
+  const finalEl = document.getElementById('p2r-final-price');
+  if (finalEl) {
+    finalEl.innerHTML =
+      `<span>${fmtUSD(finalUsd)}</span>` +
+      `<span style="font-size:12px;color:var(--muted);margin-left:8px;">≈ ${fmtKRW(finalKrw)}</span>`;
+  }
 
-  // 시나리오
+  // 시나리오 리스트 (p2r-scenarios) — USD + KRW
   const scenEl = document.getElementById('p2r-scenarios');
   if (scenEl) {
     if (scenarios.length) {
       scenEl.innerHTML = scenarios.map((s, idx) => {
         const cls = idx === 0 ? 'agg' : idx === 1 ? 'avg' : 'cons';
+        const scAud = Number(s.price_aud || 0);
+        const scUsd = audToUsd(scAud);
+        const scKrw = audToKrw(scAud);
         return `
           <div class="p2-scenario p2-scenario--${cls}">
             <div class="p2-scenario-top">
               <span class="p2-scenario-name">${_escHtml(String(s.name || `시나리오 ${idx + 1}`))}</span>
-              <span class="p2-scenario-price">SGD ${Number(s.price_sgd || 0).toFixed(2)}</span>
+              <span class="p2-scenario-price">${fmtUSD(scUsd)}
+                <span style="font-size:11px;color:var(--muted);margin-left:4px;">≈ ${fmtKRW(scKrw)}</span>
+              </span>
             </div>
           </div>`;
       }).join('');
@@ -860,7 +900,7 @@ function _renderP2AiResult(data) {
   // 산정 이유
   _setText('p2r-rationale', analysis.rationale || '산정 이유 없음');
 
-  // 다운로드
+  // 다운로드 링크 (호주 /api/report/download 그대로 호환)
   const dlState = document.getElementById('p2-report-dl-state');
   if (dlState) {
     if (data?.pdf) {
@@ -873,48 +913,42 @@ function _renderP2AiResult(data) {
     }
   }
 
-  // ── 3열 시나리오 UI 채우기 ──────────────────────────────
-  const sgdUsd = rates.sgd_usd ? Number(rates.sgd_usd) : 0;
-  const sgdKrw = rates.sgd_krw ? Number(rates.sgd_krw) : 0;
-
+  // ── 3열 시나리오 카드 (Stage 1 HTML `p2-three-col`) — USD 메인 + KRW 보조 ──
   const cols = ['agg', 'avg', 'cons'];
   scenarios.forEach((s, i) => {
-    const col     = cols[i];
+    const col = cols[i];
     if (!col) return;
-    const priceSgd = Number(s.price_sgd || 0);
-    _p2ScenarioRaw[col]     = priceSgd;
-    _p2ScenarioRaw.sgd_usd  = sgdUsd;
-    _p2ScenarioRaw.sgd_krw  = sgdKrw;
+    const priceAud = Number(s.price_aud || 0);
+    const priceUsd = audToUsd(priceAud);
+    const priceKrw = audToKrw(priceAud);
 
-    const refBase = extracted.ref_price_sgd != null ? Number(extracted.ref_price_sgd) : 0;
-    const refLabel = refBase > 0
-      ? `Retail base: ${(refBase * (i === 0 ? 1.3 : i === 1 ? 1.0 : 0.7)).toFixed(2)} SGD`
-      : `Retail base: — SGD`;
+    // 전역 저장소 — Stage 4 직접입력 탭 recalcP2Col() 재계산 기준값 (USD)
+    _p2ScenarioRaw[col]    = priceUsd;
+    _p2ScenarioRaw.aud_usd = audUsd;
+    _p2ScenarioRaw.aud_krw = audKrw;
+    _p2ScenarioRaw.usd_krw = usdKrw;
+    // 원본 AUD 도 함께 보존 (디버깅·보고서 재검증용)
+    _p2ScenarioRaw[col + '_aud'] = priceAud;
 
-    const priceEl = document.getElementById('p2c-price-' + col);
-    const subEl   = document.getElementById('p2c-sub-' + col);
-    const refEl   = document.getElementById('p2c-ref-' + col);
+    const priceEl   = document.getElementById('p2c-price-' + col);
+    const subEl     = document.getElementById('p2c-sub-' + col);
     const baseInput = document.getElementById('p2ci-base-' + col);
 
-    if (refEl)     refEl.textContent   = refLabel;
-    if (priceEl)   priceEl.textContent = priceSgd.toFixed(2);
-    if (baseInput) baseInput.value     = priceSgd.toFixed(2);
-    if (subEl) {
-      const usd = sgdUsd > 0 ? (priceSgd / sgdUsd).toFixed(2) : '—';
-      const krw = sgdKrw > 0 ? Math.round(priceSgd * sgdKrw).toLocaleString('ko-KR') : '—';
-      subEl.textContent = `${usd} USD · ${krw} KRW`;
-    }
-    // Reset custom options for each column on new AI result
+    if (priceEl)   priceEl.textContent = priceUsd.toFixed(2);
+    if (baseInput) baseInput.value     = priceUsd.toFixed(2);
+    if (subEl)     subEl.textContent   = `≈ ${fmtKRW(priceKrw)}`;
+
+    // 새 AI 결과 올 때마다 각 컬럼의 커스텀 옵션 초기화
     _p2ColData[col] = { opts: [] };
     renderP2ColOptions(col, false);
   });
 
-  // 경쟁가 분포
+  // 경쟁가 분포 (DOM 있으면 USD 기준 표기 — Stage 1 HTML 에는 없음, 향후 추가 대비)
   if (scenarios.length >= 3) {
-    const prices = scenarios.map(s => Number(s.price_sgd || 0)).sort((a, b) => a - b);
-    _setText('p2-dist-p25', `${prices[0].toFixed(2)} SGD`);
-    _setText('p2-dist-med', `${prices[1].toFixed(2)} SGD`);
-    _setText('p2-dist-p75', `${prices[2].toFixed(2)} SGD`);
+    const prices = scenarios.map(s => audToUsd(Number(s.price_aud || 0))).sort((a, b) => a - b);
+    _setText('p2-dist-p25', `${prices[0].toFixed(2)} USD`);
+    _setText('p2-dist-med', `${prices[1].toFixed(2)} USD`);
+    _setText('p2-dist-p75', `${prices[2].toFixed(2)} USD`);
   }
 
   // 제품 목록 (추출된 product_name 기준)
@@ -1392,19 +1426,27 @@ async function runPipeline() {
       return;
     }
     const reportData = await r2.json();
-    // reportData: { ok, product_id, row, blocks, refs_count, refs, meta, pdf }
-    // · row      : Supabase australia 테이블 1행 (호주 73~75 컬럼 원본)
-    // · blocks   : Claude Haiku 생성 block2_* / block3_* / block4_regulatory
-    // · refs     : 하이브리드 논문 검색 결과
-    // · meta     : confidence / confidence_breakdown
-    // · pdf      : 파일명 (GET /api/report/download?name=... 로 다운로드)
+    // reportData: { ok, product_id, blocks, refs_count, refs, meta, pdf }  (row 없음)
+    // · blocks : Claude Haiku 생성 block2_* / block3_* / block4_regulatory
+    // · refs   : 하이브리드 논문 검색 결과
+    // · meta   : { export_viable, reason_code, confidence, confidence_breakdown }
+    // · pdf    : 파일명 (GET /api/report/download?name=... 로 다운로드)
     setProgress('analyze', 'done');
     setProgress('refs',    'done');   // 호주는 논문 검색이 report/generate 내부에 포함
     setProgress('report',  'done');
 
-    // ③ 결과 렌더링 — 체크리스트 [5] 에서 호주 row → 싱가포르 renderResult shape 어댑터 경유 예정.
-    //    Stage 3 현재: reportData.row 그대로 전달 (어댑터 함수는 아직 미구현).
-    renderResult(reportData.row, reportData.refs, reportData.pdf);
+    // ③ 호주 Supabase row 별도 조회 (report/generate 응답에 row 없음)
+    const r3 = await fetch(`/api/data/${encodeURIComponent(productId)}`);
+    let auRow = null;
+    if (r3.ok) {
+      auRow = await r3.json();
+    } else {
+      console.warn('auRow 조회 실패:', r3.status, '— blocks/meta 만으로 렌더링 시도');
+    }
+
+    // ④ 호주 3응답 (auRow + blocks + meta) → 싱가포르 result shape 어댑터 변환 후 렌더
+    const renderShape = _auToRenderResult(auRow, reportData.blocks, reportData.meta);
+    renderResult(renderShape, reportData.refs, reportData.pdf);
     _resetBtn();
   } catch (e) {
     console.error('파이프라인 요청 실패:', e);
@@ -1443,6 +1485,77 @@ async function _pollCustomPipeline() { /* no-op (호주 미지원) */ }
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    §10. 결과 렌더링 (U2·U3·U4·U6·B4·N3·N4)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/**
+ * 호주 백엔드 응답 → 싱가포르 renderResult() 가 기대하는 shape 로 어댑터 변환.
+ *
+ * 호주 응답 3종 조합:
+ *   ① /api/data/{product_id}            → auRow (australia 테이블 73~75 컬럼 원본)
+ *   ② /api/report/generate → blocks     → Claude Haiku block2_x · block3_x · block4_regulatory
+ *   ③ /api/report/generate → meta       → { export_viable, reason_code, confidence, confidence_breakdown }
+ *
+ * 싱가포르 renderResult 가 접근하는 필드:
+ *   result.trade_name, result.product_id, result.inn, result.verdict,
+ *   result.basis_market_medical, result.basis_regulatory, result.basis_trade,
+ *   result.basis_pbs_line, result.entry_pathway, result.price_positioning_pbs,
+ *   result.risks_conditions, result.rationale, result.error, result.analysis_error
+ *
+ * 호주 원본은 _au_raw / _au_blocks / _au_meta 로 보존 — 데이터 전혀 버리지 않음.
+ */
+function _auToRenderResult(auRow, blocks, meta) {
+  if (!auRow) return { error: '호주 백엔드에서 품목 row 를 조회하지 못했습니다.' };
+
+  // 호주 export_viable(영어) → 한국어 판정 (싱가포르 renderResult 가 '적합'/'부적합' 매칭)
+  const evMap = { 'viable': '적합', 'conditional': '조건부', 'not_viable': '부적합' };
+  const verdict = evMap[auRow.export_viable] || auRow.export_viable || null;
+
+  // PBS 한 줄 요약 (basis-pbs-line)
+  let pbsLine;
+  if (auRow.pbs_listed) {
+    pbsLine = `PBS 등재 · ${auRow.pbs_item_code || ''}` +
+              (auRow.pbs_dpmq ? ` · DPMQ AUD ${auRow.pbs_dpmq}` : '');
+  } else if (auRow.retail_price_aud) {
+    const method = auRow.retail_estimation_method === 'pbs_dpmq'
+      ? 'PBS DPMQ 기준'
+      : auRow.retail_estimation_method === 'chemist_markup'
+      ? 'Chemist × 1.20 (CHOICE 기준)'
+      : '';
+    pbsLine = `PBS 미등재 · 시장 추정가 AUD ${auRow.retail_price_aud}` + (method ? ` (${method})` : '');
+  } else {
+    pbsLine = 'PBS 미등재 · 참고가 미확보';
+  }
+
+  return {
+    product_id:            auRow.product_id,
+    trade_name:            auRow.product_name_ko,
+    inn:                   auRow.inn_normalized,
+    verdict:               verdict,
+    reason_code:           auRow.reason_code,
+    rationale:             null,
+    basis_market_medical:  blocks?.block2_market       || null,
+    basis_regulatory:      blocks?.block2_regulatory   || null,
+    basis_trade:           blocks?.block2_trade        || null,
+    basis_pbs_line:        pbsLine,
+    entry_pathway:         blocks?.block3_channel      || null,
+    price_positioning_pbs: blocks?.block3_pricing      || null,
+    risks_conditions:      blocks?.block3_risks        || null,
+    regulatory_checks:     blocks?.block4_regulatory   || null,
+    confidence:            meta?.confidence,
+    confidence_breakdown:  meta?.confidence_breakdown,
+    // 호주 원본 보존 (_pbsLineFromApi 같은 싱가포르 헬퍼가 PBS 정보 재가공 시 접근)
+    pbs_listed:            auRow.pbs_listed,
+    pbs_item_code:         auRow.pbs_item_code,
+    pbs_price_aud:         auRow.pbs_price_aud,
+    pbs_dpmq:              auRow.pbs_dpmq,
+    retail_price_aud:      auRow.retail_price_aud,
+    chemist_price_aud:     auRow.chemist_price_aud,
+    retail_estimation_method: auRow.retail_estimation_method,
+    // 전체 원본 (디버깅·Stage 4 복원용)
+    _au_raw:    auRow,
+    _au_blocks: blocks,
+    _au_meta:   meta,
+  };
+}
 
 /**
  * 분석 완료 후 결과·논문·PDF 카드를 화면에 렌더링.

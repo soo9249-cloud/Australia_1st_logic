@@ -14,6 +14,9 @@ _BASE_DIR = Path(__file__).resolve().parent
 _CRAWLER_DIR = _BASE_DIR / "crawler"
 if str(_CRAWLER_DIR) not in sys.path:
     sys.path.insert(0, str(_CRAWLER_DIR))
+# stage2 디렉토리도 import 가능하도록 sys.path 추가 (크롤러와 독립된 FOB 역산 모듈)
+if str(_BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(_BASE_DIR))
 
 # .env 자동 로드 (uvicorn 으로 뜰 때 프로세스 env 에 ANTHROPIC_API_KEY 등이 반영되도록)
 try:

@@ -787,7 +787,7 @@ taskkill /PID <PID> /F
 python scripts/deploy_render.py
 ```
 
-**Render — `requirements.txt` 위치:** 관례대로 **저장소 루트**(README 와 같은 위치)에만 둔다. [Monorepo 문서](https://render.com/docs/monorepo-support)에 따르면 서비스 **Root Directory** 를 `upharma-au` 로 잡으면 **그 폴더 밖 파일은 빌드에 포함되지 않아** 루트의 `requirements.txt` 를 `pip` 가 열 수 없다. 따라서 Render 대시보드 → 해당 Web Service → **Settings → Build & Deploy → Root Directory 를 비운다**(저장소 루트 사용). `buildCommand` 는 `pip install -r requirements.txt`, `startCommand` 는 `render.yaml` 처럼 `--app-dir upharma-au` 로 앱만 지정하면 된다. Python 버전은 `.python-version` 과 `render.yaml` 의 `PYTHON_VERSION` 으로 맞춘다.
+**Render — `requirements.txt`:** 관례상 **정본은 저장소 루트**(`requirements.txt`, README 와 같은 위치)만 둔다. 다만 [Monorepo 문서](https://render.com/docs/monorepo-support)대로 대시보드에서 **Root Directory = `upharma-au`** 로 두면 루트 밖 파일은 빌드에 포함되지 않아 `pip install -r requirements.txt` 가 실패한다. 선택지는 둘 중 하나다. **(권장)** Root Directory 를 **비워** 저장소 루트로 두고 `startCommand` 만 `--app-dir upharma-au` 로 앱을 가리킨다 — 이러면 루트 `requirements.txt` 하나만 유지하면 된다. **(대시보드를 바꿀 수 없을 때)** `upharma-au/requirements.txt` 를 루트와 **동일 내용**으로 유지한다(의존성 바꿀 때 **반드시 둘 다** 수정). Python 버전은 `.python-version` 과 `render.yaml` 의 `PYTHON_VERSION` 으로 맞춘다.
 
 ### 11.8 전체 실행 흐름 요약
 

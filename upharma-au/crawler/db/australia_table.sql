@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS australia (
   -- retail_price_aud: 시장 추정 소매가 — PBS 등재면 DPMQ(최대처방량 총약가),
   --                   미등재면 Chemist Warehouse(호주 최저가 체인) × 1.20 (CHOICE 조사 기준)
   -- chemist_price_aud: Chemist Warehouse 원본 크롤링 가격 (참고용)
-  -- retail_estimation_method: 'pbs_dpmq' | 'chemist_markup' | 'chemist_raw'
+  -- retail_estimation_method: 'pbs_dpmq' | 'chemist_markup' | NULL
   retail_price_aud         DECIMAL,
   chemist_price_aud        DECIMAL,
   retail_estimation_method TEXT,

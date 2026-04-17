@@ -787,7 +787,7 @@ taskkill /PID <PID> /F
 python scripts/deploy_render.py
 ```
 
-**Render — Root Directory (필수):** [Monorepo 문서](https://render.com/docs/monorepo-support)에 따르면, 서비스에 Root Directory 를 `upharma-au` 처럼 **하위 폴더만** 잡아 두면 **그 디렉터리 밖의 파일은 빌드 시에도 런타임에도 사용할 수 없다.** 루트에만 있는 `requirements.txt` 는 설치 대상이 될 수 없고, `../requirements.txt` 로 우회하는 것도 Render 환경에서는 통하지 않는다. **Settings → Build & Deploy → Root Directory 를 비워 두어(=저장소 루트)** `pip install -r requirements.txt` 가 루트 파일을 읽게 할 것. Python 버전은 저장소 루트의 `.python-version` 과 `render.yaml` 의 `PYTHON_VERSION` 으로 맞춘다.
+**Render — Root Directory 와 `requirements.txt`:** [Monorepo 문서](https://render.com/docs/monorepo-support)에 따르면 Root 를 `upharma-au` 로 두면 **그 폴더 밖 파일은 빌드에 포함되지 않는다.** 그래서 루트에만 두었던 `requirements.txt` 는 해당 설정에서 `pip` 가 찾지 못한다. 이 저장소는 **`requirements.txt`(루트)** 와 **`upharma-au/requirements.txt`** 를 **동일 내용**으로 둔다(의존성을 바꿀 때 둘 다 수정). Root Directory 를 저장소 루트로 두면 루트 파일만 쓰이고, `upharma-au` 로 두면 하위 복사본이 쓰인다. Python 버전은 `.python-version` 과 `render.yaml` 의 `PYTHON_VERSION` 으로 맞춘다.
 
 ### 11.8 전체 실행 흐름 요약
 

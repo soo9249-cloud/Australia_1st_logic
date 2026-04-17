@@ -238,8 +238,18 @@ def dispatch_by_pricing_case(
     fx_aud_to_krw: float = DEFAULT_FX_AUD_TO_KRW,
     presets_pct: dict[str, float] | None = None,
     logic_b_kwargs: dict[str, Any] | None = None,
+    crawler_row: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """`fob_reference_seeds.json`의 단일 seed dict를 받아 3 시나리오 FOB 반환.
+
+    Args:
+        seed: fob_reference_seeds.json 단일 엔트리 (수기 조사 + 규제 플래그)
+        fx_aud_to_krw: AUD → KRW 환율
+        presets_pct: importer margin 프리셋 (기본 aggressive=10/average=20/conservative=30)
+        logic_b_kwargs: Logic B 마진 파라미터 (GST, pharmacy, wholesale) 덮어쓰기
+        crawler_row: 크롤러 실시간 row (선택). Logic B 에서 seed.reference_retail_aud 가
+                     없을 때 crawler_row.retail_price_aud 를 2순위 참고가로 사용.
+                     retail_estimation_method 로 출처(PBS DPMQ vs Chemist × 1.20) 구분.
 
     반환 스키마는 모듈 docstring 참고.
     """
@@ -387,15 +397,44 @@ def dispatch_by_pricing_case(
 
     # --- ESTIMATE_private / ESTIMATE_hospital: Logic B ---
     if case in ("ESTIMATE_private", "ESTIMATE_hospital"):
-        retail = seed.get("reference_retail_aud")
-        if not isinstance(retail, (int, float)):
-            return _blocked_no_price(pid, case, "reference_retail_aud missing for Logic B")
-        src = seed.get("reference_retail_source")
-        if src:
-            warnings.append(f"소매 참고가 출처: {src}")
+        # 1순위: seed.reference_retail_aud (수기 검증된 참고가)
+        # 2순위: crawler_row.retail_price_aud (크롤러 실시간 시장 추정가)
+        # 3순위: blocked
+        retail: float | None = None
+        retail_source: str | None = None
+
+        seed_retail = seed.get("reference_retail_aud")
+        if isinstance(seed_retail, (int, float)) and float(seed_retail) > 0:
+            retail = float(seed_retail)
+            retail_source = "seed"
+            src = seed.get("reference_retail_source")
+            if src:
+                warnings.append(f"소매 참고가 출처(수기 시드): {src}")
+        elif crawler_row is not None:
+            cr_retail = crawler_row.get("retail_price_aud")
+            if isinstance(cr_retail, (int, float)) and float(cr_retail) > 0:
+                retail = float(cr_retail)
+                retail_source = "crawler"
+                cr_method = crawler_row.get("retail_estimation_method")
+                method_label = {
+                    "pbs_dpmq": "PBS DPMQ(최대처방량 총약가)",
+                    "chemist_markup": "Chemist Warehouse × 1.20 (CHOICE 조사 기준 시장 평균)",
+                }.get(cr_method, cr_method or "크롤러 실시간값")
+                warnings.append(
+                    f"소매 참고가 출처(크롤러 실시간): {method_label}. "
+                    "수기 시드(reference_retail_aud) 미확보로 크롤러 추정가 사용 — "
+                    "FOB 결과는 시드 확보 후 재검증 권장."
+                )
+
+        if retail is None:
+            return _blocked_no_price(
+                pid, case,
+                "reference_retail_aud missing (seed 1순위 / crawler_row 2순위 모두 없음)",
+            )
+
         scenarios = calculate_three_scenarios(
             logic="B",
-            retail_aud=float(retail),
+            retail_aud=retail,
             fx_aud_to_krw=fx_aud_to_krw,
             presets_pct=presets_pct,
             logic_b_kwargs=logic_b_kwargs,
@@ -406,7 +445,8 @@ def dispatch_by_pricing_case(
             "inputs": {
                 "product_id": pid,
                 "pricing_case": case,
-                "retail_aud": float(retail),
+                "retail_aud": retail,
+                "retail_source": retail_source,
                 "fx_aud_to_krw": fx_aud_to_krw,
             },
             "warnings": warnings,

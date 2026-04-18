@@ -651,8 +651,65 @@ def _row_summary_for_llm(row: dict[str, Any]) -> dict[str, Any]:
     return {k: row.get(k) for k in keys}
 
 
+def _claude_messages_tool_blocks(
+    client: Any,
+    *,
+    model: str,
+    max_tokens: int,
+    system: str,
+    user_content: str,
+    schema_cls: Any,
+    tool_name: str,
+    tool_description: str,
+    usage_log_fn: Any | None = None,
+) -> dict[str, str]:
+    """Anthropic Messages API 표준 — tool_use 로 구조화 출력 (OpenAI/parse API 혼용 금지)."""
+    response = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        system=system,
+        messages=[{"role": "user", "content": user_content}],
+        tools=[
+            {
+                "name": tool_name,
+                "description": tool_description,
+                "input_schema": schema_cls.model_json_schema(),
+            }
+        ],
+        tool_choice={"type": "tool", "name": tool_name},
+    )
+
+    if usage_log_fn is not None:
+        try:
+            usage_log_fn(response)
+        except Exception:
+            pass
+
+    tool_block = next(
+        (
+            b
+            for b in response.content
+            if getattr(b, "type", None) == "tool_use" and getattr(b, "name", None) == tool_name
+        ),
+        None,
+    )
+    if tool_block is None:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Claude 응답에 tool_use 블록 없음 "
+                f"(stop_reason={getattr(response, 'stop_reason', None)})"
+            ),
+        )
+    raw = getattr(tool_block, "input", None)
+    if not isinstance(raw, dict):
+        raise HTTPException(status_code=502, detail="Claude tool_use input 이 객체가 아님")
+    parsed = schema_cls.model_validate(raw)
+    return parsed.model_dump()
+
+
 def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]:
-    """Anthropic Claude Haiku 4.5 호출. Pydantic structured output 으로 10 필드 파싱.
+    """Anthropic Claude Haiku 4.5 호출. tool_use 로 10 필드 파싱.
     크롤링 row 의 수치/필드를 읽어 한국어 보고서체 블록을 생성한다."""
     import anthropic
     import json as _json
@@ -668,37 +725,28 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]
         + "\n```"
     )
 
-    response = client_anthropic.messages.parse(
-        model=_CLAUDE_MODEL,
-        max_tokens=4096,
-        system=_CLAUDE_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_content}],
-        output_format=ReportBlocks,
-    )
-
-    # 비용 모니터링용 — 실제 토큰 사용량을 서버 로그에 찍는다
-    try:
+    def _log_usage(response: Any) -> None:
         usage = response.usage
         in_tok = getattr(usage, "input_tokens", 0)
         out_tok = getattr(usage, "output_tokens", 0)
-        # Haiku 4.5 단가: 입력 $1/1M, 출력 $5/1M (2026 기준)
         est_cost = in_tok * 1e-6 + out_tok * 5e-6
         print(
             f"[Claude Haiku] input={in_tok} output={out_tok} "
             f"est_cost=${est_cost:.5f} (product={row.get('product_id')})",
             flush=True,
         )
-    except Exception:
-        pass
 
-    parsed = response.parsed_output
-    if parsed is None:
-        stop_reason = getattr(response, "stop_reason", "unknown")
-        raise HTTPException(
-            status_code=502,
-            detail=f"Claude 응답 파싱 실패 (stop_reason={stop_reason})",
-        )
-    return parsed.model_dump()
+    return _claude_messages_tool_blocks(
+        client_anthropic,
+        model=_CLAUDE_MODEL,
+        max_tokens=4096,
+        system=_CLAUDE_SYSTEM_PROMPT,
+        user_content=user_content,
+        schema_cls=ReportBlocks,
+        tool_name="emit_report_blocks",
+        tool_description="10개 보고서 블록을 구조화해서 반환",
+        usage_log_fn=_log_usage,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -848,16 +896,7 @@ def _haiku_p2_blocks(
         + "\n```"
     )
 
-    response = client_anthropic.messages.parse(
-        model=_CLAUDE_MODEL,
-        max_tokens=3072,
-        system=_CLAUDE_P2_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_content}],
-        output_format=P2Blocks,
-    )
-
-    # 비용 모니터링
-    try:
+    def _log_usage_p2(response: Any) -> None:
         usage = response.usage
         in_tok = getattr(usage, "input_tokens", 0)
         out_tok = getattr(usage, "output_tokens", 0)
@@ -867,17 +906,18 @@ def _haiku_p2_blocks(
             f"est_cost=${est_cost:.5f} (product={row.get('product_id')}, segment={segment})",
             flush=True,
         )
-    except Exception:
-        pass
 
-    parsed = response.parsed_output
-    if parsed is None:
-        stop_reason = getattr(response, "stop_reason", "unknown")
-        raise HTTPException(
-            status_code=502,
-            detail=f"Claude 2공정 응답 파싱 실패 (stop_reason={stop_reason})",
-        )
-    return parsed.model_dump()
+    return _claude_messages_tool_blocks(
+        client_anthropic,
+        model=_CLAUDE_MODEL,
+        max_tokens=3072,
+        system=_CLAUDE_P2_SYSTEM_PROMPT,
+        user_content=user_content,
+        schema_cls=P2Blocks,
+        tool_name="emit_p2_blocks",
+        tool_description="2공정 수출 전략 제안서용 8개 블록을 구조화해서 반환",
+        usage_log_fn=_log_usage_p2,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════

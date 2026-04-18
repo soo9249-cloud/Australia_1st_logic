@@ -519,6 +519,35 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   gap: 10px;
   align-items: center;
 }
+/* 메인 1공정(#pb-p1)만: 팀원 UI — 한 줄에서 셀렉트·입력이 넓게, 분석 버튼은 오른쪽 고정 폭 */
+#main #pb-p1 .selector-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+}
+#main #pb-p1 .selector-row select#product-select {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+#main #pb-p1 .selector-row .btn-analyze {
+  flex: 0 0 auto;
+  align-self: center;
+}
+#main #pb-p1 .p1-custom-drug-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+}
+#main #pb-p1 .p1-custom-drug-row .p1-custom-input {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+#main #pb-p1 .p1-custom-drug-row .btn-analyze {
+  flex: 0 0 auto;
+  align-self: center;
+}
 .p1-custom-input {
   flex: 1 1 160px;
   min-width: 0;

@@ -649,7 +649,8 @@ def _dispatch_pbs_by_case(product: dict[str, Any]) -> dict[str, Any]:
         fetch_pbs_hospital_skip,
         fetch_pbs_multi,
         fetch_pbs_same_ingredient,
-        fetch_pbs_similar,
+        fetch_pbs_similar,         # 레거시 (하위호환)
+        fetch_pbs_substitute,      # Task 2 신설 — 실제 proxy AEMP 조회
         fetch_pbs_withdrawal,
     )
 
@@ -694,9 +695,12 @@ def _dispatch_pbs_by_case(product: dict[str, Any]) -> dict[str, Any]:
         return fetch_pbs_withdrawal(components, withdrawn, similar)
 
     # Case 4 — ESTIMATE_substitute
+    # Task 2 (2026-04-19) — fetch_pbs_similar(빈 DTO) → fetch_pbs_substitute(실제 proxy AEMP 조회) 로 전환.
+    # Gastiin(mosapride) 같은 미등재 품목에 대해 similar_inns[0] (domperidone) 의
+    # 실제 PBS AEMP/DPMQ 를 주입해 FOB 역산 가능하게 함.
     if case == "ESTIMATE_SUBSTITUTE":
         similar = product.get("similar_inns") or []
-        return fetch_pbs_similar(inn, similar)
+        return fetch_pbs_substitute(inn, similar)
 
     # Case 5 — ESTIMATE_private
     if case == "ESTIMATE_PRIVATE":

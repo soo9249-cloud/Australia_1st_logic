@@ -1121,12 +1121,15 @@ def fetch_pbs_withdrawal(
 
 
 def fetch_pbs_similar(inn: str, similar_inns: list[str]) -> dict[str, Any]:
-    """Case 4 ESTIMATE_substitute — 크롤러는 조회하지 않음.
+    """Case 4 ESTIMATE_substitute — 크롤러는 조회하지 않음 (레거시, deprecated).
 
     결정 (Jisoo, 2026-04-18): 유사약 PBS/Chemist 폴백 체인은 rate limit 21초 추가
     소요 + 품질 낮음. 크롤러는 'TGA(호주 의약품 등록 시스템) 미등재' 만 마킹하고
     유사약 서술은 보고서 생성기(Haiku 프롬프트) 가 similar_inns 배열을 받아 처리.
     (위임지서 Phase 4.9 수정 1 — Case 4 크롤러 축소)
+
+    2026-04-19 dispatcher 는 fetch_pbs_substitute() 를 호출하도록 변경 예정.
+    이 함수는 하위호환용 유지.
     """
     dto = _empty_dto()
     dto["pricing_case_applied"] = "ESTIMATE_substitute"
@@ -1134,6 +1137,81 @@ def fetch_pbs_similar(inn: str, similar_inns: list[str]) -> dict[str, Any]:
     dto["_similar_inns_hint"] = list(similar_inns) if similar_inns else []
     dto["confidence_override"] = 0.1
     return dto
+
+
+def fetch_pbs_substitute(
+    ingredient: str,
+    similar_inns: list[str],
+) -> dict[str, Any]:
+    """Case 4 ESTIMATE_substitute (신설 — Task 2, 2026-04-19).
+
+    기존 `fetch_pbs_similar` 는 조회 없이 빈 DTO 만 반환 → FOB 역산 불가 버그.
+    이 함수는 similar_inns[0] 로 실제 PBS 조회 후 AEMP/DPMQ 를 주입.
+
+    전략:
+      1) similar_inns[0] 로 fetch_pbs_by_ingredient() 호출
+      2) PBS 등재 확인되면 AEMP·DPMQ 를 반환 DTO 에 주입
+      3) 메타 필드:
+         - _substitute_for        : 원본 성분 (예: "mosapride")
+         - _substitute_proxy      : 실제 사용된 성분 (예: "domperidone")
+         - similar_drug_used      : similar_inns 전체 리스트 (기존 유지)
+         - pricing_case_applied   : "ESTIMATE_substitute"
+         - confidence_override    : 0.3
+         - warnings               : ["similar_proxy_used:<proxy>"] 추가
+      4) similar_inns 전부 PBS 에도 없으면 → _empty_dto() + warnings=["no_proxy_available"]
+
+    반환: 단일 PBSItemDTO(dict).
+    """
+    similar_inns = [s for s in (similar_inns or []) if s]
+
+    if not similar_inns:
+        dto = _empty_dto()
+        dto["pricing_case_applied"] = "ESTIMATE_substitute"
+        dto["_substitute_for"] = ingredient
+        dto["similar_drug_used"] = []
+        dto["confidence_override"] = 0.3
+        dto["warnings"] = ["no_proxy_available"]
+        return dto
+
+    # similar_inns 를 순회하며 첫 PBS 등재 proxy 발견 시 채택
+    chosen_row: dict[str, Any] | None = None
+    proxy_used: str | None = None
+    for proxy in similar_inns:
+        try:
+            rows = fetch_pbs_by_ingredient(proxy)
+        except Exception:
+            rows = []
+        valid = [r for r in rows if r.get("pbs_found")]
+        if valid:
+            # DPMQ 최저 (제네릭 우선 — _filter_results 가 이미 1건 반환하므로 대개 단일)
+            def _dpmq(r: dict[str, Any]) -> Decimal:
+                v = r.get("dpmq_aud") if r.get("dpmq_aud") is not None else r.get("pbs_dpmq")
+                d = _safe_decimal(v) if v is not None else None
+                return d if d is not None else Decimal("999999")
+            chosen_row = dict(min(valid, key=_dpmq))
+            proxy_used = proxy
+            break
+
+    if chosen_row is None:
+        # similar_inns 전부 PBS 미등재
+        dto = _empty_dto()
+        dto["pricing_case_applied"] = "ESTIMATE_substitute"
+        dto["_substitute_for"] = ingredient
+        dto["similar_drug_used"] = list(similar_inns)
+        dto["confidence_override"] = 0.3
+        dto["warnings"] = ["no_proxy_available"]
+        return dto
+
+    # 성공 — proxy DTO 에 substitute 메타 주입
+    chosen_row["pricing_case_applied"] = "ESTIMATE_substitute"
+    chosen_row["_substitute_for"] = ingredient
+    chosen_row["_substitute_proxy"] = proxy_used
+    chosen_row["similar_drug_used"] = list(similar_inns)
+    chosen_row["confidence_override"] = 0.3
+    existing_warn = list(chosen_row.get("warnings") or [])
+    existing_warn.append(f"similar_proxy_used:{proxy_used}")
+    chosen_row["warnings"] = existing_warn
+    return chosen_row
 
 
 def fetch_pbs_same_ingredient(reference_inn: str) -> dict[str, Any]:

@@ -1260,18 +1260,28 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   margin-bottom: 8px;
   align-items: stretch;
 }
-/* 메인: 두 카드(지도·뉴스) 행 높이를 동일하게 — 뉴스 목록은 아래 #news-list에서 세로 가운데 정렬 */
+/* 메인: 두 카드(지도·뉴스) 행 높이 동일(stretch). 뉴스 카드는 grid로 목록 영역 높이를 확정해야 안쪽 정렬이 먹힘 */
 #main .map-news-grid {
   align-items: stretch;
 }
 #main .map-news-grid > article.card {
+  min-height: 0;
+  padding: 10px 12px;
+  align-self: stretch;
+}
+/* 지도 카드: 플렉스로 지도 영역 확장 */
+#main .map-news-grid > article.map-card-wrap {
   display: flex;
   flex-direction: column;
-  min-height: 0;
   height: 100%;
-  padding: 10px 12px;
 }
-/* 호주 지도 카드: 제목 아래 지도가 세로로 남는 칸을 전부 채움 */
+/* 뉴스 카드: 헤더(auto) + 목록(남은 높이 전부) — #news-list에 실제 세로 공간이 생김 */
+#main .map-news-grid > article.news-card-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
 #main .map-card-wrap {
   display: flex;
   flex-direction: column;
@@ -1280,20 +1290,13 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 #main .map-card-wrap .sec {
   flex-shrink: 0;
 }
-#main .news-card-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
 #main .news-card-panel > .sec {
-  flex-shrink: 0;
+  min-height: 0;
 }
 .news-card-panel #news-list {
-  flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: 6px;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1310,11 +1313,18 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   background: rgba(23, 63, 120, 0.06);
   border: 1px solid rgba(23, 63, 120, 0.1);
 }
-/* 뉴스 카드: 6건이 한 화면에 들어가도록 타이트 */
-.news-card-panel .irow.news-item {
+/* 뉴스 카드: 목록 세로 공간을 6행이 균등 분배(아래 빈 여백 제거), 행 안 텍스트는 세로 가운데 */
+.news-card-panel #news-list > .irow.news-item {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   padding: 8px 12px;
   margin-bottom: 0;
-  flex-shrink: 0;
+}
+.news-card-panel #news-list > .irow:not(.news-item) {
+  flex: 0 0 auto;
 }
 .news-card-panel .irow .tit {
   font-size: 11px;

@@ -244,6 +244,7 @@ def _empty_dto(canonical_url: str) -> dict[str, Any]:
     Phase 4.3-v3 — 4필드(schedule, route_of_administration,
     first_registered_date, sponsor_abn) 전부 삭제.
     strength / dosage_form 은 부분 revert 로 복구 — PBS 미등재 품목 fallback.
+    Phase Omethyl — match_type / tga_artg_details 배열 키 추가.
     """
     return {
         # v2 신규 키 (§13-5-2, §14-3-1 JSONB 배열)
@@ -251,7 +252,7 @@ def _empty_dto(canonical_url: str) -> dict[str, Any]:
         "tga_artg_ids": [],
         "tga_sponsors": [],
         "raw_html_snippet": None,
-        # au_tga_artg 용 단일 필드 (품목당 여러 행 가능 — 현재는 1건만)
+        # au_tga_artg 용 단일 필드 (품목당 여러 행 가능)
         "artg_id": None,
         "sponsor_name": None,
         "active_ingredients": [],
@@ -259,6 +260,9 @@ def _empty_dto(canonical_url: str) -> dict[str, Any]:
         "dosage_form": None,
         "status": "not_registered",
         "artg_url": canonical_url,
+        # Phase Omethyl — 대표 ARTG 의 match_type + 전체 후보 배열
+        "match_type": None,
+        "tga_artg_details": [],
         # 하위호환 키 (au_crawler·determine_export_viable 사용 중)
         "artg_number": None,
         "artg_status": "not_registered",
@@ -304,10 +308,45 @@ def _sponsor_is_originator_candidate(sponsor: str | None) -> bool:
     return any(kw in low for kw in _ORIGINATOR_SPONSOR_KEYWORDS)
 
 
+def _normalize_strength_cmp(s: str | None) -> str:
+    """strength 비교용 정규화 — 공백 제거·소문자·통상 단위 표기 흡수.
+
+    "2 g" / "2g" / "2000 mg" / "2000mg" 는 의미상 같지만 단순 문자열 비교는 실패.
+    이 함수는 단순 case-insensitive + 공백 제거만 수행 (심볼 단위 변환까진 안 함).
+    strength exact match 는 문자열 ``==`` 또는 ``in`` 로 판정하되, 변환 필요한 경우는
+    caller 레벨에서 보강할 것.
+    """
+    t = (s or "").strip().lower().replace(" ", "")
+    return t
+
+
+def _strength_match(a: str | None, b: str | None) -> bool:
+    """양쪽 모두 비어있지 않고, 정규화 후 하나가 다른 하나의 substring 이면 True."""
+    na, nb = _normalize_strength_cmp(a), _normalize_strength_cmp(b)
+    if not na or not nb:
+        return False
+    return na == nb or na in nb or nb in na
+
+
+def _dosage_form_match(a: str | None, b: str | None) -> bool:
+    """제형 비교 — 공백·하이픈·쉼표 제거 후 substring 비교."""
+    def _norm(s: str | None) -> str:
+        t = (s or "").strip().lower()
+        t = re.sub(r"[\s\-,]+", "", t)
+        return t
+    na, nb = _norm(a), _norm(b)
+    if not na or not nb:
+        return False
+    return na == nb or na in nb or nb in na
+
+
 def fetch_tga_artg(
     ingredient: str,
     *,
     expected_inns: list[str] | None = None,
+    match_mode: str = "strict",
+    expected_strength: str | None = None,
+    expected_dosage_form: str | None = None,
 ) -> dict[str, Any]:
     """검색 마크다운으로 등록 여부·ARTG ID 배열을 얻고, 상세를 merge 한다.
 
@@ -320,6 +359,29 @@ def fetch_tga_artg(
         (a) sponsor 가 originator 빅파마 키워드 포함 → 우선
         (b) 동순위 시 ARTG ID 오름차순 (등재일 대체 프록시 — 작은 값이 오래됨)
       필터 결과 0건이면 기존 동작(전체 검색 결과) 으로 fallback + warning.
+
+    Phase Omethyl 수정 (2026-04-19):
+      `match_mode` 파라미터 추가 — Sereterol 의 set-equality 엄격 필터는
+      ESTIMATE_private 같은 함량·제형 상이 케이스에서 0건 매칭을 유발했음.
+
+      - `match_mode='strict'` (기본, DIRECT/FDC 용): 기존 set-equality 그대로
+        (활성성분 완전 일치만 통과)
+      - `match_mode='ingredient_only'` (ESTIMATE_* 용): 활성성분 set 이
+        `expected_inns` 를 **포함(subset)** 하면 통과. 함량·제형 다른 ARTG 도 수용.
+
+      각 ARTG 에 `match_type` 필드 부착:
+        - `exact`: inn_set == expected AND strength match AND dosage_form match
+        - `same_ingredient_diff_form`: 성분은 맞지만 strength 또는 form 다름
+        - (향후 `similar_inn` 은 유사계열 분기에서)
+
+      정렬:
+        (1) match_type='exact' 먼저
+        (2) originator 빅파마 sponsor 우선
+        (3) ARTG ID 오름차순
+
+      반환 DTO 에 `tga_artg_details: list[dict]` 추가 — 각 매칭 ARTG 의
+      (artg_id, sponsor_name, active_ingredients, strength, dosage_form, match_type)
+      전부 저장. au_crawler 가 이 배열을 iterate 해서 au_tga_artg 다행 INSERT.
     """
     q = (ingredient or "").strip()
     canonical = (
@@ -393,8 +455,8 @@ def fetch_tga_artg(
             if sp and sp not in all_sponsors:
                 all_sponsors.append(sp)
 
-    # Phase Sereterol — expected_inns 있으면 set-equality 로 후보 필터
-    filtered_pairs: list[tuple[str, dict[str, Any]]] = detail_pairs
+    # Phase Omethyl — match_mode 기반 필터 + match_type 계산
+    filtered_pairs: list[tuple[str, dict[str, Any]]] = list(detail_pairs)
     if expected_set is not None and detail_pairs:
         import sys as _sys2
         import os as _os2
@@ -405,36 +467,69 @@ def fetch_tga_artg(
         for aid, det in detail_pairs:
             ingredients_list = det.get("active_ingredients") or []
             inn_set = extract_inn_set(*ingredients_list)
-            if inn_set == expected_set:
-                eligible.append((aid, det))
+
+            # 통과 판정
+            passes = False
+            if match_mode == "strict":
+                passes = (inn_set == expected_set)
+            elif match_mode == "ingredient_only":
+                # expected_inns ⊆ ARTG inn_set (자사 성분 전부 포함하면 통과,
+                # ARTG 가 추가 성분 가졌어도 OK).
+                passes = expected_set.issubset(inn_set) and bool(expected_set)
+            else:
+                passes = (inn_set == expected_set)  # fallback = strict
+
+            if not passes:
+                continue
+
+            # match_type 계산
+            inn_exact = (inn_set == expected_set)
+            str_ok = _strength_match(expected_strength, det.get("strength"))
+            form_ok = _dosage_form_match(expected_dosage_form, det.get("dosage_form"))
+            # expected_strength / expected_dosage_form 이 아예 없으면 exact 판정 불가
+            has_self_meta = bool(expected_strength) and bool(expected_dosage_form)
+            if inn_exact and has_self_meta and str_ok and form_ok:
+                det["match_type"] = "exact"
+            else:
+                det["match_type"] = "same_ingredient_diff_form"
+            eligible.append((aid, det))
+
         if eligible:
             filtered_pairs = eligible
-            out["tga_filter_applied"] = "inn_set_match"
+            out["tga_filter_applied"] = f"inn_{match_mode}"
             out["tga_filter_count_before"] = len(detail_pairs)
             out["tga_filter_count_after"] = len(eligible)
         else:
-            # 필터 결과 0건 → fallback. warning 만 표시, 원본 리스트 유지.
-            out["tga_filter_applied"] = "inn_set_match_failed_fallback_all"
+            # 필터 결과 0건 → fallback. warning 만 표시, 원본 리스트 유지 (match_type=None).
+            out["tga_filter_applied"] = f"inn_{match_mode}_failed_fallback_all"
             out["tga_filter_count_before"] = len(detail_pairs)
             out["tga_filter_count_after"] = 0
+            for _aid, det in filtered_pairs:
+                det.setdefault("match_type", None)
 
-    # Phase Sereterol — 정렬: (1) originator 빅파마 sponsor 우선, (2) ARTG ID 오름차순
-    def _sort_key(pair: tuple[str, dict[str, Any]]) -> tuple[int, int]:
+    # Phase Omethyl — 정렬:
+    #   (1) match_type='exact' 먼저 (같은 성분 + 함량 + 제형 일치)
+    #   (2) originator 빅파마 sponsor 우선
+    #   (3) ARTG ID 오름차순
+    def _sort_key(pair: tuple[str, dict[str, Any]]) -> tuple[int, int, int]:
         aid_str, det = pair
+        is_exact = det.get("match_type") == "exact"
         is_originator = _sponsor_is_originator_candidate(det.get("tga_sponsor"))
-        # originator 먼저 → (0, artg_id_int) vs (1, artg_id_int). 작은 값이 먼저.
         try:
             aid_int = int(aid_str)
         except ValueError:
-            aid_int = 10**12  # 비숫자 → 뒤로
-        return (0 if is_originator else 1, aid_int)
+            aid_int = 10**12
+        return (
+            0 if is_exact else 1,
+            0 if is_originator else 1,
+            aid_int,
+        )
 
     filtered_pairs = sorted(filtered_pairs, key=_sort_key)
 
-    # 대표 상세 = 정렬된 첫 번째 후보
+    # 대표 상세 = 정렬된 첫 번째 후보 + 전체 상세 배열 보존
     if filtered_pairs:
         first_aid, first_detail = filtered_pairs[0]
-        # tga_artg_ids 도 필터된 순서 기준으로 재구성
         out["tga_artg_ids"] = [aid for aid, _ in filtered_pairs]
         out["artg_id"] = str(first_aid)
         out["artg_number"] = str(first_aid)
@@ -445,7 +540,6 @@ def fetch_tga_artg(
         if sp0:
             out["tga_sponsor"] = sp0
             out["sponsor_name"] = sp0
-        # tga_sponsors 는 "필터된 후보들의 sponsors dedup" 으로 재구성
         filtered_sponsors: list[str] = []
         for _aid, det in filtered_pairs:
             sp = det.get("tga_sponsor")
@@ -461,6 +555,22 @@ def fetch_tga_artg(
         out["active_ingredients"] = first_detail.get("active_ingredients") or []
         out["strength"] = first_detail.get("strength")
         out["dosage_form"] = first_detail.get("dosage_form")
+        # 대표 ARTG 의 match_type (au_products level 플래그)
+        out["match_type"] = first_detail.get("match_type")
+
+        # Phase Omethyl — 매칭된 ARTG 전부의 상세 배열. au_crawler 가 iterate 해서
+        # au_tga_artg 다행 INSERT. 각 엔트리는 match_type 로 라벨링.
+        out["tga_artg_details"] = [
+            {
+                "artg_id": aid,
+                "sponsor_name": det.get("tga_sponsor"),
+                "active_ingredients": det.get("active_ingredients") or [],
+                "strength": det.get("strength"),
+                "dosage_form": det.get("dosage_form"),
+                "match_type": det.get("match_type"),
+            }
+            for aid, det in filtered_pairs
+        ]
 
     # au_tga_artg.raw_response 저장용 (2KB 컷)
     out["raw_html_snippet"] = (text[:_RAW_SNIPPET_MAX]) if text else None

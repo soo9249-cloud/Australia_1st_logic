@@ -104,6 +104,9 @@ _ALLOWED_COLUMNS: frozenset[str] = frozenset(
         "similar_drug_used",
         "hospital_only_flag",
         "ai_deep_research_raw",
+        # Phase Omethyl (2026-04-19) — 호주 시장 재고 상태 + TGA 대표 매칭 유형
+        "availability_status",    # in_stock | temporarily_unavailable | permanently_withdrawn
+        "match_type",             # exact | same_ingredient_diff_form | similar_inn
         # 메타
         "schedule_code",
         "last_crawled_at",
@@ -289,6 +292,8 @@ _TGA_ARTG_ALLOWED: frozenset[str] = frozenset({
     "dosage_form",
     "status",
     "artg_url",
+    # Phase Omethyl — 자사 제품 대비 매칭 유형 (exact / same_ingredient_diff_form / similar_inn)
+    "match_type",
     "crawled_at",
 })
 

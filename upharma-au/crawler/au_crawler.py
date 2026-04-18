@@ -440,6 +440,13 @@ def build_product_summary(
         "retail_estimation_method": retail_estimation_method,
         "chemist_url": (chemist.get("product_url") or chemist.get("price_source_url")) if chemist_ok else None,
 
+        # Phase Omethyl (2026-04-19) — 호주 시장 재고 상태 + TGA 대표 match_type.
+        # availability_status: Healthylife 로 chemist 대체된 Case 5 경로에서만 채워짐
+        # (in_stock / temporarily_unavailable). 그 외 경로는 None.
+        # match_type: 대표 ARTG 매칭 유형 — exact / same_ingredient_diff_form / None.
+        "availability_status": chemist.get("availability_status") if chemist else None,
+        "match_type": tga.get("match_type"),
+
         # Phase 4.4 — case_code / ingredients_split DB 전파 (기존 결정 3 '보존' 정책 해제)
         # au_products.case_code 컬럼에 pricing_case 값(DIRECT / COMPONENT_SUM / ESTIMATE_* 등)
         # 을 직접 기록해 보고서·분석 단계에서 JOIN 없이 조회 가능하도록.
@@ -862,12 +869,24 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     # ── TGA ──────────────────────────────────────────────────
     tga_terms = product.get("tga_search_terms") or []
     tga_query = str(tga_terms[0] if tga_terms else product.get("inn_normalized") or "")
-    # Phase Sereterol — expected_inns 로 base INN set 정확 매칭 필터 적용.
+    # Phase Sereterol — expected_inns 로 base INN set 매칭 필터 적용.
     tga_expected = [str(c) for c in (product.get("inn_components") or []) if c]
+    # Phase Omethyl — pricing_case 별 match_mode 결정.
+    #   DIRECT (FDC 포함) → 'strict' (set-equality 엄격)
+    #   ESTIMATE_* / COMPONENT_SUM → 'ingredient_only' (expected ⊆ ARTG 허용,
+    #   함량·제형 상이 품목 수용. 보고서 레이어가 match_type 으로 구분)
+    _case_upper = str(product.get("pricing_case") or "").upper()
+    tga_match_mode = "strict" if _case_upper == "DIRECT" else "ingredient_only"
     _t0 = time.time()
     _tga_started = now_kst_iso()
     try:
-        tga = fetch_tga_artg(tga_query, expected_inns=tga_expected or None)
+        tga = fetch_tga_artg(
+            tga_query,
+            expected_inns=tga_expected or None,
+            match_mode=tga_match_mode,
+            expected_strength=product.get("strength"),
+            expected_dosage_form=product.get("dosage_form"),
+        )
         determine_export_viable(tga)
         log_crawl(
             run_id=run_id, product_code=product_filter, source="tga", status="success",
@@ -964,11 +983,21 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
 
     if case == "ESTIMATE_HOSPITAL" or product.get("skip_chemist") or case == "ESTIMATE_SUBSTITUTE":
         chemist = None
-        skip_reason = (
-            "hospital_procurement_only"
-            if case == "ESTIMATE_HOSPITAL" or product.get("skip_chemist")
-            else "not_registered_au_case4"
-        )
+        # Phase Omethyl — 사유별 세분화. 이전엔 skip_chemist=true 인 모든 케이스를
+        # "hospital_procurement_only" 로 일괄 라벨링했는데, Omethyl(ESTIMATE_private +
+        # skip_chemist=true) 이 병원 조달 품목으로 잘못 표시되던 버그. 사유별 분기:
+        if case == "ESTIMATE_HOSPITAL":
+            skip_reason = "hospital_procurement_only"
+        elif product.get("hospital_only_flag"):
+            skip_reason = "hospital_procurement_only"
+        elif case == "ESTIMATE_PRIVATE" and product.get("skip_chemist"):
+            skip_reason = "private_rx_skip_chemist"
+        elif case == "ESTIMATE_SUBSTITUTE":
+            skip_reason = "not_registered_au_case4"
+        elif product.get("skip_chemist"):
+            skip_reason = "skip_chemist_flag"
+        else:
+            skip_reason = "skipped"
         log_crawl(
             run_id=run_id, product_code=product_filter, source="chemist_warehouse",
             status="skipped",
@@ -1041,16 +1070,19 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                 # Chemist 미검색 품목은 Healthylife 가격을 retail_price_aud 로 직접 사용
                 # (Chemist × 1.20 배수 우회). build_product_summary 가 이 플래그 보고 판단.
                 is_case5 = str(product.get("pricing_case") or "").upper() == "ESTIMATE_PRIVATE"
+                hl_availability = hl.get("availability_status")  # Phase Omethyl
                 chemist = {
                     "product_url": hl.get("product_url") or hl.get("price_source_url") or "",
                     "brand_name": hl.get("brand_name"),
                     "price_aud": _to_decimal(hl.get("price_aud")),
                     "pack_size": hl.get("pack_size"),
-                    "in_stock": True,
+                    "in_stock": (hl_availability != "temporarily_unavailable"),
                     "category": hl.get("category"),
                     "source_name": "healthylife",
                     "crawled_at": hl.get("crawled_at"),
                     "_from_healthylife_case5": is_case5,
+                    # Phase Omethyl — 재고 상태 플래그 보존 (build_product_summary 가 읽음)
+                    "availability_status": hl_availability,
                     # 하위호환
                     "retail_price_aud": _to_decimal(hl.get("price_aud")),
                     "price_unit": "per pack",
@@ -1171,14 +1203,36 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                 print(f"[au_pbs_raw upsert 경고] {exc}", flush=True)
 
     # ── au_tga_artg (§14-3-3) — TGA 원본 보관 ───────────────
-    # Phase 4.3-v3 — 4필드 폐기: schedule / route_of_administration /
-    # first_registered_date / sponsor_abn 제거 (Supabase 컬럼도 DROP 완료).
-    #
-    # Phase 4.3-v3 부분 revert (2026-04-18) — strength/dosage_form 복구.
-    # PBS 미등재 품목(예: Omethyl ESTIMATE_private)은 au_pbs_raw.market_form/
-    # market_strength 가 비어있어 TGA 값이 유일한 호주 시장 비교 데이터가 됨.
-    # TGA 파싱값 우선, 비어있으면 자사 메타(au_products.json) fallback.
-    if tga.get("artg_id") or tga.get("artg_number"):
+    # Phase Omethyl — tga_artg_details 배열 전부 iterate 해서 다행 INSERT.
+    # 대표 ARTG 1건만 저장하던 기존 방식은 ESTIMATE_private 같은 케이스에서
+    # "같은 성분 다른 제품" 을 전부 놓쳤음. 각 엔트리는 match_type 으로 라벨링
+    # (exact / same_ingredient_diff_form). tga_artg_details 가 비어있으면
+    # 레거시 단일 ARTG 경로 fallback.
+    artg_details = tga.get("tga_artg_details") or []
+    if artg_details:
+        for entry in artg_details:
+            try:
+                aid = entry.get("artg_id")
+                if not aid:
+                    continue
+                artg_row = {
+                    "product_id": product_filter,
+                    "artg_id": str(aid),
+                    "product_name": product.get("product_name_ko"),
+                    "sponsor_name": entry.get("sponsor_name"),
+                    "active_ingredients": entry.get("active_ingredients") or [],
+                    "strength": entry.get("strength") or product.get("strength"),
+                    "dosage_form": entry.get("dosage_form") or product.get("dosage_form"),
+                    "status": "registered",
+                    "artg_url": f"https://www.tga.gov.au/resources/artg/{aid}",
+                    "match_type": entry.get("match_type"),  # Phase Omethyl 신규
+                    "crawled_at": now_kst_iso(),
+                }
+                upsert_tga_artg(artg_row)
+            except Exception as exc:
+                print(f"[au_tga_artg upsert 경고] {exc}", flush=True)
+    elif tga.get("artg_id") or tga.get("artg_number"):
+        # Fallback (expected_inns 미제공·구버전 DTO 호환)
         try:
             artg_row = {
                 "product_id": product_filter,
@@ -1190,6 +1244,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                 "dosage_form": tga.get("dosage_form") or product.get("dosage_form"),
                 "status": tga.get("status") or tga.get("artg_status"),
                 "artg_url": tga.get("artg_url") or tga.get("artg_source_url"),
+                "match_type": tga.get("match_type"),
                 "crawled_at": now_kst_iso(),
             }
             upsert_tga_artg(artg_row)

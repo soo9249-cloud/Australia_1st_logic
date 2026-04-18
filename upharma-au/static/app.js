@@ -17,7 +17,7 @@
  *
  * 수정 이력 (원본 대비):
  *   B1  /api/sites 제거 → /api/datasource/status
- *   B2  1단계 라벨: DB 조회 (내부 id: prog-db_load / db_load)
+ *   B2  1단계 라벨: 실시간 크롤링 (내부 id: prog-db_load / db_load)
  *   B3  refreshOutlier → /api/analyze/result
  *   B4  논문 카드: refs 0건이면 숨김
  *   U1  API 키 상태 배지

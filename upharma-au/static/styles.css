@@ -1270,6 +1270,25 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   min-height: 0;
   overflow-y: auto;
 }
+/* 뉴스 카드만 글자·여백 살짝 축소 (브라우저 100% 기준 팀 레이아웃과 맞추기 쉽게) */
+.news-card-panel .irow.news-item {
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+.news-card-panel .irow .tit {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 2px;
+  line-height: 1.35;
+}
+.news-card-panel .irow .news-sum {
+  font-size: 11px;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+.news-card-panel .irow .sub {
+  font-size: 10.5px;
+}
 .world-map-container {
   flex: 1;
   display: flex;

@@ -365,7 +365,7 @@ def get_news() -> JSONResponse:
                         "role": "system",
                         "content": (
                             "You are a news aggregator for a Korean pharmaceutical export dashboard. "
-                            "Return EXACTLY 6 recent news items as a JSON array ONLY (no markdown, no prose). "
+                            "Return EXACTLY 5 recent news items as a JSON array ONLY (no markdown, no prose). "
                             "Each item MUST have these keys: "
                             "\"title\" (English headline as published), "
                             "\"title_ko\" (Korean, concise headline for UI), "
@@ -381,12 +381,14 @@ def get_news() -> JSONResponse:
                     {
                         "role": "user",
                         "content": (
-                            "Find the 6 most recent news articles from roughly the LAST 72 HOURS about: "
-                            "Australia pharmaceutical industry, TGA regulations, PBS policy, "
-                            "healthcare legislation, public health, hospital or pharmacy sector. "
-                            "For each item give title, title_ko, summary_ko, source, date, and the DIRECT article URL. "
-                            "If you cannot find a direct article URL for an item, skip it and substitute another article. "
-                            "Prefer government (.gov.au), TGA, PBS, major newspapers."
+                            "Find exactly 5 online TEXT articles (not video pages) published within the LAST 24 HOURS. "
+                            "If 5 are not available in 24h, you may include the most recent from YESTERDAY only — "
+                            "do NOT use anything older than the previous calendar day. "
+                            "Topics: Australia pharmaceutical industry, TGA, PBS, healthcare policy, public health, hospital/pharmacy. "
+                            "Prefer: Australian outlets and .gov.au media releases, major newspapers' article URLs, "
+                            "global pharma news sites (e.g. industry trade press). "
+                            "For each item give title, title_ko, summary_ko, source, date (publication date), and the DIRECT article URL. "
+                            "If you cannot find a direct article URL, skip and substitute another article."
                         ),
                     },
                 ],
@@ -418,7 +420,7 @@ def get_news() -> JSONResponse:
         return _news_api_response(mock_items)
 
     result: list[dict[str, Any]] = []
-    for i, it in enumerate(items[:6]):
+    for i, it in enumerate(items[:5]):
         if not isinstance(it, dict):
             continue
         link_fb = ""

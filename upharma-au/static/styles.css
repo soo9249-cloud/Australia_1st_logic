@@ -484,9 +484,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 .btn-analyze:disabled { opacity: .45; cursor: not-allowed; }
 
 /* 1공정 — 신약 직접 분석 (팀원 레이아웃: 3필드 + 버튼 한 줄 우선) */
-.p1-custom-drug-card {
-  margin-bottom: 14px;
-}
+/* p1-section + .selector-card 가 세로 간격 담당 */
 .p1-custom-drug-row {
   display: flex;
   flex-wrap: wrap;
@@ -526,6 +524,42 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 .p1-custom-msg.err {
   background: rgba(200, 86, 77, 0.08);
   color: var(--red);
+}
+
+/* 1공정 — 팀원 UX: 품목·신약·PDF 각각 독립 카드(박스) */
+.p1-section {
+  margin-bottom: 14px;
+}
+.p1-section:last-child {
+  margin-bottom: 0;
+}
+.p1-pdf-card .p1-pdf-body {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+#report-state-idle.p1-pdf-body {
+  display: block;
+}
+.p1-pdf-idle-msg {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+  margin: 0;
+}
+.p1-pdf-idle-msg strong {
+  color: var(--navy);
+  font-weight: 800;
+}
+.p1-pdf-loading-msg {
+  font-size: 12px;
+  color: var(--muted);
+}
+.p1-pdf-err-msg {
+  margin: 0;
+  font-size: 13px;
+  color: var(--red);
+  font-weight: 700;
 }
 
 /* ── 14. 1공정 — 진행 단계 ───────────────────────────────────────────────── */
@@ -591,7 +625,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 @keyframes pulse-dot { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
 
 /* ── 15. 1공정 — 분석 결과 카드 ──────────────────────────────────────────── */
-.result-card, .papers-card, .report-card {
+.result-card, .papers-card {
   background: var(--card);
   border-radius: 16px;
   padding: 20px 24px;
@@ -600,7 +634,17 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   display: none;
 }
 .result-card.visible,
-.papers-card.visible,
+.papers-card.visible { display: block; }
+
+/* 레거시: 동적 삽입 등에서만 사용 */
+.report-card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 14px;
+  box-shadow: var(--sh);
+  display: none;
+}
 .report-card.visible { display: block; }
 
 .card-title {

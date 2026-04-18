@@ -1460,7 +1460,7 @@ async function runPipeline() {
   _hideP1Note();
   document.getElementById('result-card')?.classList.remove('visible');
   document.getElementById('papers-card')?.classList.remove('visible');
-  document.getElementById('report-card')?.classList.remove('visible');
+  _showReportIdle();
   const analyzeBtn = document.getElementById('btn-analyze');
   if (analyzeBtn) analyzeBtn.disabled = true;
   const iconEl = document.getElementById('btn-icon');

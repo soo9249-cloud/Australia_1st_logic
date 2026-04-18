@@ -668,6 +668,174 @@ def _load_products() -> list[dict[str, Any]]:
     return list(data.get("products", []))
 
 
+# ─────────────────────────────────────────────────────────────────────
+# Task 7 (2026-04-19) — 신약 입력 파싱 + AI 유사계열 추론
+# ─────────────────────────────────────────────────────────────────────
+
+_HAIKU_MODEL = "claude-haiku-4-5-20251001"   # CLAUDE.md 절대 규칙: Haiku 고정
+
+
+def _parse_strength_dosage_form(raw: str) -> tuple[str, str]:
+    """사용자 입력 "strength dosage_form" 문자열 파싱.
+
+    예) "200mg tablet"       → ("200mg", "tablet")
+        "50 mcg DPI"          → ("50 mcg", "DPI")
+        "10 mg/mL injection"  → ("10 mg/mL", "injection")
+        "500mg"                → ("500mg", "")  (dosage_form 없음)
+        "tablet"               → ("", "tablet") (strength 없음)
+    """
+    import re as _re
+    s = (raw or "").strip()
+    if not s:
+        return "", ""
+    # 숫자+단위 패턴
+    m = _re.search(
+        r"(\d[\d.,]*\s*(?:mg|mcg|µg|g|ml|mL|kg|iu|IU|units?|%)"
+        r"(?:\s*/\s*[\d.]*\s*(?:mg|mcg|µg|g|ml|mL|kg|iu|IU|units?|%)?)?)",
+        s,
+    )
+    if not m:
+        return "", s
+    strength = m.group(1).strip()
+    rest = (s[: m.start()] + " " + s[m.end():]).strip()
+    return strength, rest
+
+
+def _parse_new_drug_input(new_drug_input: dict[str, Any]) -> dict[str, Any]:
+    """신약 직접 입력 dict → 내부 product dict 형식으로 변환.
+
+    입력:
+      {
+        "product_name_ko": "Nexavar",
+        "inn": "sorafenib" 또는 "sorafenib, ...",
+        "strength_dosage_form": "200mg tablet",
+      }
+    반환: au_products.json 엔트리와 호환되는 임시 product dict.
+    """
+    import uuid as _uuid
+    name = str(new_drug_input.get("product_name_ko") or "").strip()
+    inn_raw = str(new_drug_input.get("inn") or "").strip()
+    strength_form = str(new_drug_input.get("strength_dosage_form") or "").strip()
+
+    components = [c.strip() for c in inn_raw.split(",") if c.strip()]
+    inn_normalized = inn_raw.lower()
+    strength, dosage_form = _parse_strength_dosage_form(strength_form)
+
+    pid = f"au-newdrug-{_uuid.uuid4().hex[:8]}"
+    return {
+        "product_id": pid,
+        "product_name_ko": name or pid,
+        "inn_normalized": inn_normalized,
+        "inn_components": components,
+        "strength": strength,
+        "dosage_form": dosage_form,
+        "hs_code_6": "",                # 신약: 사용자가 나중에 지정
+        "pbs_search_terms": [inn_raw] if inn_raw else components,
+        "tga_search_terms": [inn_raw] if inn_raw else components,
+        "market_segment": "public",
+        "_is_new_drug": True,
+    }
+
+
+def _ai_infer_similar_inns(ingredient: str) -> list[dict[str, Any]]:
+    """Haiku (claude-haiku-4-5-20251001) 로 해당 성분의 유사 ATC 계열 INN 추론.
+
+    Task 7 (2026-04-19) — ESTIMATE_substitute / ESTIMATE_withdrawal 분기에서
+    seeds 의 `similar_inns` 가 없을 때 AI 가 호주 PBS 등재 확률 높은 유사계열
+    최대 3 개 제안. tool_use 로 구조화 응답 보장.
+
+    반환 예:
+      [
+        {"inn": "domperidone", "atc_same": True, "likely_pbs_listed_in_au": True,
+         "reasoning": "5-HT4 agonist 대체 — metoclopramide/domperidone 동 ATC A03FA"},
+        ...
+      ]
+    실패·키 없음 → [].
+    """
+    ing = (ingredient or "").strip()
+    if not ing:
+        return []
+    try:
+        import anthropic  # type: ignore
+    except ImportError:
+        print("[AI 유사계열] anthropic SDK 없음 — 빈 리스트 반환", flush=True)
+        return []
+    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_API_KEY")
+    if not api_key:
+        print("[AI 유사계열] ANTHROPIC_API_KEY 없음 — 빈 리스트 반환", flush=True)
+        return []
+
+    tool = {
+        "name": "report_similar_inns",
+        "description": "Report similar INNs in the same ATC class for the Australian market",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "similar_inns": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "inn": {"type": "string"},
+                            "atc_same": {"type": "boolean"},
+                            "likely_pbs_listed_in_au": {"type": "boolean"},
+                            "reasoning": {"type": "string"},
+                        },
+                        "required": ["inn", "atc_same", "likely_pbs_listed_in_au", "reasoning"],
+                    },
+                    "maxItems": 3,
+                },
+            },
+            "required": ["similar_inns"],
+        },
+    }
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model=_HAIKU_MODEL,
+            max_tokens=1024,
+            tools=[tool],
+            tool_choice={"type": "tool", "name": "report_similar_inns"},
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"The ingredient '{ing}' is not listed in Australian PBS or TGA. "
+                    f"Identify up to 3 similar INNs in the same ATC class that are more "
+                    f"likely to be listed in Australia. Focus on clinical interchangeability."
+                ),
+            }],
+        )
+    except Exception as exc:
+        print(f"[AI 유사계열] Haiku 호출 실패: {exc}", flush=True)
+        return []
+
+    for block in response.content:
+        if getattr(block, "type", None) == "tool_use":
+            data = getattr(block, "input", {}) or {}
+            inns = data.get("similar_inns") or []
+            if isinstance(inns, list):
+                return [r for r in inns if isinstance(r, dict) and r.get("inn")]
+    return []
+
+
+def resolve_similar_inns(product_id: str | None, ingredient: str) -> list[str]:
+    """Task 7 (2026-04-19) — seeds 우선 정책 (AI 유사계열 추론 fallback).
+
+    기존 품목: seeds.similar_inns 리스트 그대로 사용 (사람 검토값).
+    신약 / seeds 미존재: _ai_infer_similar_inns → likely_pbs_listed_in_au=True
+    인 것만 INN 이름으로 평탄화해 반환.
+    """
+    if product_id:
+        seeds = _load_seeds_index()
+        seed = seeds.get(product_id) or {}
+        seed_list = seed.get("similar_inns")
+        if isinstance(seed_list, list) and seed_list:
+            return [str(x) for x in seed_list]
+    ai_results = _ai_infer_similar_inns(ingredient)
+    return [str(r.get("inn")) for r in ai_results if r.get("likely_pbs_listed_in_au")]
+
+
 def _load_seeds_index() -> dict[str, dict[str, Any]]:
     """stage2/fob_reference_seeds.json 을 product_id → seed 맵으로 로드.
 
@@ -893,17 +1061,22 @@ def _dispatch_pbs_by_case(product: dict[str, Any]) -> dict[str, Any]:
         return fetch_pbs_component_sum(components)
 
     # Case 3 — ESTIMATE_withdrawal
+    # Task 7 (2026-04-19) — 신약일 경우 seeds.similar_inns 없음 → resolve_similar_inns 로
+    # AI Haiku 추론 결과 사용 (seeds 있으면 seeds 우선).
     if case == "ESTIMATE_WITHDRAWAL":
         withdrawn = product.get("withdrawn_component") or ""
-        similar = product.get("similar_inns") or []
+        similar = product.get("similar_inns")
+        if not similar:
+            similar = resolve_similar_inns(product.get("product_id"), inn)
         return fetch_pbs_withdrawal(components, withdrawn, similar)
 
     # Case 4 — ESTIMATE_substitute
     # Task 2 (2026-04-19) — fetch_pbs_similar(빈 DTO) → fetch_pbs_substitute(실제 proxy AEMP 조회) 로 전환.
-    # Gastiin(mosapride) 같은 미등재 품목에 대해 similar_inns[0] (domperidone) 의
-    # 실제 PBS AEMP/DPMQ 를 주입해 FOB 역산 가능하게 함.
+    # Task 7 — 신약은 seeds 없음 → resolve_similar_inns 로 AI 추론 fallback.
     if case == "ESTIMATE_SUBSTITUTE":
-        similar = product.get("similar_inns") or []
+        similar = product.get("similar_inns")
+        if not similar:
+            similar = resolve_similar_inns(product.get("product_id"), inn)
         return fetch_pbs_substitute(inn, similar)
 
     # Case 5 — ESTIMATE_private
@@ -1119,6 +1292,25 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     components = [str(c) for c in (product.get("inn_components") or []) if c]
     if not components:
         components = [str(product.get("inn_normalized") or "")]
+
+    # Task 7 (2026-04-19) — 신약 또는 pricing_case 미지정 시 자동 판정.
+    # TGA 결과는 이미 위에서 확보됨 (tga 변수). PBS 등재 판정은 자동 판정용
+    # pre-probe: inn_components 첫 성분을 fetch_pbs_by_ingredient 로 조회 결과의
+    # pbs_found 만 사용. 본 조회는 _dispatch_pbs_by_case 에서 재수행.
+    if not product.get("pricing_case"):
+        pre_pbs: dict[str, Any] = {}
+        if components:
+            try:
+                rows = fetch_pbs_by_ingredient(components[0])
+                if rows:
+                    pre_pbs = dict(rows[0])
+            except Exception:
+                pre_pbs = {}
+        resolved_case = resolve_pricing_case(
+            product.get("product_id"), tga, pre_pbs, product
+        )
+        product["pricing_case"] = resolved_case
+        print(f"[auto-classify] product_id={product_filter} case={resolved_case}", flush=True)
 
     _t0 = time.time()
     _pbs_started = now_kst_iso()
@@ -1471,28 +1663,46 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     return ok
 
 
-def main(argv: list[str] | None = None, product_id: str | None = None) -> None:
+def main(
+    argv: list[str] | None = None,
+    product_id: str | None = None,
+    new_drug_input: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     """CLI 진입점 — argparse + DRY_RUN 지원.
 
-    argv / product_id:
-      - **CLI** (``argv is None``): ``sys.argv[1:]`` 를 argparse 로 파싱 — ``--product`` / ``--all``.
-      - **프로그래밍** (``product_id`` 비어 있지 않음): 해당 품목만 처리. FastAPI 등에서는
-        ``main([], product_id=...)`` 로 호출 — uvicorn 이 넣은 ``sys.argv`` 와 분리.
-      - ``argv == []`` 이고 ``product_id`` 없음: 잘못된 임베드 호출 (종료 코드 2).
+    argv / product_id / new_drug_input (XOR):
+      - **CLI** (``argv is None``, 나머지도 None): ``sys.argv[1:]`` 를 argparse 로 파싱.
+      - **프로그래밍 기존 품목** (``product_id`` 비어 있지 않음): 해당 품목만 처리.
+      - **프로그래밍 신약** (``new_drug_input`` 비어 있지 않음, Task 7 신설):
+          {"product_name_ko": "...", "inn": "...", "strength_dosage_form": "..."}
+          → au-newdrug-<uuid> 임시 ID 로 1회 크롤 실행. seeds 없이 자동 판정.
+      - ``argv == []`` 이고 product_id·new_drug_input 둘 다 없음: 잘못된 임베드 호출.
 
     사용 예:
-      # 단일 품목 (CLI)
       python -m crawler.au_crawler --product au-hydrine-004
-      # 전체 8 품목 순회
       python -m crawler.au_crawler --all
-      # DB 쓰기 skip (dry-run)
       DRY_RUN=1 python -m crawler.au_crawler --product au-hydrine-004
 
     종료 코드: 전 품목 성공 0, 실패 하나라도 있으면 1. 잘못된 임베드 호출 2.
+    프로그래밍 호출이 new_drug_input 으로 들어왔고 sys.exit 호출을 회피해야 할 때
+    (FastAPI 등) 임시 product 의 summary dict 를 반환. 기존 CLI 경로는 반환 None + exit.
     """
     # DRY_RUN — 1, true, yes 모두 수용
     dry_run_raw = (os.environ.get("DRY_RUN") or "").strip().lower()
     dry_run = dry_run_raw in {"1", "true", "yes", "on"}
+
+    # Task 7 — 신약 입력 경로 (product_id 우회, seeds 없이 자동 판정)
+    if new_drug_input:
+        product = _parse_new_drug_input(new_drug_input)
+        print(
+            f"[new_drug] product_id={product['product_id']} "
+            f"inn={product.get('inn_normalized')!r} (dry_run={dry_run})",
+            flush=True,
+        )
+        if dry_run and not logging.getLogger().handlers:
+            logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+        ok = _process_one_product(product, dry_run=dry_run)
+        return {"product_id": product["product_id"], "ok": bool(ok), "is_new_drug": True}
 
     pid_arg = (product_id or "").strip()
     selected_ids: list[str] | None
@@ -1501,8 +1711,8 @@ def main(argv: list[str] | None = None, product_id: str | None = None) -> None:
         selected_ids = [pid_arg]
     elif argv is not None and len(argv) == 0:
         print(
-            "[오류] 프로그래밍 호출 시 product_id 인자가 필요합니다. "
-            "예: run_crawler('au-hydrine-004') 또는 main([], product_id='…').",
+            "[오류] 프로그래밍 호출 시 product_id 또는 new_drug_input 인자가 필요합니다. "
+            "예: run_crawler('au-hydrine-004') 또는 main([], new_drug_input={...}).",
             file=sys.stderr,
         )
         sys.exit(2)

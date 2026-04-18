@@ -126,7 +126,8 @@ body {
   justify-content: center;
   line-height: 0;
   vertical-align: middle;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+  /* 레퍼런스: 옅은 회색·블루 톤 링 (순검정보다 칩·흰 배경과 자연스럽게 어울림) */
+  box-shadow: 0 0 0 1px rgba(23, 63, 120, 0.16);
 }
 .flag-round {
   width: 100%;

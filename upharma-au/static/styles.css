@@ -1265,6 +1265,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   display: flex;
   flex-direction: column;
   min-height: 0;
+  height: 410px;
   padding: 10px 12px;
 }
 /* 호주 지도 카드: 제목 아래 지도가 세로로 남는 칸을 전부 채움 */
@@ -1276,30 +1277,44 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 #main .map-card-wrap .sec {
   flex-shrink: 0;
 }
+#main .news-card-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 .news-card-panel #news-list {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  max-height: 300px;
+  overflow: hidden;
+  max-height: none;
 }
 /* 뉴스 카드: 5건이 한 화면에 들어가도록 타이트 */
 .news-card-panel .irow.news-item {
   padding: 6px 10px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .news-card-panel .irow .tit {
   font-size: 11px;
   font-weight: 700;
   margin-bottom: 2px;
-  line-height: 1.3;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .news-card-panel .irow .news-sum {
   font-size: 10px;
-  line-height: 1.35;
-  margin-bottom: 3px;
+  line-height: 1.3;
+  margin-bottom: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .news-card-panel .irow .sub {
   font-size: 9.5px;
+  line-height: 1.2;
 }
 #main .map-news-grid .sec {
   margin-bottom: 6px;
@@ -1363,7 +1378,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 #main .map-news-grid .map-card-wrap .sg-leaflet-map {
   flex: 1 1 auto;
   width: 100%;
-  min-height: 200px;
+  min-height: 0;
   height: auto !important;
   max-height: none !important;
   border-radius: 12px;

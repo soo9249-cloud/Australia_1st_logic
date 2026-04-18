@@ -472,6 +472,12 @@ def get_news() -> JSONResponse:
     if not result:
         logger.warning("[api/news] mock: 파싱 후 유효 항목 0건")
         return _news_api_response(mock_items, source="mock")
+    if len(result) < 5:
+        # 카드 높이를 고정했기 때문에 프론트에는 항상 5건을 내려준다.
+        for fallback in mock_items:
+            if len(result) >= 5:
+                break
+            result.append(fallback)
     return _news_api_response(result, source="perplexity")
 
 

@@ -1265,7 +1265,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: 410px;
+  height: 448px;
   padding: 10px 12px;
 }
 /* 호주 지도 카드: 제목 아래 지도가 세로로 남는 칸을 전부 채움 */
@@ -1288,7 +1288,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   overflow: hidden;
   max-height: none;
 }
-/* 뉴스 카드: 5건이 한 화면에 들어가도록 타이트 */
+/* 뉴스 카드: 6건이 한 화면에 들어가도록 타이트 */
 .news-card-panel .irow.news-item {
   padding: 6px 10px;
   margin-bottom: 3px;

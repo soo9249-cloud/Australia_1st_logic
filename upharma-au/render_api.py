@@ -303,6 +303,10 @@ def _news_api_response(
     return resp
 
 
+# 메인 프리뷰 뉴스 카드에 표시할 기사 개수(프롬프트·파싱·mock 보충과 동일)
+_NEWS_LIST_SIZE = 6
+
+
 def _normalize_news_item(raw: dict[str, Any], link_fallback: str = "") -> dict[str, Any]:
     link = str(raw.get("link") or raw.get("url") or link_fallback or "")
     title = str(raw.get("title") or "")
@@ -358,6 +362,14 @@ _MOCK_NEWS: list[dict[str, Any]] = [
         "date": "2025-07-09",
         "link": "https://www.nps.org.au",
     },
+    {
+        "title": "PBAC agenda: new listings under consideration",
+        "title_ko": "[예시] PBAC 안건·신규 등재 검토",
+        "summary_ko": "급여·등재 심의 일정·후보물질에 대한 요지를 담은 예시 문장입니다.",
+        "source": "PBAC",
+        "date": "2025-07-08",
+        "link": "https://www.pbs.gov.au/info/industry/listing/elements/pbac-meetings",
+    },
 ]
 
 _FX_FALLBACK: dict[str, Any] = {"aud_krw": 893.0, "aud_usd": 0.6412, "updated": ""}
@@ -387,7 +399,7 @@ def get_news() -> JSONResponse:
                         "role": "system",
                         "content": (
                             "You are a news aggregator for a Korean pharmaceutical export dashboard. "
-                            "Return EXACTLY 5 recent news items as a JSON array ONLY (no markdown, no prose). "
+                            f"Return EXACTLY {_NEWS_LIST_SIZE} recent news items as a JSON array ONLY (no markdown, no prose). "
                             "Each item MUST have these keys: "
                             "\"title\" (English headline as published), "
                             "\"title_ko\" (Korean, concise headline for UI), "
@@ -403,8 +415,8 @@ def get_news() -> JSONResponse:
                     {
                         "role": "user",
                         "content": (
-                            "Find exactly 5 online TEXT articles (not video pages) published within the LAST 24 HOURS. "
-                            "If 5 are not available in 24h, you may include the most recent from YESTERDAY only — "
+                            f"Find exactly {_NEWS_LIST_SIZE} online TEXT articles (not video pages) published within the LAST 24 HOURS. "
+                            f"If {_NEWS_LIST_SIZE} are not available in 24h, you may include the most recent from YESTERDAY only — "
                             "do NOT use anything older than the previous calendar day. "
                             "Topics: Australia pharmaceutical industry, TGA, PBS, healthcare policy, public health, hospital/pharmacy. "
                             "Prefer: Australian outlets and .gov.au media releases, major newspapers' article URLs, "
@@ -458,7 +470,7 @@ def get_news() -> JSONResponse:
         return _news_api_response(mock_items, source="mock")
 
     result: list[dict[str, Any]] = []
-    for i, it in enumerate(items[:5]):
+    for i, it in enumerate(items[:_NEWS_LIST_SIZE]):
         if not isinstance(it, dict):
             continue
         link_fb = ""
@@ -472,10 +484,10 @@ def get_news() -> JSONResponse:
     if not result:
         logger.warning("[api/news] mock: 파싱 후 유효 항목 0건")
         return _news_api_response(mock_items, source="mock")
-    if len(result) < 5:
-        # 카드 높이를 고정했기 때문에 프론트에는 항상 5건을 내려준다.
+    if len(result) < _NEWS_LIST_SIZE:
+        # 카드 높이를 고정했기 때문에 프론트에는 항상 동일 개수를 내려준다.
         for fallback in mock_items:
-            if len(result) >= 5:
+            if len(result) >= _NEWS_LIST_SIZE:
                 break
             result.append(fallback)
     return _news_api_response(result, source="perplexity")

@@ -182,6 +182,153 @@ def crawl(payload: dict[str, Any]) -> JSONResponse:
     )
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# Task 8 (2026-04-19) — 신약 크롤링 엔드포인트 + 상태 폴링
+# ═══════════════════════════════════════════════════════════════════════
+# au_crawler.main(new_drug_input=...) 을 백그라운드 스레드로 실행. seeds.json
+# 없이 au-newdrug-<uuid> 임시 ID 로 동일 파이프라인 실행.
+
+import threading as _nd_threading
+import uuid as _nd_uuid
+
+# job_id → {status, product_code, aemp_aud, needs_price_upload, message_ko, error}
+_new_drug_jobs: dict[str, dict[str, Any]] = {}
+_new_drug_lock = _nd_threading.Lock()
+
+_MSG_NO_AEMP_KO = (
+    "호주 공개 데이터베이스에서 이 성분의 가격 정보를 찾지 못했어요. "
+    "혹시 보유하신 호주 시장 가격 자료나 경쟁사 가격이 담긴 PDF 가 있다면, "
+    "아래에 업로드해주시면 분석을 이어갈 수 있어요."
+)
+
+
+def _new_drug_worker(job_id: str, payload: dict[str, Any]) -> None:
+    """백그라운드 스레드 — au_crawler.main(new_drug_input=payload) 실행 후
+    Supabase 에서 AEMP/retail 확보 여부 확인해 job 결과 업데이트."""
+    with _new_drug_lock:
+        cur = _new_drug_jobs.get(job_id) or {}
+        cur["status"] = "running"
+        _new_drug_jobs[job_id] = cur
+    try:
+        from crawler.au_crawler import main as _crawler_main
+        result = _crawler_main([], new_drug_input=payload)
+    except Exception as exc:
+        with _new_drug_lock:
+            _new_drug_jobs[job_id] = {
+                **_new_drug_jobs.get(job_id, {}),
+                "status": "failed",
+                "error": str(exc)[:500],
+            }
+        return
+
+    product_code = (result or {}).get("product_id") or ""
+    aemp_aud = None
+    retail_price_aud = None
+    try:
+        client = get_supabase_client()
+        resp = (
+            client.table(TABLE_NAME)
+            .select("aemp_aud,retail_price_aud")
+            .eq("product_code", product_code)
+            .order("last_crawled_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        rows = getattr(resp, "data", None) or []
+        if rows:
+            aemp_aud = rows[0].get("aemp_aud")
+            retail_price_aud = rows[0].get("retail_price_aud")
+    except Exception as exc:
+        print(f"[new_drug AEMP 조회 실패] {exc}", flush=True)
+
+    def _is_empty(v: Any) -> bool:
+        return v is None or v == "" or v == 0
+    needs_upload = _is_empty(aemp_aud) and _is_empty(retail_price_aud)
+    with _new_drug_lock:
+        _new_drug_jobs[job_id] = {
+            "status": "done",
+            "product_code": product_code,
+            "aemp_aud": aemp_aud,
+            "retail_price_aud": retail_price_aud,
+            "needs_price_upload": bool(needs_upload),
+            "message_ko": _MSG_NO_AEMP_KO if needs_upload else None,
+        }
+
+
+@app.post("/api/crawl/new-drug")
+def crawl_new_drug(payload: dict[str, Any]) -> JSONResponse:
+    """신약 크롤링 — 기존 품목과 동일 파이프라인, seeds.json 없이 작동.
+
+    요청 body:
+      {
+        "product_name_ko": "Nexavar",
+        "inn": "sorafenib" 또는 "drugA, drugB",
+        "strength_dosage_form": "200mg tablet"
+      }
+    응답:
+      {job_id, product_code, status: "queued", poll_url}
+    크롤 결과는 GET /api/crawl/status/{job_id} 로 폴링.
+    """
+    product_name_ko = str(payload.get("product_name_ko") or "").strip()
+    inn = str(payload.get("inn") or "").strip()
+    strength_dosage_form = str(payload.get("strength_dosage_form") or "").strip()
+
+    if not (product_name_ko and inn and strength_dosage_form):
+        raise HTTPException(
+            status_code=400,
+            detail="product_name_ko, inn, strength_dosage_form 3개 필드 모두 필요합니다.",
+        )
+
+    # UI 표시용 임시 product_code (실제 crawler 가 생성하는 ID 와는 다를 수 있으니
+    # 폴링 결과의 product_code 가 최종 정확값).
+    preview_product_code = f"au-newdrug-{_nd_uuid.uuid4().hex[:8]}"
+    job_id = _nd_uuid.uuid4().hex
+
+    crawler_payload = {
+        "product_name_ko": product_name_ko,
+        "inn": inn,
+        "strength_dosage_form": strength_dosage_form,
+    }
+
+    with _new_drug_lock:
+        _new_drug_jobs[job_id] = {
+            "status": "queued",
+            "product_code": preview_product_code,
+            "aemp_aud": None,
+            "retail_price_aud": None,
+            "needs_price_upload": None,
+            "message_ko": None,
+        }
+
+    worker = _nd_threading.Thread(
+        target=_new_drug_worker,
+        args=(job_id, crawler_payload),
+        daemon=True,
+    )
+    worker.start()
+
+    return JSONResponse({
+        "job_id": job_id,
+        "product_code": preview_product_code,
+        "status": "queued",
+        "poll_url": f"/api/crawl/status/{job_id}",
+    })
+
+
+@app.get("/api/crawl/status/{job_id}")
+def crawl_status(job_id: str) -> JSONResponse:
+    """Task 8 — 신약 크롤 job 상태 조회.
+
+    상태 값: queued | running | done | failed
+    done 일 때 결과 필드(aemp_aud / needs_price_upload / message_ko) 포함.
+    """
+    with _new_drug_lock:
+        job = _new_drug_jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"job_id={job_id} 없음")
+    return JSONResponse(job)
+
+
 @app.get("/api/data/{product_id}")
 def get_product(product_id: str) -> JSONResponse:
     """Supabase australia 테이블에서 product_id 단건 조회."""
@@ -1548,6 +1695,11 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
             "product_code", product_id
         ).execute()
     except Exception as exc:
+        # Claude·논문 단계는 성공했는데 UPDATE 만 실패하는 경우가 많음 — 로그에 원문 남김
+        logger.exception(
+            "au_products UPDATE 실패 product_code=%r (컬럼 누락·스키마 캐시·RLS 의심)",
+            product_id,
+        )
         raise HTTPException(
             status_code=500,
             detail=f"supabase update failed: {exc}",

@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import re
 import time
+from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any
 
 import httpx
@@ -43,15 +45,24 @@ _CF_BLOCK_MARKERS = (
 
 
 def _error_result(slug: str, reason: str) -> dict[str, Any]:
+    # HealthylifeDTO (§13-5-5) + 하위호환 키
+    product_url = f"{_BASE}/products/{slug}"
     return {
-        "slug": slug,
+        # v2 DTO 키
+        "product_url": product_url,
         "brand_name": slug,
         "price_aud": None,
+        "pack_size": None,
+        "category": None,
+        "source_name": "healthylife",
+        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        # 하위호환 키
+        "slug": slug,
         "is_pbs": False,
         "prescription": None,
         "source": f"Healthylife (실패: {reason})",
         "confidence": 0.0,
-        "price_source_url": f"{_BASE}/products/{slug}",
+        "price_source_url": product_url,
     }
 
 
@@ -97,15 +108,25 @@ def _fetch_json(slug: str) -> dict[str, Any] | None:
         if isinstance(cents, (int, float)) and cents > 0:
             price = float(cents) / 100.0
 
+    # HealthylifeDTO (§13-5-5) + 하위호환
+    product_url = f"{_BASE}/products/{slug}"
+    price_decimal = Decimal(str(price)) if price is not None else None
     return {
-        "slug": slug,
+        # v2 DTO 키
+        "product_url": product_url,
         "brand_name": data.get("name") or slug,
-        "price_aud": price,
+        "price_aud": price_decimal,
+        "pack_size": None,                 # 파싱 범위 밖 (다음 위임)
+        "category": data.get("category"),
+        "source_name": "healthylife",
+        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        # 하위호환
+        "slug": slug,
         "is_pbs": False,
         "prescription": bool(data.get("prescriptionOnly")) if "prescriptionOnly" in data else True,
         "source": "Healthylife JSON API",
         "confidence": 0.85 if price else 0.40,
-        "price_source_url": f"{_BASE}/products/{slug}",
+        "price_source_url": product_url,
     }
 
 
@@ -177,15 +198,25 @@ def _parse_price_block(
         re.search(r"\b(prescription|pharmacist\s+only|S4|schedule\s*4)\b", blob, flags=re.IGNORECASE)
     )
 
+    # HealthylifeDTO (§13-5-5) + 하위호환
+    product_url = f"{_BASE}/products/{slug}"
+    price_decimal = Decimal(str(price)) if price is not None else None
     return {
-        "slug": slug,
+        # v2 DTO 키
+        "product_url": product_url,
         "brand_name": name or slug,
-        "price_aud": price,
+        "price_aud": price_decimal,
+        "pack_size": None,
+        "category": None,
+        "source_name": "healthylife",
+        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        # 하위호환
+        "slug": slug,
         "is_pbs": False,
         "prescription": prescription,
         "source": source,
         "confidence": confidence,
-        "price_source_url": f"{_BASE}/products/{slug}",
+        "price_source_url": product_url,
     }
 
 

@@ -196,11 +196,16 @@ def _row_for_upsert(summary: dict[str, Any]) -> dict[str, Any]:
 
 
 def upsert_product(summary: dict[str, Any]) -> bool:
-    """au_products 테이블에 UPSERT. 충돌 기준: product_code."""
+    """au_products 테이블에 UPSERT. 충돌 기준: product_code.
+
+    Decimal 값은 str() 로 변환 후 전송 (Jisoo 보완안: supabase-py 는 DECIMAL 컬럼에
+    str 수용, 정밀도 손실 최소화).
+    """
     label = summary.get("product_name_ko") or summary.get("product_id") or "?"
     try:
         client = get_supabase_client()
         row = _row_for_upsert(summary)
+        row = _jsonify_decimals(row)
         response = (
             client.table(TABLE_NAME)
             .upsert(row, on_conflict="product_code")
@@ -301,6 +306,7 @@ def upsert_pbs_raw(snapshot: dict[str, Any]) -> bool:
     try:
         client = get_supabase_client()
         row = _filter_cols(snapshot, _PBS_RAW_ALLOWED)
+        row = _jsonify_decimals(row)
         response = (
             client.table(TABLE_PBS_RAW)
             .upsert(row, on_conflict="pbs_code,schedule_code")
@@ -323,6 +329,7 @@ def upsert_tga_artg(row: dict[str, Any]) -> bool:
     try:
         client = get_supabase_client()
         data = _filter_cols(row, _TGA_ARTG_ALLOWED)
+        data = _jsonify_decimals(data)
         response = (
             client.table(TABLE_TGA_ARTG)
             .upsert(data, on_conflict="artg_id")
@@ -341,11 +348,14 @@ def insert_crawl_log(row: dict[str, Any]) -> bool:
     row 키: run_id(UUID), product_id, source_name, endpoint, status,
             http_status, retry_count, error_message, duration_ms,
             started_at, finished_at, raw_response_truncated
+
+    내부용 dict 진입점. keyword-args 스타일은 log_crawl() 사용.
     """
     src = row.get("source_name", "?")
     try:
         client = get_supabase_client()
         data = _filter_cols(row, _CRAWL_LOG_ALLOWED)
+        data = _jsonify_decimals(data)
         response = client.table(TABLE_CRAWL_LOG).insert(data).execute()
         # 로그가 너무 시끄러울 수 있으므로 실패 외에는 짧게만
         print(f"[INSERT au_crawl_log] {src}/{row.get('endpoint', '-')} [{row.get('status', '-')}]")
@@ -353,3 +363,141 @@ def insert_crawl_log(row: dict[str, Any]) -> bool:
     except Exception as exc:
         print(f"[INSERT au_crawl_log 실패] {src}: {exc}")
         return False
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# v2 추가 — au_buyers 후보 풀 + log_crawl keyword-args wrapper + Decimal → str 변환
+# 위임지서 03a §2-5, §2-6, §2-7 구현
+# ═══════════════════════════════════════════════════════════════════════
+
+# au_buyers 테이블 §14-3-7 — PSI 점수는 이번 위임 범위 밖 (전부 NULL 진입)
+_BUYERS_ALLOWED: frozenset[str] = frozenset({
+    "product_id",
+    "rank",
+    "company_name",
+    "abn",
+    "state",
+    "psi_sales_scale",
+    "psi_pipeline",
+    "psi_manufacturing",
+    "psi_import_exp",
+    "psi_pharmacy_chain",
+    "psi_total",
+    "source_flags",
+    "evidence_urls",
+})
+
+
+def _jsonify_decimals(row: dict[str, Any]) -> dict[str, Any]:
+    """Decimal 값을 str() 로 변환 (Jisoo 보완안: supabase-py 가 DECIMAL 컬럼에 str 수용).
+
+    정밀도 손실 최소화 목적. json.dumps 는 Decimal 직렬화 실패하고, float 변환은
+    부동소수점 오차 발생 → str() 우선. str 파싱 오류 시 호출부에서 float 로 폴백.
+    dict 내부 중첩(JSONB 예: source_flags)·list 내부 dict 도 재귀 변환.
+    """
+    from decimal import Decimal
+    out: dict[str, Any] = {}
+    for k, v in row.items():
+        if isinstance(v, Decimal):
+            out[k] = str(v)
+        elif isinstance(v, dict):
+            out[k] = _jsonify_decimals(v)
+        elif isinstance(v, list):
+            out[k] = [
+                _jsonify_decimals(x) if isinstance(x, dict)
+                else str(x) if isinstance(x, Decimal)
+                else x
+                for x in v
+            ]
+        else:
+            out[k] = v
+    return out
+
+
+def upsert_buyer_candidates(candidates: list[dict[str, Any]]) -> bool:
+    """au_buyers 후보 풀 INSERT — 위임지서 03a §2-5 / §13-7-B.
+
+    candidates 형태:
+      [{"product_id": BIGINT | str,
+        "company_name": "Apotex",        # 정규화된 회사명
+        "abn": "12345678901" | None,
+        "source_flags": {"tga": True, "pbs": True},  # JSONB
+        "evidence_urls": ["https://..."] | None},
+       ...]
+
+    정책 (§13-7-B):
+      - 같은 (product_id, company_name) 이 TGA·PBS·NSW 3 소스에서 나오면
+        호출부에서 먼저 source_flags 를 병합해 1건으로 넘길 것.
+      - rank / psi_* 는 NULL (Haiku PSI 계산이 나중에 UPDATE).
+      - 실패해도 메인 파이프라인은 막지 말 것 — 예외는 per-candidate 로 catch.
+
+    주의: (product_id, company_name) UNIQUE 제약이 DB 에 없으므로 현재는 INSERT.
+          중복 병합은 호출부(au_crawler) 책임. 추후 DB UNIQUE 추가 시 upsert 로 교체.
+    """
+    if not candidates:
+        return True
+    client = get_supabase_client()
+    success = 0
+    fail = 0
+    for cand in candidates:
+        label = f"{cand.get('company_name', '?')} / pid={cand.get('product_id', '?')}"
+        try:
+            row = _filter_cols(cand, _BUYERS_ALLOWED)
+            row = _jsonify_decimals(row)
+            client.table(TABLE_BUYERS).insert(row).execute()
+            success += 1
+        except Exception as exc:
+            print(f"[INSERT au_buyers 실패] {label}: {exc}")
+            fail += 1
+    if success or fail:
+        print(f"[INSERT au_buyers] success={success} fail={fail}")
+    return fail == 0
+
+
+def log_crawl(
+    run_id: str,
+    product_code: str,
+    source: str,
+    status: str,
+    *,
+    endpoint: str | None = None,
+    http_status: int | None = None,
+    retry_count: int = 0,
+    error_message: str | None = None,
+    duration_ms: int | None = None,
+    started_at: str | None = None,
+    finished_at: str | None = None,
+    raw_response_truncated: str | None = None,
+) -> bool:
+    """au_crawl_log 에 1행 INSERT — keyword-args 진입점 (위임지서 03a §2-5 시그니처).
+
+    내부는 insert_crawl_log(dict) 호출. 기존 호출자 호환 유지.
+
+    parameters:
+      run_id                  : 한 번의 크롤 배치에서 uuid4() 1개로 전 품목 공유
+      product_code            : au_products.product_code (TEXT). FK 해석은 호출부 책임 —
+                                au_crawl_log.product_id 컬럼이 BIGINT FK 면 호출부에서 id 변환 후 주입
+      source                  : 'pbs_api_v3' / 'tga' / 'chemist_warehouse' / 'buy_nsw' / 'healthylife'
+      status                  : 'success' / 'partial' / 'failed' / 'skipped'
+      raw_response_truncated  : 실패 시 원본 응답 일부. 2KB 컷 자동 적용 (§14-3-9 정책).
+    """
+    # 2KB 안전 컷 — 스펙 §14-3-9
+    if raw_response_truncated and len(raw_response_truncated) > 2048:
+        raw_response_truncated = raw_response_truncated[:2048]
+
+    row = {
+        "run_id": run_id,
+        "product_id": product_code,  # 호출부에서 BIGINT FK 변환 필요 시 override
+        "source_name": source,
+        "status": status,
+        "endpoint": endpoint,
+        "http_status": http_status,
+        "retry_count": retry_count,
+        "error_message": error_message,
+        "duration_ms": duration_ms,
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "raw_response_truncated": raw_response_truncated,
+    }
+    # None 값은 _filter_cols 후 Supabase 가 NULL 로 저장. 문제없음.
+    return insert_crawl_log(row)

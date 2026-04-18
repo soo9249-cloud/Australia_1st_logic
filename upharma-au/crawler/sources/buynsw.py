@@ -10,6 +10,8 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any
 from urllib.parse import quote
 
@@ -32,11 +34,22 @@ _NSW_NOT_FOUND_TEMPLATE = (
 
 
 def _empty_row(source_url: str, search_term: str = "") -> dict[str, Any]:
-    """결과 없음 상태. nsw_source_url 은 채우고 나머지 3 필드는 None.
-    nsw_note 는 화면/보고서에 표시될 안내문 (품목 의존 메시지 아님)."""
+    """결과 없음 상태 — v2 BuyNSWDTO (§13-5-4) + 하위호환 키.
+    nsw_note 는 화면/보고서에 표시될 일반 안내문 (품목 의존 메시지)."""
     inn = (search_term or "해당 품목").strip() or "해당 품목"
     return {
+        # v2 DTO 키
+        "contract_id": None,
+        "agency": None,
+        "product_description": None,
+        "awarded_to": None,
         "contract_value_aud": None,
+        "start_date": None,
+        "end_date": None,
+        "source_url": source_url,
+        "source_name": "buy_nsw",
+        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        # 하위호환 키 (au_crawler 가 기존 참조 유지)
         "supplier_name": None,
         "contract_date": None,
         "nsw_source_url": source_url,
@@ -145,11 +158,25 @@ def fetch_buynsw(search_term: str) -> dict[str, Any]:
     if not parsed:
         return empty
 
-    # 매칭 성공 — nsw_note 는 None (안내문 대신 실제 Agency 정보 표시)
+    # 매칭 성공 — v2 DTO + 하위호환 키 동시 반환
+    value_decimal = Decimal(str(parsed["contract_value_aud"])) if parsed["contract_value_aud"] is not None else None
+    agency_val = parsed["supplier_name"]
+    date_val = parsed["contract_date"]
     return {
-        "contract_value_aud": parsed["contract_value_aud"],
-        "supplier_name": parsed["supplier_name"],
-        "contract_date": parsed["contract_date"],
+        # v2 DTO 키
+        "contract_id": None,           # buy.nsw 검색 결과 HTML 구조상 CAN-ID 파싱 가능 — 다음 위임
+        "agency": agency_val,
+        "product_description": None,   # 파싱 범위 밖 — 다음 위임
+        "awarded_to": None,             # NSW 는 agency 발주처 → 수주처는 별도 상세 페이지 필요
+        "contract_value_aud": value_decimal,
+        "start_date": date_val,
+        "end_date": None,
+        "source_url": canonical,
+        "source_name": "buy_nsw",
+        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        # 하위호환 키
+        "supplier_name": agency_val,
+        "contract_date": date_val,
         "nsw_source_url": canonical,
         "nsw_note": None,
     }

@@ -1,10 +1,34 @@
-# PBS 공개 API v3: schedule_code 확보 후 성분 기준 filter 시도, 실패 시 페이지 순회로 매칭한다.
+# PBS 공개 API v3 — v2 스키마 준수. `PBSItemDTO` (딕셔너리 형태) 반환.
+#
+# 중간안 (위임지서 03a 결정 4c):
+#   - /schedules + /items (기존)
+#   - /item-dispensing-rule-relationships (신규 — DPMQ·brand_premium·TGP·SPC 획득)
+#
+# 다음 위임(v2-pbs-full)에서 추가될 엔드포인트:
+#   - /fees                 (dispensing_fee_aud / ahi_fee_aud)
+#   - /markup-bands         (markup_variable_pct / markup_offset / markup_fixed)
+#   - /copayments           (copay_general / copay_concessional / safety_net)
+#   - /item-atc-relationships (atc_code)
+#
+# 스펙 참조:
+#   - /AX 호주 final/01_보고서필드스키마_v1.md §13-3 (엔드포인트 우선순위)
+#   - /AX 호주 final/01_보고서필드스키마_v1.md §13-5-1 (PBSItemDTO)
+#   - /AX 호주 final/01_보고서필드스키마_v1.md §14-3-1 (au_products 컬럼)
+#
+# 정책:
+#   - 금융 숫자는 Decimal (§1-5). DB 저장 직전에 supabase_insert._jsonify_decimals 가 str 변환.
+#   - 매 API 호출 사이 time.sleep(_RATE_LIMIT_SEC) — PBS rate limit 준수.
+#   - Subscription-Key 누락·HTTP 실패 시 _empty_dto() 반환 (예외 전파 안 함).
+#
+# 다른 파일에서 사용하는 키(하위호환) : au_crawler.py 가 v2 컬럼으로 dict 생성 시 이 DTO 를 참조.
 
 from __future__ import annotations
 
 import os
 import re
 import time
+from decimal import Decimal, InvalidOperation
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -12,7 +36,7 @@ from urllib.parse import quote
 from dotenv import load_dotenv
 import httpx
 
-# 프로젝트 루트 .env 로드(cwd와 무관하게 상위 경로 탐색)
+# 프로젝트 루트 .env 로드 (cwd 무관하게 상위 경로 탐색)
 _env_dir = Path(__file__).resolve().parent
 for _ in range(8):
     _env_file = _env_dir / ".env"
@@ -28,6 +52,7 @@ else:
 
 _BASE = "https://data-api.health.gov.au/pbs/api/v3"
 _MAX_FALLBACK_PAGES = 10
+_RATE_LIMIT_SEC = 21
 
 
 def _headers() -> dict[str, str]:
@@ -40,34 +65,140 @@ def _pbs_public_url(pbs_code: str | None) -> str:
     return "https://www.pbs.gov.au/browse/medicine"
 
 
-def _empty_dict() -> dict[str, Any]:
+def _safe_decimal(v: Any) -> Decimal | None:
+    """Any → Decimal | None. float/int/str 모두 허용. 파싱 실패 시 None.
+
+    금융 숫자 처리 표준 헬퍼 — 위임지서 03a §1-5 "float 금지, Decimal 사용".
+    """
+    if v is None:
+        return None
+    if isinstance(v, Decimal):
+        return v
+    if isinstance(v, (int, float)):
+        try:
+            return Decimal(str(v))
+        except (InvalidOperation, ValueError):
+            return None
+    if isinstance(v, str):
+        s = v.strip().replace(",", "")
+        if not s:
+            return None
+        try:
+            return Decimal(s)
+        except (InvalidOperation, ValueError):
+            return None
+    return None
+
+
+def _derive_section_85_100(program_code: str | None) -> str | None:
+    """program_code → section_85_100 유도 (§13-5-1).
+
+    매핑 근거 (§13-7 Case 6 분기 기준):
+      IN, IP          → S100_HSD (Highly Specialised Drugs, 병원 전용)
+      TY, TZ          → S100_EFC (Efficient Funding, 효율적 조달)
+      DB              → DB (Doctor's Bag)
+      EP              → EP (Emergency Pharmaceutical)
+      GE, R1, 기타    → S85 (일반처방약 섹션)
+    """
+    if not program_code:
+        return None
+    code = str(program_code).upper().strip()
+    if code in {"IN", "IP"}:
+        return "S100_HSD"
+    if code in {"TY", "TZ"}:
+        return "S100_EFC"
+    if code == "DB":
+        return "DB"
+    if code == "EP":
+        return "EP"
+    return "S85"
+
+
+def _empty_dto(pbs_source_url: str | None = None) -> dict[str, Any]:
+    """PBS 미등재 품목용 빈 PBSItemDTO. pbs_found=False.
+
+    위임지서 03a §2-1 "빈 값 정책": PBS 미등재 품목이면 PBS 관련 컬럼 전부 None
+    (key 는 반드시 유지 — 스키마 정합성).
+    """
     return {
-        "pbs_item_code": None,
-        "pbs_listed": False,
-        "pbs_price_aud": None,
-        "pbs_source_url": _pbs_public_url(None),
-        "restriction_text": None,
+        "pbs_found": False,
+        "pbs_code": None,
+        "li_item_id": None,
+        "schedule_code": None,
+        # 품목 정보
+        "drug_name": None,
+        "brand_name": None,
+        "manufacturer_code": None,
+        "organisation_id": None,
+        "pack_size": None,
+        "pricing_quantity": None,
+        "maximum_prescribable_pack": None,
+        "number_of_repeats": None,
+        "pack_not_to_be_broken": None,
+        # 프로그램 분류
+        "program_code": None,
+        "section_85_100": None,
+        "formulary": None,
+        "benefit_type_code": None,
+        # 가격 (AUD)
+        "aemp_aud": None,
+        "spd_aud": None,
+        "claimed_price_aud": None,
+        "dpmq_aud": None,
+        "mn_pharmacy_price_aud": None,
+        "brand_premium_aud": None,
+        "therapeutic_group_premium_aud": None,
+        "special_patient_contrib_aud": None,
+        # 마진·수수료 (TODO(v2-pbs-full): /fees /markup-bands 엔드포인트 추가)
+        "wholesale_markup_band": None,
+        "pharmacy_markup_code": None,
+        "markup_variable_pct": None,
+        "markup_offset_aud": None,
+        "markup_fixed_aud": None,
+        "dispensing_fee_aud": None,
+        "ahi_fee_aud": None,
+        # 분류·정책 플래그
+        "originator_brand": None,
+        "therapeutic_group_id": None,
+        "therapeutic_group_title": None,
+        "brand_substitution_group_id": None,
+        "atc_code": None,  # TODO(v2-pbs-full): /item-atc-relationships 엔드포인트 추가
+        "policy_imdq60": None,
+        "policy_biosim": None,
+        "section_19a_expiry_date": None,
+        "supply_only": None,
+        # 환자 본인부담 (TODO(v2-pbs-full): /copayments 엔드포인트 추가)
+        "copay_general_aud": None,
+        "copay_concessional_aud": None,
+        "safety_net_general_aud": None,
+        "safety_net_concessional_aud": None,
+        # 처방 제한
+        "authority_method": None,
+        "written_authority_required": None,
+        # 이력
+        "first_listed_date": None,
+        "non_effective_date": None,
+        "advanced_notice_date": None,
+        "supply_only_end_date": None,
+        # 가격 변동 이력
+        "price_change_events": [],
+        # 바이어 후보 풀용 (§13-7-B) — manufacturer_code 또는 organisation 에서 회사명
+        "sponsors": [],
+        # au_pbs_raw 저장용 — /items + /item-dispensing-rule-relationships 원본 통째
+        "raw_response": {},
+        # 메타
+        "source_url": pbs_source_url or _pbs_public_url(None),
+        "source_name": "pbs_api_v3",
+        "crawled_at": None,
+        # 검색 결과 다수 매칭 시 자사 브랜드 외 경쟁자 (2공정 포지셔닝용, 하위호환)
+        "pbs_brands": None,
+        "competitor_brands": None,
+        "pbs_total_brands": None,
     }
 
 
-def _price_from_row(row: dict[str, Any]) -> float | None:
-    for key in ("determined_price", "claimed_price"):
-        v = row.get(key)
-        if isinstance(v, (int, float)):
-            return float(v)
-    return None
-
-
-def _restriction_from_row(row: dict[str, Any]) -> str | None:
-    for key in ("restriction_text", "note_text", "caution_text"):
-        v = row.get(key)
-        if isinstance(v, str) and v.strip():
-            return v.strip()
-    return None
-
-
 def _row_matches_ingredient(row: dict[str, Any], needles: list[str]) -> bool:
-    """PubChem 정규화가 브랜드명(cardyl 등)으로 바뀌는 경우가 있어, 원문 성분·정규화 둘 다로 부분일치."""
+    """PubChem 정규화가 브랜드명으로 왜곡될 수 있어, 원문·정규화명 둘 다로 부분일치."""
     needles = [n.strip().lower() for n in needles if n and str(n).strip()]
     if not needles:
         return False
@@ -80,67 +211,109 @@ def _row_matches_ingredient(row: dict[str, Any], needles: list[str]) -> bool:
     return any(n in blob for n in needles)
 
 
-def _safe_float(v: Any) -> float | None:
-    if isinstance(v, (int, float)):
-        return float(v)
-    if isinstance(v, str):
-        s = v.strip().replace(",", "")
-        try:
-            return float(s)
-        except ValueError:
-            return None
-    return None
+def _row_to_dto(
+    item_row: dict[str, Any],
+    dispensing_rule_row: dict[str, Any] | None = None,
+    *,
+    schedule_code: str | None = None,
+) -> dict[str, Any]:
+    """/items row + /item-dispensing-rule-relationships row → PBSItemDTO.
 
-
-def _brand_premium_from_row(row: dict[str, Any]) -> float | None:
-    """브랜드 프리미엄(최저가 브랜드 대비 추가 환자부담).
-
-    1순위: PBS API의 `brand_price_premium` / `therapeutic_group_premium` 필드
-    2순위: claimed_price(총약가 기준) - determined_price(AEMP) 차이로 추정 불가
-          (이 차이는 유통마진이지 브랜드 프리미엄이 아님 → 계산 포기, None 반환)
+    중간안 — /fees, /markup-bands, /copayments, /item-atc-relationships 는 NULL.
+    TODO(v2-pbs-full): 위 4 엔드포인트 추가로 NULL 컬럼 14 개 중 8 개 채우기.
     """
-    for key in ("brand_price_premium", "therapeutic_group_premium"):
-        v = _safe_float(row.get(key))
-        if v is not None and v > 0:
-            return v
-    return None
+    dto = _empty_dto()
+    dto["pbs_found"] = True
 
+    # ── 식별자 ─────────────────────────────────────────────────
+    raw_code = item_row.get("pbs_code")
+    dto["pbs_code"] = str(raw_code) if raw_code is not None else None
+    dto["li_item_id"] = item_row.get("li_item_id")
+    dto["schedule_code"] = schedule_code
 
-def _row_to_result(row: dict[str, Any]) -> dict[str, Any]:
-    """PBS API row를 원본 필드 그대로 노출하는 dict로 변환.
+    # ── 품목 정보 ───────────────────────────────────────────────
+    dto["drug_name"] = item_row.get("drug_name") or item_row.get("li_drug_name")
+    dto["brand_name"] = item_row.get("brand_name")
+    dto["manufacturer_code"] = item_row.get("manufacturer_code")
+    dto["organisation_id"] = item_row.get("organisation_id")
+    dto["pack_size"] = item_row.get("pack_size")
+    dto["pricing_quantity"] = item_row.get("pricing_quantity")
+    dto["maximum_prescribable_pack"] = item_row.get("maximum_prescribable_pack")
+    dto["number_of_repeats"] = item_row.get("number_of_repeats")
+    dto["pack_not_to_be_broken"] = item_row.get("pack_not_to_be_broken_ind")
 
-    계산·역산 일체 없음. DPMQ→AEMP 역산 같은 파생값은 2공정(stage2)에서 담당.
-    """
-    raw_code = row.get("pbs_code")
-    pbs_item = str(raw_code) if raw_code is not None else None
+    # ── 프로그램 분류 ───────────────────────────────────────────
+    program_code = item_row.get("program_code")
+    dto["program_code"] = program_code
+    dto["section_85_100"] = _derive_section_85_100(program_code)
+    dto["formulary"] = item_row.get("formulary")
+    dto["benefit_type_code"] = item_row.get("benefit_type_code")
 
-    return {
-        "pbs_item_code": pbs_item,
-        "pbs_listed": True,
-        "pbs_price_aud": _price_from_row(row),
-        "pbs_source_url": _pbs_public_url(pbs_item),
-        "restriction_text": _restriction_from_row(row),
-        "pbs_dpmq": _safe_float(row.get("claimed_price")),
-        "pbs_determined_price": _safe_float(row.get("determined_price")),
-        "pbs_pack_size": row.get("pack_size"),
-        "pbs_pricing_quantity": row.get("pricing_quantity"),
-        "pbs_benefit_type": row.get("benefit_type_code"),
-        "pbs_program_code": row.get("program_code"),
-        "pbs_brand_name": row.get("brand_name"),
-        "pbs_innovator": row.get("innovator_indicator"),
-        "pbs_manufacturer": row.get("manufacturer_name") or row.get("mnfr_name"),
-        "pbs_brand_premium": _brand_premium_from_row(row),
-        "pbs_first_listed_date": row.get("first_listed_date"),
-        "pbs_repeats": row.get("number_of_repeats"),
-        "pbs_formulary": row.get("formulary"),
-        "pbs_restriction": row.get("benefit_type_code") in ("R", "S"),
+    # ── 가격 (AUD) — /items 로 채우는 것 ─────────────────────────
+    dto["aemp_aud"] = _safe_decimal(item_row.get("determined_price"))
+    dto["spd_aud"] = _safe_decimal(item_row.get("weighted_avg_disclosed_price"))
+    dto["claimed_price_aud"] = _safe_decimal(item_row.get("claimed_price"))
+
+    # ── 가격 (AUD) — /item-dispensing-rule-relationships 조인 ───
+    if dispensing_rule_row:
+        dto["dpmq_aud"] = _safe_decimal(dispensing_rule_row.get("cmnwlth_dsp_price_max_qty"))
+        dto["mn_pharmacy_price_aud"] = _safe_decimal(dispensing_rule_row.get("mn_pharmacy_price"))
+        dto["brand_premium_aud"] = _safe_decimal(dispensing_rule_row.get("brand_premium"))
+        dto["therapeutic_group_premium_aud"] = _safe_decimal(dispensing_rule_row.get("therapeutic_group_premium"))
+        dto["special_patient_contrib_aud"] = _safe_decimal(dispensing_rule_row.get("special_patient_contribution"))
+        dto["wholesale_markup_band"] = dispensing_rule_row.get("mn_price_wholesale_markup")
+        dto["pharmacy_markup_code"] = dispensing_rule_row.get("mn_pharmacy_markup_code")
+
+    # ── 분류·정책 플래그 ───────────────────────────────────────
+    dto["originator_brand"] = bool(item_row.get("originator_brand_indicator")) if item_row.get("originator_brand_indicator") is not None else None
+    dto["therapeutic_group_id"] = item_row.get("therapeutic_group_id")
+    dto["therapeutic_group_title"] = item_row.get("therapeutic_group_title")
+    dto["brand_substitution_group_id"] = item_row.get("brand_substitution_group_id")
+    dto["policy_imdq60"] = bool(item_row.get("policy_applied_imdq60_flag")) if item_row.get("policy_applied_imdq60_flag") is not None else None
+    dto["policy_biosim"] = bool(item_row.get("policy_applied_bio_sim_up_flag")) if item_row.get("policy_applied_bio_sim_up_flag") is not None else None
+    dto["section_19a_expiry_date"] = item_row.get("section_19a_expiry_date")
+    dto["supply_only"] = bool(item_row.get("supply_only_indicator")) if item_row.get("supply_only_indicator") is not None else None
+
+    # ── 처방 제한 ─────────────────────────────────────────────
+    dto["authority_method"] = item_row.get("authority_method")
+    dto["written_authority_required"] = item_row.get("written_authority_required")
+
+    # ── 이력 ──────────────────────────────────────────────────
+    dto["first_listed_date"] = item_row.get("first_listed_date")
+    dto["non_effective_date"] = item_row.get("non_effective_date")
+    dto["advanced_notice_date"] = item_row.get("advanced_notice_date")
+    dto["supply_only_end_date"] = item_row.get("supply_only_end_date")
+
+    # ── 바이어 후보 풀 (§13-7-B) — manufacturer_code 또는 brand_name 에서 회사명 ──
+    # PBS API 는 sponsor_name 직접 필드 없음. manufacturer_code(2-letter) 로 추정.
+    # 회사명 정확 매핑은 /organisations 엔드포인트 필요 (TODO(v2-pbs-full)).
+    sponsors: list[str] = []
+    mnfr = item_row.get("manufacturer_code") or item_row.get("manufacturer_name")
+    if mnfr and str(mnfr).strip():
+        sponsors.append(str(mnfr).strip())
+    dto["sponsors"] = sponsors
+
+    # ── au_pbs_raw 저장용 원본 ────────────────────────────────
+    dto["raw_response"] = {
+        "items": item_row,
+        "dispensing_rule": dispensing_rule_row or {},
     }
 
+    # ── 메타 ──────────────────────────────────────────────────
+    dto["source_url"] = _pbs_public_url(dto["pbs_code"])
+    dto["crawled_at"] = datetime.now(timezone.utc).isoformat()
+
+    return dto
+
+
+# ─────────────────────────────────────────────────────────────────────
+# API 호출 래퍼
+# ─────────────────────────────────────────────────────────────────────
 
 def fetch_latest_schedule_code() -> str | None:
-    """schedules 응답 data[0].schedule_code를 문자열로 반환한다."""
+    """/schedules data[0].schedule_code 문자열 반환. 실패 시 None."""
     try:
-        time.sleep(21)
+        time.sleep(_RATE_LIMIT_SEC)
         r = httpx.get(f"{_BASE}/schedules", headers=_headers(), timeout=10)
         if r.status_code != 200:
             return None
@@ -154,61 +327,112 @@ def fetch_latest_schedule_code() -> str | None:
         return None
 
 
-def _pbs_price_sort_key(row: dict[str, Any]) -> float:
-    v = row.get("pbs_price_aud")
-    if isinstance(v, (int, float)):
-        return float(v)
+def fetch_item_dispensing_rule(
+    li_item_id: str | None,
+    schedule_code: str | None,
+) -> dict[str, Any] | None:
+    """/item-dispensing-rule-relationships 에서 해당 li_item_id 행 1건 반환.
+
+    중간안 추가 엔드포인트 — DPMQ·brand_premium·TGP·SPC·markup_code·wholesale_markup 채움.
+    실패·매칭 없음 시 None (호출부에서 NULL 처리).
+    """
+    if not li_item_id or not schedule_code:
+        return None
+    try:
+        time.sleep(_RATE_LIMIT_SEC)
+        params: dict[str, Any] = {
+            "schedule_code": schedule_code,
+            "li_item_id": li_item_id,
+            "page": 1,
+            "limit": 5,
+        }
+        r = httpx.get(
+            f"{_BASE}/item-dispensing-rule-relationships",
+            params=params,
+            headers=_headers(),
+            timeout=10,
+        )
+        if r.status_code != 200:
+            return None
+        payload = r.json()
+        rows = payload.get("data") if isinstance(payload, dict) else None
+        if isinstance(rows, list) and rows and isinstance(rows[0], dict):
+            return rows[0]
+    except Exception:
+        return None
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 다중 결과 필터 — 오리지널 1 건 우선, 없으면 최저가 제네릭
+# ─────────────────────────────────────────────────────────────────────
+
+def _dto_price_sort_key(dto: dict[str, Any]) -> float:
+    """_filter_results 정렬용 — DPMQ 가 최저인 행 선호 (없으면 AEMP)."""
+    for key in ("dpmq_aud", "aemp_aud"):
+        v = dto.get(key)
+        if isinstance(v, Decimal):
+            return float(v)
+        if isinstance(v, (int, float)):
+            return float(v)
     return float("inf")
 
 
-def _filter_results(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """매칭된 여러 브랜드 중 1행만 반환: 오리지널(Y) 1개 우선, 없으면 최저가 제네릭(N) 1개."""
-    if not rows:
-        return rows
-    if not rows[0].get("pbs_listed"):
-        return rows
+def _filter_results(dtos: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """매칭된 여러 브랜드 중 1 건만 반환 (오리지널 Y 우선, 없으면 최저가 제네릭)."""
+    if not dtos:
+        return dtos
+    if not dtos[0].get("pbs_found"):
+        return dtos
 
-    originals = [r for r in rows if r.get("pbs_innovator") == "Y"]
+    # originator_brand True 인 행 우선. 없으면 False 중 최저가.
+    originals = [d for d in dtos if d.get("originator_brand") is True]
     if originals:
         chosen = dict(originals[0])
     else:
-        generics = [r for r in rows if r.get("pbs_innovator") == "N"]
-        pool = generics if generics else rows
-        chosen = dict(min(pool, key=_pbs_price_sort_key))
+        generics = [d for d in dtos if d.get("originator_brand") is False]
+        pool = generics if generics else dtos
+        chosen = dict(min(pool, key=_dto_price_sort_key))
 
-    pbs_total_brands = len(
-        {r.get("pbs_brand_name") for r in rows if r.get("pbs_brand_name")}
-    )
-    chosen["pbs_total_brands"] = pbs_total_brands
-    pbs_brands: list[dict[str, Any]] = [
+    # 2공정 포지셔닝용 — 경쟁 브랜드 정보 (하위호환 키 이름 유지)
+    total = len({d.get("brand_name") for d in dtos if d.get("brand_name")})
+    chosen["pbs_total_brands"] = total
+    pbs_brands = [
         {
-            "brand_name": r.get("pbs_brand_name"),
-            "pbs_price_aud": r.get("pbs_price_aud"),
-            "pbs_dpmq": r.get("pbs_dpmq"),
-            "pbs_determined_price": r.get("pbs_determined_price"),
-            "pbs_innovator": r.get("pbs_innovator"),
-            "pbs_item_code": r.get("pbs_item_code"),
-            "pbs_manufacturer": r.get("pbs_manufacturer"),
-            "brand_premium": r.get("pbs_brand_premium"),
+            "brand_name": d.get("brand_name"),
+            "aemp_aud": d.get("aemp_aud"),
+            "dpmq_aud": d.get("dpmq_aud"),
+            "originator_brand": d.get("originator_brand"),
+            "pbs_code": d.get("pbs_code"),
+            "manufacturer_code": d.get("manufacturer_code"),
+            "brand_premium_aud": d.get("brand_premium_aud"),
         }
-        for r in rows
+        for d in dtos
     ]
     chosen["pbs_brands"] = pbs_brands
-    # competitor_brands: 선정된 행을 제외한 경쟁 브랜드만. 2공정 FOB 분석에서
-    # 자사 브랜드 가격 포지셔닝 판단에 쓴다.
-    chosen_code = chosen.get("pbs_item_code")
-    chosen_brand = chosen.get("pbs_brand_name")
     chosen["competitor_brands"] = [
         b for b in pbs_brands
-        if not (b.get("pbs_item_code") == chosen_code and b.get("brand_name") == chosen_brand)
+        if not (b.get("pbs_code") == chosen.get("pbs_code") and b.get("brand_name") == chosen.get("brand_name"))
     ]
+    # 모든 브랜드의 sponsors 합치기 (바이어 후보 풀 — §13-7-B)
+    all_sponsors: list[str] = list(chosen.get("sponsors") or [])
+    for d in dtos:
+        for s in (d.get("sponsors") or []):
+            if s and s not in all_sponsors:
+                all_sponsors.append(s)
+    chosen["sponsors"] = all_sponsors
     return [chosen]
 
 
+# ─────────────────────────────────────────────────────────────────────
+# 메인 엔트리 포인트 — 성분 기반 검색
+# ─────────────────────────────────────────────────────────────────────
+
 def _pbs_needles(ing_raw: str) -> list[str]:
     """원문 성분 + PubChem 정규화명(브랜드명으로 왜곡될 수 있음) 모두로 매칭."""
-    import sys, os
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import sys
+    import os as _os
+    sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
     from utils.inn_normalize import normalize_inn
 
     raw = ing_raw.strip().lower()
@@ -219,25 +443,26 @@ def _pbs_needles(ing_raw: str) -> list[str]:
 
 
 def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
-    """ingredient로 PBS 품목을 찾는다.
+    """ingredient 로 PBS 품목을 찾아 PBSItemDTO(dict) 리스트 반환.
 
-    매칭이 여러 브랜드일 때는 리스트에 dict **1개**만 담는다:
-    innovator_indicator=Y 인 오리지널 1개만, 없으면 innovator=N 중 pbs_price_aud 최저 1개.
-    없으면 [_empty_dict()].
+    매칭 다중 시 1 건만: originator_brand 우선, 없으면 dpmq 최저.
+    없으면 [_empty_dto()]. Key 이름은 §13-5-1 PBSItemDTO 기준.
+
+    중간안: /items + /item-dispensing-rule-relationships 조인.
     """
     ing_raw = (ingredient or "").strip()
     if not ing_raw:
-        return [_empty_dict()]
+        return [_empty_dto()]
     needles = _pbs_needles(ing_raw)
     ing = needles[0] if needles else ing_raw.lower()
-    out_empty = _empty_dict()
+    out_empty = _empty_dto()
 
     try:
         schedule = fetch_latest_schedule_code()
         if not schedule:
             return [out_empty]
 
-        # 1차: drug_name 파라미터 (빈 결과·비-200이면 fallback)
+        # 1 차: drug_name 파라미터
         params_primary: dict[str, Any] = {
             "schedule_code": schedule,
             "drug_name": ing,
@@ -245,7 +470,7 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
             "limit": 10,
         }
         try:
-            time.sleep(21)
+            time.sleep(_RATE_LIMIT_SEC)
             r1 = httpx.get(
                 f"{_BASE}/items",
                 params=params_primary,
@@ -268,16 +493,18 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
                         primary_matched.append(row)
 
         if primary_matched:
-            return _filter_results([_row_to_result(r) for r in primary_matched])
+            return _filter_results([
+                _join_dispensing_rule(r, schedule) for r in primary_matched
+            ])
 
-        # 1차 보조: drug_name 을 정규화명만으로 재조회(원문과 API 인덱스 불일치 대비)
+        # 1 차 보조: 정규화명으로 재조회
         if (
             not primary_matched
             and len(needles) > 1
             and needles[1] != needles[0]
         ):
             try:
-                time.sleep(21)
+                time.sleep(_RATE_LIMIT_SEC)
                 r1b = httpx.get(
                     f"{_BASE}/items",
                     params={
@@ -299,25 +526,21 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
                 rows_b = payload_b.get("data") if isinstance(payload_b, dict) else None
                 if isinstance(rows_b, list):
                     for row in rows_b:
-                        if isinstance(row, dict) and _row_matches_ingredient(
-                            row, needles
-                        ):
+                        if isinstance(row, dict) and _row_matches_ingredient(row, needles):
                             primary_matched.append(row)
             if primary_matched:
-                return _filter_results([_row_to_result(r) for r in primary_matched])
+                return _filter_results([
+                    _join_dispensing_rule(r, schedule) for r in primary_matched
+                ])
 
-        # fallback: filter 없이 page 순차, drug_name / li_drug_name 부분일치(소문자)
+        # 2 차: filter 없이 페이지 순회, drug_name / li_drug_name 부분일치
         fallback_matched: list[dict[str, Any]] = []
         for page in range(1, _MAX_FALLBACK_PAGES + 1):
             try:
-                time.sleep(21)
+                time.sleep(_RATE_LIMIT_SEC)
                 r2 = httpx.get(
                     f"{_BASE}/items",
-                    params={
-                        "schedule_code": schedule,
-                        "page": page,
-                        "limit": 100,
-                    },
+                    params={"schedule_code": schedule, "page": page, "limit": 100},
                     headers=_headers(),
                     timeout=10,
                 )
@@ -338,34 +561,50 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
                 break
 
         if fallback_matched:
-            return _filter_results([_row_to_result(r) for r in fallback_matched])
+            return _filter_results([
+                _join_dispensing_rule(r, schedule) for r in fallback_matched
+            ])
 
         return [out_empty]
     except Exception:
         return [out_empty]
 
 
+def _join_dispensing_rule(item_row: dict[str, Any], schedule: str) -> dict[str, Any]:
+    """/item-dispensing-rule-relationships 조회 후 DTO 로 변환."""
+    li_item_id = item_row.get("li_item_id")
+    rule_row = fetch_item_dispensing_rule(li_item_id, schedule)
+    return _row_to_dto(item_row, rule_row, schedule_code=schedule)
+
+
 def fetch_pbs_multi(ingredients: list[str]) -> list[dict[str, Any]]:
     """여러 성분에 대해 fetch_pbs_by_ingredient 결과를 이어 붙인다."""
     if not ingredients:
-        return [_empty_dict()]
+        return [_empty_dto()]
     acc: list[dict[str, Any]] = []
     for raw in ingredients:
         acc.extend(fetch_pbs_by_ingredient(raw))
-    return acc if acc else [_empty_dict()]
+    return acc if acc else [_empty_dto()]
 
+
+# ─────────────────────────────────────────────────────────────────────
+# Web 보강 — Jina Reader (API 실패·pbs_web_source_url 용). DTO 반환 아님.
+# ─────────────────────────────────────────────────────────────────────
 
 def fetch_pbs_web(pbs_item_code: str) -> dict[str, Any]:
-    """Jina Reader로 PBS 품목 페이지 마크다운을 받아 가격·브랜드 표를 파싱한다."""
+    """Jina Reader 로 PBS 품목 페이지 마크다운을 받아 DPMQ·환자부담 파싱.
 
-    def _dollar(cell: str) -> float | None:
+    API 실패 시 최후 fallback. DTO 가 아니라 보조 dict 반환 (하위호환 유지 —
+    au_crawler 가 DTO 에 이 값을 merge 할 때만 사용).
+
+    TODO(v2-pbs-full): 이 함수의 반환도 DTO 형식으로 통일 예정 (향후 위임).
+    """
+
+    def _dollar(cell: str) -> Decimal | None:
         m = re.search(r"\$\s*(\d+(?:,\d{3})*(?:\.\d+)?)", cell.strip())
         if not m:
             return None
-        try:
-            return float(m.group(1).replace(",", ""))
-        except ValueError:
-            return None
+        return _safe_decimal(m.group(1).replace(",", ""))
 
     def _strip_md_links(cell: str) -> str:
         s = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", cell)
@@ -381,11 +620,11 @@ def fetch_pbs_web(pbs_item_code: str) -> dict[str, Any]:
     code = (pbs_item_code or "").strip()
     canonical = f"https://www.pbs.gov.au/medicine/item/{code}" if code else ""
     empty: dict[str, Any] = {
-        "pbs_dpmq": None,
+        "dpmq_aud": None,
         "pbs_patient_charge": None,
         "pbs_web_source_url": canonical,
-        "pbs_brand_name": None,
-        "pbs_innovator": None,
+        "brand_name": None,
+        "originator_brand": None,
         "pbs_brands": None,
     }
     if not code:
@@ -420,11 +659,10 @@ def fetch_pbs_web(pbs_item_code: str) -> dict[str, Any]:
         rows_out.append(
             {
                 "brand_name": brand_txt or None,
-                "pbs_price_aud": dpmq_v,
-                "pbs_dpmq": dpmq_v,
+                "dpmq_aud": dpmq_v,
                 "pbs_patient_charge": pat_v,
-                "pbs_innovator": None,
-                "pbs_item_code": code,
+                "originator_brand": None,
+                "pbs_code": code,
             }
         )
 
@@ -435,25 +673,25 @@ def fetch_pbs_web(pbs_item_code: str) -> dict[str, Any]:
     pbs_brands: list[dict[str, Any]] = [
         {
             "brand_name": r.get("brand_name"),
-            "pbs_price_aud": r.get("pbs_price_aud"),
-            "pbs_innovator": r.get("pbs_innovator"),
-            "pbs_item_code": r.get("pbs_item_code"),
+            "dpmq_aud": r.get("dpmq_aud"),
+            "originator_brand": r.get("originator_brand"),
+            "pbs_code": r.get("pbs_code"),
         }
         for r in rows_out
     ]
     return {
-        "pbs_dpmq": first.get("pbs_dpmq"),
+        "dpmq_aud": first.get("dpmq_aud"),
         "pbs_patient_charge": first.get("pbs_patient_charge"),
         "pbs_web_source_url": canonical,
-        "pbs_brand_name": first.get("brand_name"),
-        "pbs_innovator": None,
+        "brand_name": first.get("brand_name"),
+        "originator_brand": None,
         "pbs_brands": pbs_brands,
     }
 
 
 if __name__ == "__main__":
+    import json as _json
     result = fetch_pbs_by_ingredient("hydroxycarbamide")
-    for row in result:
-        print(row)
-
-
+    for dto in result:
+        # Decimal 은 json.dumps 불가 → 간이 출력
+        print({k: (str(v) if isinstance(v, Decimal) else v) for k, v in dto.items() if k != "raw_response"})

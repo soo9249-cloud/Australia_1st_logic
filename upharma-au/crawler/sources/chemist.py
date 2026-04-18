@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any
 from urllib.parse import quote
 
@@ -129,8 +131,20 @@ def fetch_chemist_price(search_term: str) -> dict[str, Any] | None:
     if retail is None:
         return None
 
+    # ChemistDTO (§13-5-3) — Decimal 사용, v2 키 + 하위호환 키 둘 다 유지
+    price_decimal = Decimal(str(retail))
     return {
-        "retail_price_aud": retail,
+        # v2 DTO 키
+        "product_url": target_url,
+        "brand_name": None,            # 현재 파싱 범위 밖 — 다음 위임
+        "price_aud": price_decimal,
+        "pack_size": None,             # 현재 파싱 범위 밖
+        "in_stock": True,               # 검색 결과에 노출된 첫 양수가 있으면 true 로 간주
+        "category": None,
+        "source_name": "chemist_warehouse",
+        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        # 하위호환 키 (au_crawler._estimate_retail_price 등에서 사용)
+        "retail_price_aud": price_decimal,
         "price_unit": "per pack",
         "price_source_name": "Chemist Warehouse",
         "price_source_url": target_url,

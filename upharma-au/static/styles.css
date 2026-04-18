@@ -1275,12 +1275,12 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   flex-direction: column;
   height: 100%;
 }
-/* 뉴스 카드: 헤더(auto) + 목록(남은 높이 전부) — #news-list에 실제 세로 공간이 생김 */
+/* 뉴스 카드: 플렉스 열로 목록이 남은 높이를 반드시 먹게(중첩 grid 1fr은 높이 불확실 시 무력화되기 쉬움) */
 #main .map-news-grid > article.news-card-panel {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  height: 100%;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 #main .map-card-wrap {
   display: flex;
@@ -1294,6 +1294,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   min-height: 0;
 }
 .news-card-panel #news-list {
+  flex: 1 1 0%;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -1317,11 +1318,15 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 .news-card-panel #news-list > .irow.news-item {
   flex: 1 1 0;
   min-height: 0;
-  display: flex;
+  display: flex !important;
   flex-direction: column;
   justify-content: center;
-  padding: 8px 12px;
-  margin-bottom: 0;
+  padding: 8px 12px !important;
+  margin-bottom: 0 !important;
+}
+.news-card-panel #news-list > a.irow.news-item {
+  text-decoration: none;
+  color: inherit;
 }
 .news-card-panel #news-list > .irow:not(.news-item) {
   flex: 0 0 auto;

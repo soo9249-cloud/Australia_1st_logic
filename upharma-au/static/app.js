@@ -1925,7 +1925,7 @@ async function loadNews() {
         ? `<div class="news-sum">${_escHtml(item.summary_ko)}</div>`
         : '';
       return `
-        <${tag} class="irow news-item" ${href} style="${item.link ? 'text-decoration:none;display:block;' : ''}">
+        <${tag} class="irow news-item" ${href}>
           <div class="tit">${_escHtml(head)}</div>
           ${sum}
           ${source ? `<div class="sub">${_escHtml(source)}</div>` : ''}

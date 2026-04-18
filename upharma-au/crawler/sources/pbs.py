@@ -862,6 +862,80 @@ def fetch_pbs_fdc(
     return best
 
 
+def _component_aemp_markup() -> Decimal:
+    """COMPONENT_SUM fallback 에서 소매가 → AEMP 역산에 쓰는 배수.
+
+    기본 1.6 (호주 약국 마크업·GST·조제료 역산 근사). 환경변수
+    COMPONENT_AEMP_MARKUP 로 오버라이드 가능. 실측 근거 나오면
+    utils/enums.py 상수화.
+    """
+    import os
+    raw = (os.environ.get("COMPONENT_AEMP_MARKUP") or "1.6").strip()
+    try:
+        v = Decimal(raw)
+        return v if v > Decimal("0") else Decimal("1.6")
+    except (InvalidOperation, ValueError):
+        return Decimal("1.6")
+
+
+def _seeds_lookup_by_ingredient(ingredient: str) -> Decimal | None:
+    """fob_reference_seeds.json 에서 같은 성분을 가진 다른 제품의
+    reference_retail_aud 를 찾아 반환.
+
+    동작: au_products.json 을 로드해서 inn_components 에 ingredient 가
+    포함된 제품들의 product_id 집합을 얻고, seeds.json 에서 해당 product_id
+    매칭 + reference_retail_aud non-null 인 첫 seed 의 값 반환.
+
+    예) ingredient="omega-3-acid ethyl esters" →
+        au-omethyl-001 (inn_components 포함) → seeds au-omethyl-001
+        → reference_retail_aud=48.95 반환.
+
+    실패 시 None.
+    """
+    if not ingredient:
+        return None
+    import json
+    from pathlib import Path
+    ing_low = ingredient.strip().lower()
+    if not ing_low:
+        return None
+
+    # au_products.json 경로 (crawler/ 하위). 이 파일에서 2 단계 상위.
+    crawler_dir = Path(__file__).resolve().parent.parent
+    products_path = crawler_dir / "au_products.json"
+    seeds_path = crawler_dir.parent / "stage2" / "fob_reference_seeds.json"
+
+    try:
+        with products_path.open(encoding="utf-8") as f:
+            products_data = json.load(f)
+        with seeds_path.open(encoding="utf-8") as f:
+            seeds_data = json.load(f)
+    except Exception:
+        return None
+
+    # ingredient 포함 제품 product_id 모으기
+    candidates: list[str] = []
+    for p in products_data.get("products", []):
+        inn_comps = p.get("inn_components") or []
+        inn_norm = (p.get("inn_normalized") or "").lower()
+        comp_low = [str(c).lower() for c in inn_comps]
+        if ing_low in comp_low or ing_low in inn_norm:
+            pid = p.get("product_id")
+            if pid:
+                candidates.append(pid)
+
+    if not candidates:
+        return None
+
+    # seeds 에서 해당 product_id 매칭 + reference_retail_aud non-null 첫 건
+    for seed in seeds_data.get("seeds", []):
+        if seed.get("product_id") in candidates:
+            rr = seed.get("reference_retail_aud")
+            if isinstance(rr, (int, float)) and float(rr) > 0:
+                return Decimal(str(rr))
+    return None
+
+
 def fetch_pbs_component_sum(components: list[str]) -> dict[str, Any]:
     """Case 2 COMPONENT_SUM — 복합제 FDC 미등재, 각 단일성분 PBS 등재 → 합산.
 
@@ -871,8 +945,20 @@ def fetch_pbs_component_sum(components: list[str]) -> dict[str, Any]:
     Chemist Warehouse 소매가를 폴백으로 조회하고 AEMP 역산(소매가 ÷ 1.6 근사)한
     가짜 행을 추가해 merge. 결과에 missing_from_pbs + confidence_override 기록.
 
-    ※ AEMP 역산 배수 1.6 은 임시값 — 실측 근거 확보 시 utils/enums.py 상수화 예정.
+    Task 1 (2026-04-19) — PBS 미등재 성분 3단 fallback 체인:
+      1. Chemist Warehouse (기존)
+      2. Healthylife (Chemist 실패·비신뢰 시)
+      3. fob_reference_seeds.json 의 같은 성분 reference_retail_aud
+         (omega-3-acid ethyl esters 같은 건강기능식품성 성분 대응)
+    모두 실패하면 missing_from_pbs 에 기록.
+
+    각 fallback 행에 `_source` 로 출처 구분:
+      "chemist_fallback" / "healthylife_fallback" / "seeds_reference_retail"
+
+    AEMP 역산 배수는 _component_aemp_markup() — 환경변수 COMPONENT_AEMP_MARKUP 오버라이드.
     """
+    markup = _component_aemp_markup()
+
     acc: list[dict[str, Any]] = []
     missing_from_pbs: list[str] = []
     for c in components:
@@ -885,35 +971,79 @@ def fetch_pbs_component_sum(components: list[str]) -> dict[str, Any]:
         else:
             missing_from_pbs.append(c)
 
-    # PBS 없는 성분 → Chemist 소매가 역산으로 보강 (Phase 4.6)
+    # Task 1 — PBS 없는 성분: Chemist → Healthylife → seeds 3단 fallback
     if missing_from_pbs:
         try:
             from sources.chemist import fetch_chemist_price
         except ImportError:
             from .chemist import fetch_chemist_price  # type: ignore
+        try:
+            from sources.healthylife import fetch_healthylife_price
+        except ImportError:
+            try:
+                from .healthylife import fetch_healthylife_price  # type: ignore
+            except Exception:
+                fetch_healthylife_price = None  # type: ignore
+
+        still_missing: list[str] = []
         for c in missing_from_pbs:
+            # 1) Chemist Warehouse
             try:
                 ch = fetch_chemist_price(c)
             except Exception:
                 ch = None
-            if not ch:
+            price: Decimal | None = None
+            price_source = None
+            if ch:
+                raw = ch.get("price_aud") if ch.get("price_aud") is not None else ch.get("retail_price_aud")
+                price = _safe_decimal(raw)
+                if price is not None and price > 0:
+                    price_source = "chemist_fallback"
+                else:
+                    price = None
+
+            # 2) Healthylife
+            if price is None and fetch_healthylife_price is not None:
+                try:
+                    hl = fetch_healthylife_price(c)
+                except Exception:
+                    hl = None
+                if hl:
+                    raw = hl.get("price_aud") if hl.get("price_aud") is not None else hl.get("retail_price_aud")
+                    price = _safe_decimal(raw)
+                    if price is not None and price > 0:
+                        price_source = "healthylife_fallback"
+                    else:
+                        price = None
+
+            # 3) seeds.reference_retail_aud (같은 성분 다른 제품)
+            if price is None:
+                seed_price = _seeds_lookup_by_ingredient(c)
+                if seed_price is not None and seed_price > 0:
+                    price = seed_price
+                    price_source = "seeds_reference_retail"
+
+            if price is None or price_source is None:
+                # 3단 전부 실패 — missing 으로 남김
+                still_missing.append(c)
                 continue
-            # price_aud(v2) 우선, retail_price_aud(하위호환) 보조
-            raw = ch.get("price_aud") if ch.get("price_aud") is not None else ch.get("retail_price_aud")
-            price = _safe_decimal(raw)
-            if price is None or price <= 0:
-                continue
-            aemp_est = (price / Decimal("1.6")).quantize(Decimal("0.01"))
+
+            aemp_est = (price / markup).quantize(Decimal("0.01"))
             acc.append({
                 "pbs_found": False,            # 실제 PBS 등재 아님 — 추정값
                 "drug_name": c,
                 "aemp_aud": aemp_est,
-                "dpmq_aud": price,              # 소매가를 DPMQ 위치로 투영 (합산시 참고용)
-                "_source": "chemist_fallback",
-                "_confidence": 0.5,
+                "dpmq_aud": price,             # 소매가를 DPMQ 위치로 투영 (합산시 참고)
+                "_source": price_source,
+                "_confidence": 0.5 if price_source == "chemist_fallback" else (
+                    0.45 if price_source == "healthylife_fallback" else 0.4
+                ),
                 "pbs_code": None,
                 "sponsors": [],
             })
+
+        # missing_from_pbs 최종 = 3단 전부 실패한 것만
+        missing_from_pbs = still_missing
 
     if not acc:
         return _empty_dto()
@@ -924,7 +1054,15 @@ def fetch_pbs_component_sum(components: list[str]) -> dict[str, Any]:
     merged["pricing_case_applied"] = "COMPONENT_SUM"
     merged["_component_rows"] = acc  # 감사 로그용
     merged["missing_from_pbs"] = missing_from_pbs
-    merged["confidence_override"] = 0.6 if missing_from_pbs else 0.85
+    # Task 1 — 3단 fallback 전부 실패한 성분이 있으면 confidence 하향 (0.3).
+    # fallback 으로 메꿨으면 0.6, 모든 성분 PBS 정등재면 0.85.
+    if missing_from_pbs:
+        merged["confidence_override"] = 0.3
+    elif any(r.get("_source") in ("chemist_fallback", "healthylife_fallback", "seeds_reference_retail")
+             for r in acc):
+        merged["confidence_override"] = 0.6
+    else:
+        merged["confidence_override"] = 0.85
     return merged
 
 

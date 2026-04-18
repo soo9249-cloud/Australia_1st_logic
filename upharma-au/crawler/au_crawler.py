@@ -425,10 +425,13 @@ def build_product_summary(
         "retail_estimation_method": retail_estimation_method,
         "chemist_url": (chemist.get("product_url") or chemist.get("price_source_url")) if chemist_ok else None,
 
-        # 내부 필드 — case_code 는 의도적 제외 (결정 3 보완)
+        # Phase 4.4 — case_code / ingredients_split DB 전파 (기존 결정 3 '보존' 정책 해제)
+        # au_products.case_code 컬럼에 pricing_case 값(DIRECT / COMPONENT_SUM / ESTIMATE_* 등)
+        # 을 직접 기록해 보고서·분석 단계에서 JOIN 없이 조회 가능하도록.
+        "case_code": product.get("pricing_case"),
         "ingredients_split": (
             {"components": product.get("inn_components", [])}
-            if product.get("inn_components") else None
+            if product.get("inn_components") else {"components": []}
         ),
         "ai_deep_research_raw": None,    # AI 붙을 때 채움
 
@@ -508,8 +511,42 @@ def build_product_summary(
         "llm_generated_at": None,
     }
 
-    # case_code 방어적 제거 — 혹시라도 상위에서 섞여 들어왔을 때 (결정 3 보완)
-    out.pop("case_code", None)
+    # Phase 4.4 — case_code 는 이제 의도적으로 기록 (결정 3 정책 반전).
+    # 기존 "pop" 방어 삭제 — pricing_case 값이 DB 에 전달되어야 분석 레이어에서 JOIN 없이 사용 가능.
+
+    # 위임지서 §4.4 — dispatcher 가 붙여준 추정 메타를 warnings/situation_summary 에 전파
+    case_applied = pbs.get("pricing_case_applied")
+    if case_applied and case_applied not in ("DIRECT", "DIRECT_FDC", "COMPONENT_SUM"):
+        # fallback·추정 케이스만 사용자에 노출
+        current = list(out.get("warnings") or [])
+        current.append(f"pricing_case_applied={case_applied}")
+        out["warnings"] = current
+
+    similar_proxy = pbs.get("_similar_proxy")
+    if similar_proxy:
+        existing = out.get("similar_drug_used") or []
+        if similar_proxy not in existing:
+            out["similar_drug_used"] = list(existing) + [similar_proxy]
+
+    skip_reason = pbs.get("_pbs_skipped_reason")
+    if skip_reason:
+        w = list(out.get("warnings") or [])
+        w.append(f"pbs_skipped:{skip_reason}")
+        out["warnings"] = w
+
+    # Phase 4.5 — originator_brand 판정 정상화 (fallback).
+    # `pbs.get("originator_brand")` 가 None 이면 endpoint_items 원본에서 innovator_indicator
+    # 를 직접 확인 (API·웹 편차 방지). 'Y' 만 True, 'N' 은 False, 그 외 None.
+    if out.get("originator_brand") is None:
+        raw_resp = pbs.get("raw_response") or {}
+        items = raw_resp.get("items") if isinstance(raw_resp, dict) else {}
+        innov = (
+            pbs.get("innovator_indicator")
+            or (items.get("innovator_indicator") if isinstance(items, dict) else None)
+            or (items.get("originator_brand_indicator") if isinstance(items, dict) else None)
+        )
+        if innov is not None:
+            out["originator_brand"] = str(innov).strip().upper() == "Y"
 
     return out
 

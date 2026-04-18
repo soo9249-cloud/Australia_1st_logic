@@ -266,14 +266,27 @@ def _row_to_dto(
         dto["pharmacy_markup_code"] = dispensing_rule_row.get("mn_pharmacy_markup_code")
 
     # ── 분류·정책 플래그 ───────────────────────────────────────
-    dto["originator_brand"] = bool(item_row.get("originator_brand_indicator")) if item_row.get("originator_brand_indicator") is not None else None
+    # Phase 4.5 — 'Y'/'N' 문자열 플래그는 bool() 로 씌우면 둘 다 True 가 되므로
+    # 반드시 .upper()=='Y' 로 비교. PBS API 는 innovator_indicator(신규) ·
+    # originator_brand_indicator(구) 둘 중 하나만 채워줄 수 있으므로 양쪽 수용.
+    def _yn_to_bool(val: Any) -> bool | None:
+        if val is None:
+            return None
+        return str(val).strip().upper() == "Y"
+
+    innov_raw = (
+        item_row.get("originator_brand_indicator")
+        if item_row.get("originator_brand_indicator") is not None
+        else item_row.get("innovator_indicator")
+    )
+    dto["originator_brand"] = _yn_to_bool(innov_raw)
     dto["therapeutic_group_id"] = item_row.get("therapeutic_group_id")
     dto["therapeutic_group_title"] = item_row.get("therapeutic_group_title")
     dto["brand_substitution_group_id"] = item_row.get("brand_substitution_group_id")
-    dto["policy_imdq60"] = bool(item_row.get("policy_applied_imdq60_flag")) if item_row.get("policy_applied_imdq60_flag") is not None else None
-    dto["policy_biosim"] = bool(item_row.get("policy_applied_bio_sim_up_flag")) if item_row.get("policy_applied_bio_sim_up_flag") is not None else None
+    dto["policy_imdq60"] = _yn_to_bool(item_row.get("policy_applied_imdq60_flag"))
+    dto["policy_biosim"] = _yn_to_bool(item_row.get("policy_applied_bio_sim_up_flag"))
     dto["section_19a_expiry_date"] = item_row.get("section_19a_expiry_date")
-    dto["supply_only"] = bool(item_row.get("supply_only_indicator")) if item_row.get("supply_only_indicator") is not None else None
+    dto["supply_only"] = _yn_to_bool(item_row.get("supply_only_indicator"))
 
     # ── 처방 제한 ─────────────────────────────────────────────
     dto["authority_method"] = item_row.get("authority_method")

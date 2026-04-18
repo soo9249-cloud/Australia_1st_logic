@@ -116,6 +116,20 @@ _ALLOWED_COLUMNS: frozenset[str] = frozenset(
         "crawler_source_urls",
         "error_type",
         "warnings",
+        # 보고서 ① — render_api POST /api/report/generate 가 Haiku 결과 UPDATE
+        "block2_market",
+        "block2_regulatory",
+        "block2_trade",
+        "block2_procurement",
+        "block2_channel",
+        "block3_channel",
+        "block3_pricing",
+        "block3_partners",
+        "block3_risks",
+        "block4_regulatory",
+        "perplexity_refs",
+        "llm_model",
+        "llm_generated_at",
     }
 )
 

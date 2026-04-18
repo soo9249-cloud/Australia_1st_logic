@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 # 기본 환율 — 2026-04 기준 근사값. 운영 배포 전 매일 갱신 API 로 교체 예정.
 _DEFAULT_AUD_USD = "0.65"
@@ -59,3 +60,50 @@ def aud_to_krw(aud: Decimal | int | float | str | None) -> Decimal | None:
     except (InvalidOperation, ValueError):
         return None
     return (value * _rate("FX_AUD_KRW", _DEFAULT_AUD_KRW)).quantize(Decimal("1"))
+
+
+# Task 9 (2026-04-19) — PDF 업로드 경로용 역환산 헬퍼.
+# 사용자가 USD/KRW/EUR 로 된 가격 자료 PDF 업로드 시 AUD 로 정규화해 저장.
+_DEFAULT_AUD_EUR = "0.60"   # 2026-04 근사. env FX_AUD_EUR 로 override.
+
+
+def _to_dec(v: Any) -> Decimal | None:  # type: ignore[name-defined]
+    if v is None:
+        return None
+    try:
+        return Decimal(str(v))
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def usd_to_aud(usd: Decimal | int | float | str | None) -> Decimal | None:
+    """USD → AUD. 소수점 둘째 자리 반올림. None 은 그대로 None."""
+    v = _to_dec(usd)
+    if v is None:
+        return None
+    rate_aud_usd = _rate("FX_AUD_USD", _DEFAULT_AUD_USD)
+    if rate_aud_usd == 0:
+        return None
+    return (v / rate_aud_usd).quantize(Decimal("0.01"))
+
+
+def krw_to_aud(krw: Decimal | int | float | str | None) -> Decimal | None:
+    """KRW → AUD. 소수점 둘째 자리 반올림."""
+    v = _to_dec(krw)
+    if v is None:
+        return None
+    rate_aud_krw = _rate("FX_AUD_KRW", _DEFAULT_AUD_KRW)
+    if rate_aud_krw == 0:
+        return None
+    return (v / rate_aud_krw).quantize(Decimal("0.01"))
+
+
+def eur_to_aud(eur: Decimal | int | float | str | None) -> Decimal | None:
+    """EUR → AUD. FX_AUD_EUR (AUD→EUR 환율) 역산. 기본 0.60."""
+    v = _to_dec(eur)
+    if v is None:
+        return None
+    rate_aud_eur = _rate("FX_AUD_EUR", _DEFAULT_AUD_EUR)
+    if rate_aud_eur == 0:
+        return None
+    return (v / rate_aud_eur).quantize(Decimal("0.01"))

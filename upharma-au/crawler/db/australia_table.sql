@@ -127,6 +127,20 @@ CREATE TABLE IF NOT EXISTS au_products (
   crawler_source_urls           JSONB   NOT NULL DEFAULT '{}'::jsonb,
   error_type                    TEXT,
   warnings                      JSONB   NOT NULL DEFAULT '[]'::jsonb,
+  -- 보고서 ① — POST /api/report/generate 가 Haiku 블록·참고문헌 UPDATE (레거시 australia 테이블과 동일 슬롯)
+  block2_market                 TEXT,
+  block2_regulatory             TEXT,
+  block2_trade                  TEXT,
+  block2_procurement            TEXT,
+  block2_channel                TEXT,
+  block3_channel                TEXT,
+  block3_pricing                TEXT,
+  block3_partners               TEXT,
+  block3_risks                  TEXT,
+  block4_regulatory             TEXT,
+  perplexity_refs               JSONB,
+  llm_model                     TEXT,
+  llm_generated_at              TIMESTAMPTZ,
   created_at                    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at                    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -141,6 +155,19 @@ ALTER TABLE au_products ADD COLUMN IF NOT EXISTS availability_status TEXT;
 ALTER TABLE au_products ADD COLUMN IF NOT EXISTS match_type TEXT;
 ALTER TABLE au_products ADD COLUMN IF NOT EXISTS healthylife_price_aud DECIMAL(10,2);
 ALTER TABLE au_products ADD COLUMN IF NOT EXISTS healthylife_url TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS block2_market TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS block2_regulatory TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS block2_trade TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS block2_procurement TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS block2_channel TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS block3_channel TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS block3_pricing TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS block3_partners TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS block3_risks TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS block4_regulatory TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS perplexity_refs JSONB;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS llm_model TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS llm_generated_at TIMESTAMPTZ;
 
 -- Phase 4.3-v3 — 레거시 컬럼 제거 (에디터 스크립트와 동일)
 -- 참고: case_code SMALLINT→TEXT 는 v_au_products 가 case_code 를 참조하므로

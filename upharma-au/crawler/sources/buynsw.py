@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 from urllib.parse import quote
@@ -48,7 +47,7 @@ def _empty_row(source_url: str, search_term: str = "") -> dict[str, Any]:
         "end_date": None,
         "source_url": source_url,
         "source_name": "buy_nsw",
-        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        "crawled_at": now_kst_iso(),
         # 하위호환 키 (au_crawler 가 기존 참조 유지)
         "supplier_name": None,
         "contract_date": None,
@@ -173,7 +172,7 @@ def fetch_buynsw(search_term: str) -> dict[str, Any]:
         "end_date": None,
         "source_url": canonical,
         "source_name": "buy_nsw",
-        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        "crawled_at": now_kst_iso(),
         # 하위호환 키
         "supplier_name": agency_val,
         "contract_date": date_val,

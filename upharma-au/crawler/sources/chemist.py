@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 from urllib.parse import quote
 
 import httpx
+
+from utils.crawl_time import now_kst_iso
 
 _USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 _BASE = "https://www.chemistwarehouse.com.au"
@@ -142,7 +143,7 @@ def fetch_chemist_price(search_term: str) -> dict[str, Any] | None:
         "in_stock": True,               # 검색 결과에 노출된 첫 양수가 있으면 true 로 간주
         "category": None,
         "source_name": "chemist_warehouse",
-        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        "crawled_at": now_kst_iso(),
         # 하위호환 키 (au_crawler._estimate_retail_price 등에서 사용)
         "retail_price_aud": price_decimal,
         "price_unit": "per pack",

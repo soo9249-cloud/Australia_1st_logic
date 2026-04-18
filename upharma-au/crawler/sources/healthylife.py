@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import re
 import time
-from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
 import httpx
+
+from utils.crawl_time import now_kst_iso
 
 _BASE = "https://www.healthylife.com.au"
 _JINA = "https://r.jina.ai/"
@@ -55,7 +56,7 @@ def _error_result(slug: str, reason: str) -> dict[str, Any]:
         "pack_size": None,
         "category": None,
         "source_name": "healthylife",
-        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        "crawled_at": now_kst_iso(),
         # 하위호환 키
         "slug": slug,
         "is_pbs": False,
@@ -119,7 +120,7 @@ def _fetch_json(slug: str) -> dict[str, Any] | None:
         "pack_size": None,                 # 파싱 범위 밖 (다음 위임)
         "category": data.get("category"),
         "source_name": "healthylife",
-        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        "crawled_at": now_kst_iso(),
         # 하위호환
         "slug": slug,
         "is_pbs": False,
@@ -209,7 +210,7 @@ def _parse_price_block(
         "pack_size": None,
         "category": None,
         "source_name": "healthylife",
-        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        "crawled_at": now_kst_iso(),
         # 하위호환
         "slug": slug,
         "is_pbs": False,

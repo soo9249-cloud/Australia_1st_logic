@@ -28,12 +28,13 @@ import os
 import re
 import time
 from decimal import Decimal, InvalidOperation
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
 from dotenv import load_dotenv
+
+from utils.crawl_time import now_kst_iso
 import httpx
 
 # 프로젝트 루트 .env 로드 (cwd 무관하게 상위 경로 탐색)
@@ -301,7 +302,7 @@ def _row_to_dto(
 
     # ── 메타 ──────────────────────────────────────────────────
     dto["source_url"] = _pbs_public_url(dto["pbs_code"])
-    dto["crawled_at"] = datetime.now(timezone.utc).isoformat()
+    dto["crawled_at"] = now_kst_iso()
 
     return dto
 

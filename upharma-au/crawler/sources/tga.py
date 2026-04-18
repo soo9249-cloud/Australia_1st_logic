@@ -13,11 +13,12 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
 import httpx
+
+from utils.crawl_time import now_kst_iso
 
 _JINA = "https://r.jina.ai/"
 _TGA_BASE = "https://www.tga.gov.au"
@@ -133,7 +134,7 @@ def _empty_dto(canonical_url: str) -> dict[str, Any]:
         "artg_source_url": canonical_url,
         # 메타
         "source_name": "tga",
-        "crawled_at": datetime.now(timezone.utc).isoformat(),
+        "crawled_at": now_kst_iso(),
     }
 
 

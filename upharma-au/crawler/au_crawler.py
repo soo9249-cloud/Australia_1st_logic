@@ -23,7 +23,6 @@ import os
 import sys
 import time
 import uuid
-from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -32,6 +31,7 @@ _logger = logging.getLogger(__name__)
 
 from sources.chemist import build_sites
 from sources.tga import determine_export_viable
+from utils.crawl_time import now_kst_iso
 from utils.evidence import build_evidence_text
 from utils.fx import aud_to_krw, aud_to_usd
 from utils.scoring import AU_REQUIRED_FIELDS, completeness_score
@@ -433,8 +433,8 @@ def build_product_summary(
         "ai_deep_research_raw": None,    # AI 붙을 때 채움
 
         # 메타
-        "last_crawled_at": datetime.now(timezone.utc).isoformat(),
-        "crawled_at": datetime.now(timezone.utc).isoformat(),  # rename → last_crawled_at
+        "last_crawled_at": now_kst_iso(),
+        "crawled_at": now_kst_iso(),  # rename → last_crawled_at
         "crawler_source_urls": sites,
         "schedule_code": pbs.get("schedule_code"),
         "error_type": error_type,
@@ -619,6 +619,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     tga_terms = product.get("tga_search_terms") or []
     tga_query = str(tga_terms[0] if tga_terms else product.get("inn_normalized") or "")
     _t0 = time.time()
+    _tga_started = now_kst_iso()
     try:
         tga = fetch_tga_artg(tga_query)
         determine_export_viable(tga)
@@ -626,6 +627,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
             run_id=run_id, product_code=product_filter, source="tga", status="success",
             endpoint="/resources/artg",
             duration_ms=int((time.time() - _t0) * 1000),
+            started_at=_tga_started,
+            finished_at=now_kst_iso(),
         )
     except Exception as exc:
         tga = {}
@@ -634,6 +637,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
             endpoint="/resources/artg",
             error_message=str(exc)[:500],
             duration_ms=int((time.time() - _t0) * 1000),
+            started_at=_tga_started,
+            finished_at=now_kst_iso(),
         )
 
     # ── PBS ──────────────────────────────────────────────────
@@ -642,6 +647,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
         components = [str(product.get("inn_normalized") or "")]
 
     _t0 = time.time()
+    _pbs_started = now_kst_iso()
     try:
         if len(components) > 1:
             pbs_rows = fetch_pbs_multi(components)
@@ -652,6 +658,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
             run_id=run_id, product_code=product_filter, source="pbs_api_v3", status="success",
             endpoint="/items,/item-dispensing-rule-relationships",
             duration_ms=int((time.time() - _t0) * 1000),
+            started_at=_pbs_started,
+            finished_at=now_kst_iso(),
         )
     except Exception as exc:
         pbs_rows = []
@@ -661,6 +669,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
             endpoint="/items",
             error_message=str(exc)[:500],
             duration_ms=int((time.time() - _t0) * 1000),
+            started_at=_pbs_started,
+            finished_at=now_kst_iso(),
         )
 
     # PBS 웹 보강 (Jina Reader — DPMQ 가 API 에서 못 얻었을 때 fallback)
@@ -699,6 +709,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     retail_query = str(pbs_terms[0] if pbs_terms else product.get("inn_normalized") or "")
 
     _t0 = time.time()
+    _ch_started = now_kst_iso()
     try:
         chemist = fetch_chemist_price(retail_query)
         log_crawl(
@@ -706,6 +717,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
             status="success" if chemist else "partial",
             endpoint="/search",
             duration_ms=int((time.time() - _t0) * 1000),
+            started_at=_ch_started,
+            finished_at=now_kst_iso(),
         )
     except Exception as exc:
         chemist = None
@@ -714,6 +727,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
             endpoint="/search",
             error_message=str(exc)[:500],
             duration_ms=int((time.time() - _t0) * 1000),
+            started_at=_ch_started,
+            finished_at=now_kst_iso(),
         )
 
     # ── Healthylife 보강 (PBS 미등재 Private 처방약 참고가) ───
@@ -721,6 +736,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     hl_slug = product.get("healthylife_slug")
     if hl_slug:
         _t0 = time.time()
+        _hl_started = now_kst_iso()
         try:
             from sources.healthylife import fetch_healthylife_price
             hl = fetch_healthylife_price(str(hl_slug))
@@ -729,6 +745,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                 status="success" if hl and hl.get("price_aud") else "partial",
                 endpoint=f"/products/{hl_slug}",
                 duration_ms=int((time.time() - _t0) * 1000),
+                started_at=_hl_started,
+                finished_at=now_kst_iso(),
             )
         except Exception as exc:
             hl = None
@@ -737,6 +755,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                 endpoint=f"/products/{hl_slug}",
                 error_message=str(exc)[:500],
                 duration_ms=int((time.time() - _t0) * 1000),
+                started_at=_hl_started,
+                finished_at=now_kst_iso(),
             )
         if hl and hl.get("price_aud") is not None:
             ch_price = (chemist or {}).get("price_aud") if chemist else None
@@ -763,6 +783,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
 
     # ── buy.nsw.gov.au ───────────────────────────────────────
     _t0 = time.time()
+    _nsw_started = now_kst_iso()
     try:
         nsw = fetch_buynsw(retail_query)
         log_crawl(
@@ -770,6 +791,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
             status="success" if nsw and nsw.get("contract_value_aud") is not None else "partial",
             endpoint="/notices/search",
             duration_ms=int((time.time() - _t0) * 1000),
+            started_at=_nsw_started,
+            finished_at=now_kst_iso(),
         )
     except Exception as exc:
         nsw = {}
@@ -778,6 +801,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
             endpoint="/notices/search",
             error_message=str(exc)[:500],
             duration_ms=int((time.time() - _t0) * 1000),
+            started_at=_nsw_started,
+            finished_at=now_kst_iso(),
         )
 
     # ── 최종 dict 조립 ─────────────────────────────────────────
@@ -827,8 +852,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                 "endpoint_items": raw_resp.get("items") if isinstance(raw_resp, dict) else None,
                 "endpoint_dispensing_rules": raw_resp.get("dispensing_rule") if isinstance(raw_resp, dict) else None,
                 # TODO(v2-pbs-full): /fees, /markup-bands, /copayments, /atc 엔드포인트 raw 보관
-                "api_fetched_at": datetime.now(timezone.utc).isoformat(),
-                "crawled_at": datetime.now(timezone.utc).isoformat(),
+                "api_fetched_at": now_kst_iso(),
+                "crawled_at": now_kst_iso(),
             }
             upsert_pbs_raw(snapshot)
         except Exception as exc:
@@ -851,7 +876,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                 "first_registered_date": tga.get("first_registered_date"),
                 "status": tga.get("status") or tga.get("artg_status"),
                 "artg_url": tga.get("artg_url") or tga.get("artg_source_url"),
-                "crawled_at": datetime.now(timezone.utc).isoformat(),
+                "crawled_at": now_kst_iso(),
             }
             upsert_tga_artg(artg_row)
         except Exception as exc:

@@ -50,9 +50,17 @@
       "reference_dpmq_aud": null,
       "reference_retail_aud": null,
       "reference_retail_source": null,
+      "fob_hardcoded_aud": {
+        "bayer_reference_aud": 16.49,
+        "aggressive": 9.89,
+        "average": 12.37,
+        "conservative": 14.02,
+        "bayer_reference_source": "TradeMap 2024 NZ→DE HS 300630 CIF $735.5/kg × density 1.30 g/mL × AU 프리미엄 +25% × 물류 8% (15mL 기준)",
+        "notes": "Bayer Gadovist 호주 FOB(원가) $16.49/병 — 오리지널 기준. 제네릭 진입 시 Penetration 40% off / Reference 25% off / Premium 15% off."
+      },
       "competitor_brands_on_pbs": [],
       "confidence_score": 0.5,
-      "notes": "Bayer Gadovist 독점 MRI 조영제. 약국 유통 없음 → HealthShare NSW / state hospital tender 루트. PBS 등재 불가."
+      "notes": "Bayer Gadovist 독점 MRI 조영제. 약국 유통 없음 → HealthShare NSW / state hospital tender 루트. PBS 등재 불가. FOB는 수기 TradeMap 역산 확정값(seed.fob_hardcoded_aud) 사용."
     },
     {
       "product_id": "au-sereterol-003",

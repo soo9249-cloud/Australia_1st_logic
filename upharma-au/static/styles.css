@@ -1260,12 +1260,16 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   margin-bottom: 8px;
   align-items: stretch;
 }
-/* 호주 메인: 한 화면 배치 — 과도한 최소 높이 제거, 지도·뉴스 높이는 아래에서 지정 */
+/* 메인: 짧은 쪽 카드를 그리드가 늘리면서 카드 안에 빈 여백이 생기므로, 콘텐츠 높이에 맞춤 */
+#main .map-news-grid {
+  align-items: start;
+}
+/* 호주 메인: 콘텐츠 높이 기준(지도는 아래 min-height로 확보) */
 #main .map-news-grid > article.card {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: 448px;
+  height: auto;
   padding: 10px 12px;
 }
 /* 호주 지도 카드: 제목 아래 지도가 세로로 남는 칸을 전부 채움 */
@@ -1283,10 +1287,20 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   min-height: 0;
 }
 .news-card-panel #news-list {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
   overflow: hidden;
   max-height: none;
+}
+.news-source-hint {
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--muted);
+  padding: 6px 8px;
+  margin: 0 0 8px;
+  border-radius: 8px;
+  background: rgba(23, 63, 120, 0.06);
+  border: 1px solid rgba(23, 63, 120, 0.1);
 }
 /* 뉴스 카드: 6건이 한 화면에 들어가도록 타이트 */
 .news-card-panel .irow.news-item {
@@ -1378,7 +1392,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 #main .map-news-grid .map-card-wrap .sg-leaflet-map {
   flex: 1 1 auto;
   width: 100%;
-  min-height: 0;
+  min-height: 300px;
   height: auto !important;
   max-height: none !important;
   border-radius: 12px;

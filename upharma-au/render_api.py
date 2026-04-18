@@ -324,50 +324,50 @@ def _normalize_news_item(raw: dict[str, Any], link_fallback: str = "") -> dict[s
 _MOCK_NEWS: list[dict[str, Any]] = [
     {
         "title": "TGA approves fast-track for PIC/S generics",
-        "title_ko": "[예시] TGA, PIC/S 제네릭 우선 심사 확대",
-        "summary_ko": "TGA가 PIC/S 동등성 제네릭 등에 대한 우선 심사·허가 절차를 강화했다는 요지의 예시 문장입니다. (실서비스에서는 Perplexity로 최신 기사가 채워집니다.)",
+        "title_ko": "TGA, PIC/S 제네릭 우선 심사 확대",
+        "summary_ko": "PIC/S 동등성 제네릭에 대한 심사·허가 절차 강화 등 규제 동향을 다룬 샘플 요약입니다.",
         "source": "TGA.gov.au",
-        "date": "2025-07-14",
+        "date": "2026-04-18",
         "link": "https://www.tga.gov.au",
     },
     {
         "title": "Australia pharma imports from Korea up 11%",
-        "title_ko": "[예시] 한국산 의약품 수입 증가",
-        "summary_ko": "교역 통계·정책 동향을 다룬 예시 문장입니다.",
+        "title_ko": "한국산 의약품 수입 증가",
+        "summary_ko": "교역 통계와 수입 품목·정책 맥락을 짧게 정리한 샘플 요약입니다.",
         "source": "Austrade",
-        "date": "2025-07-13",
+        "date": "2026-04-17",
         "link": "https://www.austrade.gov.au",
     },
     {
         "title": "PBS listing reforms: what exporters need to know",
-        "title_ko": "[예시] PBS 등재 개편과 수출사 관점",
-        "summary_ko": "등재·보험급여 변화가 수출 전략에 주는 시사점을 요약한 예시입니다.",
+        "title_ko": "PBS 등재 개편과 수출사 관점",
+        "summary_ko": "등재·급여 변화가 수출·가격 전략에 주는 시사점을 담은 샘플 요약입니다.",
         "source": "Dept. of Health",
-        "date": "2025-07-12",
+        "date": "2026-04-16",
         "link": "https://www.pbs.gov.au",
     },
     {
         "title": "KAFTA and Korea–Australia pharma trade",
-        "title_ko": "[예시] 한·호주 의약품 교역",
-        "summary_ko": "무역협정·관세·규제 환경을 짧게 설명하는 예시입니다.",
+        "title_ko": "한·호주 의약품 교역",
+        "summary_ko": "무역협정·관세·규제 환경을 개괄한 샘플 요약입니다.",
         "source": "KITA",
-        "date": "2025-07-10",
+        "date": "2026-04-15",
         "link": "https://www.kita.net",
     },
     {
         "title": "NPS MedicineWise updates consumer medicines information",
-        "title_ko": "[예시] NPS, 일반의약품 정보 개정",
-        "summary_ko": "소비자 대상 의약품 안전·복약 지침이 갱신되었다는 요지의 예시입니다.",
+        "title_ko": "NPS, 일반의약품 정보 개정",
+        "summary_ko": "소비자 대상 복약·안내 정보 갱신을 다룬 샘플 요약입니다.",
         "source": "NPS MedicineWise",
-        "date": "2025-07-09",
+        "date": "2026-04-14",
         "link": "https://www.nps.org.au",
     },
     {
         "title": "PBAC agenda: new listings under consideration",
-        "title_ko": "[예시] PBAC 안건·신규 등재 검토",
-        "summary_ko": "급여·등재 심의 일정·후보물질에 대한 요지를 담은 예시 문장입니다.",
+        "title_ko": "PBAC 안건·신규 등재 검토",
+        "summary_ko": "급여 심의 일정·후보 품목 논의를 요약한 샘플 문장입니다.",
         "source": "PBAC",
-        "date": "2025-07-08",
+        "date": "2026-04-13",
         "link": "https://www.pbs.gov.au/info/industry/listing/elements/pbac-meetings",
     },
 ]
@@ -1421,6 +1421,24 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
         "confidence_breakdown": conf_meta,
     }
 
+    # Phase 4.3-v3 — au_pbs_raw 에서 market_form/market_strength 를 row 에 주입.
+    # au_products 에는 이 두 컬럼이 없고 au_pbs_raw 에만 존재 → PDF 제품정보 섹션용.
+    try:
+        raw_resp = (
+            client_sb.table("au_pbs_raw")
+            .select("market_form,market_strength")
+            .eq("product_id", product_id)
+            .order("crawled_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        raw_rows = getattr(raw_resp, "data", None) or []
+        if raw_rows:
+            row["market_form"] = raw_rows[0].get("market_form")
+            row["market_strength"] = raw_rows[0].get("market_strength")
+    except Exception as exc:
+        print(f"[au_pbs_raw market_* 조회 경고] {exc}", flush=True)
+
     # 8) PDF 보고서 생성 (reportlab) — 서버 디스크 reports/ 에 저장
     pdf_name: str | None = None
     try:
@@ -2107,6 +2125,22 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
         # ── Step 6: PDF 생성 (선택) ──
         with _p2_lock:
             _p2_state["step_label"] = "⑥ PDF 보고서 생성 중…"
+        # Phase 4.3-v3 — au_pbs_raw 에서 market_form/market_strength 주입 (render_pdf 와 동일)
+        try:
+            raw_resp = (
+                sb_client.table("au_pbs_raw")
+                .select("market_form,market_strength")
+                .eq("product_id", product_id)
+                .order("crawled_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            raw_rows = getattr(raw_resp, "data", None) or []
+            if raw_rows:
+                row["market_form"] = raw_rows[0].get("market_form")
+                row["market_strength"] = raw_rows[0].get("market_strength")
+        except Exception as exc:
+            print(f"[P2 au_pbs_raw market_* 조회 경고] {exc}", flush=True)
         try:
             from report_generator import render_p2_pdf
             from datetime import datetime as _dt

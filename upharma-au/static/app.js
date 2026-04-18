@@ -1902,6 +1902,7 @@ async function loadNews() {
 
   try {
     const res  = await fetch('/api/news');
+    const newsBackend = (res.headers.get('X-News-Source') || '').trim();
     const raw  = await res.json();
     /* 레거시: 배열만 오던 응답 호환 */
     const data = Array.isArray(raw) ? { ok: true, items: raw, error: null } : raw;
@@ -1911,7 +1912,11 @@ async function loadNews() {
       return;
     }
 
-    listEl.innerHTML = data.items.map(item => {
+    const mockHint = newsBackend === 'mock'
+      ? '<div class="news-source-hint" role="status">Perplexity 실데이터가 아닌 <strong>샘플</strong>입니다. Render에 <code>PERPLEXITY_API_KEY</code>(또는 <code>PERPLEXITY_KEY</code>)가 설정돼 있고 API가 성공하면 최신 기사로 바뀝니다.</div>'
+      : '';
+
+    listEl.innerHTML = mockHint + data.items.map(item => {
       const href   = item.link ? `href="${_escHtml(item.link)}" target="_blank" rel="noopener"` : '';
       const tag    = item.link ? 'a' : 'div';
       const source = [item.source, item.date].filter(Boolean).join(' · ');

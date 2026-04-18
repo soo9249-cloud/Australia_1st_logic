@@ -1,9 +1,10 @@
 {
-  "_schema_version": "1.1",
+  "_schema_version": "1.2",
   "_schema_notes": {
     "purpose": "크롤러 전용 정적 설정. PBS/TGA/Healthylife 검색어와 제품 기본 메타데이터만 포함. 역산 시드·플래그는 stage2/fob_reference_seeds.json으로 분리.",
     "pricing_case": "au_crawler.py와 utils/evidence.py가 evidence 생성 분기에 사용하는 공통 메타. DIRECT(PBS 등재) | COMPONENT_SUM(복합제) | ESTIMATE_private | ESTIMATE_withdrawal | ESTIMATE_substitute | ESTIMATE_hospital",
     "market_segment": "public(PBS 경로) | private(소매) | hospital(병원조달)",
+    "_case_fields_1_2": "reference_inn(Case 5) · skip_chemist(Case 6) · fdc_search_term(Case 1 복합제) · chemist_search_term(Chemist 브랜드 우선) · withdrawn_component(Case 3) · similar_inns(Case 3,4) · reference_pack_note(Case 5) — 2026-04-18 Phase 1.3 추가",
     "_removed_fields": "pbs_section/pbs_status/pbs_code/section_19a_flag/efc_applicable/pbac_superiority_required/commercial_withdrawal_flag/hospital_channel_only/restricted_benefit/reference_aemp_aud/reference_dpmq_aud/reference_retail_aud/competitor_brands_on_pbs/confidence_score/notes 는 전부 stage2/fob_reference_seeds.json으로 이동됨"
   },
   "products": [
@@ -31,8 +32,10 @@
       "hs_code_6": "300640",
       "pricing_case": "ESTIMATE_hospital",
       "pbs_search_terms": ["gadobutrol"],
-      "tga_search_terms": ["gadobutrol", "Gadvoa"],
-      "market_segment": "hospital"
+      "tga_search_terms": ["gadobutrol", "Gadvoa", "Gadovist"],
+      "nsw_search_terms": ["gadobutrol", "gadovist", "MRI contrast"],
+      "market_segment": "hospital",
+      "skip_chemist": true
     },
     {
       "product_id": "au-sereterol-003",
@@ -45,6 +48,8 @@
       "pricing_case": "DIRECT",
       "pbs_search_terms": ["fluticasone", "salmeterol", "fluticasone propionate"],
       "tga_search_terms": ["fluticasone", "salmeterol", "Sereterol"],
+      "fdc_search_term": "fluticasone+salmeterol",
+      "chemist_search_term": "seretide",
       "market_segment": "public"
     },
     {
@@ -97,6 +102,8 @@
       "pricing_case": "ESTIMATE_withdrawal",
       "pbs_search_terms": ["cilostazol", "rosuvastatin"],
       "tga_search_terms": ["cilostazol", "rosuvastatin", "Ciloduo"],
+      "withdrawn_component": "cilostazol",
+      "similar_inns": ["clopidogrel"],
       "market_segment": "public"
     },
     {
@@ -110,6 +117,7 @@
       "pricing_case": "ESTIMATE_substitute",
       "pbs_search_terms": ["mosapride", "mosapride citrate"],
       "tga_search_terms": ["mosapride", "Gastiin"],
+      "similar_inns": ["domperidone", "metoclopramide"],
       "market_segment": "public"
     }
   ]

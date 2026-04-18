@@ -1932,8 +1932,8 @@ async function loadNews() {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 loadKeyStatus();        // API 키 배지
-loadExchange();         // 환율 즉시 로드
-setInterval(() => { loadExchange(); }, 10000); // yfinance 실시간 반영 강화
+// 메인에 환율 UI 없음 — 2공정 FOB·직접입력이 window._exchangeRates 를 쓰므로 초기 1회만 조회
+loadExchange();
 loadMacro();            // 거시 지표 로드
 renderReportTab();      // 보고서 탭 초기 렌더
 initP2Strategy();       // 2공정 수출전략 초기화

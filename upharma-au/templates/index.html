@@ -74,7 +74,7 @@
         <div id="au-map" class="sg-leaflet-map"></div>
       </article>
 
-      <article class="card">
+      <article class="card news-card-panel">
         <div class="sec">
           <h3>호주 의약품 시장 주요 동향</h3>
           <button class="btn-refresh" id="btn-news-refresh" onclick="loadNews()" style="margin-top:0;">↺</button>
@@ -86,42 +86,7 @@
 
     </div>
 
-    <!-- SECTION C: 환율 · 관세 상세 카드 (호주 전용 유지 · USD 중심) -->
-    <article class="card">
-      <div class="sec">
-        <div>
-          <h3>환율 · 관세 현황</h3>
-          <p>FOB 역산 기준 실시간 환율</p>
-        </div>
-      </div>
-
-      <!-- USD/KRW 메인 + USD/AUD · AUD/KRW 2페어 (Q2-c: JPY/CNY 제거) -->
-      <div id="fx-content">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-top:14px;">USD / KRW</div>
-        <div id="fx-main" style="font-size:28px;font-weight:900;color:var(--navy);letter-spacing:-.04em;line-height:1;margin:4px 0 6px;">—<span style="font-size:14px;margin-left:4px;color:var(--muted);font-weight:700;">원</span></div>
-        <span id="fx-chg" class="bdg" style="display:none;font-size:11px;"></span>
-        <div id="fx-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
-          <div class="irow" style="margin:0;">
-            <div style="font-size:10.5px;color:var(--muted);margin-bottom:3px;">USD / AUD</div>
-            <div id="fx-usd-aud" style="font-size:15px;font-weight:900;color:var(--navy);">—</div>
-          </div>
-          <div class="irow" style="margin:0;">
-            <div style="font-size:10.5px;color:var(--muted);margin-bottom:3px;">AUD / KRW <span style="font-weight:400;font-size:10px;">(FOB 참고)</span></div>
-            <div id="fx-aud-krw" style="font-size:15px;font-weight:900;color:var(--navy);">—</div>
-          </div>
-        </div>
-      </div>
-      <div class="exchange-section">
-        <div id="fxTimestamp" style="font-size:10.5px;color:var(--muted);">조회: —</div>
-        <button class="btn-refresh" onclick="loadExchange()">↻ 환율 새로고침</button>
-      </div>
-
-      <!-- 관세 4행: HS + GST -->
-      <div class="trow"><div class="irow-row"><div><div class="tit">HS 3004.90 — 개량신약·일반제·항암제</div><div class="sub">KAFTA(한-호주 FTA) · MFN 동일 0% 적용</div></div><span style="font-size:20px;font-weight:900;color:var(--green);">0%</span></div></div>
-      <div class="trow"><div class="irow-row"><div><div class="tit">HS 3006.30 — 조영제 (Gadvoa Inj.)</div><div class="sub">Gadobutrol 604.72mg · KAFTA 0%</div></div><span style="font-size:20px;font-weight:900;color:var(--green);">0%</span></div></div>
-      <div class="trow"><div class="irow-row"><div><div class="tit">GST · 처방의약품 (GST-free, 부가세 면제)</div><div class="sub">Hydrine · Sereterol · Gadvoa · Rosumeg · Atmeg · Ciloduo · Gastiin CR</div></div><span style="font-size:20px;font-weight:900;color:var(--green);">0%</span></div></div>
-      <div class="trow"><div class="irow-row"><div><div class="tit">GST · OTC·건강기능식품 (부가가치세 과세)</div><div class="sub">Omethyl (Omega-3) — 민간 유통 시 표시가에 포함</div></div><span style="font-size:20px;font-weight:900;color:var(--warn);">10%</span></div></div>
-    </article>
+    <!-- 환율·관세 카드: 메인 프리뷰에서 제거 (FOB 역산은 백엔드·2공정 로직에서만 사용). loadExchange()는 app.js에서 window._exchangeRates 채우기용으로 유지. -->
 
     <!-- ════════════ 1공정 아코디언 ════════════ -->
     <div class="process-section">
@@ -504,7 +469,7 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- Leaflet JS + 호주 app.js + 지도 초기화 (시드니) -->
+<!-- Leaflet JS + 호주 app.js + 지도 초기화 (수도+5대 권역 6개) -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/app.js?v={{ static_v }}"></script>
 <script>
@@ -512,9 +477,18 @@
   if (typeof L === 'undefined') return;
   var mapEl = document.getElementById('au-map');
   if (!mapEl) return;
+
+  /** 수도 + 5대 권역 6곳 — 이름만(설명 문구 없음, 비전문가·단순 조작 우선) */
+  var cities = [
+    { lat: -35.2802, lng: 149.1310, label: '캔버라 (Canberra)', primary: true },
+    { lat: -33.8688, lng: 151.2093, label: '시드니 (Sydney)' },
+    { lat: -37.8136, lng: 144.9631, label: '멜버른 (Melbourne)' },
+    { lat: -27.4705, lng: 153.0260, label: '브리즈번 (Brisbane)' },
+    { lat: -31.9523, lng: 115.8613, label: '퍼스 (Perth)' },
+    { lat: -34.9285, lng: 138.6007, label: '애들레이드 (Adelaide)' },
+  ];
+
   var map = L.map('au-map', {
-    center: [-33.8688, 151.2093],
-    zoom: 10,
     zoomControl: true,
     scrollWheelZoom: true,
   });
@@ -522,17 +496,30 @@
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 18,
   }).addTo(map);
-  var icon = L.divIcon({
-    className: '',
-    html: '<div style="width:14px;height:14px;background:#c8564d;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 7px rgba(200,86,77,.22),0 2px 6px rgba(0,0,0,.3);"></div>',
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
+
+  function makeIcon(primary) {
+    var size = primary ? 16 : 12;
+    var pad = primary ? 8 : 5;
+    return L.divIcon({
+      className: 'au-city-marker',
+      html: '<div style="width:' + size + 'px;height:' + size + 'px;background:#c8564d;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ' + pad + 'px rgba(200,86,77,.2),0 2px 6px rgba(0,0,0,.28);"></div>',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    });
+  }
+
+  var bounds = L.latLngBounds([]);
+  cities.forEach(function (c) {
+    bounds.extend([c.lat, c.lng]);
+    L.marker([c.lat, c.lng], { icon: makeIcon(!!c.primary) })
+      .addTo(map)
+      .bindPopup('<b>' + c.label + '</b>');
   });
-  L.marker([-33.8688, 151.2093], { icon: icon })
-    .addTo(map)
-    .bindPopup('<b>Sydney, Australia</b>')
-    .openPopup();
-  setTimeout(function() { map.invalidateSize(); }, 100);
+
+  map.fitBounds(bounds, { padding: [40, 40] });
+
+  setTimeout(function () { map.invalidateSize(); }, 100);
+  setTimeout(function () { map.invalidateSize(); }, 400);
 })();
 </script>
 

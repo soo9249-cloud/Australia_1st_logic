@@ -525,6 +525,78 @@ def _load_products() -> list[dict[str, Any]]:
     return list(data.get("products", []))
 
 
+def _dispatch_pbs_by_case(product: dict[str, Any]) -> dict[str, Any]:
+    """au_products.json 의 pricing_case 기준으로 PBS 조회 경로 선택.
+
+    Case 1 DIRECT         → 단성분 fetch_pbs_by_ingredient, 복합제 fetch_pbs_fdc
+    Case 2 COMPONENT_SUM  → fetch_pbs_component_sum
+    Case 3 ESTIMATE_withdrawal → fetch_pbs_withdrawal (withdrawn_component + similar_inns)
+    Case 4 ESTIMATE_substitute → fetch_pbs_similar (similar_inns)
+    Case 5 ESTIMATE_private    → fetch_pbs_same_ingredient (reference_inn)
+    Case 6 ESTIMATE_hospital   → fetch_pbs_hospital_skip (PBS skip)
+
+    반환: 단일 PBSItemDTO(dict). 빈 DTO 도 유효값.
+    """
+    from sources.pbs import (
+        fetch_pbs_by_ingredient,
+        fetch_pbs_component_sum,
+        fetch_pbs_fdc,
+        fetch_pbs_hospital_skip,
+        fetch_pbs_multi,
+        fetch_pbs_same_ingredient,
+        fetch_pbs_similar,
+        fetch_pbs_withdrawal,
+    )
+
+    case = str(product.get("pricing_case") or "").upper()
+    components = [str(c) for c in (product.get("inn_components") or []) if c]
+    inn = str(product.get("inn_normalized") or "")
+
+    # Case 6 — 병원 조달, PBS skip
+    if case == "ESTIMATE_HOSPITAL":
+        return fetch_pbs_hospital_skip()
+
+    # Case 1 — DIRECT
+    if case == "DIRECT":
+        if len(components) > 1:
+            return fetch_pbs_fdc(components, product.get("fdc_search_term"))
+        ing = components[0] if components else inn
+        rows = fetch_pbs_by_ingredient(ing)
+        if rows:
+            # 단일 성분은 fetch_pbs_by_ingredient 가 이미 최적 1건만 반환 (_filter_results)
+            out = dict(rows[0])
+            out["pricing_case_applied"] = "DIRECT"
+            return out
+        return {}
+
+    # Case 2 — COMPONENT_SUM
+    if case == "COMPONENT_SUM":
+        return fetch_pbs_component_sum(components)
+
+    # Case 3 — ESTIMATE_withdrawal
+    if case == "ESTIMATE_WITHDRAWAL":
+        withdrawn = product.get("withdrawn_component") or ""
+        similar = product.get("similar_inns") or []
+        return fetch_pbs_withdrawal(components, withdrawn, similar)
+
+    # Case 4 — ESTIMATE_substitute
+    if case == "ESTIMATE_SUBSTITUTE":
+        similar = product.get("similar_inns") or []
+        return fetch_pbs_similar(inn, similar)
+
+    # Case 5 — ESTIMATE_private
+    if case == "ESTIMATE_PRIVATE":
+        ref = product.get("reference_inn") or inn
+        return fetch_pbs_same_ingredient(ref)
+
+    # fallback — 기존 동작 유지 (pricing_case 비어 있거나 알 수 없는 값)
+    if len(components) > 1:
+        rows = fetch_pbs_multi(components)
+    else:
+        rows = fetch_pbs_by_ingredient(components[0] if components else inn)
+    return _merge_pbs_rows(rows)
+
+
 def _merge_pbs_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """PBS 다행(복합 성분 등)을 요약용 단일 DTO 로 합친다. v2 DTO 기준."""
     if not rows:
@@ -642,6 +714,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
         )
 
     # ── PBS ──────────────────────────────────────────────────
+    # pricing_case 기반 dispatcher — Case 1~6 분기 (위임지서 Phase 1.2)
     components = [str(c) for c in (product.get("inn_components") or []) if c]
     if not components:
         components = [str(product.get("inn_normalized") or "")]
@@ -649,14 +722,11 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     _t0 = time.time()
     _pbs_started = now_kst_iso()
     try:
-        if len(components) > 1:
-            pbs_rows = fetch_pbs_multi(components)
-        else:
-            pbs_rows = fetch_pbs_by_ingredient(components[0])
-        pbs = _merge_pbs_rows(pbs_rows)
+        pbs = _dispatch_pbs_by_case(product)
+        pbs_rows = pbs.get("_component_rows") if isinstance(pbs, dict) else None
         log_crawl(
             run_id=run_id, product_code=product_filter, source="pbs_api_v3", status="success",
-            endpoint="/items,/item-dispensing-rule-relationships",
+            endpoint=f"/items,/item-dispensing-rule-relationships (case={product.get('pricing_case')})",
             duration_ms=int((time.time() - _t0) * 1000),
             started_at=_pbs_started,
             finished_at=now_kst_iso(),
@@ -666,7 +736,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
         pbs = {}
         log_crawl(
             run_id=run_id, product_code=product_filter, source="pbs_api_v3", status="failed",
-            endpoint="/items",
+            endpoint=f"/items (case={product.get('pricing_case')})",
             error_message=str(exc)[:500],
             duration_ms=int((time.time() - _t0) * 1000),
             started_at=_pbs_started,

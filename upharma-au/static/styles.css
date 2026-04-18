@@ -1233,13 +1233,25 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 ══════════════════════════════════════════════════════════════════════════ */
 .map-news-grid {
   display: grid;
-  grid-template-columns: 1.25fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
   margin-bottom: 10px;
+  align-items: stretch;
+}
+/* 싱가포르/파나마 메인 프리뷰와 동일하게 양열 동일 너비·동일 최소 높이 */
+#main .map-news-grid > article.card {
+  display: flex;
+  flex-direction: column;
+  min-height: 360px;
 }
 .map-card-wrap {
   display: flex;
   flex-direction: column;
+}
+.news-card-panel #news-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 .world-map-container {
   flex: 1;
@@ -1273,7 +1285,14 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   50%      { r: 16; opacity: .4; }
 }
 
-/* ── Leaflet 지도 컨테이너 ────────────────────────────────────────────────── */
+/* ── Leaflet 지도 컨테이너 (뉴스 패널과 세로 높이 맞춤) ─────────────────────── */
+#main .map-news-grid .sg-leaflet-map {
+  flex: 1;
+  min-height: 260px;
+  height: auto;
+  border-radius: 12px;
+  overflow: hidden;
+}
 .sg-leaflet-map {
   height: 300px;
   border-radius: 12px;

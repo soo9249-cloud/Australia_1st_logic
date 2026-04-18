@@ -589,6 +589,202 @@ def fetch_pbs_multi(ingredients: list[str]) -> list[dict[str, Any]]:
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Case별 조회 함수 (pricing_case 분기용, v2 크롤링 로직 L150~534 기준)
+# 위임지서: /AX 호주 final/CLAUDE_CODE_수정지시_Case별_크롤링_분기.md Phase 1.1
+# ─────────────────────────────────────────────────────────────────────
+
+def fetch_pbs_fdc(
+    components: list[str],
+    fdc_search_term: str | None = None,
+) -> dict[str, Any]:
+    """Case 1 DIRECT — 복합제가 PBS 에 FDC (Fixed-Dose Combination, 고정용량복합제)
+    한 줄로 등재된 경우.
+
+    전략:
+      1) fdc_search_term(있으면) 또는 components[0] 을 anchor 로 drug_name 조회
+      2) 응답 중 drug_name·brand_name 이 모든 components 를 포함하는 행만 필터
+      3) 여러 개면 dpmq 최저행 반환 (제네릭 우선)
+      4) 매칭 0건이면 fetch_pbs_component_sum() 으로 폴백 + flag 기록
+
+    반환: 단일 PBSItemDTO(dict). 폴백됐으면 'fdc_fallback': True 표시.
+    """
+    if not components:
+        return _empty_dto()
+
+    # 1차: FDC 통째 쿼리 (API 가 and 검색 지원 안 함 — 첫 성분 기준 + 응답 필터)
+    anchor = fdc_search_term or components[0]
+    rows = fetch_pbs_by_ingredient(anchor)
+
+    def _all_in(dn: str) -> bool:
+        dn_low = (dn or "").lower()
+        return all(c.lower() in dn_low for c in components)
+
+    matched = [
+        r for r in rows
+        if _all_in(r.get("drug_name") or r.get("brand_name") or "")
+    ]
+
+    if matched:
+        def _dpmq(r: dict[str, Any]) -> Decimal:
+            v = r.get("dpmq_aud") if r.get("dpmq_aud") is not None else r.get("pbs_dpmq")
+            d = _safe_decimal(v) if v is not None else None
+            return d if d is not None else Decimal("999999")
+
+        best = dict(min(matched, key=_dpmq))
+        best["pricing_case_applied"] = "DIRECT_FDC"
+        return best
+
+    # 폴백: FDC 행 없음 → 성분별 합산으로 전환
+    fallback = fetch_pbs_component_sum(components)
+    fallback["pricing_case_applied"] = "DIRECT_FDC_fallback_to_component_sum"
+    fallback["fdc_fallback"] = True
+    return fallback
+
+
+def fetch_pbs_component_sum(components: list[str]) -> dict[str, Any]:
+    """Case 2 COMPONENT_SUM — 복합제 FDC 미등재, 각 단일성분 PBS 등재 → 합산.
+
+    전략: 성분별로 fetch_pbs_by_ingredient 호출 → _merge_pbs_rows (au_crawler 쪽).
+    Phase 4.6 에서 PBS 미등재 성분에 대한 Chemist Warehouse 폴백이 추가됨.
+    """
+    acc: list[dict[str, Any]] = []
+    for c in components:
+        if not c:
+            continue
+        rows = fetch_pbs_by_ingredient(c)
+        # 유효한 PBS 등재 행만 누적 (_empty_dto 는 pbs_found=False)
+        valid = [r for r in rows if r.get("pbs_found")]
+        if valid:
+            acc.extend(valid)
+
+    if not acc:
+        return _empty_dto()
+
+    from importlib import import_module
+    au = import_module("au_crawler")
+    merged = au._merge_pbs_rows(acc)
+    merged["pricing_case_applied"] = "COMPONENT_SUM"
+    merged["_component_rows"] = acc  # 감사 로그용
+    return merged
+
+
+def fetch_pbs_withdrawal(
+    components: list[str],
+    withdrawn_component: str,
+    similar_inns: list[str],
+) -> dict[str, Any]:
+    """Case 3 ESTIMATE_withdrawal — 복합제 성분 중 하나가 시장 철수
+    (예: Ciloduo 의 Cilostazol — 2020 FDA 안전성 경고 후 호주 AEMP 생산 중단).
+
+    전략:
+      1) withdrawn_component 제외한 나머지 성분은 fetch_pbs_by_ingredient 로 AEMP 확보
+      2) 철수 성분은 similar_inns[0] 유사계열 (Cilostazol → Clopidogrel) 로 AEMP 추정
+      3) 두 AEMP 를 합산 (_merge_pbs_rows 재사용)
+      4) flag = 'Commercial Withdrawal / similar_estimate' + confidence 0.3
+    """
+    acc: list[dict[str, Any]] = []
+    for c in components:
+        if c and c.lower() != (withdrawn_component or "").lower():
+            rows = fetch_pbs_by_ingredient(c)
+            # 유효한 PBS 행만 누적 (빈 _empty_dto 는 버림)
+            valid = [r for r in rows if r.get("pbs_found")]
+            if valid:
+                acc.extend(valid)
+
+    # 철수 성분 → 유사계열 추정
+    if similar_inns:
+        sim_rows = fetch_pbs_by_ingredient(similar_inns[0])
+        valid_sim = [r for r in sim_rows if r.get("pbs_found")]
+        for r in valid_sim:
+            r["_estimated_for"] = withdrawn_component
+            r["_similar_proxy"] = similar_inns[0]
+        acc.extend(valid_sim)
+
+    if not acc:
+        return _empty_dto()
+
+    from importlib import import_module
+    au = import_module("au_crawler")
+    merged = au._merge_pbs_rows(acc)
+    merged["pricing_case_applied"] = "ESTIMATE_withdrawal"
+    merged["withdrawn_component"] = withdrawn_component
+    merged["similar_proxy_inns"] = similar_inns[:1]
+    merged["confidence_override"] = 0.3
+    return merged
+
+
+def fetch_pbs_similar(inn: str, similar_inns: list[str]) -> dict[str, Any]:
+    """Case 4 ESTIMATE_substitute — 성분 자체 미등재, 유사계열 존재
+    (예: Mosapride → Domperidone).
+
+    전략: similar_inns[0] 로 fetch_pbs_by_ingredient 호출. 반환 DTO 에 추정 메타 태깅.
+    Phase 4.9 에서 "크롤러는 유사약 조회하지 않음" 결정에 따라 축소될 예정.
+    """
+    if not similar_inns:
+        return _empty_dto()
+    rows = fetch_pbs_by_ingredient(similar_inns[0])
+    if not rows:
+        return _empty_dto()
+
+    valid = [r for r in rows if r.get("pbs_found")]
+    if not valid:
+        return _empty_dto()
+
+    def _dpmq(r: dict[str, Any]) -> Decimal:
+        v = r.get("dpmq_aud") if r.get("dpmq_aud") is not None else r.get("pbs_dpmq")
+        d = _safe_decimal(v) if v is not None else None
+        return d if d is not None else Decimal("999999")
+
+    best = dict(min(valid, key=_dpmq))
+    best["pricing_case_applied"] = "ESTIMATE_substitute"
+    best["_estimated_for"] = inn
+    best["_similar_proxy"] = similar_inns[0]
+    best["confidence_override"] = 0.3
+    return best
+
+
+def fetch_pbs_same_ingredient(reference_inn: str) -> dict[str, Any]:
+    """Case 5 ESTIMATE_private — 동일 성분 다른 제형/함량 등재
+    (예: Omethyl 2g pouch ↔ OMACOR 1g 캡슐).
+
+    전략: reference_inn 으로 PBS 조회해서 AEMP 확보
+    (미팅 결정: 동일 성분은 같은 가격 기준 OK).
+    """
+    rows = fetch_pbs_by_ingredient(reference_inn)
+    if not rows:
+        return _empty_dto()
+
+    # 유효한 PBS 등재만 고려
+    valid = [r for r in rows if r.get("pbs_found")]
+    if not valid:
+        return _empty_dto()
+
+    def _dpmq(r: dict[str, Any]) -> Decimal:
+        v = r.get("dpmq_aud") if r.get("dpmq_aud") is not None else r.get("pbs_dpmq")
+        d = _safe_decimal(v) if v is not None else None
+        return d if d is not None else Decimal("999999")
+
+    best = dict(min(valid, key=_dpmq))
+    best["pricing_case_applied"] = "ESTIMATE_private"
+    best["_reference_inn"] = reference_inn
+    best["confidence_override"] = 0.6
+    return best
+
+
+def fetch_pbs_hospital_skip() -> dict[str, Any]:
+    """Case 6 ESTIMATE_hospital — 병원 조달 품목 (Gadvoa). PBS 조회 skip.
+
+    반환: 빈 DTO + 메타 태그. FOB 는 2공정 fob_calculator 가 메모리 확정값 사용
+    (Bayer 오리지널 $16.49/병 + 제네릭 3시나리오).
+    """
+    dto = _empty_dto()
+    dto["pricing_case_applied"] = "ESTIMATE_hospital"
+    dto["_pbs_skipped_reason"] = "hospital_procurement_only"
+    dto["confidence_override"] = 0.3
+    return dto
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Web 보강 — Jina Reader (API 실패·pbs_web_source_url 용). DTO 반환 아님.
 # ─────────────────────────────────────────────────────────────────────
 

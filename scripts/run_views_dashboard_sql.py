@@ -1,11 +1,13 @@
-"""views_dashboard.sql 을 Postgres에 적용한다. Supabase: Settings → Database → URI 복사 후 DATABASE_URL 로 사용.
+"""sql_editor_bundle.sql(또는 views_dashboard.sql)을 Postgres에 적용한다.
+
+Supabase: Settings → Database → URI 복사 후 DATABASE_URL 사용.
 
 사용:
   pip install "psycopg[binary]"
-  set DATABASE_URL=postgresql://postgres.[ref]:[비밀번호]@aws-0-....pooler.supabase.com:6543/postgres
+  set DATABASE_URL=postgresql://postgres.[ref]:[비밀번호]@...
   python scripts/run_views_dashboard_sql.py
 
-또는 (한 번만, 비밀번호를 .env 에 안 남기고):
+또는:
   python scripts/run_views_dashboard_sql.py "postgresql://..."
 """
 
@@ -71,9 +73,12 @@ def main() -> None:
         sys.exit(1)
 
     root = Path(__file__).resolve().parent.parent
-    sql_path = root / "upharma-au" / "crawler" / "db" / "views_dashboard.sql"
+    db_dir = root / "upharma-au" / "crawler" / "db"
+    bundle = db_dir / "sql_editor_bundle.sql"
+    fallback = db_dir / "views_dashboard.sql"
+    sql_path = bundle if bundle.is_file() else fallback
     if not sql_path.is_file():
-        print(f"파일 없음: {sql_path}", file=sys.stderr)
+        print(f"파일 없음: {bundle} 또는 {fallback}", file=sys.stderr)
         sys.exit(1)
 
     raw = sql_path.read_text(encoding="utf-8")

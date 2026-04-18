@@ -87,7 +87,11 @@ templates = Jinja2Templates(directory=str(_BASE_DIR / "templates"))
 
 
 def _static_version() -> str:
-    # styles.css / app.js / 파비콘 SVG 중 최신 mtime → 정적 자원 캐시 무효화 키
+    # Render: 배포마다 커밋이 바뀌므로 mtime 이 안 맞아도 캐시 무효화가 확실함
+    commit = (os.environ.get("RENDER_GIT_COMMIT") or "").strip()
+    if commit:
+        return commit[:12]
+    # 로컬: styles.css / app.js / 파비콘 SVG 중 최신 mtime
     paths = [
         _BASE_DIR / "static" / "styles.css",
         _BASE_DIR / "static" / "app.js",

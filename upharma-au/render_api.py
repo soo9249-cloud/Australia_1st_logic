@@ -651,6 +651,54 @@ def _row_summary_for_llm(row: dict[str, Any]) -> dict[str, Any]:
     return {k: row.get(k) for k in keys}
 
 
+def _anthropic_tool_input_schema(schema_cls: Any) -> dict[str, Any]:
+    """Pydantic JSON Schema 에서 Anthropic API 가 거부하는 `title` 등을 제거 (draft 2020-12 호환)."""
+    import copy as _copy
+
+    raw = schema_cls.model_json_schema()
+
+    def _strip_titles(obj: Any) -> Any:
+        if isinstance(obj, dict):
+            return {k: _strip_titles(v) for k, v in obj.items() if k != "title"}
+        if isinstance(obj, list):
+            return [_strip_titles(x) for x in obj]
+        return obj
+
+    return _strip_titles(_copy.deepcopy(raw))
+
+
+def _try_parse_blocks_from_assistant_text(text: str, schema_cls: Any) -> dict[str, str] | None:
+    """tool_use 대신 텍스트로만 JSON 이 온 경우 마지막 수단으로 파싱."""
+    import json as _json
+    import re
+
+    t = (text or "").strip()
+    if not t:
+        return None
+    blobs: list[dict[str, Any]] = []
+    try:
+        o = _json.loads(t)
+        if isinstance(o, dict):
+            blobs.append(o)
+    except Exception:
+        pass
+    for m in re.finditer(r"\{[\s\S]*\}", t):
+        try:
+            o = _json.loads(m.group(0))
+            if isinstance(o, dict):
+                blobs.append(o)
+        except Exception:
+            continue
+    from pydantic import ValidationError
+
+    for o in blobs:
+        try:
+            return schema_cls.model_validate(o).model_dump()
+        except ValidationError:
+            continue
+    return None
+
+
 def _claude_messages_tool_blocks(
     client: Any,
     *,
@@ -664,20 +712,44 @@ def _claude_messages_tool_blocks(
     usage_log_fn: Any | None = None,
 ) -> dict[str, str]:
     """Anthropic Messages API 표준 — tool_use 로 구조화 출력 (OpenAI/parse API 혼용 금지)."""
-    response = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": user_content}],
-        tools=[
-            {
-                "name": tool_name,
-                "description": tool_description,
-                "input_schema": schema_cls.model_json_schema(),
-            }
-        ],
-        tool_choice={"type": "tool", "name": tool_name},
-    )
+    import anthropic
+    from anthropic.types import TextBlock, ToolUseBlock
+    from pydantic import ValidationError
+
+    input_schema = _anthropic_tool_input_schema(schema_cls)
+
+    try:
+        response = client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            system=system,
+            messages=[{"role": "user", "content": user_content}],
+            tools=[
+                {
+                    "name": tool_name,
+                    "description": tool_description,
+                    "input_schema": input_schema,
+                }
+            ],
+            tool_choice={"type": "tool", "name": tool_name},
+        )
+    except anthropic.RateLimitError as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Claude 요율 제한: {e.message}",
+        ) from e
+    except anthropic.APIStatusError as e:
+        # 400 invalid_json_schema / 기타 — Render 로그에 원문이 남도록 detail 에 포함
+        body = e.body if isinstance(e.body, (dict, str)) else repr(e.body)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Anthropic API 오류 ({e.status_code}): {e.message} body={body}",
+        ) from e
+    except anthropic.APIError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Anthropic 연결/응답 오류: {e.message}",
+        ) from e
 
     if usage_log_fn is not None:
         try:
@@ -686,25 +758,46 @@ def _claude_messages_tool_blocks(
             pass
 
     tool_block = next(
-        (
-            b
-            for b in response.content
-            if getattr(b, "type", None) == "tool_use" and getattr(b, "name", None) == tool_name
-        ),
+        (b for b in response.content if isinstance(b, ToolUseBlock) and b.name == tool_name),
         None,
     )
-    if tool_block is None:
+
+    raw: dict[str, Any] | None = None
+    if tool_block is not None and isinstance(tool_block.input, dict):
+        raw = tool_block.input
+
+    if raw is None:
+        text_parts = [b.text for b in response.content if isinstance(b, TextBlock)]
+        combined = "\n".join(text_parts)
+        fallback = _try_parse_blocks_from_assistant_text(combined, schema_cls)
+        if fallback is not None:
+            print(
+                f"[Claude] tool_use 없음 → 텍스트 JSON 폴백 성공 (stop_reason={response.stop_reason})",
+                flush=True,
+            )
+            return fallback
+        snippet = (combined[:800] + "…") if len(combined) > 800 else combined
+        print(
+            f"[Claude] tool_use 없음 · 텍스트 미리보기: {snippet!r} "
+            f"stop_reason={response.stop_reason} content_types="
+            f"{[getattr(b, 'type', type(b).__name__) for b in response.content]}",
+            flush=True,
+        )
         raise HTTPException(
             status_code=502,
             detail=(
-                "Claude 응답에 tool_use 블록 없음 "
-                f"(stop_reason={getattr(response, 'stop_reason', None)})"
+                "Claude 응답에 tool_use 블록 없고 텍스트 JSON 파싱도 실패함. "
+                f"stop_reason={getattr(response, 'stop_reason', None)} — 서버 로그 참고."
             ),
         )
-    raw = getattr(tool_block, "input", None)
-    if not isinstance(raw, dict):
-        raise HTTPException(status_code=502, detail="Claude tool_use input 이 객체가 아님")
-    parsed = schema_cls.model_validate(raw)
+
+    try:
+        parsed = schema_cls.model_validate(raw)
+    except ValidationError as ve:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Claude tool 출력 검증 실패: {ve}",
+        ) from ve
     return parsed.model_dump()
 
 

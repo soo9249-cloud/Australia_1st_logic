@@ -283,12 +283,25 @@ def build_product_summary(
 
     retail_aud, retail_estimation_method = _estimate_retail_price(pbs, chemist_price_aud)
 
+    # Phase 4.7 — Omethyl Case 5: Healthylife OMACOR 가격을 retail_price_aud 로 직접 사용.
+    # chemist dict 이 _from_healthylife_case5=True 플래그를 갖고 있으면 Chemist × 1.20 배수
+    # 우회하고 HL 가격 그대로 적용. retail_estimation_method 는 고유 라벨로 구분.
+    hl_case5_flag = bool(chemist.get("_from_healthylife_case5"))
+    if hl_case5_flag:
+        hl_price = _to_decimal(chemist.get("price_aud") or chemist.get("retail_price_aud"))
+        if hl_price is not None and hl_price > 0:
+            retail_aud = hl_price.quantize(Decimal("0.01"))
+            retail_estimation_method = "healthylife_same_ingredient_diff_form"
+
     # price_source_name / url (하위호환)
     if retail_estimation_method == "pbs_dpmq":
         price_name = "PBS"
         price_url = pbs.get("source_url") or pbs.get("pbs_source_url") or ""
     elif retail_estimation_method == "chemist_markup":
         price_name = "Chemist Warehouse"
+        price_url = chemist.get("product_url") or chemist.get("price_source_url") or ""
+    elif retail_estimation_method == "healthylife_same_ingredient_diff_form":
+        price_name = f"Healthylife — {chemist.get('brand_name') or 'OMACOR'}"
         price_url = chemist.get("product_url") or chemist.get("price_source_url") or ""
     else:
         price_name = "PBS"
@@ -322,6 +335,16 @@ def build_product_summary(
         nsw.get("source_url") or nsw.get("nsw_source_url") or "",
         pubmed_url=None,
     )
+
+    # Phase 4.7 — Case 5 Healthylife 경로일 땐 private_price 라벨을 Healthylife 로 교체
+    if hl_case5_flag and isinstance(sites, dict):
+        brand = chemist.get("brand_name") or "OMACOR"
+        hl_url = chemist.get("product_url") or chemist.get("price_source_url") or ""
+        if hl_url:
+            sites["private_price"] = [{
+                "name": f"Healthylife — {brand}",
+                "url": hl_url,
+            }]
 
     # PBS 웹 보강 미완 감지
     error_type: str | None = None
@@ -900,6 +923,10 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
             ch_dec = _to_decimal(ch_price)
             chemist_is_empty = ch_dec is None or ch_dec < Decimal("5.0")
             if chemist_is_empty:
+                # Phase 4.7 — Case 5 ESTIMATE_private 전용 마커. Omethyl 같이 PBS·
+                # Chemist 미검색 품목은 Healthylife 가격을 retail_price_aud 로 직접 사용
+                # (Chemist × 1.20 배수 우회). build_product_summary 가 이 플래그 보고 판단.
+                is_case5 = str(product.get("pricing_case") or "").upper() == "ESTIMATE_PRIVATE"
                 chemist = {
                     "product_url": hl.get("product_url") or hl.get("price_source_url") or "",
                     "brand_name": hl.get("brand_name"),
@@ -909,6 +936,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                     "category": hl.get("category"),
                     "source_name": "healthylife",
                     "crawled_at": hl.get("crawled_at"),
+                    "_from_healthylife_case5": is_case5,
                     # 하위호환
                     "retail_price_aud": _to_decimal(hl.get("price_aud")),
                     "price_unit": "per pack",

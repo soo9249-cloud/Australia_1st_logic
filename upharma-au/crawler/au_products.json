@@ -20,7 +20,10 @@
       "pbs_search_terms": ["omega-3-acid ethyl esters", "omega 3 ethyl esters"],
       "tga_search_terms": ["omega-3-acid ethyl esters", "Omethyl"],
       "healthylife_slug": "omacor-1000mg-cap-28",
-      "market_segment": "private"
+      "market_segment": "private",
+      "reference_inn": "omega-3-acid ethyl esters",
+      "reference_pack_note": "OMACOR 1g cap × 28 (동일 성분·제형 상이)",
+      "skip_chemist": true
     },
     {
       "product_id": "au-gadvoa-002",

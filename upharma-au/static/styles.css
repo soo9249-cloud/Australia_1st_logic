@@ -2115,3 +2115,57 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   align-self: flex-start;
   margin-top: 4px;
 }
+
+/* Task (2026-04-19) — 2공정 업로드 영역 강조 (신약 fallback 유도) */
+.p2-upload-highlight {
+  animation: p2-upload-pulse 0.6s ease-in-out 3;
+  border: 2px solid var(--primary) !important;
+  border-radius: 10px;
+}
+@keyframes p2-upload-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(58,74,94,0.0); }
+  50%      { box-shadow: 0 0 0 8px rgba(58,74,94,0.25); }
+}
+.p2-upload-hint {
+  padding: 6px 10px;
+  background: #fafaf3;
+  border-left: 3px solid #d4a054;
+  margin: 8px 0 0 0;
+}
+
+/* showToast() — 신약 needs_price_upload 안내 */
+.app-toast {
+  position: fixed;
+  z-index: 99990;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%) translateY(20px);
+  max-width: min(92vw, 440px);
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.45;
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+.app-toast--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.app-toast--info {
+  background: #fff;
+  color: #1a1a1a;
+  border: 1px solid #ddd;
+}
+.app-toast--warn {
+  background: #fff8e6;
+  color: #5c4a1a;
+  border: 1px solid #e0c060;
+}
+.app-toast--error {
+  background: #fdeaea;
+  color: #6b1a1a;
+  border: 1px solid #e08080;
+}

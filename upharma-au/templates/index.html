@@ -145,25 +145,6 @@
             </button>
           </div>
           <p class="p1-custom-msg" id="p1-custom-msg" style="display:none;" role="status"></p>
-
-          <!-- Task 10 (2026-04-19) — PDF 업로드 fallback 영역.
-               /api/crawl/new-drug 응답에 needs_price_upload=true 일 때 _handleCustomCrawlResult 가
-               hidden=false 로 노출. 업로드 후 /api/crawl/price-pdf-upload 로 전송. -->
-          <div id="price-pdf-fallback" class="fallback-upload" hidden>
-            <p class="soft-message" id="fallback-message">
-              호주 공개 데이터베이스에서 가격 정보를 찾지 못했어요. 보유하신 가격 자료 PDF 가 있다면 업로드해 주세요.
-            </p>
-            <label for="price-pdf-input" class="upload-zone">
-              <span>가격 자료 PDF 업로드</span>
-              <input type="file" id="price-pdf-input" accept="application/pdf" />
-            </label>
-            <small class="soft-note">
-              업로드 없어도 괜찮습니다. 그 경우 '유사계열 대체가' 기반 추정값으로 보고서가 작성됩니다 (신뢰도 낮음 표시).
-            </small>
-            <button type="button" class="btn-analyze" id="btn-upload-price-pdf" onclick="uploadPricePdf()">
-              <span>▶</span> 업로드 후 분석 계속
-            </button>
-          </div>
         </div>
 
         <!-- ③ PDF 보고서 — 생성 전 안내 / 로딩 / 다운로드 / 오류 (한 박스) -->
@@ -232,17 +213,21 @@
                 </select>
               </div>
 
-              <div class="p2-or-divider">또는 PDF 직접 업로드</div>
+              <div class="p2-or-divider">또는 가격 자료 PDF 직접 업로드</div>
 
               <div class="p2-upload-area" id="p2-upload-area">
                 <input type="file" id="p2-pdf-file" accept=".pdf" style="display:none;"
                        onchange="handleP2FileSelect(this)">
                 <label for="p2-pdf-file" class="p2-upload-label">
                   <span class="p2-upload-icon">📄</span>
-                  <span id="p2-upload-text">PDF 파일 선택</span>
+                  <span id="p2-upload-text">가격 자료 PDF 선택 (1공정 시장분석 보고서 PDF 또는 신약 가격 자료 PDF)</span>
                 </label>
               </div>
               <div id="p2-upload-status" class="p2-note" style="display:none;"></div>
+
+              <p class="p2-upload-hint">
+                1공정에서 가격을 찾지 못한 신약의 경우, 보유하신 가격 자료 PDF (해외 약가·견적서·수출실적 등)를 여기에 업로드하세요.
+              </p>
 
               <p id="p2-ai-market-hint" class="p2-market-hint">
                 공공 시장: PBS 공공급여 채널 · 주 정부 병원조달(HealthShare NSW 등) / 민간 시장: Chemist Warehouse 등 약국 체인 · 소매 유통 구조 기준
@@ -394,17 +379,21 @@
                 </select>
               </div>
 
-              <div class="p2-or-divider">또는 PDF 직접 업로드</div>
+              <div class="p2-or-divider">또는 가격 자료 PDF 직접 업로드</div>
 
               <div class="p2-upload-area" id="p2-manual-upload-area">
                 <input type="file" id="p2-manual-pdf-file" accept=".pdf" style="display:none;"
                        onchange="handleP2ManualFileSelect(this)">
                 <label for="p2-manual-pdf-file" class="p2-upload-label">
                   <span class="p2-upload-icon">📄</span>
-                  <span id="p2-manual-upload-text">PDF 파일 선택</span>
+                  <span id="p2-manual-upload-text">가격 자료 PDF 선택 (1공정 시장분석 보고서 PDF 또는 신약 가격 자료 PDF)</span>
                 </label>
               </div>
               <div id="p2-manual-upload-status" class="p2-note" style="display:none;"></div>
+
+              <p class="p2-upload-hint">
+                1공정에서 가격을 찾지 못한 신약의 경우, 보유하신 가격 자료 PDF (해외 약가·견적서·수출실적 등)를 여기에 업로드하세요.
+              </p>
 
               <div id="p2-report-brief" class="p2-brief-wrap" style="margin-top:12px;">
                 <p class="p2-brief-empty">보고서를 선택하거나 PDF를 업로드하면 가격 정보가 자동으로 반영됩니다.</p>

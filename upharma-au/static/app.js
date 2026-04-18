@@ -568,6 +568,9 @@ function setP2AiSeg(seg) {
 }
 
 async function handleP2FileSelect(inputEl) {
+  // TODO (CC 병행 Task) — 이 업로드가 신약(needs_price_upload) 케이스이면
+  // /api/crawl/price-pdf-upload 로, 아니면 기존 /api/p2/pipeline 로 라우팅.
+  // 현 프런트 변경 범위에서는 라벨·UX 만 통합하고 백엔드 분기는 유지.
   const file = inputEl?.files?.[0];
   const statusEl = document.getElementById('p2-upload-status');
   const textEl = document.getElementById('p2-upload-text');
@@ -1661,66 +1664,43 @@ async function _pollCustomPipeline(jobId) {
   _showCustomDrugMsg('신약 분석 시간 초과 — 백엔드 로그를 확인하세요.', true);
 }
 
-/** Task 10 — 크롤 결과 분기: AEMP 있음 → 보고서 / 없음 → PDF fallback 영역 노출 */
-function _handleCustomCrawlResult(job) {
-  if (job.needs_price_upload) {
-    // PDF fallback 영역 노출 + 메시지 주입
-    const msgEl = document.getElementById('fallback-message');
-    if (msgEl) msgEl.textContent = job.message_ko || '';
-    const fallbackEl = document.getElementById('price-pdf-fallback');
-    if (fallbackEl) fallbackEl.hidden = false;
-    const btn = document.getElementById('btn-upload-price-pdf');
-    if (btn) btn.dataset.productCode = job.product_code || '';
-    _showCustomDrugMsg(
-      `신약 크롤링 완료 — 가격 데이터 추가 입력 필요. 아래에 PDF 업로드 하세요.`,
-      false,
-    );
-  } else {
-    _showCustomDrugMsg(
-      `신약 분석 완료 — product_code=${job.product_code}, AEMP=${job.aemp_aud || 'N/A'}.`,
-      false,
-    );
-    // 기존 보고서 생성 플로우로 이어짐 (렌더 로직은 결과 화면 단에서).
-  }
+/** 신약 가격 유도 등 짧은 알림 (2공정 업로드 안내용) */
+function showToast(message, level) {
+  const wrap = document.createElement('div');
+  wrap.className = 'app-toast app-toast--' + (level || 'info');
+  wrap.setAttribute('role', 'status');
+  wrap.textContent = message;
+  document.body.appendChild(wrap);
+  requestAnimationFrame(() => wrap.classList.add('app-toast--visible'));
+  const ms = level === 'warn' ? 5200 : 4000;
+  setTimeout(() => {
+    wrap.classList.remove('app-toast--visible');
+    setTimeout(() => wrap.remove(), 320);
+  }, ms);
 }
 
-/** Task 10 — 가격 자료 PDF 업로드 (fallback UX) */
-async function uploadPricePdf() {
-  const btn = document.getElementById('btn-upload-price-pdf');
-  const productCode = btn?.dataset?.productCode || '';
-  const fileInput = document.getElementById('price-pdf-input');
-  const file = fileInput?.files?.[0];
-  if (!productCode) {
-    alert('product_code 정보 누락. 신약 분석을 먼저 완료해주세요.');
+/** Task 10 — 크롤 결과 분기: AEMP 있음 → 보고서 / 없음 → 2공정 가격 PDF 업로드 유도 */
+function _handleCustomCrawlResult(job) {
+  if (job.needs_price_upload) {
+    showToast(
+      '호주 공개 DB에서 가격을 찾지 못했습니다. 2공정 "가격 자료 PDF 업로드"에 PDF를 올려주세요.',
+      'warn',
+    );
+    const p2body = document.getElementById('pb-p2');
+    if (p2body && p2body.classList.contains('hidden')) toggleProcess('p2');
+    if (typeof switchP2Tab === 'function') switchP2Tab('ai');
+    const p2up = document.getElementById('p2-upload-area');
+    if (p2up) {
+      p2up.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      p2up.classList.add('p2-upload-highlight');
+      setTimeout(() => p2up.classList.remove('p2-upload-highlight'), 2400);
+    }
     return;
   }
-  if (!file) {
-    alert('PDF 파일을 선택해주세요.');
-    return;
-  }
-  const fd = new FormData();
-  fd.append('product_code', productCode);
-  fd.append('pdf_file', file);
-
-  _showCustomDrugMsg('PDF 가격 정보 추출 중… (Haiku 분석, 약 10-30초 소요)', false);
-
-  try {
-    const res = await fetch('/api/crawl/price-pdf-upload', { method: 'POST', body: fd });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      _showCustomDrugMsg(`PDF 업로드 실패 (${res.status}): ${err.detail || res.statusText}`, true);
-      return;
-    }
-    const data = await res.json();
-    if (data.success) {
-      _showCustomDrugMsg(data.message_ko || 'PDF 가격 추출 완료.', false);
-      // 2공정(/api/p2/pipeline) 으로 자동 이동은 프론트 라우팅 결정에 따라 추후 연결.
-    } else {
-      _showCustomDrugMsg('PDF 가격 추출 실패.', true);
-    }
-  } catch (exc) {
-    _showCustomDrugMsg(`네트워크 오류: ${exc.message}`, true);
-  }
+  _showCustomDrugMsg(
+    `신약 분석 완료 — product_code=${job.product_code}, AEMP=${job.aemp_aud || 'N/A'}.`,
+    false,
+  );
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

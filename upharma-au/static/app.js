@@ -17,7 +17,7 @@
  *
  * 수정 이력 (원본 대비):
  *   B1  /api/sites 제거 → /api/datasource/status
- *   B2  크롤링 step → DB 조회 step (prog-db_load)
+ *   B2  1단계 라벨: 실시간 크롤링 (내부 id: prog-db_load / db_load)
  *   B3  refreshOutlier → /api/analyze/result
  *   B4  논문 카드: refs 0건이면 숨김
  *   U1  API 키 상태 배지
@@ -52,7 +52,7 @@ const INN_MAP = {
 
 /**
  * B2: 서버 step 이름 → 프론트 progress 단계 ID 매핑
- * 서버 step: init → db_load → analyze → refs → report → done
+ * 진행 단계: 크롤링(db_load) → analyze → refs → report → done
  */
 const STEP_ORDER = ['db_load', 'analyze', 'refs', 'report'];
 

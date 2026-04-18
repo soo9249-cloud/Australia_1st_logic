@@ -167,7 +167,8 @@ def crawl(payload: dict[str, Any]) -> JSONResponse:
     exit_code: int | None = None
     try:
         try:
-            run_crawler()
+            # uvicorn 의 sys.argv(render_api:app, --host …)를 argparse 가 읽지 않도록 빈 argv 로 호출
+            run_crawler([])
             exit_code = 0
         except SystemExit as e:
             exit_code = 0 if (e.code is None or e.code == 0) else int(e.code)

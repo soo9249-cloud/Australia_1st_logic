@@ -1263,8 +1263,14 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     return ok
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     """CLI 진입점 — argparse + DRY_RUN 지원.
+
+    argv:
+      - None (기본): ``sys.argv[1:]`` 를 파싱 — 터미널에서 ``python au_crawler.py ...`` 실행 시.
+      - 빈 리스트 ``[]``: 크롤러 전용 인자 없이 파싱 — **uvicorn 등 다른 프로세스가 넣은
+        ``sys.argv``(render_api:app, --host …)를 읽지 않도록, FastAPI 등에서 ``main([])``
+        로 호출할 때 사용. 품목은 ``PRODUCT_FILTER`` / ``--product``(argv로 넘길 때)로 결정.
 
     사용 예:
       # 단일 품목
@@ -1289,7 +1295,8 @@ def main() -> None:
         action="store_true",
         help="au_products.json 에 정의된 전체 품목 순회. --product/PRODUCT_FILTER 없을 때만 적용.",
     )
-    args = parser.parse_args()
+    # None → 표준 CLI(sys.argv). [] → 임베드 호출(uvicorn과 argv 공유 시 충돌 방지).
+    args = parser.parse_args(argv) if argv is not None else parser.parse_args()
 
     # DRY_RUN — 1, true, yes 모두 수용
     dry_run_raw = (os.environ.get("DRY_RUN") or "").strip().lower()
@@ -1342,8 +1349,8 @@ def main() -> None:
 
 
 def run() -> None:
-    """모듈 외부 호출용 진입점 — main() 과 동일."""
-    main()
+    """모듈 외부 호출용 — 웹 서버 프로세스 안에서는 argv 를 쓰지 않음."""
+    main([])
 
 
 if __name__ == "__main__":

@@ -512,65 +512,12 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 .btn-analyze:hover:not(:disabled) { background: var(--navy2); }
 .btn-analyze:disabled { opacity: .45; cursor: not-allowed; }
 
-/* 1공정 — 신약 직접 분석: 기본은 flex(다른 페이지 호환), 메인 #pb-p1 에서는 아래 그리드로 덮음 */
+/* 1공정 — 신약 직접 분석 (품목 행과 동일 · flex + wrap) */
 .p1-custom-drug-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-}
-/* 메인 1공정: 그리드로 칼럼 축소 시 오버플로 방지(.process-section overflow:hidden 대응) */
-/* 메인 1공정 아코디언: 기본 .process-section{overflow:hidden} 이 그리드·버튼을 카드 밖으로 밀 때 오른쪽을 잘라 냄 */
-#main .process-section {
-  min-width: 0;
-  overflow: visible;
-}
-#pb-p1 {
-  min-width: 0;
-}
-#main #pb-p1 .selector-card {
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-/* 품목 행: auto-fit 으로 좁아지면 셀렉트·버튼이 자동으로 세로 스택 (고정 2열은 중간 폭에서 버튼 잘림 방지) */
-#main #pb-p1 .selector-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 12px;
-  align-items: stretch;
-}
-#main #pb-p1 .selector-row .btn-analyze {
-  min-width: 0;
-  justify-self: stretch;
-}
-#main #pb-p1 .selector-row select#product-select {
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
-}
-/* 신약 3필드 + 버튼: 고정 4열 금지 — 칸이 부족하면 줄 바꿈, 버튼은 항상 마지막에 한 줄 전체 폭 */
-#main #pb-p1 .p1-custom-drug-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
-  gap: 10px;
-  align-items: stretch;
-  min-width: 0;
-  width: 100%;
-}
-#main #pb-p1 .p1-custom-drug-row .btn-analyze {
-  grid-column: 1 / -1;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  justify-self: stretch;
-  box-sizing: border-box;
-}
-#main #pb-p1 .p1-custom-drug-row .p1-custom-input {
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
 }
 .p1-custom-input {
   flex: 1 1 160px;
@@ -1368,32 +1315,6 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 /* ── 24. 반응형 ──────────────────────────────────────────────────────────── */
 @media (max-width: 1100px) {
   .g3 { grid-template-columns: 1fr 1fr; }
-}
-/* 1공정 스테퍼: 좁은 뷰포트에서 단계 라벨이 한 줄에 안 들어갈 때 */
-@media (max-width: 1200px) {
-  #pb-p1 .progress-row.visible {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: visible;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 8px;
-    gap: 0;
-    justify-content: flex-start;
-    margin-left: -4px;
-    margin-right: -4px;
-    padding-left: 4px;
-    padding-right: 4px;
-  }
-  #pb-p1 .progress-row.visible .prog-step {
-    flex: 0 0 auto;
-    min-width: 72px;
-  }
-  #pb-p1 .progress-row.visible .prog-label {
-    font-size: 10px;
-    line-height: 1.25;
-    hyphens: auto;
-    word-break: keep-all;
-  }
 }
 @media (max-width: 960px) {
   .g2 { grid-template-columns: 1fr; }

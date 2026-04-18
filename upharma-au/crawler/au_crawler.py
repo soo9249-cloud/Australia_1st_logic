@@ -274,12 +274,21 @@ def build_product_summary(
     # Phase 4.7 — Omethyl Case 5: Healthylife OMACOR 가격을 retail_price_aud 로 직접 사용.
     # chemist dict 이 _from_healthylife_case5=True 플래그를 갖고 있으면 Chemist × 1.20 배수
     # 우회하고 HL 가격 그대로 적용. retail_estimation_method 는 고유 라벨로 구분.
+    # Task 3 (2026-04-19) — Case 5 외 일반 Healthylife fallback 경로도 수용.
+    #   _from_healthylife_case5=True → "healthylife_same_ingredient_diff_form" (Omethyl 전용)
+    #   chemist.source_name=="healthylife" 그 외 → "healthylife_actual" (신약 일반 경로)
     hl_case5_flag = bool(chemist.get("_from_healthylife_case5"))
+    hl_source_flag = (chemist.get("source_name") == "healthylife")
     if hl_case5_flag:
         hl_price = _to_decimal(chemist.get("price_aud") or chemist.get("retail_price_aud"))
         if hl_price is not None and hl_price > 0:
             retail_aud = hl_price.quantize(Decimal("0.01"))
             retail_estimation_method = "healthylife_same_ingredient_diff_form"
+    elif hl_source_flag:
+        hl_price = _to_decimal(chemist.get("price_aud") or chemist.get("retail_price_aud"))
+        if hl_price is not None and hl_price > 0:
+            retail_aud = hl_price.quantize(Decimal("0.01"))
+            retail_estimation_method = "healthylife_actual"
 
     # price_source_name / url (하위호환)
     if retail_estimation_method == "pbs_dpmq":
@@ -290,6 +299,10 @@ def build_product_summary(
         price_url = chemist.get("product_url") or chemist.get("price_source_url") or ""
     elif retail_estimation_method == "healthylife_same_ingredient_diff_form":
         price_name = f"Healthylife — {chemist.get('brand_name') or 'OMACOR'}"
+        price_url = chemist.get("product_url") or chemist.get("price_source_url") or ""
+    elif retail_estimation_method == "healthylife_actual":
+        # Task 3 — 신약·일반 경로: Healthylife 실제 장바구니 가격 직접 사용
+        price_name = f"Healthylife — {chemist.get('brand_name') or 'Healthylife'}"
         price_url = chemist.get("product_url") or chemist.get("price_source_url") or ""
     else:
         price_name = "PBS"
@@ -439,6 +452,19 @@ def build_product_summary(
         "chemist_price_aud": chemist_price_aud,
         "retail_estimation_method": retail_estimation_method,
         "chemist_url": (chemist.get("product_url") or chemist.get("price_source_url")) if chemist_ok else None,
+
+        # Task 3 (2026-04-19) — Healthylife 가격·URL 전용 컬럼.
+        # chemist dict 이 Healthylife 로 대체된 경우 source_name='healthylife' 표기.
+        "healthylife_price_aud": (
+            _to_decimal(chemist.get("price_aud") or chemist.get("retail_price_aud"))
+            if chemist.get("source_name") == "healthylife"
+            else None
+        ),
+        "healthylife_url": (
+            chemist.get("product_url") or chemist.get("price_source_url")
+            if chemist.get("source_name") == "healthylife"
+            else None
+        ),
 
         # Phase Omethyl (2026-04-19) — 호주 시장 재고 상태 + TGA 대표 match_type.
         # availability_status: Healthylife 로 chemist 대체된 Case 5 경로에서만 채워짐

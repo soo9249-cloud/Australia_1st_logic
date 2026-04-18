@@ -58,6 +58,7 @@ def _error_result(slug: str, reason: str) -> dict[str, Any]:
         "source_name": "healthylife",
         "crawled_at": now_kst_iso(),
         "availability_status": None,   # Phase Omethyl 신규 — in_stock / temporarily_unavailable
+        "extraction_method": None,     # Task 3 — dom / json_ld / json_api / None
         # 하위호환 키
         "slug": slug,
         "is_pbs": False,
@@ -115,22 +116,61 @@ def _detect_availability(blob: str) -> str:
     return "in_stock"
 
 
-def _extract_price_from_blob(blob: str) -> float | None:
-    """다단계 우선순위로 상품 정가 추출.
+def _extract_price_from_blob(blob: str) -> tuple[float | None, str | None]:
+    """다단계 우선순위로 상품 정가 + 추출 경로(extraction_method) 반환.
 
-    1) JSON-LD schema.org Offer: `"price":"48.95"` / `"price": 48.95`
-       또는 `"lowPrice"` / `"highPrice"` (LD Offers).
-    2) HTML 속성: `itemprop="price" content="48.95"`, `data-price="48.95"`.
-    3) 프로모션 맥락 제외한 첫 $XX.XX (소수점 포함 패턴만 채택 — 소수점 없는
-       정수 금액은 대개 "orders over $100" 같은 정책 문구라 2순위).
+    Task 3 (2026-04-19) — DOM > JSON-LD 우선순위 역전.
+    기존 JSON-LD 우선 정책은 Healthylife 가 `offers.price` 에 "권장소비자가(RRP)"
+    를 넣는 경우 실제 장바구니 가격보다 높게 잡혀 과대평가 발생. 실제 판매가는
+    DOM 의 가격 셀렉터가 더 신뢰됨.
 
-    실패 시 None. (호출부는 이 경우 None 반환해 다음 fetch 경로로 넘어감.)
+    우선순위:
+      1) DOM: HTML 속성 (itemprop="price"·data-price·data-product-price),
+         `class="price-current"` / `class="price-now"` 등 명시적 현재가 클래스.
+      2) JSON-LD schema.org Offer price / lowPrice (2순위 fallback).
+      3) 프로모션 맥락 제외한 첫 $XX.XX 소수점 포함 패턴.
+
+    반환: (price_float | None, extraction_method | None)
+      extraction_method ∈ {"dom", "json_ld", None}
     """
     if not blob:
-        return None
+        return None, None
 
-    # 1) JSON-LD schema.org Offer price
-    #    "price":"48.95" / "price":48.95 / "price": "48.95"
+    # 1) DOM 속성 + 명시적 현재가 클래스
+    for attr_re in (
+        r'itemprop=["\']price["\'][^>]*content=["\']?(\d+(?:\.\d{1,2})?)',
+        r'data-price=["\']?(\d+(?:\.\d{1,2})?)',
+        r'data-product-price=["\']?(\d+(?:\.\d{1,2})?)',
+        r'data-current-price=["\']?(\d+(?:\.\d{1,2})?)',
+    ):
+        m = re.search(attr_re, blob, flags=re.IGNORECASE)
+        if m:
+            try:
+                v = float(m.group(1))
+                if v > 0:
+                    return v, "dom"
+            except ValueError:
+                continue
+
+    # 1b) 명시적 현재가 클래스 — <span class="price-current">$48.95</span>
+    #     "price-now" / "product-price" / "sale-price" / "current-price"
+    for class_re in (
+        r'class=["\'][^"\']*\bprice[-_]?current\b[^"\']*["\'][^>]*>\s*\$?\s*(\d+(?:\.\d{1,2})?)',
+        r'class=["\'][^"\']*\bprice[-_]?now\b[^"\']*["\'][^>]*>\s*\$?\s*(\d+(?:\.\d{1,2})?)',
+        r'class=["\'][^"\']*\bsale[-_]?price\b[^"\']*["\'][^>]*>\s*\$?\s*(\d+(?:\.\d{1,2})?)',
+        r'class=["\'][^"\']*\bcurrent[-_]?price\b[^"\']*["\'][^>]*>\s*\$?\s*(\d+(?:\.\d{1,2})?)',
+        r'class=["\'][^"\']*\bproduct[-_]?price\b[^"\']*["\'][^>]*>\s*\$?\s*(\d+(?:\.\d{1,2})?)',
+    ):
+        m = re.search(class_re, blob, flags=re.IGNORECASE)
+        if m:
+            try:
+                v = float(m.group(1))
+                if v > 0:
+                    return v, "dom"
+            except ValueError:
+                continue
+
+    # 2) JSON-LD schema.org Offer price (2순위 fallback — RRP 오탑 위험)
     m = re.search(
         r'"price"\s*:\s*"?(\d+(?:\.\d{1,2})?)"?',
         blob,
@@ -139,11 +179,11 @@ def _extract_price_from_blob(blob: str) -> float | None:
         try:
             v = float(m.group(1))
             if v > 0:
-                return v
+                return v, "json_ld"
         except ValueError:
             pass
 
-    # lowPrice / highPrice — Offers 는 range 도 가짐
+    # lowPrice — Offers range 의 하한 (RRP 보다 실 판매가에 더 가까움)
     m = re.search(
         r'"lowPrice"\s*:\s*"?(\d+(?:\.\d{1,2})?)"?',
         blob,
@@ -152,26 +192,9 @@ def _extract_price_from_blob(blob: str) -> float | None:
         try:
             v = float(m.group(1))
             if v > 0:
-                return v
+                return v, "json_ld"
         except ValueError:
             pass
-
-    # 2) HTML itemprop="price" / data-price 속성
-    #    <meta itemprop="price" content="48.95">
-    #    <span data-price="48.95">...</span>
-    for attr_re in (
-        r'itemprop=["\']price["\'][^>]*content=["\']?(\d+(?:\.\d{1,2})?)',
-        r'data-price=["\']?(\d+(?:\.\d{1,2})?)',
-        r'data-product-price=["\']?(\d+(?:\.\d{1,2})?)',
-    ):
-        m = re.search(attr_re, blob, flags=re.IGNORECASE)
-        if m:
-            try:
-                v = float(m.group(1))
-                if v > 0:
-                    return v
-            except ValueError:
-                continue
 
     # 3) 프로모션 맥락 제외한 $XX.XX — 소수점 포함 패턴만 (정수 단독 금액은 후순위)
     def _is_noise_context(text: str, match_start: int, window: int = 30) -> bool:
@@ -198,7 +221,7 @@ def _extract_price_from_blob(blob: str) -> float | None:
         try:
             v = float(m.group(1))
             if v > 0:
-                return v
+                return v, "dom"  # $ 기호 + 소수점 있는 값은 DOM 상 노출 가격 취급
         except ValueError:
             continue
 
@@ -211,11 +234,11 @@ def _extract_price_from_blob(blob: str) -> float | None:
             # 너무 큰 정수 ($300, $500 같은 라운드 넘버) 는 배송 임계값·적립금 가능성 — skip
             # (상품 정가는 통상 소수점 있음. 정수 상품가 있어도 대부분 $1~$99 범위.)
             if 0 < v < 200:
-                return v
+                return v, "dom"
         except ValueError:
             continue
 
-    return None
+    return None, None
 
 
 def _is_blocked(status: int, body: str) -> bool:
@@ -286,6 +309,7 @@ def _fetch_json(slug: str) -> dict[str, Any] | None:
         "source_name": "healthylife",
         "crawled_at": now_kst_iso(),
         "availability_status": availability,
+        "extraction_method": "json_api",   # Task 3 — JSON API 경로 표기
         # 하위호환
         "slug": slug,
         "is_pbs": False,
@@ -342,13 +366,16 @@ def _parse_price_block(
 
     Phase Omethyl (2026-04-19) — 기존 단순 `\\$\\s*(\\d+...)` 첫 매칭 파싱은
     "Free shipping on orders over $300" 같은 프로모션 텍스트를 상품가로 오인식.
-    → `_extract_price_from_blob` 다단계 우선순위(JSON-LD → itemprop/data-price
-    → 프로모션 맥락 제외한 $XX.XX) 로 교체.
+    → `_extract_price_from_blob` 다단계 우선순위.
+
+    Task 3 (2026-04-19) — 우선순위 역전:
+    JSON-LD offers.price 는 권장소비자가(RRP) 반환 사례 있음 → DOM 우선.
+    _extract_price_from_blob 이 (price, extraction_method) 튜플 반환.
 
     재고 상태: `_detect_availability` 로 in_stock / temporarily_unavailable 반환.
     품절이어도 정가는 계속 추출해 참고가로 반환 (정가 표시는 유지되는 경우 흔함).
     """
-    price = _extract_price_from_blob(blob)
+    price, extraction_method = _extract_price_from_blob(blob)
     if price is None:
         return None
 
@@ -380,6 +407,7 @@ def _parse_price_block(
         "source_name": "healthylife",
         "crawled_at": now_kst_iso(),
         "availability_status": availability,
+        "extraction_method": extraction_method,  # Task 3 — "dom" | "json_ld"
         # 하위호환
         "slug": slug,
         "is_pbs": False,

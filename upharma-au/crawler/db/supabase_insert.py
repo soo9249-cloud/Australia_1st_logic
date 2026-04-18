@@ -107,6 +107,9 @@ _ALLOWED_COLUMNS: frozenset[str] = frozenset(
         # Phase Omethyl (2026-04-19) — 호주 시장 재고 상태 + TGA 대표 매칭 유형
         "availability_status",    # in_stock | temporarily_unavailable | permanently_withdrawn
         "match_type",             # exact | same_ingredient_diff_form | similar_inn
+        # Task 3 (2026-04-19) — Healthylife 가격·URL 전용 컬럼
+        "healthylife_price_aud",
+        "healthylife_url",
         # 메타
         "schedule_code",
         "last_crawled_at",

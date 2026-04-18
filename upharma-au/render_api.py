@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from pathlib import Path
@@ -43,6 +44,8 @@ _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 # crawler 내부 코드 (수정하지 않고 import 만)
 from au_crawler import main as run_crawler  # type: ignore
 from db.supabase_insert import TABLE_NAME, get_supabase_client  # type: ignore
+
+logger = logging.getLogger("render_api")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -126,11 +129,16 @@ def health() -> dict[str, Any]:
     """
     deps = {name: info["ok"] for name, info in _DEPS_STATUS.items()}
     all_optional_ok = all(deps.values())
+    pplx_set = bool(
+        (os.environ.get("PERPLEXITY_API_KEY") or "").strip()
+        or (os.environ.get("PERPLEXITY_KEY") or "").strip()
+    )
     return {
         "status": "ok",
         "optional_deps": deps,
         "optional_deps_all_installed": all_optional_ok,
         "stage2_ok": _STAGE2_OK if "_STAGE2_OK" in globals() else None,
+        "perplexity_api_key_configured": pplx_set,
         "hint": None if all_optional_ok else "pip install -r requirements.txt",
     }
 
@@ -285,9 +293,14 @@ def _news_api_response(
     *,
     ok: bool = True,
     error: str | None = None,
+    source: str = "mock",
 ) -> JSONResponse:
-    """프론트(loadNews)와 동일한 계약: { ok, items, error } — DB 저장 없음."""
-    return JSONResponse(content={"ok": ok, "items": items, "error": error})
+    """프론트(loadNews)와 동일한 계약: { ok, items, error } — DB 저장 없음.
+    source: mock | perplexity (진단용 헤더 X-News-Source)
+    """
+    resp = JSONResponse(content={"ok": ok, "items": items, "error": error})
+    resp.headers["X-News-Source"] = source
+    return resp
 
 
 def _normalize_news_item(raw: dict[str, Any], link_fallback: str = "") -> dict[str, Any]:
@@ -345,11 +358,12 @@ _FX_FALLBACK: dict[str, Any] = {"aud_krw": 893.0, "aud_usd": 0.6412, "updated": 
 @app.get("/api/news")
 def get_news() -> JSONResponse:
     """Perplexity sonar: 호주 제약 뉴스 검색 + 한국어 제목·요약 + 기사 직링크. 키 없거나 실패 시 mock."""
-    api_key = os.environ.get("PERPLEXITY_API_KEY", "").strip()
+    api_key = (os.environ.get("PERPLEXITY_API_KEY") or "").strip() or (os.environ.get("PERPLEXITY_KEY") or "").strip()
     mock_items = [_normalize_news_item(x) for x in _MOCK_NEWS]
 
     if not api_key:
-        return _news_api_response(mock_items)
+        logger.warning("[api/news] mock: 환경변수 PERPLEXITY_API_KEY(또는 PERPLEXITY_KEY) 비어 있음")
+        return _news_api_response(mock_items, source="mock")
 
     try:
         r = httpx.post(
@@ -397,17 +411,28 @@ def get_news() -> JSONResponse:
             timeout=45.0,
         )
         if r.status_code != 200:
-            return _news_api_response(mock_items)
+            logger.warning(
+                "[api/news] mock: Perplexity HTTP %s — %s",
+                r.status_code,
+                (r.text or "")[:500],
+            )
+            return _news_api_response(mock_items, source="mock")
         data = r.json()
-    except Exception:
-        return _news_api_response(mock_items)
+    except Exception as exc:
+        logger.warning("[api/news] mock: 요청 예외 %s: %s", type(exc).__name__, exc)
+        return _news_api_response(mock_items, source="mock")
 
     import json as _json
     content = ""
     try:
         content = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
-    except Exception:
-        return _news_api_response(mock_items)
+    except Exception as exc:
+        logger.warning("[api/news] mock: 응답 choices 파싱 실패: %s", exc)
+        return _news_api_response(mock_items, source="mock")
+
+    if not content.strip():
+        logger.warning("[api/news] mock: message content 비어 있음")
+        return _news_api_response(mock_items, source="mock")
 
     citations = data.get("citations") or []
     link_list = [c if isinstance(c, str) else (c.get("url") if isinstance(c, dict) else "") for c in citations]
@@ -416,8 +441,13 @@ def get_news() -> JSONResponse:
         start = content.index("[")
         end = content.rindex("]") + 1
         items = _json.loads(content[start:end])
-    except Exception:
-        return _news_api_response(mock_items)
+    except Exception as exc:
+        logger.warning(
+            "[api/news] mock: JSON 배열 파싱 실패 (%s) content_prefix=%s",
+            exc,
+            (content or "")[:400],
+        )
+        return _news_api_response(mock_items, source="mock")
 
     result: list[dict[str, Any]] = []
     for i, it in enumerate(items[:5]):
@@ -432,8 +462,9 @@ def get_news() -> JSONResponse:
         result.append(_normalize_news_item(merged))
 
     if not result:
-        return _news_api_response(mock_items)
-    return _news_api_response(result)
+        logger.warning("[api/news] mock: 파싱 후 유효 항목 0건")
+        return _news_api_response(mock_items, source="mock")
+    return _news_api_response(result, source="perplexity")
 
 
 @app.get("/api/exchange")

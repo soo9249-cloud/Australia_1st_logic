@@ -78,11 +78,11 @@ uvicorn render_api:app --app-dir upharma-au --reload --port 8000
 
 ```bash
 cd upharma-au/crawler
-set PRODUCT_FILTER=au-hydrine-004   # Windows cmd
-python au_crawler.py
+python au_crawler.py --product au-hydrine-004
+# 전체 품목: python au_crawler.py --all
 ```
 
-PowerShell: `$env:PRODUCT_FILTER="au-hydrine-004"; python au_crawler.py`
+품목 지정은 **`--product` / `--all` 만 사용**합니다. 과거에 쓰이던 `PRODUCT_FILTER` 환경변수는 제거되었으며, 동시 요청 시 프로세스 간 경합을 피하기 위해 **코드에서 읽지 않습니다.** Render 대시보드에 `PRODUCT_FILTER` 를 넣어 두었다면 **삭제해도 됩니다** (웹의 `/api/crawl` 은 요청 body 의 `product_id` 만 사용).
 
 ---
 

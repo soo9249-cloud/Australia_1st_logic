@@ -835,7 +835,7 @@ def _extract_pbs_derived(
 
 
 # ─────────────────────────────────────────────────────────────────────
-# main — PRODUCT_FILTER 1개 품목 크롤 + upsert + 바이어 풀 + 로그
+# main — 단일/전체 품목 크롤 + upsert + 바이어 풀 + 로그
 # ─────────────────────────────────────────────────────────────────────
 
 def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> bool:
@@ -1263,60 +1263,64 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     return ok
 
 
-def main(argv: list[str] | None = None) -> None:
+def main(argv: list[str] | None = None, product_id: str | None = None) -> None:
     """CLI 진입점 — argparse + DRY_RUN 지원.
 
-    argv:
-      - None (기본): ``sys.argv[1:]`` 를 파싱 — 터미널에서 ``python au_crawler.py ...`` 실행 시.
-      - 빈 리스트 ``[]``: 크롤러 전용 인자 없이 파싱 — **uvicorn 등 다른 프로세스가 넣은
-        ``sys.argv``(render_api:app, --host …)를 읽지 않도록, FastAPI 등에서 ``main([])``
-        로 호출할 때 사용. 품목은 ``PRODUCT_FILTER`` / ``--product``(argv로 넘길 때)로 결정.
+    argv / product_id:
+      - **CLI** (``argv is None``): ``sys.argv[1:]`` 를 argparse 로 파싱 — ``--product`` / ``--all``.
+      - **프로그래밍** (``product_id`` 비어 있지 않음): 해당 품목만 처리. FastAPI 등에서는
+        ``main([], product_id=...)`` 로 호출 — uvicorn 이 넣은 ``sys.argv`` 와 분리.
+      - ``argv == []`` 이고 ``product_id`` 없음: 잘못된 임베드 호출 (종료 코드 2).
 
     사용 예:
-      # 단일 품목
+      # 단일 품목 (CLI)
       python -m crawler.au_crawler --product au-hydrine-004
       # 전체 8 품목 순회
       python -m crawler.au_crawler --all
-      # 환경변수 PRODUCT_FILTER 도 호환 (우선순위: --product > PRODUCT_FILTER > --all)
-      PRODUCT_FILTER=au-omethyl-001 python -m crawler.au_crawler
       # DB 쓰기 skip (dry-run)
       DRY_RUN=1 python -m crawler.au_crawler --product au-hydrine-004
 
-    종료 코드: 전 품목 성공 0, 실패 하나라도 있으면 1.
+    종료 코드: 전 품목 성공 0, 실패 하나라도 있으면 1. 잘못된 임베드 호출 2.
     """
-    parser = argparse.ArgumentParser(description="호주 의약품 크롤러 v2 (위임지서 03a)")
-    parser.add_argument(
-        "--product",
-        metavar="PRODUCT_ID",
-        help="단일 품목 크롤 (예: au-hydrine-004). PRODUCT_FILTER env 보다 우선.",
-    )
-    parser.add_argument(
-        "--all",
-        action="store_true",
-        help="au_products.json 에 정의된 전체 품목 순회. --product/PRODUCT_FILTER 없을 때만 적용.",
-    )
-    # None → 표준 CLI(sys.argv). [] → 임베드 호출(uvicorn과 argv 공유 시 충돌 방지).
-    args = parser.parse_args(argv) if argv is not None else parser.parse_args()
-
     # DRY_RUN — 1, true, yes 모두 수용
     dry_run_raw = (os.environ.get("DRY_RUN") or "").strip().lower()
     dry_run = dry_run_raw in {"1", "true", "yes", "on"}
 
-    # 우선순위: --product > PRODUCT_FILTER env > --all
-    env_filter = (os.environ.get("PRODUCT_FILTER") or "").strip()
+    pid_arg = (product_id or "").strip()
     selected_ids: list[str] | None
-    if args.product:
-        selected_ids = [args.product.strip()]
-    elif env_filter:
-        selected_ids = [env_filter]
-    elif args.all:
-        selected_ids = None  # None = 전체
-    else:
+
+    if pid_arg:
+        selected_ids = [pid_arg]
+    elif argv is not None and len(argv) == 0:
         print(
-            "[오류] 대상 품목 지정 필요 — --product <id> / --all / PRODUCT_FILTER env 중 하나.",
+            "[오류] 프로그래밍 호출 시 product_id 인자가 필요합니다. "
+            "예: run_crawler('au-hydrine-004') 또는 main([], product_id='…').",
             file=sys.stderr,
         )
-        sys.exit(1)
+        sys.exit(2)
+    else:
+        parser = argparse.ArgumentParser(description="호주 의약품 크롤러 v2 (위임지서 03a)")
+        parser.add_argument(
+            "--product",
+            metavar="PRODUCT_ID",
+            help="단일 품목 크롤 (예: au-hydrine-004).",
+        )
+        parser.add_argument(
+            "--all",
+            action="store_true",
+            help="au_products.json 에 정의된 전체 품목 순회. --product 없을 때만 적용.",
+        )
+        args = parser.parse_args(argv) if argv is not None else parser.parse_args()
+        if args.product:
+            selected_ids = [args.product.strip()]
+        elif args.all:
+            selected_ids = None
+        else:
+            print(
+                "[오류] 대상 품목 지정 필요 — --product <id> 또는 --all",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     products = _load_products()
     if selected_ids is None:
@@ -1348,9 +1352,9 @@ def main(argv: list[str] | None = None) -> None:
     sys.exit(0 if all_ok else 1)
 
 
-def run() -> None:
-    """모듈 외부 호출용 — 웹 서버 프로세스 안에서는 argv 를 쓰지 않음."""
-    main([])
+def run_crawler(product_id: str) -> None:
+    """웹 API 등에서 호출 — 품목은 인자로만 전달 (프로세스 환경변수로 품목 지정하지 않음)."""
+    main([], product_id=product_id)
 
 
 if __name__ == "__main__":

@@ -31,10 +31,9 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          PRODUCT_FILTER: ${{ github.event.inputs.product_filter }}
           PBS_SUBSCRIPTION_KEY: ${{ secrets.PBS_SUBSCRIPTION_KEY }}
         working-directory: upharma-au/crawler
-        run: python au_crawler.py
+        run: python au_crawler.py --product "${{ github.event.inputs.product_filter }}"
 
       - name: 실행 결과 요약 출력
         if: always()

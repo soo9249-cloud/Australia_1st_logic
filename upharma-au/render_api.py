@@ -41,8 +41,8 @@ from starlette.responses import HTMLResponse
 _REPORTS_DIR = _BASE_DIR / "reports"
 _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# crawler 내부 코드 (수정하지 않고 import 만)
-from au_crawler import main as run_crawler  # type: ignore
+# crawler 내부 코드
+from au_crawler import run_crawler  # type: ignore
 from db.supabase_insert import TABLE_NAME, get_supabase_client  # type: ignore
 
 logger = logging.getLogger("render_api")
@@ -154,29 +154,17 @@ def health_deps() -> dict[str, Any]:
 
 @app.post("/api/crawl")
 def crawl(payload: dict[str, Any]) -> JSONResponse:
-    """au_crawler.py 의 main() 을 직접 호출한다.
-    - PRODUCT_FILTER env 를 세팅한 뒤 main() 실행 (단일 워커 전제).
-    - main() 내부의 sys.exit(code) 는 SystemExit 으로 잡아서 성공 여부만 판단한다.
-    """
+    """au_crawler.run_crawler(product_id) 호출 — 품목은 요청 body 로만 전달 (환경변수 미사용)."""
     product_id = str(payload.get("product_id") or "").strip()
     if not product_id:
         raise HTTPException(status_code=400, detail="product_id is required")
 
-    prev_filter = os.environ.get("PRODUCT_FILTER")
-    os.environ["PRODUCT_FILTER"] = product_id
     exit_code: int | None = None
     try:
-        try:
-            # uvicorn 의 sys.argv(render_api:app, --host …)를 argparse 가 읽지 않도록 빈 argv 로 호출
-            run_crawler([])
-            exit_code = 0
-        except SystemExit as e:
-            exit_code = 0 if (e.code is None or e.code == 0) else int(e.code)
-    finally:
-        if prev_filter is None:
-            os.environ.pop("PRODUCT_FILTER", None)
-        else:
-            os.environ["PRODUCT_FILTER"] = prev_filter
+        run_crawler(product_id)
+        exit_code = 0
+    except SystemExit as e:
+        exit_code = 0 if (e.code is None or e.code == 0) else int(e.code)
 
     ok = exit_code == 0
     return JSONResponse(

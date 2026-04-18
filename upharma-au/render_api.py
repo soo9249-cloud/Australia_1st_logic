@@ -197,13 +197,18 @@ def list_products() -> JSONResponse:
     return JSONResponse(content={"items": rows, "count": len(rows)})
 
 
-# ── reports 테이블 어댑터 (1/2/3공정 산출 보고서 메타) ─────────────
-_REPORTS_TABLE = "reports"
+# ── au_reports_history 테이블 어댑터 (1/2/3공정 산출 보고서 메타, v2) ─────
+# v2 스키마: title/file_url/crawled_data 는 JSONB snapshot 안으로 흡수.
+_REPORTS_TABLE = "au_reports_history"
 
 
 @app.get("/api/reports")
 def list_reports_today() -> JSONResponse:
-    """오늘 날짜(UTC 기준)에 생성된 보고서 목록을 최신순으로 반환."""
+    """오늘 날짜(UTC 기준)에 생성된 보고서 목록을 최신순으로 반환.
+    v2 응답 구조: { items: [{id, product_id, gong, snapshot:{title,file_url,...},
+                              llm_model, generated_at, created_at}], count }
+    프론트는 snapshot.title · snapshot.file_url 로 접근.
+    """
     from datetime import datetime, timezone, timedelta
 
     now = datetime.now(timezone.utc)
@@ -229,6 +234,8 @@ def list_reports_today() -> JSONResponse:
 def create_report(payload: dict[str, Any]) -> JSONResponse:
     """보고서 저장 버튼이 호출하는 엔드포인트.
     body: { product_id?, gong: 1|2|3, title, file_url?, crawled_data? }
+
+    v2 매핑: title/file_url/crawled_data → snapshot JSONB 안으로 흡수.
     """
     gong = payload.get("gong")
     title = str(payload.get("title") or "").strip()
@@ -238,9 +245,12 @@ def create_report(payload: dict[str, Any]) -> JSONResponse:
     row = {
         "product_id": payload.get("product_id"),
         "gong": int(gong),
-        "title": title,
-        "file_url": payload.get("file_url"),
-        "crawled_data": payload.get("crawled_data"),
+        "snapshot": {
+            "title":        title,
+            "file_url":     payload.get("file_url"),
+            "crawled_data": payload.get("crawled_data") or {},
+        },
+        "llm_model": payload.get("llm_model") or _CLAUDE_MODEL,
     }
     try:
         client = get_supabase_client()
@@ -1804,7 +1814,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
                     "disclaimer": dispatch_result.get("disclaimer"),
                     "llm_model": _CLAUDE_MODEL,
                 }
-                sb_client_blocked.table("australia_p2_results").upsert(
+                sb_client_blocked.table("au_reports_r2").upsert(
                     blocked_upsert,
                     on_conflict="product_id,segment",
                 ).execute()
@@ -1957,7 +1967,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
                 "llm_model": _CLAUDE_MODEL,
                 "generated_at": _dt_now_utc(),
             }
-            sb_client.table("australia_p2_results").upsert(
+            sb_client.table("au_reports_r2").upsert(
                 upsert_data,
                 on_conflict="product_id,segment",
             ).execute()
@@ -1980,7 +1990,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
             # Supabase에 pdf_filename 업데이트
             try:
                 sb_client_pdf = get_supabase_client()
-                sb_client_pdf.table("australia_p2_results").update(
+                sb_client_pdf.table("au_reports_r2").update(
                     {"pdf_filename": pdf_name}
                 ).eq("product_id", product_id).eq("segment", segment).execute()
             except Exception:

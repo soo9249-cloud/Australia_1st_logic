@@ -136,7 +136,9 @@ def build_product_summary(
     chemist: dict[str, Any] | None,
     nsw: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    """각 소스 dict 를 australia 스키마에 맞는 단일 dict 로 병합한다."""
+    """각 소스 dict 를 au_products 스키마(v2)에 맞는 단일 dict 로 병합한다.
+    반환 dict 의 'product_id' 키는 supabase_insert._KEY_RENAME_AU_PRODUCTS 에서
+    'product_code' 로 자동 rename 되므로, 크롤러는 기존 키 이름을 유지한다."""
     data_source_count = sum(
         1 for x in (pbs, tga, chemist, nsw) if x is not None
     )

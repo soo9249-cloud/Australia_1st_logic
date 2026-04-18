@@ -111,7 +111,16 @@ body {
   font-weight: 800;
   font-size: 13px;
 }
-.flag-emoji { font-size: 22px; line-height: 1; }
+/* Windows 등에서 🇦🇺 이모지가 깨지므로 SVG 자산 + 원형 마스크 사용 */
+.flag-round {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
 
 /* ── 4. 내비게이션 탭 ────────────────────────────────────────────────────── */
 .main {

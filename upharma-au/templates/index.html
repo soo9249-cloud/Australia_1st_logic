@@ -21,7 +21,9 @@
   </div>
   <div class="topbar-r">
     <div class="pill">
-      <img class="flag-round" src="/static/flag-au.svg?v={{ static_v }}" width="26" height="26" alt="" aria-hidden="true"/>
+      <span class="flag-round-wrap" aria-hidden="true">
+        <img class="flag-round" src="/static/flag-au.svg?v={{ static_v }}" width="26" height="26" alt=""/>
+      </span>
       <span>Australia</span>
     </div>
   </div>
@@ -511,9 +513,16 @@
   var bounds = L.latLngBounds([]);
   cities.forEach(function (c) {
     bounds.extend([c.lat, c.lng]);
-    L.marker([c.lat, c.lng], { icon: makeIcon(!!c.primary) })
+    var isCap = !!c.primary;
+    L.marker([c.lat, c.lng], { icon: makeIcon(isCap) })
       .addTo(map)
-      .bindPopup('<b>' + c.label + '</b>');
+      .bindTooltip(c.label, {
+        permanent: true,
+        direction: 'top',
+        offset: [0, isCap ? -16 : -12],
+        className: 'au-city-tooltip',
+        opacity: 1,
+      });
   });
 
   map.fitBounds(bounds, { padding: [40, 40] });

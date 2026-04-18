@@ -1421,7 +1421,8 @@ function resetProgress() {
     const el = document.getElementById('prog-' + STEP_ORDER[i]);
     if (!el) continue;
     el.className = 'prog-step';
-    el.querySelector('.prog-dot').textContent = i + 1;
+    const dot = el.querySelector('.prog-dot');
+    if (dot) dot.textContent = String(i + 1);
   }
 }
 
@@ -1782,6 +1783,20 @@ function renderResult(result, refs, pdfName) {
   }
 }
 
+/** U4: PDF 영역 초기(안내 문구) — 파이프라인 재실행 직전에 호출 */
+function _showReportIdle() {
+  const idle = document.getElementById('report-state-idle');
+  const loading = document.getElementById('report-state-loading');
+  const ok = document.getElementById('report-state-ok');
+  const err = document.getElementById('report-state-error');
+  if (idle) idle.style.display = '';
+  if (loading) loading.style.display = 'none';
+  if (ok) ok.style.display = 'none';
+  if (err) err.style.display = 'none';
+  const preview = document.getElementById('pdf-preview-frame');
+  if (preview) preview.setAttribute('src', 'about:blank');
+}
+
 /** U4: PDF 생성 중 */
 function _showReportLoading() {
   const preview = document.getElementById('pdf-preview-frame');
@@ -1789,6 +1804,7 @@ function _showReportLoading() {
   document.getElementById('report-state-loading').style.display = 'flex';
   document.getElementById('report-state-ok').style.display      = 'none';
   document.getElementById('report-state-error').style.display   = 'none';
+  document.getElementById('report-state-idle').style.display    = 'none';
   document.getElementById('report-card').classList.add('visible');
 }
 
@@ -1807,6 +1823,8 @@ function _showReportOk(pdfName) {
   document.getElementById('report-state-loading').style.display = 'none';
   document.getElementById('report-state-ok').style.display      = 'block';
   document.getElementById('report-state-error').style.display   = 'none';
+  const idleOk = document.getElementById('report-state-idle');
+  if (idleOk) idleOk.style.display = 'none';
   document.getElementById('report-card').classList.add('visible');
 }
 
@@ -1817,6 +1835,8 @@ function _showReportError() {
   document.getElementById('report-state-loading').style.display = 'none';
   document.getElementById('report-state-ok').style.display      = 'none';
   document.getElementById('report-state-error').style.display   = 'block';
+  const idleErr = document.getElementById('report-state-idle');
+  if (idleErr) idleErr.style.display = 'none';
   document.getElementById('report-card').classList.add('visible');
 }
 

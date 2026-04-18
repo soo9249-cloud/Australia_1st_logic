@@ -87,12 +87,25 @@ templates = Jinja2Templates(directory=str(_BASE_DIR / "templates"))
 
 
 def _static_version() -> str:
-    # styles.css / app.js 중 최신 mtime → 정적 자원 캐시 무효화 키
-    paths = [_BASE_DIR / "static" / "styles.css", _BASE_DIR / "static" / "app.js"]
+    # styles.css / app.js / 파비콘 SVG 중 최신 mtime → 정적 자원 캐시 무효화 키
+    paths = [
+        _BASE_DIR / "static" / "styles.css",
+        _BASE_DIR / "static" / "app.js",
+        _BASE_DIR / "static" / "flag-au.svg",
+    ]
     try:
         return str(int(max(p.stat().st_mtime for p in paths if p.is_file())))
     except ValueError:
         return "0"
+
+
+@app.get("/favicon.ico")
+def favicon() -> FileResponse:
+    """브라우저 기본 요청(/favicon.ico)에 호주 국기 SVG 제공 (탭 아이콘)."""
+    return FileResponse(
+        _BASE_DIR / "static" / "flag-au.svg",
+        media_type="image/svg+xml",
+    )
 
 
 @app.get("/", response_class=HTMLResponse)

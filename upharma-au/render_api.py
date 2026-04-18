@@ -304,7 +304,7 @@ def _news_api_response(
 
 
 # 메인 프리뷰 뉴스 카드에 표시할 기사 개수(프롬프트·파싱·mock 보충과 동일)
-_NEWS_LIST_SIZE = 6
+_NEWS_LIST_SIZE = 5
 
 
 def _normalize_news_item(raw: dict[str, Any], link_fallback: str = "") -> dict[str, Any]:
@@ -361,14 +361,6 @@ _MOCK_NEWS: list[dict[str, Any]] = [
         "source": "NPS MedicineWise",
         "date": "2026-04-14",
         "link": "https://www.nps.org.au",
-    },
-    {
-        "title": "PBAC agenda: new listings under consideration",
-        "title_ko": "PBAC 안건·신규 등재 검토",
-        "summary_ko": "급여 심의 일정·후보 품목 논의를 요약한 샘플 문장입니다.",
-        "source": "PBAC",
-        "date": "2026-04-13",
-        "link": "https://www.pbs.gov.au/info/industry/listing/elements/pbac-meetings",
     },
 ]
 

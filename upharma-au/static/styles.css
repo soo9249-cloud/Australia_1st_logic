@@ -432,17 +432,30 @@ a.news-item:hover .tit { color: var(--navy2); }
 }
 .selector-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 
-/* 1공정 품목/신약 필드 — 팀원 UI: 진한 실선 테두리(연한 rgba 대신 슬레이트 톤) */
-#main .selector-card select#product-select,
+/* 1공정 품목/신약 필드 — 팀원 UI: 진한 실선 테두리 */
+/* select 는 이미 전역 `select { appearance:none }` 로 네이티브 스킨 제거됨. */
+#main .selector-card select#product-select {
+  min-height: 44px;
+  min-width: 0;
+  background-color: #fff;
+  border-radius: 12px;
+  border: 2px solid #334155;
+  box-shadow: none;
+}
+/*
+ * 신약 text input 은 전역에서 appearance 를 안 건드려서(= select 와 달리)
+ * Win/Edge/Chrome/Safari 가 OS 네이티브 필드 스킨을 그리며 border 가 묻히는 경우가 많음.
+ * → -webkit-appearance / appearance 로 리셋 + 2px 진한 테두리로 확실히 보이게 함.
+ */
 #main .selector-card .p1-custom-drug-row input.p1-custom-input {
   min-height: 44px;
   background-color: #fff;
   border-radius: 12px;
-  border: 1px solid #64748b;
+  border: 2px solid #334155;
   box-shadow: none;
-}
-#main .selector-card select#product-select {
-  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background-clip: padding-box;
 }
 #main .selector-card select#product-select:focus,
 #main .selector-card .p1-custom-drug-row input.p1-custom-input:focus {
@@ -455,7 +468,7 @@ a.news-item:hover .tit { color: var(--navy2); }
 #main .selector-card .p1-custom-drug-row input.p1-custom-input:-webkit-autofill:hover,
 #main .selector-card .p1-custom-drug-row input.p1-custom-input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--text);
-  border: 1px solid #64748b;
+  border: 2px solid #334155;
   box-shadow: 0 0 0 1000px #fff inset;
   transition: background-color 99999s ease-out;
 }
@@ -534,10 +547,13 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   font-size: 14px;
   color: var(--text);
   background-color: #fff;
-  border: 1px solid #64748b;
+  border: 2px solid #334155;
   box-shadow: none;
   outline: none;
   font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+  background-clip: padding-box;
   transition: box-shadow .15s, border-color .15s;
 }
 .p1-custom-input::placeholder {

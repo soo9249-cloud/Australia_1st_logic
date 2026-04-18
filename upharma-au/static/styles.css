@@ -483,6 +483,45 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 .btn-analyze:hover:not(:disabled) { background: var(--navy2); }
 .btn-analyze:disabled { opacity: .45; cursor: not-allowed; }
 
+/* 1공정 — 신약 직접 분석 (팀원 레이아웃: 3필드 + 버튼 한 줄 우선) */
+.p1-custom-drug-card {
+  margin-bottom: 14px;
+}
+.p1-custom-drug-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.p1-custom-input {
+  flex: 1 1 160px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--text);
+  background-color: var(--inner);
+  border: 1px solid rgba(23, 63, 120, 0.1);
+  box-shadow: var(--sh3);
+  outline: none;
+  font-family: inherit;
+  transition: box-shadow .15s, border-color .15s;
+}
+.p1-custom-input:focus {
+  border-color: rgba(23, 63, 120, 0.28);
+  box-shadow: 0 0 0 3px rgba(23, 63, 120, 0.1);
+}
+.p1-custom-msg {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.p1-custom-msg.err {
+  color: var(--red);
+}
+
 /* ── 14. 1공정 — 진행 단계 ───────────────────────────────────────────────── */
 .progress-row         { display: none; gap: 0; margin-top: 18px; }
 .progress-row.visible { display: flex; }

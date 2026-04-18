@@ -1548,17 +1548,37 @@ function _resetBtn() {
    §9. 신약 분석 파이프라인
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-// ── 호주: /api/pipeline/custom 엔드포인트 없음 (Stage 0 Q3 → 신약 분석 폼 삭제).
-// custom-trade-name · custom-inn · custom-dosage · btn-custom · cprog-* DOM 모두 Stage 1 에서 제거됨.
-// 아래 함수들은 혹시 남아있는 참조 대비 no-op 로 유지. 호출되어도 아무 동작 없음.
+// 호주: 임의 신약용 /api/pipeline/custom 은 없음. UI는 팀원과 동일하게 두고 안내만 표시.
 let _customPollTimer = null;
 const CUSTOM_STEP_ORDER = ['analyze', 'refs', 'report'];
 
-function _setCustomProgress() { /* no-op (호주 미지원) */ }
-function _resetCustomProgress() { /* no-op (호주 미지원) */ }
-function _resetCustomBtn() { /* no-op (호주 미지원) */ }
-async function runCustomPipeline() { /* no-op — 호주에서는 신약 분석 미지원. 8 품목 고정. */ }
-async function _pollCustomPipeline() { /* no-op (호주 미지원) */ }
+function _setCustomProgress() { /* 예약 */ }
+function _resetCustomProgress() { /* 예약 */ }
+function _resetCustomBtn() { /* 예약 */ }
+
+function _showCustomDrugMsg(msg, isErr) {
+  const el = document.getElementById('p1-custom-msg');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.className = 'p1-custom-msg' + (isErr ? ' err' : '');
+}
+
+/** 신약 직접 분석 — 백엔드 미연동 시 안내 (8개 등록 품목은 위 드롭다운 + 분석 실행 사용) */
+async function runCustomPipeline() {
+  const trade = (document.getElementById('custom-trade-name')?.value || '').trim();
+  const inn = (document.getElementById('custom-inn')?.value || '').trim();
+  const dosage = (document.getElementById('custom-dosage')?.value || '').trim();
+  if (!trade && !inn && !dosage) {
+    _showCustomDrugMsg('약품명·성분명·제형 중 하나 이상 입력해 주세요.', true);
+    return;
+  }
+  _showCustomDrugMsg(
+    '호주 1공정은 등록된 8개 품목(위 품목 선택) 분석을 지원합니다. 임의 신약 자동 분석 API는 추후 연동 예정입니다.',
+    false
+  );
+}
+async function _pollCustomPipeline() { /* 예약 */ }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    §10. 결과 렌더링 (U2·U3·U4·U6·B4·N3·N4)

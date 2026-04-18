@@ -111,24 +111,33 @@ body {
   font-weight: 800;
   font-size: 13px;
 }
-/* 호주 국기 SVG + 원형 래퍼(사각형이 동그라미 안에 끼는 현상 방지) */
+/* 국기 배지: 정사각형·가로형 SVG 공통 — 원 안을 채우고 가장자리만 잘림 (파나마 등 다른 국기에도 동일 클래스 사용) */
 .flag-round-wrap {
   width: 26px;
   height: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  aspect-ratio: 1;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 0;
   vertical-align: middle;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 .flag-round {
-  width: 26px;
-  height: 26px;
+  width: 100%;
+  height: 100%;
   display: block;
+  border-radius: 50%;
   object-fit: cover;
   object-position: center;
+  /* img+SVG 시 외부 clipPath 미적용·여백 남는 경우 대비 (WebKit 포함) */
+  -webkit-clip-path: circle(50% at 50% 50%);
+  clip-path: circle(50% at 50% 50%);
 }
 
 /* ── 4. 내비게이션 탭 ────────────────────────────────────────────────────── */

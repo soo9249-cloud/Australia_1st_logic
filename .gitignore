@@ -12,3 +12,6 @@ __pycache__/
 # Claude Code 로컬 작업 파일 (공유 설정인 .claude/settings.json 은 제외하고 ignore)
 .claude/worktrees/
 .claude/settings.local.json
+
+# 1·2공정 생성 PDF (로컬/Render 디스크·DB 기준 — Git 추적 제외)
+upharma-au/reports/**/*.pdf

@@ -131,14 +131,6 @@ def _estimate_retail_price(
     return None, None
 
 
-def _tga_schedule_s2348_only(raw: object) -> str | None:
-    """tga_schedule 컬럼에는 S2/S3/S4/S8 만 저장."""
-    if raw is None:
-        return None
-    s = str(raw).strip().upper()
-    return s if s in ("S2", "S3", "S4", "S8") else None
-
-
 def _raw_evidence_text(
     pbs: dict[str, Any],
     tga: dict[str, Any],
@@ -146,15 +138,12 @@ def _raw_evidence_text(
 ) -> str:
     """PBS·TGA·조달 텍스트를 이어 붙여 근거 원문으로 쓴다.
 
-    v2 DTO · v1 하위호환 키 양쪽 수용.
+    Phase 4.3-v3 (2026-04-18) — TGA Schedule 라인 제거 (4필드 폐기).
     """
     parts: list[str] = []
     rt = pbs.get("restriction_text")
     if isinstance(rt, str) and rt.strip():
         parts.append(rt.strip())
-    st = tga.get("tga_schedule") or tga.get("schedule_code")
-    if st:
-        parts.append(f"Schedule: {st}")
     sp = tga.get("tga_sponsor") or tga.get("sponsor_name")
     if sp:
         parts.append(f"Sponsor: {sp}")
@@ -261,19 +250,18 @@ def build_product_summary(
     chemist = chemist or {}
     nsw = nsw or {}
 
-    # TGA 스케줄 정규화
-    tga_sched = _tga_schedule_s2348_only(tga.get("tga_schedule") or tga.get("schedule_code"))
-    tga_norm = {**tga, "tga_schedule": tga_sched}
+    # Phase 4.3-v3 — TGA 4필드 폐기. tga_schedule 정규화·tga_norm dict 사본 제거.
+    # determine_export_viable 은 이제 artg_status 만 참조.
 
-    # 수출 적합성 판정 — TGA 기반. PBS 등재면 무조건 viable 로 덮어쓰기.
-    viable_result = determine_export_viable(tga_norm)
+    # 수출 적합성 판정 — TGA ARTG 등재 여부. PBS 등재면 무조건 viable 로 덮어쓰기.
+    viable_result = determine_export_viable(tga)
     pbs_found_flag = bool(pbs.get("pbs_found") if pbs.get("pbs_found") is not None else pbs.get("pbs_listed"))
     if pbs_found_flag:
         viable_result = {"export_viable": "viable", "reason_code": "PBS_REGISTERED"}
 
     inn = str(product.get("inn_normalized") or "")
     pricing_case = str(product.get("pricing_case") or "ESTIMATE")
-    raw_text = _raw_evidence_text(pbs, tga_norm, nsw)
+    raw_text = _raw_evidence_text(pbs, tga, nsw)
     evidence = build_evidence_text(pricing_case, raw_text, inn)
 
     # 소매가 추정 (Decimal 반환)
@@ -313,10 +301,11 @@ def build_product_summary(
         (chemist.get("product_url") or chemist.get("price_source_url") or "") if chemist_ok else ""
     )
 
-    # completeness_score 계산용 assembled (v1 키 — scoring.py AU_REQUIRED_FIELDS 호환)
+    # completeness_score 계산용 assembled (v1 키 — scoring.py AU_REQUIRED_FIELDS 호환).
+    # Phase 4.3-v3 — tga_schedule 제거 (4필드 폐기). scoring.AU_REQUIRED_FIELDS 도
+    # tga_schedule 을 더 이상 요구하지 않아야 함 (별도 위임에서 정리).
     assembled_for_score: dict[str, Any] = {
         "artg_number": tga.get("artg_number") or tga.get("artg_id"),
-        "tga_schedule": tga_sched,
         "pbs_item_code": pbs.get("pbs_code") or pbs.get("pbs_item_code"),
         "retail_price_aud": retail_aud,
         "price_source_url": price_url,
@@ -391,10 +380,9 @@ def build_product_summary(
             or ([str(tga.get("artg_number"))] if tga.get("artg_number") else []),
         "tga_sponsors": tga.get("tga_sponsors")
             or ([tga.get("tga_sponsor")] if tga.get("tga_sponsor") else []),
-        # TGA 하위호환
+        # TGA 하위호환 (Phase 4.3-v3 — tga_schedule 제거, au_products 컬럼도 DROP 완료)
         "artg_number": tga.get("artg_number") or tga.get("artg_id"),
         "artg_status": tga.get("artg_status") or tga.get("status"),
-        "tga_schedule": tga_sched,
         "tga_licence_category": tga.get("tga_licence_category"),
         "tga_licence_status": tga.get("tga_licence_status"),
         "tga_sponsor": tga.get("tga_sponsor") or tga.get("sponsor_name"),
@@ -1155,6 +1143,10 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                     "effective_date": r.get("first_listed_date"),
                     "endpoint_items": endpoint_items,
                     "endpoint_dispensing_rules": endpoint_disp or {},
+                    # Phase 4.3-v3 — 호주 PBS 시장 제형·강도 (시장조사 비교용).
+                    # DTO 는 `market_form`/`market_strength`, raw API 는 `form`/`strength`.
+                    "market_form": r.get("market_form") or (endpoint_items.get("form") if isinstance(endpoint_items, dict) else None),
+                    "market_strength": r.get("market_strength") or (endpoint_items.get("strength") if isinstance(endpoint_items, dict) else None),
                     # TODO(v2-pbs-full): /fees, /markup-bands, /copayments, /atc raw 보관
                     "api_fetched_at": now_kst_iso(),
                     "crawled_at": now_kst_iso(),
@@ -1164,6 +1156,9 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                 print(f"[au_pbs_raw upsert 경고] {exc}", flush=True)
 
     # ── au_tga_artg (§14-3-3) — TGA 원본 보관 ───────────────
+    # Phase 4.3-v3 — 4필드 폐기: schedule / route_of_administration /
+    # first_registered_date / sponsor_abn 제거 (Supabase 컬럼도 DROP 완료).
+    # strength/dosage_form 은 자사 제품 메타라 TGA 테이블에 넣을 이유 없음 → 제거.
     if tga.get("artg_id") or tga.get("artg_number"):
         try:
             artg_row = {
@@ -1171,13 +1166,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                 "artg_id": tga.get("artg_id") or str(tga.get("artg_number") or ""),
                 "product_name": product.get("product_name_ko"),
                 "sponsor_name": tga.get("sponsor_name") or tga.get("tga_sponsor"),
-                "sponsor_abn": tga.get("sponsor_abn"),
                 "active_ingredients": tga.get("active_ingredients") or [],
-                "strength": product.get("strength"),
-                "dosage_form": product.get("dosage_form"),
-                "route_of_administration": tga.get("route_of_administration"),
-                "schedule": tga.get("schedule") or tga.get("tga_schedule"),
-                "first_registered_date": tga.get("first_registered_date"),
                 "status": tga.get("status") or tga.get("artg_status"),
                 "artg_url": tga.get("artg_url") or tga.get("artg_source_url"),
                 "crawled_at": now_kst_iso(),

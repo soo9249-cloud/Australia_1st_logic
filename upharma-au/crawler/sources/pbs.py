@@ -136,6 +136,10 @@ def _empty_dto(pbs_source_url: str | None = None) -> dict[str, Any]:
         "maximum_prescribable_pack": None,
         "number_of_repeats": None,
         "pack_not_to_be_broken": None,
+        # Phase 4.3-v3 (2026-04-18) — 호주 PBS 시장 등재 약의 제형·강도.
+        # au_products.json 의 자사 제품 dosage_form/strength 와 구분 (시장조사 비교용).
+        "market_form": None,        # PBS API items.form       — "호주 PBS 시장 제형"
+        "market_strength": None,    # PBS API items.strength   — "호주 PBS 시장 강도"
         # 프로그램 분류
         "program_code": None,
         "section_85_100": None,
@@ -242,6 +246,10 @@ def _row_to_dto(
     dto["maximum_prescribable_pack"] = item_row.get("maximum_prescribable_pack")
     dto["number_of_repeats"] = item_row.get("number_of_repeats")
     dto["pack_not_to_be_broken"] = item_row.get("pack_not_to_be_broken_ind")
+
+    # Phase 4.3-v3 — 호주 PBS 시장 제형·강도 (시장조사 비교용)
+    dto["market_form"] = item_row.get("form")
+    dto["market_strength"] = item_row.get("strength")
 
     # ── 프로그램 분류 ───────────────────────────────────────────
     program_code = item_row.get("program_code")

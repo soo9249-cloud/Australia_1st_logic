@@ -255,23 +255,23 @@ _PBS_RAW_ALLOWED: frozenset[str] = frozenset({
     "endpoint_summary_of_changes",
     "endpoint_atc",
     "endpoint_restrictions",
+    # Phase 4.3-v3 (2026-04-18) — 호주 PBS 시장 제형·강도 (시장조사 비교용)
+    "market_form",
+    "market_strength",
     "api_fetched_at",
     "crawled_at",
 })
 
 
+# Phase 4.3-v3 — au_tga_artg 4필드 폐기 (Supabase 컬럼 DROP 완료):
+#   schedule / route_of_administration / first_registered_date / sponsor_abn.
+# strength / dosage_form 도 제거 — 자사 제품 메타라 TGA 테이블과 무관.
 _TGA_ARTG_ALLOWED: frozenset[str] = frozenset({
     "product_id",
     "artg_id",
     "product_name",
     "sponsor_name",
-    "sponsor_abn",
     "active_ingredients",
-    "strength",
-    "dosage_form",
-    "route_of_administration",
-    "schedule",
-    "first_registered_date",
     "status",
     "artg_url",
     "crawled_at",
@@ -337,8 +337,11 @@ def upsert_pbs_raw(snapshot: dict[str, Any]) -> bool:
 def upsert_tga_artg(row: dict[str, Any]) -> bool:
     """au_tga_artg 에 UPSERT. artg_id UNIQUE 기준.
 
-    row 키: product_id, artg_id, product_name, sponsor_name, sponsor_abn,
-            active_ingredients(JSONB), strength, dosage_form, ...
+    Phase 4.3-v3 (2026-04-18) — 컬럼 축소. 유지되는 행 키:
+      product_id, artg_id, product_name, sponsor_name, active_ingredients(JSONB),
+      status, artg_url, crawled_at.
+    폐기 키: schedule, route_of_administration, first_registered_date, sponsor_abn,
+            strength, dosage_form. (Supabase 컬럼도 DROP 완료.)
     """
     artg_id = row.get("artg_id") or "?"
     try:

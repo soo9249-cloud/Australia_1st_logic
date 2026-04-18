@@ -116,6 +116,181 @@ _DB_SOURCES_STATIC: list[dict[str, str]] = [
 ]
 
 
+def _build_product_info_flowables(
+    row: dict[str, Any],
+    *,
+    content_width: float,
+    base_font: str,
+    bold_font: str,
+):
+    """'자사 제품 정보' + '호주 PBS 시장 동일 약 정보' 2 박스 + 일치/불일치 배지.
+
+    Phase 4.3-v3 (2026-04-18) — dosage_form 출처 분리:
+      · 위 박스: au_products.json 출처 (한국 유나이티드 제품)
+      · 아래 박스: au_pbs_raw.market_form / market_strength (호주 PBS 시장 비교 약)
+
+    반환: [Paragraph(섹션 헤더), Table(자사), Paragraph(배지), Table(시장), Spacer].
+    """
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+
+    C_NAVY = colors.HexColor("#1B2A4A")
+    C_BORDER = colors.HexColor("#D0D7E3")
+    C_ALT = colors.HexColor("#F4F6F9")
+    C_BODY = colors.HexColor("#1A1A1A")
+    C_OK = colors.HexColor("#1F7A1F")        # 녹색 — 일치
+    C_WARN = colors.HexColor("#B86A00")      # 주황 — 상이
+    C_INFO = colors.HexColor("#6B7280")      # 회색 — 정보 없음
+
+    s_section = ParagraphStyle(
+        "ProdSection", fontName=bold_font, fontSize=11, textColor=C_NAVY,
+        leading=15, spaceBefore=8, spaceAfter=4,
+    )
+    s_box_title = ParagraphStyle(
+        "ProdBoxTitle", fontName=bold_font, fontSize=10, textColor=colors.white,
+        leading=13, alignment=TA_CENTER,
+    )
+    s_cell_h = ParagraphStyle(
+        "ProdCellH", fontName=bold_font, fontSize=9, textColor=C_NAVY,
+        leading=13, wordWrap="CJK",
+    )
+    s_cell = ParagraphStyle(
+        "ProdCell", fontName=base_font, fontSize=9, textColor=C_BODY,
+        leading=14, wordWrap="CJK",
+    )
+    s_badge = ParagraphStyle(
+        "ProdBadge", fontName=bold_font, fontSize=10, textColor=colors.white,
+        leading=14, alignment=TA_CENTER,
+    )
+
+    def _rx(text: str) -> str:
+        return ((text or "")
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;"))
+
+    COL1 = content_width * 0.30
+    COL2 = content_width * 0.70
+
+    # ── 데이터 추출 ──
+    self_name = str(row.get("product_name_ko") or row.get("trade_name") or "—")
+    self_inn = str(row.get("inn_normalized") or "—")
+    self_strength = str(row.get("strength") or "—")
+    self_form = str(row.get("dosage_form") or "—")
+
+    market_form = str(row.get("market_form") or "—")
+    market_strength = str(row.get("market_strength") or "—")
+    market_brand = str(row.get("pbs_brand_name") or row.get("brand_name") or "—")
+    originator_flag = row.get("originator_brand")
+    if originator_flag is True:
+        brand_kind = "오리지널 (originator brand)"
+    elif originator_flag is False:
+        brand_kind = "제네릭 (generic brand)"
+    else:
+        brand_kind = "—"
+
+    def _box_style(header_bg, alt_bg=C_ALT):
+        return TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), header_bg),
+            ("SPAN",       (0, 0), (-1, 0)),
+            ("GRID",       (0, 0), (-1, -1), 0.5, C_BORDER),
+            ("VALIGN",     (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING",    (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+            ("BACKGROUND",    (0, 2), (-1, 2), alt_bg),
+        ])
+
+    # 자사 박스 (한국 유나이티드)
+    self_rows = [
+        [Paragraph(_rx("한국 유나이티드 제품 정보"), s_box_title), ""],
+        [Paragraph(_rx("제품명 / INN"), s_cell_h),
+         Paragraph(_rx(f"{self_name} — {self_inn}"), s_cell)],
+        [Paragraph(_rx("제형 (dosage_form)"), s_cell_h),
+         Paragraph(_rx(self_form), s_cell)],
+        [Paragraph(_rx("강도 (strength)"), s_cell_h),
+         Paragraph(_rx(self_strength), s_cell)],
+    ]
+    self_tbl = Table(self_rows, colWidths=[COL1, COL2])
+    self_tbl.setStyle(_box_style(C_NAVY))
+
+    # 시장 박스 (호주 PBS 등재 동일 약)
+    market_rows = [
+        [Paragraph(_rx("호주 PBS 시장 동일 약 정보 (PBS API 출처)"), s_box_title), ""],
+        [Paragraph(_rx("브랜드명 / 구분"), s_cell_h),
+         Paragraph(_rx(f"{market_brand} · {brand_kind}"), s_cell)],
+        [Paragraph(_rx("호주 PBS 시장 제형 (market_form)"), s_cell_h),
+         Paragraph(_rx(market_form), s_cell)],
+        [Paragraph(_rx("호주 PBS 시장 강도 (market_strength)"), s_cell_h),
+         Paragraph(_rx(market_strength), s_cell)],
+    ]
+    market_tbl = Table(market_rows, colWidths=[COL1, COL2])
+    market_tbl.setStyle(_box_style(colors.HexColor("#4A5F85")))
+
+    # 일치/불일치 배지
+    def _norm(s: str) -> str:
+        return (s or "").strip().lower()
+
+    def _forms_match(a: str, b: str) -> bool:
+        na, nb = _norm(a), _norm(b)
+        if not na or not nb or na == "—" or nb == "—":
+            return False
+        # 부분 매칭 허용 (Capsule vs "Capsule, hard" 같은 변종 대응)
+        return na in nb or nb in na
+
+    def _strengths_match(a: str, b: str) -> bool:
+        na, nb = _norm(a), _norm(b)
+        if not na or not nb or na == "—" or nb == "—":
+            return False
+        # 공백 제거 후 비교 (500mg vs "500 mg" 대응)
+        return na.replace(" ", "") == nb.replace(" ", "")
+
+    fm = _forms_match(self_form, market_form)
+    sm = _strengths_match(self_strength, market_strength)
+    has_market = market_form != "—" or market_strength != "—"
+
+    if not has_market:
+        badge_text = "[정보] 호주 PBS 시장 비교 약 데이터 없음 (PBS API 응답에 form/strength 누락)"
+        badge_bg = C_INFO
+    elif fm and sm:
+        badge_text = "[일치] 제형·강도 일치 — 시장 동일 규격 존재"
+        badge_bg = C_OK
+    else:
+        diffs: list[str] = []
+        if not sm:
+            diffs.append(f"강도 상이: 자사 {self_strength} / 호주시장 {market_strength}")
+        if not fm:
+            diffs.append(f"제형 상이: 자사 {self_form} / 호주시장 {market_form}")
+        badge_text = "[상이] " + " · ".join(diffs)
+        badge_bg = C_WARN
+
+    badge_tbl = Table(
+        [[Paragraph(_rx(badge_text), s_badge)]],
+        colWidths=[content_width],
+    )
+    badge_tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), badge_bg),
+        ("TOPPADDING",    (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 10),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 10),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+
+    return [
+        Paragraph(_rx("0. 제품 정보 (자사 vs 호주 PBS 시장)"), s_section),
+        self_tbl,
+        Spacer(1, 4),
+        badge_tbl,
+        Spacer(1, 4),
+        market_tbl,
+        Spacer(1, 8),
+    ]
+
+
 def render_pdf(
     row: dict[str, Any],
     blocks: dict[str, str],
@@ -260,6 +435,14 @@ def render_pdf(
     ]))
     story.append(bar_tbl)
     story.append(Spacer(1, 10))
+
+    # Phase 4.3-v3 — 0. 제품 정보 (자사 vs 호주 PBS 시장)
+    story.extend(_build_product_info_flowables(
+        row,
+        content_width=CONTENT_W,
+        base_font=base_font,
+        bold_font=bold_font,
+    ))
 
     # ── 1. 수출 적합 판정 ──
     story.append(Paragraph(_rx("1. 수출 적합 판정"), s_section))
@@ -532,6 +715,14 @@ def render_p2_pdf(
     ]))
     story.append(bar_tbl)
     story.append(Spacer(1, 10))
+
+    # Phase 4.3-v3 — 0. 제품 정보 (자사 vs 호주 PBS 시장) — render_pdf 와 동일
+    story.extend(_build_product_info_flowables(
+        row,
+        content_width=CONTENT_W,
+        base_font=base_font,
+        bold_font=bold_font,
+    ))
 
     # ── 1. 추출정보 요약 ──
     story.append(Paragraph(_rx("1. 품목 추출정보"), s_section))

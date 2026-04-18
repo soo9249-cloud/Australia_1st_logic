@@ -1,11 +1,14 @@
 # product_summary 완전성 점수(completeness_score) 계산.
+#
+# Phase 4.3-v3 (2026-04-18) — tga_schedule 폐기에 따라 AU_REQUIRED_FIELDS 에서
+# 제거. (TGA 4필드 폐기: schedule/route/first_reg_date/sponsor_abn 전부 삭제,
+# au_products.tga_schedule 컬럼도 DROP 완료.)
 
 from __future__ import annotations
 
 # fob_estimated_usd는 1공정에서 항상 null → 감점 제외
 AU_REQUIRED_FIELDS: list[str] = [
     "artg_number",
-    "tga_schedule",
     "pbs_item_code",
     "retail_price_aud",
     "price_source_url",

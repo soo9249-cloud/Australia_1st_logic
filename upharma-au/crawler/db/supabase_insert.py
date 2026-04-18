@@ -36,12 +36,14 @@ _ALLOWED_COLUMNS: frozenset[str] = frozenset(
     {
         # 식별자
         "product_code",
+        "is_new_drug",
         "product_name_ko",
         "inn_normalized",
         "strength",
         "dosage_form",
         # Case 분기
         "case_code",
+        "pricing_case_source",
         "case_risk_text_ko",
         # TGA 블록
         "tga_found",
@@ -54,6 +56,7 @@ _ALLOWED_COLUMNS: frozenset[str] = frozenset(
         "section_85_100",
         "formulary",
         "aemp_aud",
+        "aemp_source",
         "aemp_usd",
         "aemp_krw",
         "spd_aud",
@@ -102,6 +105,9 @@ _ALLOWED_COLUMNS: frozenset[str] = frozenset(
         "confidence",
         "ingredients_split",
         "similar_drug_used",
+        "similar_proxy_inn",
+        "ai_inferred_similar_inns",
+        "user_uploaded_pdf_extracted",
         "hospital_only_flag",
         "ai_deep_research_raw",
         # Phase Omethyl (2026-04-19) — 호주 시장 재고 상태 + TGA 대표 매칭 유형

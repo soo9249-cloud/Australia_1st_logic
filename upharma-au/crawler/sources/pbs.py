@@ -725,74 +725,62 @@ def fetch_pbs_withdrawal(
     withdrawn_component: str,
     similar_inns: list[str],
 ) -> dict[str, Any]:
-    """Case 3 ESTIMATE_withdrawal — 복합제 성분 중 하나가 시장 철수
-    (예: Ciloduo 의 Cilostazol — 2020 FDA 안전성 경고 후 호주 AEMP 생산 중단).
+    """Case 3 ESTIMATE_withdrawal — 시장 철수 성분은 유사계열 프록시 조회 안 함.
+
+    결정 (Jisoo, 2026-04-18): cilostazol 같은 철수 성분 → clopidogrel proxy fetch 는
+    rate limit 21초 추가 소요 + 의미 낮음. 보고서 레이어가 similar_inns 받아서 서술.
+    (위임지서 Phase 4.9 수정 4 — Case 3 크롤러 축소)
 
     전략:
-      1) withdrawn_component 제외한 나머지 성분은 fetch_pbs_by_ingredient 로 AEMP 확보
-      2) 철수 성분은 similar_inns[0] 유사계열 (Cilostazol → Clopidogrel) 로 AEMP 추정
-      3) 두 AEMP 를 합산 (_merge_pbs_rows 재사용)
-      4) flag = 'Commercial Withdrawal / similar_estimate' + confidence 0.3
+      1) withdrawn_component 제외한 나머지 성분만 fetch_pbs_by_ingredient
+      2) 철수 성분 자체는 크롤링 skip
+      3) 메타 태깅: _withdrawn_component, _similar_inns_hint, confidence_override=0.3
+
+    예시: Ciloduo = cilostazol + rosuvastatin.
+      rosuvastatin 은 단일성분 PBS 등재 → 조회 유지
+      cilostazol 은 2020 FDA 경고 후 호주 철수 → 조회 skip
+      → 보고서에서 clopidogrel 참조로 서술.
     """
     acc: list[dict[str, Any]] = []
     for c in components:
         if c and c.lower() != (withdrawn_component or "").lower():
             rows = fetch_pbs_by_ingredient(c)
-            # 유효한 PBS 행만 누적 (빈 _empty_dto 는 버림)
             valid = [r for r in rows if r.get("pbs_found")]
             if valid:
                 acc.extend(valid)
 
-    # 철수 성분 → 유사계열 추정
-    if similar_inns:
-        sim_rows = fetch_pbs_by_ingredient(similar_inns[0])
-        valid_sim = [r for r in sim_rows if r.get("pbs_found")]
-        for r in valid_sim:
-            r["_estimated_for"] = withdrawn_component
-            r["_similar_proxy"] = similar_inns[0]
-        acc.extend(valid_sim)
-
     if not acc:
-        return _empty_dto()
+        dto = _empty_dto()
+        dto["pricing_case_applied"] = "ESTIMATE_withdrawal"
+        dto["_withdrawn_component"] = withdrawn_component
+        dto["_similar_inns_hint"] = list(similar_inns) if similar_inns else []
+        dto["confidence_override"] = 0.3
+        return dto
 
     from importlib import import_module
     au = import_module("au_crawler")
     merged = au._merge_pbs_rows(acc)
     merged["pricing_case_applied"] = "ESTIMATE_withdrawal"
-    merged["withdrawn_component"] = withdrawn_component
-    merged["similar_proxy_inns"] = similar_inns[:1]
+    merged["_withdrawn_component"] = withdrawn_component
+    merged["_similar_inns_hint"] = list(similar_inns) if similar_inns else []  # 보고서 레이어 전달
     merged["confidence_override"] = 0.3
     return merged
 
 
 def fetch_pbs_similar(inn: str, similar_inns: list[str]) -> dict[str, Any]:
-    """Case 4 ESTIMATE_substitute — 성분 자체 미등재, 유사계열 존재
-    (예: Mosapride → Domperidone).
+    """Case 4 ESTIMATE_substitute — 크롤러는 조회하지 않음.
 
-    전략: similar_inns[0] 로 fetch_pbs_by_ingredient 호출. 반환 DTO 에 추정 메타 태깅.
-    Phase 4.9 에서 "크롤러는 유사약 조회하지 않음" 결정에 따라 축소될 예정.
+    결정 (Jisoo, 2026-04-18): 유사약 PBS/Chemist 폴백 체인은 rate limit 21초 추가
+    소요 + 품질 낮음. 크롤러는 'TGA(호주 의약품 등록 시스템) 미등재' 만 마킹하고
+    유사약 서술은 보고서 생성기(Haiku 프롬프트) 가 similar_inns 배열을 받아 처리.
+    (위임지서 Phase 4.9 수정 1 — Case 4 크롤러 축소)
     """
-    if not similar_inns:
-        return _empty_dto()
-    rows = fetch_pbs_by_ingredient(similar_inns[0])
-    if not rows:
-        return _empty_dto()
-
-    valid = [r for r in rows if r.get("pbs_found")]
-    if not valid:
-        return _empty_dto()
-
-    def _dpmq(r: dict[str, Any]) -> Decimal:
-        v = r.get("dpmq_aud") if r.get("dpmq_aud") is not None else r.get("pbs_dpmq")
-        d = _safe_decimal(v) if v is not None else None
-        return d if d is not None else Decimal("999999")
-
-    best = dict(min(valid, key=_dpmq))
-    best["pricing_case_applied"] = "ESTIMATE_substitute"
-    best["_estimated_for"] = inn
-    best["_similar_proxy"] = similar_inns[0]
-    best["confidence_override"] = 0.3
-    return best
+    dto = _empty_dto()
+    dto["pricing_case_applied"] = "ESTIMATE_substitute"
+    dto["_not_registered_au"] = True
+    dto["_similar_inns_hint"] = list(similar_inns) if similar_inns else []
+    dto["confidence_override"] = 0.1
+    return dto
 
 
 def fetch_pbs_same_ingredient(reference_inn: str) -> dict[str, Any]:

@@ -567,6 +567,38 @@ def build_product_summary(
         w.append(f"pbs_skipped:{skip_reason}")
         out["warnings"] = w
 
+    # Phase 4.9 수정 3 — Case 4 ESTIMATE_substitute situation_summary + 메타 기록
+    pricing_case_upper = pricing_case.upper()
+    if pricing_case_upper == "ESTIMATE_SUBSTITUTE" and not out.get("tga_found"):
+        out["situation_summary"] = (
+            "TGA(호주 의약품 등록 시스템) 미등재 상태입니다. "
+            "호주 진출을 위해서는 먼저 TGA ARTG 등록 절차가 필요합니다. "
+            "동일 치료 영역에 등재된 유사 효능 의약품은 보고서에서 별도로 참조합니다."
+        )
+        existing_warn = list(out.get("warnings") or [])
+        if "not_registered_au" not in existing_warn:
+            existing_warn.append("not_registered_au")
+        out["warnings"] = existing_warn
+        out["similar_drug_used"] = list(product.get("similar_inns") or [])
+        out["confidence"] = 0.1
+
+    # Phase 4.9 수정 5 — Case 3 ESTIMATE_withdrawal situation_summary + 메타 기록
+    if pricing_case_upper == "ESTIMATE_WITHDRAWAL":
+        withdrawn = product.get("withdrawn_component") or ""
+        similar = list(product.get("similar_inns") or [])
+        out["situation_summary"] = (
+            f"복합제 성분 중 {withdrawn} 는 호주 시장에서 상업적으로 철수한 상태입니다. "
+            f"등재된 나머지 성분 AEMP(정부 승인 출고가) 만 반영했으며, "
+            f"{withdrawn} 의 가격 추정은 유사 계열"
+            f"({', '.join(similar) if similar else '없음'}) 참조로 보고서에서 별도 처리됩니다."
+        )
+        existing_warn = list(out.get("warnings") or [])
+        if "withdrawal_proxy_in_report" not in existing_warn:
+            existing_warn.append("withdrawal_proxy_in_report")
+        out["warnings"] = existing_warn
+        out["similar_drug_used"] = similar
+        out["confidence"] = 0.3
+
     # Phase 4.5 — originator_brand 판정 정상화 (fallback).
     # `pbs.get("originator_brand")` 가 None 이면 endpoint_items 원본에서 innovator_indicator
     # 를 직접 확인 (API·웹 편차 방지). 'Y' 만 True, 'N' 은 False, 그 외 None.
@@ -1020,28 +1052,42 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                 }
 
     # ── buy.nsw.gov.au ───────────────────────────────────────
-    _t0 = time.time()
-    _nsw_started = now_kst_iso()
-    try:
-        nsw = fetch_buynsw(retail_query)
-        log_crawl(
-            run_id=run_id, product_code=product_filter, source="buy_nsw",
-            status="success" if nsw and nsw.get("contract_value_aud") is not None else "partial",
-            endpoint="/notices/search",
-            duration_ms=int((time.time() - _t0) * 1000),
-            started_at=_nsw_started,
-            finished_at=now_kst_iso(),
-        )
-    except Exception as exc:
+    # Phase 4.9 수정 2 — Case 4 ESTIMATE_substitute (TGA/PBS 미등재) → NSW 조달에도
+    # 당연히 없으므로 skip. 로그만 status='skipped' 로 기록.
+    case = str(product.get("pricing_case") or "").upper()
+    if case == "ESTIMATE_SUBSTITUTE":
         nsw = {}
         log_crawl(
-            run_id=run_id, product_code=product_filter, source="buy_nsw", status="failed",
-            endpoint="/notices/search",
-            error_message=str(exc)[:500],
-            duration_ms=int((time.time() - _t0) * 1000),
-            started_at=_nsw_started,
+            run_id=run_id, product_code=product_filter, source="buy_nsw",
+            status="skipped",
+            endpoint="/notices/search (skip: not_registered_au_case4)",
+            duration_ms=0,
+            started_at=now_kst_iso(),
             finished_at=now_kst_iso(),
         )
+    else:
+        _t0 = time.time()
+        _nsw_started = now_kst_iso()
+        try:
+            nsw = fetch_buynsw(retail_query)
+            log_crawl(
+                run_id=run_id, product_code=product_filter, source="buy_nsw",
+                status="success" if nsw and nsw.get("contract_value_aud") is not None else "partial",
+                endpoint="/notices/search",
+                duration_ms=int((time.time() - _t0) * 1000),
+                started_at=_nsw_started,
+                finished_at=now_kst_iso(),
+            )
+        except Exception as exc:
+            nsw = {}
+            log_crawl(
+                run_id=run_id, product_code=product_filter, source="buy_nsw", status="failed",
+                endpoint="/notices/search",
+                error_message=str(exc)[:500],
+                duration_ms=int((time.time() - _t0) * 1000),
+                started_at=_nsw_started,
+                finished_at=now_kst_iso(),
+            )
 
     # ── 최종 dict 조립 ─────────────────────────────────────────
     summary = build_product_summary(product, pbs, tga, chemist, nsw)

@@ -1902,10 +1902,12 @@ async function loadNews() {
 
   try {
     const res  = await fetch('/api/news');
-    const data = await res.json();
+    const raw  = await res.json();
+    /* 레거시: 배열만 오던 응답 호환 */
+    const data = Array.isArray(raw) ? { ok: true, items: raw, error: null } : raw;
 
     if (!data.ok || !data.items?.length) {
-      listEl.innerHTML = `<div class="irow" style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0;">${data.error || '뉴스를 불러올 수 없습니다.'}</div>`;
+      listEl.innerHTML = `<div class="irow" style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0;">${_escHtml(data.error || '뉴스를 불러올 수 없습니다.')}</div>`;
       return;
     }
 
@@ -1913,9 +1915,14 @@ async function loadNews() {
       const href   = item.link ? `href="${_escHtml(item.link)}" target="_blank" rel="noopener"` : '';
       const tag    = item.link ? 'a' : 'div';
       const source = [item.source, item.date].filter(Boolean).join(' · ');
+      const head   = item.title_ko || item.title || '';
+      const sum    = item.summary_ko
+        ? `<div class="news-sum">${_escHtml(item.summary_ko)}</div>`
+        : '';
       return `
         <${tag} class="irow news-item" ${href} style="${item.link ? 'text-decoration:none;display:block;' : ''}">
-          <div class="tit">${_escHtml(item.title)}</div>
+          <div class="tit">${_escHtml(head)}</div>
+          ${sum}
           ${source ? `<div class="sub">${_escHtml(source)}</div>` : ''}
         </${tag}>`;
     }).join('');

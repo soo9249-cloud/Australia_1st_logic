@@ -280,19 +280,63 @@ def create_report(payload: dict[str, Any]) -> JSONResponse:
 
 # ── 외부 데이터 어댑터 (Supabase 저장 없음) ─────────────────────────
 
+def _news_api_response(
+    items: list[dict[str, Any]],
+    *,
+    ok: bool = True,
+    error: str | None = None,
+) -> JSONResponse:
+    """프론트(loadNews)와 동일한 계약: { ok, items, error } — DB 저장 없음."""
+    return JSONResponse(content={"ok": ok, "items": items, "error": error})
+
+
+def _normalize_news_item(raw: dict[str, Any], link_fallback: str = "") -> dict[str, Any]:
+    link = str(raw.get("link") or raw.get("url") or link_fallback or "")
+    title = str(raw.get("title") or "")
+    title_ko = str(raw.get("title_ko") or title)
+    return {
+        "title": title,
+        "title_ko": title_ko,
+        "summary_ko": str(raw.get("summary_ko") or ""),
+        "source": str(raw.get("source") or ""),
+        "date": str(raw.get("date") or ""),
+        "link": link,
+    }
+
+
 _MOCK_NEWS: list[dict[str, Any]] = [
-    {"title": "TGA approves fast-track for PIC/S generics",
-     "source": "TGA.gov.au", "date": "2025-07-14",
-     "link": "https://www.tga.gov.au"},
-    {"title": "Australia pharma imports from Korea up 11%",
-     "source": "Austrade", "date": "2025-07-13",
-     "link": "https://www.austrade.gov.au"},
-    {"title": "PBS listing reforms: what exporters need to know",
-     "source": "Dept. of Health", "date": "2025-07-12",
-     "link": "https://www.pbs.gov.au"},
-    {"title": "KAFTA 10주년 — 한-호주 의약품 교역 현황",
-     "source": "KITA", "date": "2025-07-10",
-     "link": "https://www.kita.net"},
+    {
+        "title": "TGA approves fast-track for PIC/S generics",
+        "title_ko": "[예시] TGA, PIC/S 제네릭 우선 심사 확대",
+        "summary_ko": "PERPLEXITY_API_KEY 미설정 또는 API 오류 시 표시되는 샘플입니다. 키를 넣으면 최근 호주 제약 뉴스가 한국어로 채워집니다.",
+        "source": "TGA.gov.au",
+        "date": "2025-07-14",
+        "link": "https://www.tga.gov.au",
+    },
+    {
+        "title": "Australia pharma imports from Korea up 11%",
+        "title_ko": "[예시] 한국산 의약품 수입 증가",
+        "summary_ko": "교역 통계·정책 동향을 다룬 예시 문장입니다.",
+        "source": "Austrade",
+        "date": "2025-07-13",
+        "link": "https://www.austrade.gov.au",
+    },
+    {
+        "title": "PBS listing reforms: what exporters need to know",
+        "title_ko": "[예시] PBS 등재 개편과 수출사 관점",
+        "summary_ko": "등재·보험급여 변화가 수출 전략에 주는 시사점을 요약한 예시입니다.",
+        "source": "Dept. of Health",
+        "date": "2025-07-12",
+        "link": "https://www.pbs.gov.au",
+    },
+    {
+        "title": "KAFTA and Korea–Australia pharma trade",
+        "title_ko": "[예시] 한·호주 의약품 교역",
+        "summary_ko": "무역협정·관세·규제 환경을 짧게 설명하는 예시입니다.",
+        "source": "KITA",
+        "date": "2025-07-10",
+        "link": "https://www.kita.net",
+    },
 ]
 
 _FX_FALLBACK: dict[str, Any] = {"aud_krw": 893.0, "aud_usd": 0.6412, "updated": ""}
@@ -300,10 +344,13 @@ _FX_FALLBACK: dict[str, Any] = {"aud_krw": 893.0, "aud_usd": 0.6412, "updated": 
 
 @app.get("/api/news")
 def get_news() -> JSONResponse:
-    """Perplexity sonar 로 호주 제약·규제·건강 뉴스 4건. 키 없거나 실패 시 mock."""
+    """Perplexity sonar: 호주 제약 뉴스 검색 + 한국어 제목·요약 + 기사 직링크. 키 없거나 실패 시 mock."""
     api_key = os.environ.get("PERPLEXITY_API_KEY", "").strip()
+    mock_items = [_normalize_news_item(x) for x in _MOCK_NEWS]
+
     if not api_key:
-        return JSONResponse(content=_MOCK_NEWS)
+        return _news_api_response(mock_items)
+
     try:
         r = httpx.post(
             "https://api.perplexity.ai/chat/completions",
@@ -317,44 +364,48 @@ def get_news() -> JSONResponse:
                     {
                         "role": "system",
                         "content": (
-                            "You are a news aggregator. Return EXACTLY 6 recent news items "
-                            "as a JSON array. Each item must have: "
-                            "{\"title\": string, \"source\": string, \"date\": string (YYYY-MM-DD), \"link\": string}. "
-                            "CRITICAL: The 'link' field MUST be the DIRECT URL to the specific article page "
-                            "where the user can READ that article — NOT the homepage or main site URL. "
-                            "Example: 'https://www.pharmainfocus.com.au/news/article-slug-123' NOT 'https://www.pharmainfocus.com.au'. "
-                            "No markdown, no explanation, ONLY the JSON array."
+                            "You are a news aggregator for a Korean pharmaceutical export dashboard. "
+                            "Return EXACTLY 6 recent news items as a JSON array ONLY (no markdown, no prose). "
+                            "Each item MUST have these keys: "
+                            "\"title\" (English headline as published), "
+                            "\"title_ko\" (Korean, concise headline for UI), "
+                            "\"summary_ko\" (Korean, 1–2 sentences: what the article is about for a business reader), "
+                            "\"source\" (outlet or site name), "
+                            "\"date\" (YYYY-MM-DD), "
+                            "\"link\" (string). "
+                            "CRITICAL: \"link\" MUST be the DIRECT URL of the specific article page where the full text can be read — "
+                            "NOT a site homepage. "
+                            "All Korean text must be natural and professional."
                         ),
                     },
                     {
                         "role": "user",
                         "content": (
-                            "Find the 6 most recent news articles from the LAST 24 HOURS about: "
+                            "Find the 6 most recent news articles from roughly the LAST 72 HOURS about: "
                             "Australia pharmaceutical industry, TGA regulations, PBS policy, "
-                            "healthcare legislation, public health trends, disease outbreaks. "
-                            "For EACH item you MUST provide the DIRECT URL to that specific article page "
-                            "(the full URL path where the article text can be read, NOT the site homepage). "
-                            "If you cannot find the direct article URL, skip that article and find another one. "
-                            "Prioritize official government sources and major news outlets."
+                            "healthcare legislation, public health, hospital or pharmacy sector. "
+                            "For each item give title, title_ko, summary_ko, source, date, and the DIRECT article URL. "
+                            "If you cannot find a direct article URL for an item, skip it and substitute another article. "
+                            "Prefer government (.gov.au), TGA, PBS, major newspapers."
                         ),
                     },
                 ],
                 "return_citations": True,
             },
-            timeout=20.0,
+            timeout=45.0,
         )
         if r.status_code != 200:
-            return JSONResponse(content=_MOCK_NEWS)
+            return _news_api_response(mock_items)
         data = r.json()
     except Exception:
-        return JSONResponse(content=_MOCK_NEWS)
+        return _news_api_response(mock_items)
 
     import json as _json
     content = ""
     try:
         content = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
     except Exception:
-        return JSONResponse(content=_MOCK_NEWS)
+        return _news_api_response(mock_items)
 
     citations = data.get("citations") or []
     link_list = [c if isinstance(c, str) else (c.get("url") if isinstance(c, dict) else "") for c in citations]
@@ -364,22 +415,23 @@ def get_news() -> JSONResponse:
         end = content.rindex("]") + 1
         items = _json.loads(content[start:end])
     except Exception:
-        return JSONResponse(content=_MOCK_NEWS)
+        return _news_api_response(mock_items)
 
     result: list[dict[str, Any]] = []
     for i, it in enumerate(items[:6]):
         if not isinstance(it, dict):
             continue
-        link = it.get("link") or it.get("url") or ""
-        if not link and i < len(link_list):
-            link = link_list[i]
-        result.append({
-            "title": it.get("title", ""),
-            "source": it.get("source", ""),
-            "date": it.get("date", ""),
-            "link": link,
-        })
-    return JSONResponse(content=result if result else _MOCK_NEWS)
+        link_fb = ""
+        if i < len(link_list):
+            link_fb = link_list[i] or ""
+        merged = dict(it)
+        if not (merged.get("link") or merged.get("url")) and link_fb:
+            merged["link"] = link_fb
+        result.append(_normalize_news_item(merged))
+
+    if not result:
+        return _news_api_response(mock_items)
+    return _news_api_response(result)
 
 
 @app.get("/api/exchange")

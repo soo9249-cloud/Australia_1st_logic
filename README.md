@@ -787,7 +787,9 @@ taskkill /PID <PID> /F
 python scripts/deploy_render.py
 ```
 
-**Render — `requirements.txt` 한 곳(저장소 최상위):** 로컬·GitHub Actions 도 **루트의 `requirements.txt`** 만 쓴다. Render 대시보드에서 **Root Directory** 를 `upharma-au` 로 두면 [Monorepo 규칙](https://render.com/docs/monorepo-support) 때문에 **그 밖에 있는 루트 `requirements.txt` 가 빌드 트리에 포함되지 않아** `pip install -r requirements.txt` 가 실패할 수 있다. 그래서 `render.yaml` 빌드 단계는 (1) 로컬에 `requirements.txt` 가 있으면 그걸 쓰고, (2) 없으면 Render 가 넣어 주는 `RENDER_GIT_REPO_SLUG`·`RENDER_GIT_COMMIT` 으로 **GitHub raw 에서 같은 커밋의 `requirements.txt`** 를 받아 설치한다(저장소가 **공개**일 때). 비공개 저장소면 raw 가 막히므로 Root Directory 를 비우거나 별도 토큰 전략이 필요하다. 기동은 루트면 `--app-dir upharma-au`, Root 가 `upharma-au` 면 그대로 `uvicorn render_api:app` 이 되도록 `render.yaml` 에 분기해 두었다. Python 버전은 `.python-version` 과 `render.yaml` 의 `PYTHON_VERSION` 으로 맞춘다.
+**Render — `requirements.txt` 한 곳(저장소 최상위):** 로컬·GitHub Actions·Render 모두 **루트의 `requirements.txt`** 를 기준으로 한다. `render.yaml` 은 **`rootDir: .`** 로 빌드 루트를 저장소 최상위로 맞추고, 빌드 명령은 (1) 그 경로에 `requirements.txt` 가 있으면 `pip install -r requirements.txt`, (2) 보이지 않으면 **GitHub raw**(동일 커밋, 공개 저장소)로 설치한다. Python 버전은 `.python-version` 과 `render.yaml` 의 `PYTHON_VERSION` 이다.
+
+**배포가 `requirements.txt` 없음으로 실패할 때:** 배포 로그의 빌드 줄이 **`pip install -r requirements.txt` 만** 있고 **`sh -c`** 나 **`raw.githubusercontent.com`** 이 없으면, **대시보드에 예전 Build Command 가 수동으로 박혀 있어 `render.yaml` 이 적용되지 않은 상태**일 수 있다. Render → 해당 Web Service → **Settings → Build & Deploy** 에서 **Build Command 를 비우면**(Blueprint/`render.yaml` 값 사용) 또는 **Blueprint 를 다시 저장·동기화**하면 된다. Root Directory 도 비우거나 `render.yaml` 의 `rootDir` 과 맞출 것.
 
 ### 11.8 전체 실행 흐름 요약
 

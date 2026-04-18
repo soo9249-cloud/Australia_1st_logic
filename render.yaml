@@ -1,7 +1,8 @@
-# Render.com 배포 스펙 — Python 웹서비스 1개 (FastAPI + Uvicorn)
-# render_api.py 가 브라우저 요청을 받아 crawler/ 를 실행하고 Supabase 에 저장한다.
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# requirements.txt 는 저장소 최상위(README 와 동일) 한 곳만 둔다.
 #
-# requirements.txt 는 저장소 최상위 한 곳. 빌드는 GitHub raw + $RENDER_GIT_COMMIT URL 로 pip 설치(공개 저장소).
+# 주의: 대시보드에서 Build Command 를 수동으로 넣어 두면 이 파일의 buildCommand 가 무시된다.
+#       배포 로그에 `pip install -r requirements.txt` 만 보이고 sh/raw URL 이 없으면 미적용 상태다.
 
 services:
   - type: web
@@ -9,9 +10,12 @@ services:
     env: python
     plan: free
     region: singapore
-    # 빌드 cwd 와 무관하게 GitHub raw(현재 커밋)에서 requirements 설치. sh -c 로 호환성 확보.
-    buildCommand: 'sh -c "pip install -r https://raw.githubusercontent.com/soo9249-cloud/Australia_1st_logic/$RENDER_GIT_COMMIT/requirements.txt"'
-    # 루트면 --app-dir upharma-au / Root 가 upharma-au 면 같은 디렉터리에 render_api.py
+    branch: main
+    # 저장소 루트 = 서비스 루트(Blueprint 동기화 시 대시보드의 upharma-au 전용 Root 를 덮어씀)
+    rootDir: .
+    # (1) 루트에 requirements.txt 가 보이면 로컬 설치 (2) 아니면 GitHub raw(동일 커밋, 공개 저장소)
+    buildCommand: 'sh -c "set -e; if [ -f requirements.txt ]; then pip install -r requirements.txt; else pip install -r https://raw.githubusercontent.com/soo9249-cloud/Australia_1st_logic/$RENDER_GIT_COMMIT/requirements.txt; fi"'
+    # 루트면 --app-dir upharma-au / 예전 설정으로 Root 가 upharma-au 면 render_api.py 가 현재 디렉터리
     startCommand: 'sh -c "if [ -f render_api.py ]; then exec uvicorn render_api:app --host 0.0.0.0 --port $PORT; else exec uvicorn render_api:app --app-dir upharma-au --host 0.0.0.0 --port $PORT; fi"'
     envVars:
       - key: SUPABASE_URL

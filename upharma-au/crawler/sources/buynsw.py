@@ -16,6 +16,8 @@ from urllib.parse import quote
 
 import httpx
 
+from utils.crawl_time import now_kst_iso
+
 _USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 _BASE = "https://buy.nsw.gov.au"
 _JINA = "https://r.jina.ai/"

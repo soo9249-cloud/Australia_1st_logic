@@ -329,6 +329,278 @@ def crawl_status(job_id: str) -> JSONResponse:
     return JSONResponse(job)
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# Task 9 (2026-04-19) — PDF 업로드 가격 추출 (Haiku + tool_use)
+# ═══════════════════════════════════════════════════════════════════════
+# 신약 분석에서 AEMP/retail 확보 실패 시 사용자가 가격 자료 PDF 업로드 →
+# Haiku (claude-haiku-4-5-20251001, CLAUDE.md 절대 규칙) 로 구조화 추출.
+
+from fastapi import File, Form, UploadFile
+from decimal import Decimal as _PdfDecimal
+
+_MSG_PDF_DONE_KO = "가격 데이터 추출 완료. 수출전략 제안 단계로 진행합니다."
+_MSG_PDF_LOW_CONF_KO = (
+    "PDF 에서 가격 정보를 확실하게 추출하지 못했습니다. 추출 결과를 검토하고 "
+    "필요하면 수기 보정 후 다음 단계로 진행하세요."
+)
+
+
+def _extract_pdf_text(pdf_bytes: bytes) -> str:
+    """업로드 PDF 바이트 → 평문 텍스트. pypdf → pdfplumber → 빈 문자열 순서로 폴백.
+
+    OCR 필요한 스캔 PDF 는 커버하지 않음 (text-layer 있는 일반 PDF 가정).
+    """
+    if not pdf_bytes:
+        return ""
+    # 1) pypdf
+    try:
+        from pypdf import PdfReader
+        from io import BytesIO
+        reader = PdfReader(BytesIO(pdf_bytes))
+        parts: list[str] = []
+        for page in reader.pages:
+            try:
+                parts.append(page.extract_text() or "")
+            except Exception:
+                continue
+        joined = "\n".join(parts).strip()
+        if joined:
+            return joined
+    except Exception as exc:
+        print(f"[pdf pypdf 실패] {exc}", flush=True)
+    # 2) pdfplumber
+    try:
+        import pdfplumber  # type: ignore
+        from io import BytesIO
+        with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
+            parts2: list[str] = []
+            for page in pdf.pages:
+                try:
+                    parts2.append(page.extract_text() or "")
+                except Exception:
+                    continue
+            joined = "\n".join(parts2).strip()
+            if joined:
+                return joined
+    except Exception as exc:
+        print(f"[pdf pdfplumber 실패] {exc}", flush=True)
+    return ""
+
+
+def _normalize_to_aud(
+    value: Any,
+    currency: str,
+) -> tuple[_PdfDecimal | None, str]:
+    """통화별 → AUD 환산. 반환: (aud_decimal, 적용 메서드 라벨)."""
+    from crawler.utils.fx import usd_to_aud, krw_to_aud, eur_to_aud
+    c = (currency or "").upper().strip()
+    if value is None:
+        return None, c
+    try:
+        raw_dec = _PdfDecimal(str(value))
+    except Exception:
+        return None, c
+    if c == "AUD":
+        return raw_dec, "AUD"
+    if c == "USD":
+        return usd_to_aud(raw_dec), "USD→AUD"
+    if c == "KRW":
+        return krw_to_aud(raw_dec), "KRW→AUD"
+    if c == "EUR":
+        return eur_to_aud(raw_dec), "EUR→AUD"
+    return raw_dec, f"{c}(env 환율 없음)"
+
+
+def _haiku_extract_price(pdf_text: str) -> dict[str, Any] | None:
+    """Haiku (claude-haiku-4-5-20251001) + tool_use 로 PDF 텍스트에서 가격 추출."""
+    if not pdf_text:
+        return None
+    try:
+        import anthropic  # type: ignore
+    except ImportError:
+        print("[PDF 가격 추출] anthropic SDK 미설치", flush=True)
+        return None
+    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_API_KEY")
+    if not api_key:
+        print("[PDF 가격 추출] ANTHROPIC_API_KEY 없음", flush=True)
+        return None
+
+    tool = {
+        "name": "extract_price_data",
+        "description": (
+            "Extract pharmaceutical pricing (AEMP, DPMQ, retail) from a document. "
+            "Report the detected currency separately — caller will convert to AUD."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "aemp_aud": {"type": ["number", "null"]},
+                "dpmq_aud": {"type": ["number", "null"]},
+                "retail_price_aud": {"type": ["number", "null"]},
+                "currency_detected": {
+                    "type": "string",
+                    "enum": ["AUD", "USD", "KRW", "EUR", "unknown"],
+                },
+                "source_description": {"type": "string"},
+                "extracted_text_excerpts": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+                "confidence": {"type": "number"},
+            },
+            "required": ["confidence", "currency_detected"],
+        },
+    }
+
+    snippet = pdf_text[:30000]  # Haiku context 절약
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=2048,
+            tools=[tool],
+            tool_choice={"type": "tool", "name": "extract_price_data"},
+            messages=[{
+                "role": "user",
+                "content": (
+                    "Extract pharmaceutical pricing (AEMP, DPMQ, retail) from the "
+                    "document text below. If the document currency is not AUD, "
+                    "report the raw number in the currency's original value (not "
+                    "converted) and set currency_detected accordingly — the caller "
+                    "will handle conversion. If a field is absent, return null.\n\n"
+                    "Document text:\n---\n" + snippet
+                ),
+            }],
+        )
+    except Exception as exc:
+        print(f"[PDF 가격 추출] Haiku 호출 실패: {exc}", flush=True)
+        return None
+
+    for block in response.content:
+        if getattr(block, "type", None) == "tool_use":
+            data = getattr(block, "input", {}) or {}
+            if isinstance(data, dict):
+                return data
+    return None
+
+
+@app.post("/api/crawl/price-pdf-upload")
+def extract_price_from_pdf(
+    product_code: str = Form(...),
+    pdf_file: UploadFile = File(...),
+) -> JSONResponse:
+    """분석 실패 시 사용자가 업로드한 가격 자료 PDF 에서 AEMP/DPMQ/소매가 추출.
+
+    요청 (multipart/form-data):
+      product_code : 신약 임시 ID (au-newdrug-...) 또는 기존 품목 코드
+      pdf_file     : 가격 자료 PDF
+
+    처리:
+      1) PDF → 평문 텍스트 (pypdf / pdfplumber)
+      2) Haiku(tool_use) 로 {aemp_aud, dpmq_aud, retail_price_aud, currency, ...} 추출
+      3) currency_detected != AUD 면 utils.fx.*_to_aud 로 환산
+      4) Supabase au_products UPDATE — retail_estimation_method="user_pdf_upload"
+    """
+    if not pdf_file or not pdf_file.filename:
+        raise HTTPException(status_code=400, detail="pdf_file 필수")
+    if not (pdf_file.filename or "").lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="PDF 파일만 허용됩니다.")
+    try:
+        pdf_bytes = pdf_file.file.read()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"PDF 읽기 실패: {exc}")
+
+    pdf_text = _extract_pdf_text(pdf_bytes)
+    if not pdf_text:
+        raise HTTPException(
+            status_code=422,
+            detail="PDF 텍스트 레이어를 추출할 수 없습니다. 스캔 PDF 는 OCR 필요.",
+        )
+
+    extracted = _haiku_extract_price(pdf_text)
+    if not extracted:
+        raise HTTPException(status_code=502, detail="AI 가격 추출 실패 (Haiku 호출 오류).")
+
+    currency = str(extracted.get("currency_detected") or "unknown").upper()
+    aemp_aud_norm, aemp_method = _normalize_to_aud(extracted.get("aemp_aud"), currency)
+    dpmq_aud_norm, dpmq_method = _normalize_to_aud(extracted.get("dpmq_aud"), currency)
+    retail_aud_norm, retail_method = _normalize_to_aud(
+        extracted.get("retail_price_aud"), currency
+    )
+
+    source_desc = str(extracted.get("source_description") or "")[:200]
+    confidence_raw = extracted.get("confidence")
+    try:
+        confidence = float(confidence_raw) if confidence_raw is not None else 0.5
+    except (TypeError, ValueError):
+        confidence = 0.5
+
+    # 기존 warnings 에 신규 항목 append (기존 리스트 보존)
+    existing_warnings: list[str] = []
+    try:
+        client = get_supabase_client()
+        existing_resp = (
+            client.table(TABLE_NAME)
+            .select("warnings")
+            .eq("product_code", product_code)
+            .limit(1)
+            .execute()
+        )
+        rows = getattr(existing_resp, "data", None) or []
+        if rows:
+            warn_raw = rows[0].get("warnings")
+            if isinstance(warn_raw, list):
+                existing_warnings = [str(w) for w in warn_raw]
+    except Exception as exc:
+        print(f"[PDF 업로드 warnings 조회 경고] {exc}", flush=True)
+
+    new_warnings = list(existing_warnings)
+    new_warnings.append("user_uploaded_pdf")
+    if source_desc:
+        new_warnings.append(f"pdf_source:{source_desc}")
+    if currency not in ("AUD", "UNKNOWN"):
+        new_warnings.append(f"pdf_currency_converted:{currency}→AUD")
+
+    update_row: dict[str, Any] = {
+        "retail_estimation_method": "user_pdf_upload",
+        "warnings": new_warnings,
+    }
+    if aemp_aud_norm is not None:
+        update_row["aemp_aud"] = str(aemp_aud_norm)
+    if dpmq_aud_norm is not None:
+        update_row["dpmq_aud"] = str(dpmq_aud_norm)
+    if retail_aud_norm is not None:
+        update_row["retail_price_aud"] = str(retail_aud_norm)
+
+    try:
+        client = get_supabase_client()
+        client.table(TABLE_NAME).update(update_row).eq(
+            "product_code", product_code
+        ).execute()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Supabase UPDATE 실패: {exc}")
+
+    message_ko = _MSG_PDF_DONE_KO if confidence >= 0.7 else _MSG_PDF_LOW_CONF_KO
+    return JSONResponse({
+        "success": True,
+        "extracted": {
+            "aemp_aud": str(aemp_aud_norm) if aemp_aud_norm is not None else None,
+            "dpmq_aud": str(dpmq_aud_norm) if dpmq_aud_norm is not None else None,
+            "retail_price_aud": str(retail_aud_norm) if retail_aud_norm is not None else None,
+            "currency_detected": currency,
+            "aemp_conversion": aemp_method,
+            "dpmq_conversion": dpmq_method,
+            "retail_conversion": retail_method,
+            "source_description": source_desc,
+            "confidence": confidence,
+            "excerpts": extracted.get("extracted_text_excerpts") or [],
+        },
+        "next_step": "/api/p2/pipeline",
+        "message_ko": message_ko,
+    })
+
+
 @app.get("/api/data/{product_id}")
 def get_product(product_id: str) -> JSONResponse:
     """Supabase `au_products` 에서 품목 단건 조회 (필터 컬럼: product_code)."""

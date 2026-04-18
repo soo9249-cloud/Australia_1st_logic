@@ -31,6 +31,7 @@ except ImportError:
 
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -810,11 +811,12 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]
     ReportBlocks = _claude_blocks_schema()
     client_anthropic = anthropic.Anthropic(api_key=api_key)
 
+    # Decimal 등 비JSON 타입 직렬화 (2공정 Haiku 경로와 동일)
     user_content = (
         "다음 품목의 크롤링 데이터를 해석하여 10개 블록을 보고서체(~함/~임)로 작성하라.\n"
         "실제 숫자/문자열 값(ARTG 번호, DPMQ, PBS item code, 스폰서명 등)을 본문에 반드시 인용.\n\n"
         "```json\n"
-        + _json.dumps(_row_summary_for_llm(row), ensure_ascii=False, indent=2)
+        + _json.dumps(_row_summary_for_llm(row), ensure_ascii=False, indent=2, default=str)
         + "\n```"
     )
 
@@ -1445,6 +1447,23 @@ def _perplexity_fetch_refs(row: dict[str, Any], api_key: str) -> list[dict[str, 
 
 @app.post("/api/report/generate")
 def generate_report(payload: dict[str, Any]) -> JSONResponse:
+    """예외 시 Render 로그에 스택이 남도록 래핑 (원인 조사용)."""
+    try:
+        return _generate_report_core(payload)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "POST /api/report/generate 실패 product_id=%r",
+            (payload or {}).get("product_id"),
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"{type(exc).__name__}: {exc}",
+        ) from exc
+
+
+def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
     """product_id 의 boundary 데이터를 읽어 LLM 으로 Block2/3 + Perplexity refs 를 생성하고
     australia 테이블에 UPDATE 한다. 공통 6컬럼(id, product_id, market_segment,
     fob_estimated_usd, confidence, crawled_at) 은 건드리지 않는다."""
@@ -1585,17 +1604,22 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
         print(f"[render_pdf error] {exc}", flush=True)
         pdf_name = None
 
-    return JSONResponse(content={
-        "ok": True,
-        "product_id": product_id,
-        "llm_model": _CLAUDE_MODEL,
-        "llm_generated_at": generated_at,
-        "blocks": blocks,
-        "refs_count": len(refs),
-        "refs": refs,
-        "meta": meta,
-        "pdf": pdf_name,
-    })
+    # Decimal/datetime 등이 섞여 있으면 JSONResponse 직렬화에서 TypeError 가능 — jsonable_encoder 사용
+    return JSONResponse(
+        content=jsonable_encoder(
+            {
+                "ok": True,
+                "product_id": product_id,
+                "llm_model": _CLAUDE_MODEL,
+                "llm_generated_at": generated_at,
+                "blocks": blocks,
+                "refs_count": len(refs),
+                "refs": refs,
+                "meta": meta,
+                "pdf": pdf_name,
+            }
+        )
+    )
 
 
 # ============================================================================

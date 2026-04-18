@@ -37,12 +37,28 @@ def _parse_schedule_s2348(full_text: str) -> str | None:
 
 
 def fetch_tga_detail(artg_id: str) -> dict[str, Any]:
-    """ARTG 상세 페이지 마크다운에서 스폰서·라이선스 정보를 추출한다. 실패 시 None 필드."""
+    """ARTG 상세 페이지 마크다운에서 스폰서·라이선스·성분·규제 정보를 추출한다.
+
+    Phase 4.3 추가 필드 (위임지서 §4.3):
+      - active_ingredients (list[str])     — bullet 목록 파싱
+      - first_registered_date (str|None)   — Start Date 파싱
+      - route_of_administration (str|None) — 투여경로
+      - sponsor_abn (str|None)             — 호주 사업자번호 (숫자만)
+      - strength (str|None)                — TGA 공식 함량 표기
+
+    실패 시 전부 None 필드.
+    """
     empty: dict[str, Any] = {
         "tga_sponsor": None,
         "tga_licence_category": None,
         "tga_licence_status": None,
         "tga_schedule": None,
+        # Phase 4.3 추가
+        "active_ingredients": [],
+        "first_registered_date": None,
+        "route_of_administration": None,
+        "sponsor_abn": None,
+        "strength": None,
     }
     aid = (artg_id or "").strip()
     if not aid:
@@ -74,11 +90,65 @@ def fetch_tga_detail(artg_id: str) -> dict[str, Any]:
 
     sched = _parse_schedule_s2348(text)
 
+    # ── Phase 4.3: 추가 5필드 파싱 ───────────────────────────────────
+    # Active ingredients — "Active Ingredient(s)" 헤더 다음 bullet 목록
+    ingredients: list[str] = []
+    m_ing = re.search(
+        r"Active\s+Ingredient[^\n]*\n+\s*((?:\*\s+[^\n]+\n?)+)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if m_ing:
+        for line in m_ing.group(1).splitlines():
+            s = line.strip()
+            if s.startswith("*"):
+                s = s.lstrip("*").strip()
+                if s:
+                    ingredients.append(s)
+
+    # First registered date — "Start Date" 헤더 다음 "DD Month YYYY"
+    first_reg: str | None = None
+    m_date = re.search(
+        r"Start\s+Date\s*\n+\s*(\d{1,2}\s+\w+\s+\d{4})",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if m_date:
+        first_reg = m_date.group(1).strip()
+
+    # Route of administration — "Route(s) of Administration" 헤더 다음 한 줄
+    route: str | None = None
+    m_route = re.search(
+        r"Route[s]?\s+of\s+Administration\s*\n+\s*([^\n]+)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if m_route:
+        route = m_route.group(1).strip()
+
+    # Sponsor ABN — "ABN" 다음 9~11자리 숫자 (공백 구분 허용 → 제거)
+    abn: str | None = None
+    m_abn = re.search(r"ABN\s*[:\s]*(\d[\d\s]{8,})", text)
+    if m_abn:
+        abn = re.sub(r"\s+", "", m_abn.group(1))
+
+    # Strength — TGA 상세 페이지의 "Strength" 헤더 (있을 때만)
+    strength: str | None = None
+    m_str = re.search(r"\bStrength\s*\n+\s*([^\n]+)", text, flags=re.IGNORECASE)
+    if m_str:
+        strength = m_str.group(1).strip()
+
     return {
         "tga_sponsor": sponsor,
         "tga_licence_category": cat,
         "tga_licence_status": stat,
         "tga_schedule": sched,
+        # Phase 4.3 추가
+        "active_ingredients": ingredients,
+        "first_registered_date": first_reg,
+        "route_of_administration": route,
+        "sponsor_abn": abn,
+        "strength": strength,
     }
 
 
@@ -86,6 +156,22 @@ def _parse_first_artg_id(markdown: str) -> str | None:
     """검색 결과 마크다운에서 첫 번째 ARTG ID(숫자)를 추출한다."""
     m = re.search(r"###\s+\[[^\]]*\((\d+)\)\]\(", markdown)
     return m.group(1) if m else None
+
+
+def _parse_all_artg_ids(markdown: str) -> list[str]:
+    """검색 결과 마크다운에서 모든 ARTG ID 추출. 중복 제거, 등장순 유지.
+
+    위임지서 §4.2 — Gadvoa 등 다규격 품목(Gadovist 6규격: 2/5/7.5/10/15/65mL)
+    대응. `_parse_first_artg_id` 는 하위호환용으로 유지.
+    """
+    ids = re.findall(r"###\s+\[[^\]]*\((\d+)\)\]\(", markdown)
+    seen: set[str] = set()
+    out: list[str] = []
+    for i in ids:
+        if i not in seen:
+            seen.add(i)
+            out.append(i)
+    return out
 
 
 def _parse_sponsor_filter_first(markdown: str) -> str | None:
@@ -170,7 +256,9 @@ def fetch_tga_artg(ingredient: str) -> dict[str, Any]:
     if not has_results:
         return _empty_dto(canonical)
 
-    artg_id = _parse_first_artg_id(text)
+    # 위임지서 §4.2 — 모든 ARTG 수집 (Gadvoa 6규격 등 다규격 품목 대응)
+    artg_id_list = _parse_all_artg_ids(text)
+    artg_id = artg_id_list[0] if artg_id_list else None
     sponsor_from_filter = _parse_sponsor_filter_first(text)
 
     detail_url = f"{_TGA_BASE}/resources/artg/{artg_id}" if artg_id else canonical
@@ -179,7 +267,7 @@ def fetch_tga_artg(ingredient: str) -> dict[str, Any]:
     out = _empty_dto(canonical)
     if artg_id:
         out["tga_found"] = True
-        out["tga_artg_ids"] = [str(artg_id)]
+        out["tga_artg_ids"] = [str(x) for x in artg_id_list]
         out["artg_id"] = str(artg_id)
         out["artg_number"] = str(artg_id)
         out["artg_status"] = "registered"
@@ -192,19 +280,43 @@ def fetch_tga_artg(ingredient: str) -> dict[str, Any]:
         out["sponsor_name"] = sponsor_from_filter
         out["tga_sponsors"] = [sponsor_from_filter]
 
-    if artg_id:
-        detail = fetch_tga_detail(artg_id)
-        sp = detail.get("tga_sponsor")
-        if sp:
-            out["tga_sponsor"] = sp
-            out["sponsor_name"] = sp
-            # 스폰서 배열 업데이트 (filter 값과 다를 수 있으므로 덮어쓰기)
-            out["tga_sponsors"] = [sp]
-        out["tga_licence_category"] = detail.get("tga_licence_category")
-        out["tga_licence_status"] = detail.get("tga_licence_status")
-        out["tga_schedule"] = detail.get("tga_schedule")
-        out["schedule"] = detail.get("tga_schedule")
-        out["schedule_code"] = detail.get("tga_schedule")
+    # 위임지서 §4.2/4.3 — 각 ARTG 상세 페이지 병렬 수집해 sponsors dedup + 대표 1건 필드 병합
+    if artg_id_list:
+        all_sponsors: list[str] = []
+        first_detail: dict[str, Any] = {}
+        for idx, aid in enumerate(artg_id_list):
+            detail = fetch_tga_detail(aid)
+            if idx == 0:
+                first_detail = detail
+            sp = detail.get("tga_sponsor")
+            if sp and sp not in all_sponsors:
+                all_sponsors.append(sp)
+
+        # 대표 상세(첫 ARTG) 에서 기본 라이선스·스케줄·성분·규제 필드 주입
+        sp0 = first_detail.get("tga_sponsor")
+        if sp0:
+            out["tga_sponsor"] = sp0
+            out["sponsor_name"] = sp0
+        if all_sponsors:
+            # filter 스폰서 1건 있어도 상세에서 확보된 실제 스폰서들로 덮어씀
+            out["tga_sponsors"] = all_sponsors
+
+        out["tga_licence_category"] = first_detail.get("tga_licence_category")
+        out["tga_licence_status"] = first_detail.get("tga_licence_status")
+        out["tga_schedule"] = first_detail.get("tga_schedule")
+        out["schedule"] = first_detail.get("tga_schedule")
+        # 위임지서 §4.3 — schedule_code 는 TGA 값 우선 (PBS 버전번호 "3963" 오염 방지)
+        if first_detail.get("tga_schedule"):
+            out["schedule_code"] = first_detail.get("tga_schedule")
+
+        # 위임지서 §4.3 — 상세 추가 5필드 반영
+        out["active_ingredients"] = first_detail.get("active_ingredients") or []
+        out["first_registered_date"] = first_detail.get("first_registered_date")
+        out["route_of_administration"] = first_detail.get("route_of_administration")
+        out["sponsor_abn"] = first_detail.get("sponsor_abn")
+        # strength 는 au_products.json 쪽에 이미 있으면 덮어쓰지 않음 — caller 책임.
+        # DTO 에는 TGA 수집값을 그대로 노출.
+        out["strength"] = first_detail.get("strength")
 
     # au_tga_artg.raw_response 저장용 (2KB 컷)
     out["raw_html_snippet"] = (text[:_RAW_SNIPPET_MAX]) if text else None

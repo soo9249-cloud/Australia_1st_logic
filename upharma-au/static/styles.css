@@ -1268,6 +1268,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 }
 #main .map-news-grid > article.card {
   min-height: 0;
+  height: 100%;
   padding: 10px 12px;
   align-self: stretch;
 }
@@ -1282,6 +1283,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   display: flex;
   flex-direction: column;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 #main .map-card-wrap {
@@ -1295,15 +1297,32 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 #main .news-card-panel > .sec {
   min-height: 0;
 }
-.news-card-panel #news-list {
+/* 목록 영역: 5행 고정 그리드(안내 배너는 #news-list 밖 #news-mock-banner 로 분리) */
+#main .news-card-panel #news-list.news-list--ready {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  overflow: hidden;
+  align-content: stretch;
+}
+#main .news-card-panel #news-list.news-list--busy {
   flex: 1 1 0%;
   min-height: 0;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  max-height: none;
+  align-items: center;
+  justify-content: center;
+}
+.news-mock-banner {
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+.news-mock-banner:empty {
+  display: none;
 }
 .news-source-hint {
   font-size: 10px;
@@ -1311,27 +1330,27 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   color: var(--muted);
   padding: 6px 8px;
   margin: 0;
-  flex-shrink: 0;
+  min-height: 0;
   border-radius: 8px;
   background: rgba(23, 63, 120, 0.06);
   border: 1px solid rgba(23, 63, 120, 0.1);
 }
-/* 뉴스 카드: 목록 세로 공간을 5행이 균등 분배(아래 빈 여백 제거), 행 안 텍스트는 세로 가운데 */
+/* 뉴스 카드: 각 셀 안에서 텍스트 세로 가운데 */
 .news-card-panel #news-list > .irow.news-item {
-  flex: 1 1 0;
   min-height: 0;
+  overflow: hidden;
   display: flex !important;
   flex-direction: column;
   justify-content: center;
-  padding: 8px 12px !important;
-  margin-bottom: 0 !important;
+  padding: 10px 12px !important;
+  margin: 0 !important;
 }
 .news-card-panel #news-list > a.irow.news-item {
   text-decoration: none;
   color: inherit;
 }
 .news-card-panel #news-list > .irow:not(.news-item) {
-  flex: 0 0 auto;
+  grid-column: 1 / -1;
 }
 .news-card-panel .irow .tit {
   font-size: 11px;

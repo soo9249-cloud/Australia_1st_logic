@@ -1898,6 +1898,12 @@ async function loadNews() {
   if (!listEl) return;
 
   if (btn) btn.disabled = true;
+  const bannerEl = document.getElementById('news-mock-banner');
+  if (bannerEl) {
+    bannerEl.hidden = true;
+    bannerEl.innerHTML = '';
+  }
+  listEl.className = 'news-list--busy';
   listEl.innerHTML = '<div class="irow" style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0;">뉴스 로드 중…</div>';
 
   try {
@@ -1908,15 +1914,27 @@ async function loadNews() {
     const data = Array.isArray(raw) ? { ok: true, items: raw, error: null } : raw;
 
     if (!data.ok || !data.items?.length) {
+      listEl.className = 'news-list--busy';
       listEl.innerHTML = `<div class="irow" style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0;">${_escHtml(data.error || '뉴스를 불러올 수 없습니다.')}</div>`;
       return;
     }
 
-    const mockHint = newsBackend === 'mock'
-      ? '<div class="news-source-hint" role="status">Perplexity 실데이터가 아닌 <strong>샘플</strong>입니다. Render에 <code>PERPLEXITY_API_KEY</code>(또는 <code>PERPLEXITY_KEY</code>)가 설정돼 있고 API가 성공하면 최신 기사로 바뀝니다.</div>'
-      : '';
+    if (bannerEl) {
+      if (newsBackend === 'mock') {
+        bannerEl.hidden = false;
+        bannerEl.innerHTML =
+          '<div class="news-source-hint" role="status">Perplexity 실데이터가 아닌 <strong>샘플</strong>입니다. Render에 <code>PERPLEXITY_API_KEY</code>(또는 <code>PERPLEXITY_KEY</code>)가 설정돼 있고 API가 성공하면 최신 기사로 바뀝니다.</div>';
+      } else {
+        bannerEl.hidden = true;
+        bannerEl.innerHTML = '';
+      }
+    }
 
-    listEl.innerHTML = mockHint + data.items.map(item => {
+    /* 메인 카드는 항상 5건 레이아웃(백엔드와 동일) */
+    const newsItems = (data.items || []).slice(0, 5);
+
+    listEl.className = 'news-list--ready';
+    listEl.innerHTML = newsItems.map(item => {
       const href   = item.link ? `href="${_escHtml(item.link)}" target="_blank" rel="noopener"` : '';
       const tag    = item.link ? 'a' : 'div';
       const source = [item.source, item.date].filter(Boolean).join(' · ');
@@ -1932,6 +1950,7 @@ async function loadNews() {
         </${tag}>`;
     }).join('');
   } catch (e) {
+    listEl.className = 'news-list--busy';
     listEl.innerHTML = '<div class="irow" style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0;">뉴스 조회 실패 — 잠시 후 다시 시도해 주세요</div>';
     console.warn('뉴스 로드 실패:', e);
   } finally {

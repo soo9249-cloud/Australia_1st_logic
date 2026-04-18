@@ -4,11 +4,15 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
 
 from supabase import Client, create_client
+
+# 위임지서 03a §2-7 — 화이트리스트에서 드롭된 키는 silent drop 금지, debug 로그 남김
+_logger = logging.getLogger(__name__)
 
 # ── v2 스키마: 메인 마스터 테이블 이름 변경 ──────────────────────────────────
 TABLE_NAME = "au_products"
@@ -291,7 +295,18 @@ _CRAWL_LOG_ALLOWED: frozenset[str] = frozenset({
 
 
 def _filter_cols(row: dict[str, Any], allowed: frozenset[str]) -> dict[str, Any]:
-    return {k: v for k, v in row.items() if k in allowed}
+    """화이트리스트 필터. 드롭되는 키는 debug 로그로 남김 (§2-7 silent drop 금지).
+
+    운영 환경에서 로그 레벨이 INFO 이상이면 조용하지만, DEBUG 로 내리면 누락 키 확인 가능:
+      logging.getLogger('crawler.db.supabase_insert').setLevel(logging.DEBUG)
+    """
+    out: dict[str, Any] = {}
+    for k, v in row.items():
+        if k in allowed:
+            out[k] = v
+        else:
+            _logger.debug("dropped unknown key: %s", k)
+    return out
 
 
 def upsert_pbs_raw(snapshot: dict[str, Any]) -> bool:

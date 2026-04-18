@@ -16,7 +16,9 @@
 
 from __future__ import annotations
 
+import argparse
 import json
+import logging
 import os
 import sys
 import time
@@ -25,6 +27,8 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
+
+_logger = logging.getLogger(__name__)
 
 from sources.chemist import build_sites
 from sources.tga import determine_export_viable
@@ -434,7 +438,8 @@ def build_product_summary(
         "crawler_source_urls": sites,
         "schedule_code": pbs.get("schedule_code"),
         "error_type": error_type,
-        "warnings": warnings if warnings else None,
+        # NOT NULL DEFAULT '[]' 제약 — None 대신 빈 배열 (Hydrine dry-run 23502 위반 수정)
+        "warnings": warnings,
 
         # 하위호환 v1 키 (_row_for_upsert rename 매핑 + scoring 용)
         "pbs_item_code": pbs_code_val,
@@ -582,8 +587,8 @@ def _merge_pbs_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
 # main — PRODUCT_FILTER 1개 품목 크롤 + upsert + 바이어 풀 + 로그
 # ─────────────────────────────────────────────────────────────────────
 
-def main() -> None:
-    """PRODUCT_FILTER 로 지정한 1개 품목만 수집·요약·Supabase upsert 한다.
+def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> bool:
+    """단일 품목 크롤 + upsert. 성공 True, 실패 False. dry_run 이면 DB 쓰기 skip.
 
     v2 확장:
       - run_id (uuid4) 생성 → 한 배치에서 모든 log_crawl 호출 공유
@@ -591,22 +596,7 @@ def main() -> None:
       - PBS 성공 시 upsert_pbs_raw, TGA 성공 시 upsert_tga_artg (원본 보관)
       - 최종 바이어 후보 풀 수집 → upsert_buyer_candidates
     """
-    product_filter = (os.environ.get("PRODUCT_FILTER") or "").strip()
-    if not product_filter:
-        print(
-            "[오류] PRODUCT_FILTER 가 비어 있습니다. product_id 1 개를 지정해야 합니다.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    products = _load_products()
-    product = next((p for p in products if p.get("product_id") == product_filter), None)
-    if product is None:
-        print(
-            f"[오류] product_id={product_filter!r} 품목을 au_products.json 에서 찾을 수 없습니다.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    product_filter = product["product_id"]
 
     # Lazy import (크롤러만 돌릴 때 supabase-py 로드 최소화)
     from db.supabase_insert import (
@@ -792,6 +782,37 @@ def main() -> None:
 
     # ── 최종 dict 조립 ─────────────────────────────────────────
     summary = build_product_summary(product, pbs, tga, chemist, nsw)
+
+    # ── DRY_RUN 분기 ───────────────────────────────────────────
+    if dry_run:
+        _logger.info(
+            "[DRY_RUN] product=%s pbs_found=%s tga_found=%s aemp_aud=%s dpmq_aud=%s "
+            "retail_price_aud=%s (method=%s) warnings=%d keys=%d",
+            product_filter,
+            summary.get("pbs_found"),
+            summary.get("tga_found"),
+            summary.get("aemp_aud"),
+            summary.get("dpmq_aud"),
+            summary.get("retail_price_aud"),
+            summary.get("retail_estimation_method"),
+            len(summary.get("warnings") or []),
+            len(summary),
+        )
+        # 보조 테이블도 dry-run: 호출 대상만 출력
+        pbs_would = bool(pbs.get("pbs_found") or pbs.get("pbs_listed"))
+        tga_would = bool(tga.get("artg_id") or tga.get("artg_number"))
+        try:
+            candidates_preview = _collect_buyer_candidates(product_filter, tga, pbs, nsw or {})
+        except Exception:
+            candidates_preview = []
+        _logger.info(
+            "[DRY_RUN] would upsert — au_pbs_raw=%s au_tga_artg=%s au_buyers=%d candidates",
+            pbs_would, tga_would, len(candidates_preview),
+        )
+        print(f"[DRY_RUN 완료] product_id={product_filter}")
+        return True
+
+    # ── 실제 DB 쓰기 경로 ─────────────────────────────────────
     ok = upsert_product(summary)
 
     # ── au_pbs_raw (§14-3-2) — PBS 원본 보관 ────────────────
@@ -845,11 +866,89 @@ def main() -> None:
         print(f"[au_buyers upsert 경고] {exc}", flush=True)
 
     print(f"[완료] product_id={product_filter} upsert={'성공' if ok else '실패'}")
-    sys.exit(0 if ok else 1)
+    return ok
+
+
+def main() -> None:
+    """CLI 진입점 — argparse + DRY_RUN 지원.
+
+    사용 예:
+      # 단일 품목
+      python -m crawler.au_crawler --product au-hydrine-004
+      # 전체 8 품목 순회
+      python -m crawler.au_crawler --all
+      # 환경변수 PRODUCT_FILTER 도 호환 (우선순위: --product > PRODUCT_FILTER > --all)
+      PRODUCT_FILTER=au-omethyl-001 python -m crawler.au_crawler
+      # DB 쓰기 skip (dry-run)
+      DRY_RUN=1 python -m crawler.au_crawler --product au-hydrine-004
+
+    종료 코드: 전 품목 성공 0, 실패 하나라도 있으면 1.
+    """
+    parser = argparse.ArgumentParser(description="호주 의약품 크롤러 v2 (위임지서 03a)")
+    parser.add_argument(
+        "--product",
+        metavar="PRODUCT_ID",
+        help="단일 품목 크롤 (예: au-hydrine-004). PRODUCT_FILTER env 보다 우선.",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="au_products.json 에 정의된 전체 품목 순회. --product/PRODUCT_FILTER 없을 때만 적용.",
+    )
+    args = parser.parse_args()
+
+    # DRY_RUN — 1, true, yes 모두 수용
+    dry_run_raw = (os.environ.get("DRY_RUN") or "").strip().lower()
+    dry_run = dry_run_raw in {"1", "true", "yes", "on"}
+
+    # 우선순위: --product > PRODUCT_FILTER env > --all
+    env_filter = (os.environ.get("PRODUCT_FILTER") or "").strip()
+    selected_ids: list[str] | None
+    if args.product:
+        selected_ids = [args.product.strip()]
+    elif env_filter:
+        selected_ids = [env_filter]
+    elif args.all:
+        selected_ids = None  # None = 전체
+    else:
+        print(
+            "[오류] 대상 품목 지정 필요 — --product <id> / --all / PRODUCT_FILTER env 중 하나.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    products = _load_products()
+    if selected_ids is None:
+        targets = products
+        print(f"[all] {len(targets)} 품목 전체 순회 (dry_run={dry_run})", flush=True)
+    else:
+        targets = []
+        for pid in selected_ids:
+            p = next((x for x in products if x.get("product_id") == pid), None)
+            if p is None:
+                print(
+                    f"[오류] product_id={pid!r} 를 au_products.json 에서 찾을 수 없습니다.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            targets.append(p)
+
+    if dry_run:
+        print("[DRY_RUN] 활성 — Supabase 쓰기 skip, summary 주요 필드만 로그에 출력.", flush=True)
+        # dry-run 에서 INFO 로그가 보이도록 basicConfig 설정 (외부 로거 설정이 있으면 무시됨)
+        if not logging.getLogger().handlers:
+            logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+
+    all_ok = True
+    for product in targets:
+        ok = _process_one_product(product, dry_run=dry_run)
+        all_ok = all_ok and ok
+
+    sys.exit(0 if all_ok else 1)
 
 
 def run() -> None:
-    """CLI 진입점과 동일."""
+    """모듈 외부 호출용 진입점 — main() 과 동일."""
     main()
 
 

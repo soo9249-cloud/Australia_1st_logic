@@ -775,31 +775,59 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
             pbs["pbs_brand_name"] = api_bn
 
     # ── Chemist Warehouse ─────────────────────────────────────
+    # pricing_case 기반 분기 (위임지서 Phase 2.1) —
+    #   Case 6 ESTIMATE_hospital / skip_chemist=true  → skip (약국 유통 없음)
+    #   Case 4 ESTIMATE_substitute (성분 미등재)      → skip (약국에도 당연히 없음)
+    #   나머지: chemist_search_term > pbs_search_terms[0] > inn_normalized 순으로 쿼리.
+    case = str(product.get("pricing_case") or "").upper()
     pbs_terms = product.get("pbs_search_terms") or []
-    retail_query = str(pbs_terms[0] if pbs_terms else product.get("inn_normalized") or "")
+    retail_query = str(
+        product.get("chemist_search_term")
+        or (pbs_terms[0] if pbs_terms else None)
+        or product.get("inn_normalized")
+        or ""
+    )
 
-    _t0 = time.time()
-    _ch_started = now_kst_iso()
-    try:
-        chemist = fetch_chemist_price(retail_query)
+    if case == "ESTIMATE_HOSPITAL" or product.get("skip_chemist") or case == "ESTIMATE_SUBSTITUTE":
+        chemist = None
+        skip_reason = (
+            "hospital_procurement_only"
+            if case == "ESTIMATE_HOSPITAL" or product.get("skip_chemist")
+            else "not_registered_au_case4"
+        )
         log_crawl(
             run_id=run_id, product_code=product_filter, source="chemist_warehouse",
-            status="success" if chemist else "partial",
-            endpoint="/search",
-            duration_ms=int((time.time() - _t0) * 1000),
-            started_at=_ch_started,
+            status="skipped",
+            endpoint=f"/search (skip: {skip_reason})",
+            duration_ms=0,
+            started_at=now_kst_iso(),
             finished_at=now_kst_iso(),
         )
-    except Exception as exc:
-        chemist = None
-        log_crawl(
-            run_id=run_id, product_code=product_filter, source="chemist_warehouse", status="failed",
-            endpoint="/search",
-            error_message=str(exc)[:500],
-            duration_ms=int((time.time() - _t0) * 1000),
-            started_at=_ch_started,
-            finished_at=now_kst_iso(),
-        )
+        _t0 = time.time()  # no-op but keeps subsequent var-scoping balanced
+        _ch_started = now_kst_iso()
+    else:
+        _t0 = time.time()
+        _ch_started = now_kst_iso()
+        try:
+            chemist = fetch_chemist_price(retail_query)
+            log_crawl(
+                run_id=run_id, product_code=product_filter, source="chemist_warehouse",
+                status="success" if chemist else "partial",
+                endpoint="/search",
+                duration_ms=int((time.time() - _t0) * 1000),
+                started_at=_ch_started,
+                finished_at=now_kst_iso(),
+            )
+        except Exception as exc:
+            chemist = None
+            log_crawl(
+                run_id=run_id, product_code=product_filter, source="chemist_warehouse", status="failed",
+                endpoint="/search",
+                error_message=str(exc)[:500],
+                duration_ms=int((time.time() - _t0) * 1000),
+                started_at=_ch_started,
+                finished_at=now_kst_iso(),
+            )
 
     # ── Healthylife 보강 (PBS 미등재 Private 처방약 참고가) ───
     # 기존 로직 유지 (§1-6). 조건: healthylife_slug 지정 + Chemist 실패/저가 시 대체.

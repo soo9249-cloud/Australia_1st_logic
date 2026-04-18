@@ -265,13 +265,19 @@ _PBS_RAW_ALLOWED: frozenset[str] = frozenset({
 
 # Phase 4.3-v3 — au_tga_artg 4필드 폐기 (Supabase 컬럼 DROP 완료):
 #   schedule / route_of_administration / first_registered_date / sponsor_abn.
-# strength / dosage_form 도 제거 — 자사 제품 메타라 TGA 테이블과 무관.
+#
+# Phase 4.3-v3 부분 revert (2026-04-18 Jisoo 재결정):
+#   strength / dosage_form 복구. PBS 미등재 품목(예: Omethyl ESTIMATE_private)은
+#   au_pbs_raw.market_form/market_strength 가 비어있어 TGA 의 strength/dosage_form
+#   이 유일한 호주 시장 비교 데이터가 되므로 보존. DB 컬럼은 그대로 살아있음.
 _TGA_ARTG_ALLOWED: frozenset[str] = frozenset({
     "product_id",
     "artg_id",
     "product_name",
     "sponsor_name",
     "active_ingredients",
+    "strength",
+    "dosage_form",
     "status",
     "artg_url",
     "crawled_at",
@@ -339,9 +345,10 @@ def upsert_tga_artg(row: dict[str, Any]) -> bool:
 
     Phase 4.3-v3 (2026-04-18) — 컬럼 축소. 유지되는 행 키:
       product_id, artg_id, product_name, sponsor_name, active_ingredients(JSONB),
-      status, artg_url, crawled_at.
-    폐기 키: schedule, route_of_administration, first_registered_date, sponsor_abn,
-            strength, dosage_form. (Supabase 컬럼도 DROP 완료.)
+      strength, dosage_form, status, artg_url, crawled_at.
+    폐기 키: schedule, route_of_administration, first_registered_date, sponsor_abn
+            (Supabase 컬럼 DROP 완료).
+    strength / dosage_form 은 부분 revert 로 복구 — PBS 미등재 품목 fallback 용.
     """
     artg_id = row.get("artg_id") or "?"
     try:

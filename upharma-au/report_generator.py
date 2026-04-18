@@ -180,8 +180,36 @@ def _build_product_info_flowables(
     self_strength = str(row.get("strength") or "—")
     self_form = str(row.get("dosage_form") or "—")
 
-    market_form = str(row.get("market_form") or "—")
-    market_strength = str(row.get("market_strength") or "—")
+    # Phase 4.3-v3 부분 revert — 호주 시장 비교 데이터 3단 fallback:
+    #   1순위: au_pbs_raw.market_form / market_strength (PBS 등재 시)
+    #   2순위: au_tga_artg.dosage_form / strength (PBS 미등재, TGA 만 등재 시)
+    #   3순위: "호주 시장 데이터 없음" — 회색 배지
+    pbs_market_form = row.get("market_form") or None
+    pbs_market_strength = row.get("market_strength") or None
+    tga_dosage_form = row.get("tga_dosage_form") or None
+    tga_strength_val = row.get("tga_strength") or None
+
+    if pbs_market_form or pbs_market_strength:
+        market_source = "pbs"              # 1순위
+        market_form_val = pbs_market_form or "—"
+        market_strength_val = pbs_market_strength or "—"
+        market_section_title = "호주 PBS 시장 동일 약 정보 (PBS API 출처)"
+        market_header_bg_hex = "#4A5F85"   # 슬레이트 (PBS)
+    elif tga_dosage_form or tga_strength_val:
+        market_source = "tga"              # 2순위 — PBS 미등재, TGA 만 등재
+        market_form_val = tga_dosage_form or "—"
+        market_strength_val = tga_strength_val or "—"
+        market_section_title = "호주 TGA 등재 약 정보 (ARTG 출처)"
+        market_header_bg_hex = "#5F7A4A"   # 올리브 (TGA)
+    else:
+        market_source = "none"             # 3순위
+        market_form_val = "—"
+        market_strength_val = "—"
+        market_section_title = "호주 시장 동일 약 정보"
+        market_header_bg_hex = "#6B7280"   # 회색 (데이터 없음)
+
+    market_form = str(market_form_val)
+    market_strength = str(market_strength_val)
     market_brand = str(row.get("pbs_brand_name") or row.get("brand_name") or "—")
     originator_flag = row.get("originator_brand")
     if originator_flag is True:
@@ -217,18 +245,28 @@ def _build_product_info_flowables(
     self_tbl = Table(self_rows, colWidths=[COL1, COL2])
     self_tbl.setStyle(_box_style(C_NAVY))
 
-    # 시장 박스 (호주 PBS 등재 동일 약)
+    # 시장 박스 (호주 PBS 등재 또는 TGA 등재 동일 약) — 데이터 출처에 따라 라벨·배경색 전환
+    if market_source == "pbs":
+        form_label = "호주 PBS 시장 제형 (market_form)"
+        strength_label = "호주 PBS 시장 강도 (market_strength)"
+    elif market_source == "tga":
+        form_label = "호주 TGA 등재 제형 (tga_dosage_form)"
+        strength_label = "호주 TGA 등재 강도 (tga_strength)"
+    else:
+        form_label = "호주 시장 제형"
+        strength_label = "호주 시장 강도"
+
     market_rows = [
-        [Paragraph(_rx("호주 PBS 시장 동일 약 정보 (PBS API 출처)"), s_box_title), ""],
+        [Paragraph(_rx(market_section_title), s_box_title), ""],
         [Paragraph(_rx("브랜드명 / 구분"), s_cell_h),
          Paragraph(_rx(f"{market_brand} · {brand_kind}"), s_cell)],
-        [Paragraph(_rx("호주 PBS 시장 제형 (market_form)"), s_cell_h),
+        [Paragraph(_rx(form_label), s_cell_h),
          Paragraph(_rx(market_form), s_cell)],
-        [Paragraph(_rx("호주 PBS 시장 강도 (market_strength)"), s_cell_h),
+        [Paragraph(_rx(strength_label), s_cell_h),
          Paragraph(_rx(market_strength), s_cell)],
     ]
     market_tbl = Table(market_rows, colWidths=[COL1, COL2])
-    market_tbl.setStyle(_box_style(colors.HexColor("#4A5F85")))
+    market_tbl.setStyle(_box_style(colors.HexColor(market_header_bg_hex)))
 
     # 일치/불일치 배지
     def _norm(s: str) -> str:
@@ -250,20 +288,24 @@ def _build_product_info_flowables(
 
     fm = _forms_match(self_form, market_form)
     sm = _strengths_match(self_strength, market_strength)
-    has_market = market_form != "—" or market_strength != "—"
 
-    if not has_market:
-        badge_text = "[정보] 호주 PBS 시장 비교 약 데이터 없음 (PBS API 응답에 form/strength 누락)"
+    if market_source == "none":
+        badge_text = (
+            "[정보] 호주 시장 비교 약 데이터 없음 (PBS 미등재 + TGA strength/"
+            "dosage_form 파싱 실패)"
+        )
         badge_bg = C_INFO
     elif fm and sm:
-        badge_text = "[일치] 제형·강도 일치 — 시장 동일 규격 존재"
+        src_label = "PBS" if market_source == "pbs" else "TGA"
+        badge_text = f"[일치] 제형·강도 일치 — 호주 {src_label} 시장 동일 규격 존재"
         badge_bg = C_OK
     else:
+        src_label = "PBS" if market_source == "pbs" else "TGA"
         diffs: list[str] = []
         if not sm:
-            diffs.append(f"강도 상이: 자사 {self_strength} / 호주시장 {market_strength}")
+            diffs.append(f"강도 상이: 자사 {self_strength} / 호주{src_label} {market_strength}")
         if not fm:
-            diffs.append(f"제형 상이: 자사 {self_form} / 호주시장 {market_form}")
+            diffs.append(f"제형 상이: 자사 {self_form} / 호주{src_label} {market_form}")
         badge_text = "[상이] " + " · ".join(diffs)
         badge_bg = C_WARN
 

@@ -1158,7 +1158,11 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     # ── au_tga_artg (§14-3-3) — TGA 원본 보관 ───────────────
     # Phase 4.3-v3 — 4필드 폐기: schedule / route_of_administration /
     # first_registered_date / sponsor_abn 제거 (Supabase 컬럼도 DROP 완료).
-    # strength/dosage_form 은 자사 제품 메타라 TGA 테이블에 넣을 이유 없음 → 제거.
+    #
+    # Phase 4.3-v3 부분 revert (2026-04-18) — strength/dosage_form 복구.
+    # PBS 미등재 품목(예: Omethyl ESTIMATE_private)은 au_pbs_raw.market_form/
+    # market_strength 가 비어있어 TGA 값이 유일한 호주 시장 비교 데이터가 됨.
+    # TGA 파싱값 우선, 비어있으면 자사 메타(au_products.json) fallback.
     if tga.get("artg_id") or tga.get("artg_number"):
         try:
             artg_row = {
@@ -1167,6 +1171,8 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
                 "product_name": product.get("product_name_ko"),
                 "sponsor_name": tga.get("sponsor_name") or tga.get("tga_sponsor"),
                 "active_ingredients": tga.get("active_ingredients") or [],
+                "strength": tga.get("strength") or product.get("strength"),
+                "dosage_form": tga.get("dosage_form") or product.get("dosage_form"),
                 "status": tga.get("status") or tga.get("artg_status"),
                 "artg_url": tga.get("artg_url") or tga.get("artg_source_url"),
                 "crawled_at": now_kst_iso(),

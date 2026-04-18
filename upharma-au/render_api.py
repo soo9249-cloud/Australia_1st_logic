@@ -1431,6 +1431,24 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
     except Exception as exc:
         print(f"[au_pbs_raw market_* 조회 경고] {exc}", flush=True)
 
+    # Phase 4.3-v3 부분 revert — PBS 미등재 품목 fallback 용 au_tga_artg.strength /
+    # dosage_form 주입. PDF 의 '호주 시장 동일 약 정보' 섹션 2순위 소스.
+    try:
+        tga_resp = (
+            client_sb.table("au_tga_artg")
+            .select("strength,dosage_form")
+            .eq("product_id", product_id)
+            .order("crawled_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        tga_rows = getattr(tga_resp, "data", None) or []
+        if tga_rows:
+            row["tga_strength"] = tga_rows[0].get("strength")
+            row["tga_dosage_form"] = tga_rows[0].get("dosage_form")
+    except Exception as exc:
+        print(f"[au_tga_artg strength/dosage_form 조회 경고] {exc}", flush=True)
+
     # 8) PDF 보고서 생성 (reportlab) — 서버 디스크 reports/ 에 저장
     pdf_name: str | None = None
     try:
@@ -2133,6 +2151,22 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
                 row["market_strength"] = raw_rows[0].get("market_strength")
         except Exception as exc:
             print(f"[P2 au_pbs_raw market_* 조회 경고] {exc}", flush=True)
+        # Phase 4.3-v3 부분 revert — PBS 미등재 품목 fallback 용 au_tga_artg 주입
+        try:
+            tga_resp = (
+                sb_client.table("au_tga_artg")
+                .select("strength,dosage_form")
+                .eq("product_id", product_id)
+                .order("crawled_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            tga_rows = getattr(tga_resp, "data", None) or []
+            if tga_rows:
+                row["tga_strength"] = tga_rows[0].get("strength")
+                row["tga_dosage_form"] = tga_rows[0].get("dosage_form")
+        except Exception as exc:
+            print(f"[P2 au_tga_artg strength/dosage_form 조회 경고] {exc}", flush=True)
         try:
             from report_generator import render_p2_pdf
             from datetime import datetime as _dt

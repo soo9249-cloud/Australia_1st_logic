@@ -37,13 +37,15 @@ def _jina_wrap(https_url: str) -> str:
 
 
 def fetch_tga_detail(artg_id: str) -> dict[str, Any]:
-    """ARTG 상세 페이지 마크다운에서 스폰서·라이선스·성분을 추출한다.
+    """ARTG 상세 페이지 마크다운에서 스폰서·라이선스·성분·제형·강도를 추출한다.
 
     Phase 4.3-v3 유지 필드:
       - tga_sponsor (str|None)              — Sponsor 링크 텍스트
       - tga_licence_category (str|None)     — Licence category
       - tga_licence_status (str|None)       — Licence status
       - active_ingredients (list[str])      — Active Ingredient(s) bullet 목록
+      - strength (str|None)                 — TGA 공식 함량 (부분 revert 로 복구)
+      - dosage_form (str|None)              — TGA 공식 제형 (부분 revert 로 복구)
 
     폐기 (2026-04-18 결정): schedule, route_of_administration,
       first_registered_date, sponsor_abn — 보고서에서 쓰이지 않음.
@@ -55,6 +57,8 @@ def fetch_tga_detail(artg_id: str) -> dict[str, Any]:
         "tga_licence_category": None,
         "tga_licence_status": None,
         "active_ingredients": [],
+        "strength": None,
+        "dosage_form": None,
     }
     aid = (artg_id or "").strip()
     if not aid:
@@ -99,11 +103,29 @@ def fetch_tga_detail(artg_id: str) -> dict[str, Any]:
                 if s:
                     ingredients.append(s)
 
+    # Strength — TGA 상세 페이지의 "Strength" 헤더 다음 한 줄 (복구)
+    strength: str | None = None
+    m_str = re.search(r"\bStrength\s*\n+\s*([^\n]+)", text, flags=re.IGNORECASE)
+    if m_str:
+        strength = m_str.group(1).strip()
+
+    # Dosage form — TGA 상세 페이지의 "Dosage form" / "Dose form" 헤더 다음 한 줄 (복구)
+    dosage_form: str | None = None
+    m_df = re.search(
+        r"\bDos(?:age|e)\s+form\s*\n+\s*([^\n]+)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if m_df:
+        dosage_form = m_df.group(1).strip()
+
     return {
         "tga_sponsor": sponsor,
         "tga_licence_category": cat,
         "tga_licence_status": stat,
         "active_ingredients": ingredients,
+        "strength": strength,
+        "dosage_form": dosage_form,
     }
 
 
@@ -149,6 +171,7 @@ def _empty_dto(canonical_url: str) -> dict[str, Any]:
 
     Phase 4.3-v3 — 4필드(schedule, route_of_administration,
     first_registered_date, sponsor_abn) 전부 삭제.
+    strength / dosage_form 은 부분 revert 로 복구 — PBS 미등재 품목 fallback.
     """
     return {
         # v2 신규 키 (§13-5-2, §14-3-1 JSONB 배열)
@@ -160,6 +183,8 @@ def _empty_dto(canonical_url: str) -> dict[str, Any]:
         "artg_id": None,
         "sponsor_name": None,
         "active_ingredients": [],
+        "strength": None,
+        "dosage_form": None,
         "status": "not_registered",
         "artg_url": canonical_url,
         # 하위호환 키 (au_crawler·determine_export_viable 사용 중)
@@ -251,6 +276,9 @@ def fetch_tga_artg(ingredient: str) -> dict[str, Any]:
         out["tga_licence_category"] = first_detail.get("tga_licence_category")
         out["tga_licence_status"] = first_detail.get("tga_licence_status")
         out["active_ingredients"] = first_detail.get("active_ingredients") or []
+        # Phase 4.3-v3 부분 revert — TGA strength/dosage_form 복구 (PBS 미등재 fallback)
+        out["strength"] = first_detail.get("strength")
+        out["dosage_form"] = first_detail.get("dosage_form")
 
     # au_tga_artg.raw_response 저장용 (2KB 컷)
     out["raw_html_snippet"] = (text[:_RAW_SNIPPET_MAX]) if text else None

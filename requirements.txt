@@ -6,6 +6,7 @@ python-dotenv
 tenacity
 openai
 fastapi
+python-multipart
 uvicorn[standard]
 jinja2
 anthropic

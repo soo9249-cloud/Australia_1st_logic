@@ -528,8 +528,9 @@
 
   map.fitBounds(bounds, { padding: [40, 40] });
 
-  setTimeout(function () { map.invalidateSize(); }, 100);
-  setTimeout(function () { map.invalidateSize(); }, 400);
+  [100, 400, 700, 1200].forEach(function (ms) {
+    setTimeout(function () { map.invalidateSize(); }, ms);
+  });
 })();
 </script>
 

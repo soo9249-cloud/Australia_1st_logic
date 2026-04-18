@@ -1267,15 +1267,20 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   min-height: 0;
   padding: 10px 12px;
 }
-.map-card-wrap {
+/* 호주 지도 카드: 제목 아래 지도가 세로로 남는 칸을 전부 채움 */
+#main .map-card-wrap {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+#main .map-card-wrap .sec {
+  flex-shrink: 0;
 }
 .news-card-panel #news-list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  max-height: 280px;
+  max-height: 300px;
 }
 /* 뉴스 카드: 5건이 한 화면에 들어가도록 타이트 */
 .news-card-panel .irow.news-item {
@@ -1354,12 +1359,13 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 .leaflet-tooltip.au-city-tooltip::before {
   border-top-color: rgba(255, 255, 255, 0.96) !important;
 }
-#main .map-news-grid .sg-leaflet-map {
-  flex: 0 0 auto;
+/* 메인 프리뷰 지도만: 카드 높이에 맞춰 꽉 채움(그리드 열 높이 = 뉴스 패널과 동일) */
+#main .map-news-grid .map-card-wrap .sg-leaflet-map {
+  flex: 1 1 auto;
   width: 100%;
-  height: 220px !important;
-  min-height: 220px;
-  max-height: 220px;
+  min-height: 200px;
+  height: auto !important;
+  max-height: none !important;
   border-radius: 12px;
   overflow: hidden;
 }

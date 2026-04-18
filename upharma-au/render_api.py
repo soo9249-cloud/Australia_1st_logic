@@ -350,6 +350,14 @@ _MOCK_NEWS: list[dict[str, Any]] = [
         "date": "2025-07-10",
         "link": "https://www.kita.net",
     },
+    {
+        "title": "NPS MedicineWise updates consumer medicines information",
+        "title_ko": "[예시] NPS, 일반의약품 정보 개정",
+        "summary_ko": "소비자 대상 의약품 안전·복약 지침이 갱신되었다는 요지의 예시입니다.",
+        "source": "NPS MedicineWise",
+        "date": "2025-07-09",
+        "link": "https://www.nps.org.au",
+    },
 ]
 
 _FX_FALLBACK: dict[str, Any] = {"aud_krw": 893.0, "aud_usd": 0.6412, "updated": ""}

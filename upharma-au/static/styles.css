@@ -133,14 +133,9 @@ body {
   object-fit: cover;
   object-position: center center;
 }
-/* 호주: 유니언잭·남십자가 비대칭이라 center 만 쓰면 원 안 구도가 밋밋함 — 초점·살짝 확대 */
-.flag-round-wrap--au .flag-round--au {
-  inset: auto;
-  left: -6%;
-  top: -6%;
-  width: 112%;
-  height: 112%;
-  object-position: 46% 44%;
+/* 호주: 필드색과 동일 — 서브픽셀/안티앨리어싱으로 원 아래 틈이 보일 때 흰색 대신 파랑 */
+.flag-round-wrap--au {
+  background-color: #00247d;
 }
 
 /* ── 4. 내비게이션 탭 ────────────────────────────────────────────────────── */

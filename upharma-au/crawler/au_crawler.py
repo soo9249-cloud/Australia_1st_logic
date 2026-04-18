@@ -668,6 +668,123 @@ def _load_products() -> list[dict[str, Any]]:
     return list(data.get("products", []))
 
 
+def _load_seeds_index() -> dict[str, dict[str, Any]]:
+    """stage2/fob_reference_seeds.json 을 product_id → seed 맵으로 로드.
+
+    Task 6 (2026-04-19) — auto_classify_case 결과보다 seeds 의 수동 기재가
+    정확도가 높으므로, 기존 8 품목은 seeds 의 pricing_case / similar_inns 를
+    우선 참조. 파일 로드 실패·키 없음 → 빈 dict.
+    """
+    seeds_path = _CRAWLER_DIR.parent / "stage2" / "fob_reference_seeds.json"
+    try:
+        with seeds_path.open(encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for seed in data.get("seeds", []):
+        pid = seed.get("product_id")
+        if pid:
+            out[pid] = seed
+    return out
+
+
+def auto_classify_case(
+    tga_result: dict[str, Any],
+    pbs_result: dict[str, Any],
+    product_input: dict[str, Any],
+) -> str:
+    """Task 6 (2026-04-19) — seeds 없는 신약 대응 pricing_case 자동 판정.
+
+    판정 테이블 (프롬프트 §5-A):
+      - TGA 동일 성분·함량·제형 일치 + PBS 등재        → DIRECT_MATCH (Case A)
+      - TGA 복합제 미등재 but 단일성분 등재 + PBS 복합 미등재 but 단일 등재
+                                                     → COMPONENT_SUM (Case B)
+      - TGA cancelled 또는 PBS 철수 이력               → ESTIMATE_withdrawal (Case C)
+      - TGA·PBS 둘 다 성분 전무 + 유사 ATC 성분 존재   → ESTIMATE_substitute (Case D)
+      - TGA 동일 성분 있으나 제형·함량 다름 + PBS 없음 → ESTIMATE_form_diff (Case E)
+      - TGA 동일 성분 + PBS 없음 + hospital_only / 독점 패턴
+                                                     → ESTIMATE_hospital (Case F)
+
+    반환 문자열은 기존 dispatcher 가 이해하는 값으로 정규화:
+      DIRECT_MATCH / DIRECT → "DIRECT"
+      ESTIMATE_form_diff → "ESTIMATE_private"   (같은 성분 다른 제형 = 기존 Case 5)
+      그 외 → 그대로.
+    기본값 (판정 불능) → "ESTIMATE_substitute" (가장 보수적 — 보고서 신뢰도 낮게).
+    """
+    tga_found = bool(
+        tga_result.get("tga_found")
+        if tga_result.get("tga_found") is not None
+        else (tga_result.get("artg_status") or tga_result.get("status")) == "registered"
+    )
+    pbs_found = bool(
+        pbs_result.get("pbs_found")
+        if pbs_result.get("pbs_found") is not None
+        else pbs_result.get("pbs_listed")
+    )
+    match_type = (tga_result.get("match_type") or "").lower()
+    artg_status = (tga_result.get("artg_status") or tga_result.get("status") or "").lower()
+
+    components = [str(c) for c in (product_input.get("inn_components") or []) if c]
+    is_fdc = len(components) > 1
+    hospital_only = bool(product_input.get("hospital_only_flag")) or bool(
+        product_input.get("skip_chemist")
+    )
+
+    # Case C — TGA cancelled 또는 PBS 철수 이력
+    if artg_status in ("cancelled", "withdrawn") or pbs_result.get("commercial_withdrawal"):
+        return "ESTIMATE_withdrawal"
+
+    # Case A — TGA match_type=='exact' + PBS 등재
+    if tga_found and match_type == "exact" and pbs_found:
+        return "DIRECT"
+
+    # Case B — 복합제 & PBS 복합 미등재 but 각 성분 등재
+    #   (tga.tga_artg_details 가 비었거나 exact 없음) AND components 전부 PBS 단일 등재 시
+    #   실제 검증은 pbs.fetch_pbs_component_sum 단계에서 이뤄짐. 힌트만 제공.
+    if is_fdc and tga_found and not pbs_found:
+        return "COMPONENT_SUM"
+
+    # Case F — 병원 전용 (hospital_only / 독점 패턴)
+    if tga_found and not pbs_found and hospital_only:
+        return "ESTIMATE_hospital"
+
+    # Case E — TGA 성분 있으나 제형·함량 다름 (match_type='same_ingredient_diff_form') + PBS 없음
+    if tga_found and match_type == "same_ingredient_diff_form" and not pbs_found:
+        return "ESTIMATE_private"
+
+    # Case D — TGA·PBS 둘 다 미등재 → 유사계열 proxy 필요
+    if not tga_found and not pbs_found:
+        return "ESTIMATE_substitute"
+
+    # DIRECT 기본 — tga_found AND pbs_found 인데 다른 조건 안 맞는 경우 DIRECT 로.
+    if tga_found and pbs_found:
+        return "DIRECT"
+
+    # 기본: 가장 보수적 라벨
+    return "ESTIMATE_substitute"
+
+
+def resolve_pricing_case(
+    product_id: str | None,
+    tga_result: dict[str, Any],
+    pbs_result: dict[str, Any],
+    input_data: dict[str, Any],
+) -> str:
+    """Task 6 (2026-04-19) — seeds 우선 정책 + 신약 자동 판정.
+
+    기존 품목(product_id 있음)은 seeds.pricing_case 를 우선 (사람이 검토한 값이
+    더 정확). 신약이거나 seeds 에 없으면 auto_classify_case 호출.
+    """
+    if product_id:
+        seeds = _load_seeds_index()
+        seed = seeds.get(product_id) or {}
+        seed_case = seed.get("pricing_case")
+        if seed_case:
+            return str(seed_case)
+    return auto_classify_case(tga_result, pbs_result, input_data)
+
+
 def _load_fob_hardcoded(product_id: str | None) -> dict[str, Any] | None:
     """stage2/fob_reference_seeds.json 에서 product_id 의 fob_hardcoded_aud 블록 반환.
 

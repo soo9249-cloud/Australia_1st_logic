@@ -658,17 +658,54 @@ def fetch_pbs_component_sum(components: list[str]) -> dict[str, Any]:
     """Case 2 COMPONENT_SUM — 복합제 FDC 미등재, 각 단일성분 PBS 등재 → 합산.
 
     전략: 성분별로 fetch_pbs_by_ingredient 호출 → _merge_pbs_rows (au_crawler 쪽).
-    Phase 4.6 에서 PBS 미등재 성분에 대한 Chemist Warehouse 폴백이 추가됨.
+
+    Phase 4.6 — PBS 미등재 성분(예: Rosumeg/Atmeg 의 omega-3-acid ethyl esters)은
+    Chemist Warehouse 소매가를 폴백으로 조회하고 AEMP 역산(소매가 ÷ 1.6 근사)한
+    가짜 행을 추가해 merge. 결과에 missing_from_pbs + confidence_override 기록.
+
+    ※ AEMP 역산 배수 1.6 은 임시값 — 실측 근거 확보 시 utils/enums.py 상수화 예정.
     """
     acc: list[dict[str, Any]] = []
+    missing_from_pbs: list[str] = []
     for c in components:
         if not c:
             continue
         rows = fetch_pbs_by_ingredient(c)
-        # 유효한 PBS 등재 행만 누적 (_empty_dto 는 pbs_found=False)
         valid = [r for r in rows if r.get("pbs_found")]
         if valid:
             acc.extend(valid)
+        else:
+            missing_from_pbs.append(c)
+
+    # PBS 없는 성분 → Chemist 소매가 역산으로 보강 (Phase 4.6)
+    if missing_from_pbs:
+        try:
+            from sources.chemist import fetch_chemist_price
+        except ImportError:
+            from .chemist import fetch_chemist_price  # type: ignore
+        for c in missing_from_pbs:
+            try:
+                ch = fetch_chemist_price(c)
+            except Exception:
+                ch = None
+            if not ch:
+                continue
+            # price_aud(v2) 우선, retail_price_aud(하위호환) 보조
+            raw = ch.get("price_aud") if ch.get("price_aud") is not None else ch.get("retail_price_aud")
+            price = _safe_decimal(raw)
+            if price is None or price <= 0:
+                continue
+            aemp_est = (price / Decimal("1.6")).quantize(Decimal("0.01"))
+            acc.append({
+                "pbs_found": False,            # 실제 PBS 등재 아님 — 추정값
+                "drug_name": c,
+                "aemp_aud": aemp_est,
+                "dpmq_aud": price,              # 소매가를 DPMQ 위치로 투영 (합산시 참고용)
+                "_source": "chemist_fallback",
+                "_confidence": 0.5,
+                "pbs_code": None,
+                "sponsors": [],
+            })
 
     if not acc:
         return _empty_dto()
@@ -678,6 +715,8 @@ def fetch_pbs_component_sum(components: list[str]) -> dict[str, Any]:
     merged = au._merge_pbs_rows(acc)
     merged["pricing_case_applied"] = "COMPONENT_SUM"
     merged["_component_rows"] = acc  # 감사 로그용
+    merged["missing_from_pbs"] = missing_from_pbs
+    merged["confidence_override"] = 0.6 if missing_from_pbs else 0.85
     return merged
 
 

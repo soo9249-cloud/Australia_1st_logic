@@ -226,6 +226,12 @@ def get_disclaimer_text(logic: str) -> str:
     )
     if logic == "B":
         return base + " Logic B(Private)는 소매가에서 역산한 값으로 유통사·체인별 편차 ±15% 가능."
+    if logic == "hardcoded":
+        return (
+            "병원 tender 수기 FOB 확정값 (ESTIMATE_hospital). "
+            "TradeMap 역산 + AU 프리미엄 + 물류 반영한 오리지널/제네릭 시나리오 직접 입력치. "
+            "실제 계약가는 HealthShare NSW 등 state tender 입찰 과정에서 ±20% 변동 가능."
+        )
     if logic == "blocked":
         return "해당 품목은 규제 사유로 표준 FOB 역산이 불가합니다. 별도 진입 시나리오 필요."
     return base
@@ -394,6 +400,51 @@ def dispatch_by_pricing_case(
             "disclaimer": get_disclaimer_text("A"),
             "blocked_reason": None,
         }
+
+    # --- ESTIMATE_hospital: seed.fob_hardcoded_aud 우선 (병원 tender 수기 확정가) ---
+    # 위임지서 Phase 3 — Gadvoa 는 TradeMap NZ 역산 확정값($16.49/병) 하드코딩.
+    # 수기 fob_hardcoded_aud 가 있으면 Logic B 역산을 건너뛰고 직접 FOB 시나리오 반환.
+    if case == "ESTIMATE_hospital":
+        hardcoded = seed.get("fob_hardcoded_aud")
+        if isinstance(hardcoded, dict):
+            scenarios_out: dict[str, dict[str, float]] = {}
+            presets = presets_pct or DEFAULT_PRESETS_PCT
+            for key, pct in presets.items():
+                fob_v = hardcoded.get(key)
+                if not isinstance(fob_v, (int, float)) or float(fob_v) <= 0:
+                    continue
+                fob_aud = float(fob_v)
+                scenarios_out[key] = {
+                    "fob_aud": round(fob_aud, 4),
+                    "fob_krw": round(fob_aud * fx_aud_to_krw, 2),
+                    "importer_margin_pct": float(pct),
+                    "fx_aud_to_krw": float(fx_aud_to_krw),
+                    "source": "hardcoded_hospital_tender",
+                }
+            if scenarios_out:
+                bayer_ref = hardcoded.get("bayer_reference_aud")
+                bayer_src = hardcoded.get("bayer_reference_source")
+                if bayer_ref:
+                    warnings.append(
+                        f"Bayer 오리지널 호주 FOB(원가) 참조값 ${float(bayer_ref):.2f}/병 — "
+                        "제네릭 시나리오는 Penetration(저가진입) 40% off / "
+                        "Reference(기준가) 25% off / Premium(프리미엄) 15% off 기준."
+                    )
+                if bayer_src:
+                    warnings.append(f"참조값 출처: {bayer_src}")
+                return {
+                    "logic": "hardcoded",
+                    "scenarios": scenarios_out,
+                    "inputs": {
+                        "product_id": pid,
+                        "pricing_case": case,
+                        "bayer_reference_aud": bayer_ref,
+                        "fx_aud_to_krw": fx_aud_to_krw,
+                    },
+                    "warnings": warnings,
+                    "disclaimer": get_disclaimer_text("hardcoded"),
+                    "blocked_reason": None,
+                }
 
     # --- ESTIMATE_private / ESTIMATE_hospital: Logic B ---
     if case in ("ESTIMATE_private", "ESTIMATE_hospital"):

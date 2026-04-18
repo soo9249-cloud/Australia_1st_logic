@@ -537,6 +537,16 @@ def build_product_summary(
     # Phase 4.4 — case_code 는 이제 의도적으로 기록 (결정 3 정책 반전).
     # 기존 "pop" 방어 삭제 — pricing_case 값이 DB 에 전달되어야 분석 레이어에서 JOIN 없이 사용 가능.
 
+    # Phase 4.8 — _extract_pbs_derived 로 null 필드 복원.
+    # multi/withdrawal 경로 merged DTO 는 대표 1건만 유지하므로 program_code/formulary
+    # 등이 None 일 수 있음 → raw_response.items/dispensing_rule 에서 직접 뽑아 채움.
+    raw_resp = pbs.get("raw_response") or {}
+    if isinstance(raw_resp, dict) and raw_resp.get("items"):
+        derived = _extract_pbs_derived(raw_resp.get("items"), raw_resp.get("dispensing_rule"))
+        for k, v in derived.items():
+            if v is not None and out.get(k) is None:
+                out[k] = v
+
     # 위임지서 §4.4 — dispatcher 가 붙여준 추정 메타를 warnings/situation_summary 에 전파
     case_applied = pbs.get("pricing_case_applied")
     if case_applied and case_applied not in ("DIRECT", "DIRECT_FDC", "COMPONENT_SUM"):
@@ -712,7 +722,72 @@ def _merge_pbs_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if restrs:
         merged["restriction_text"] = " | ".join(str(x) for x in restrs)
 
+    # Phase 4.8 — 원본 rows 보존 (au_pbs_raw 복수행 INSERT 용). endpoint_items NOT NULL
+    # 위반 방지: 대표 1건의 items/dispensing_rule 를 merged.raw_response 에도 복구.
+    merged["_raw_rows"] = list(rows)
+    for r in rows:
+        rr = r.get("raw_response") or {}
+        if isinstance(rr, dict) and rr.get("items"):
+            merged["raw_response"] = {
+                "items": rr.get("items"),
+                "dispensing_rule": rr.get("dispensing_rule") or {},
+            }
+            break
+
     return merged
+
+
+def _extract_pbs_derived(
+    row_items: dict[str, Any] | None,
+    row_disp: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """endpoint_items + endpoint_dispensing_rules 에서 au_products 파생필드 추출.
+
+    Phase 4.8 — multi/withdrawal 경로(`_merge_pbs_rows`)에서 DTO 는 합산되지만
+    program_code/formulary/pack_size 등 개별 필드는 대표 1건이 필요. DIRECT 경로와
+    동일한 추출 로직을 공용 함수화해 summary 에서 호출.
+
+    row_items   : PBS /items 원본 dict
+    row_disp    : PBS /item-dispensing-rule-relationships 원본 dict
+
+    반환은 au_products 컬럼명 기준 dict (미검출 필드는 None).
+    """
+    items = row_items or {}
+    disp = row_disp or {}
+
+    def _yn(v: Any) -> bool | None:
+        if v is None:
+            return None
+        return str(v).strip().upper() == "Y"
+
+    # s85/s100 파생 — dispensing_rule_mnem 이 's90...' 으로 시작하면 s85 (Section 85)
+    mnem = (disp.get("dispensing_rule_mnem") or "").lower()
+    section = "S85" if mnem.startswith("s90") else None
+
+    return {
+        "program_code": items.get("program_code"),
+        "formulary": items.get("formulary"),
+        "pack_size": items.get("pack_size"),
+        "pricing_quantity": items.get("pricing_quantity"),
+        "maximum_prescribable_pack": items.get("maximum_prescribable_pack"),
+        "first_listed_date": items.get("first_listed_date"),
+        # schedule_code 는 PBS 버전번호("3963")라 TGA 와 충돌. au_products 에는
+        # TGA 값이 들어가야 하므로 여기선 반환하지 않음 (build_product_summary 가
+        # TGA 경로에서 별도 주입).
+        "mn_pharmacy_price_aud": _to_decimal(disp.get("mn_pharmacy_price")),
+        "brand_premium_aud": _to_decimal(disp.get("brand_premium")),
+        "therapeutic_group_premium_aud": _to_decimal(disp.get("therapeutic_group_premium")),
+        "special_patient_contrib_aud": _to_decimal(disp.get("special_patient_contribution")),
+        "wholesale_markup_band": disp.get("mn_price_wholesale_markup"),
+        "pharmacy_markup_code": disp.get("mn_pharmacy_markup_code"),
+        "dispensing_fee_aud": _to_decimal(disp.get("fee_dispensing")),
+        "ahi_fee_aud": _to_decimal(disp.get("fee_extra")),
+        "section_85_100": section,
+        "therapeutic_group_id": items.get("therapeutic_group_id"),
+        "brand_substitution_group_id": items.get("brand_substitution_group_id"),
+        "policy_imdq60": _yn(items.get("policy_applied_imdq60_flag")),
+        "policy_biosim": _yn(items.get("policy_applied_bio_sim_up_flag")),
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -1004,23 +1079,39 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     ok = upsert_product(summary)
 
     # ── au_pbs_raw (§14-3-2) — PBS 원본 보관 ────────────────
+    # Phase 4.8 — multi/withdrawal 경로는 `_raw_rows` 에 성분별 DTO 가 있음.
+    # 각 성분별로 1행씩 insert. endpoint_items 가 비어있으면 skip (NOT NULL 위반 방지).
     if pbs.get("pbs_found") or pbs.get("pbs_listed"):
-        try:
-            raw_resp = pbs.get("raw_response") or {}
-            snapshot = {
-                "product_id": product_filter,  # FK 변환은 DB 레벨에서 (TEXT vs BIGINT 주의)
-                "pbs_code": pbs.get("pbs_code") or pbs.get("pbs_item_code"),
-                "schedule_code": pbs.get("schedule_code"),
-                "effective_date": pbs.get("first_listed_date"),
-                "endpoint_items": raw_resp.get("items") if isinstance(raw_resp, dict) else None,
-                "endpoint_dispensing_rules": raw_resp.get("dispensing_rule") if isinstance(raw_resp, dict) else None,
-                # TODO(v2-pbs-full): /fees, /markup-bands, /copayments, /atc 엔드포인트 raw 보관
-                "api_fetched_at": now_kst_iso(),
-                "crawled_at": now_kst_iso(),
-            }
-            upsert_pbs_raw(snapshot)
-        except Exception as exc:
-            print(f"[au_pbs_raw upsert 경고] {exc}", flush=True)
+        raw_row_list: list[dict[str, Any]] = []
+        candidate_rows = pbs.get("_raw_rows") if isinstance(pbs.get("_raw_rows"), list) else None
+        if candidate_rows:
+            raw_row_list = candidate_rows
+        else:
+            raw_row_list = [pbs]
+
+        for r in raw_row_list:
+            try:
+                r_raw = r.get("raw_response") or {}
+                endpoint_items = r_raw.get("items") if isinstance(r_raw, dict) else None
+                endpoint_disp = r_raw.get("dispensing_rule") if isinstance(r_raw, dict) else None
+                # Phase 4.8 — endpoint_items 가 없으면 insert 스킵 (NOT NULL 위반 방지).
+                # Chemist fallback 성분행처럼 items 가 비어있는 경우 감당.
+                if not endpoint_items:
+                    continue
+                snapshot = {
+                    "product_id": product_filter,
+                    "pbs_code": r.get("pbs_code") or r.get("pbs_item_code"),
+                    "schedule_code": r.get("schedule_code"),
+                    "effective_date": r.get("first_listed_date"),
+                    "endpoint_items": endpoint_items,
+                    "endpoint_dispensing_rules": endpoint_disp or {},
+                    # TODO(v2-pbs-full): /fees, /markup-bands, /copayments, /atc raw 보관
+                    "api_fetched_at": now_kst_iso(),
+                    "crawled_at": now_kst_iso(),
+                }
+                upsert_pbs_raw(snapshot)
+            except Exception as exc:
+                print(f"[au_pbs_raw upsert 경고] {exc}", flush=True)
 
     # ── au_tga_artg (§14-3-3) — TGA 원본 보관 ───────────────
     if tga.get("artg_id") or tga.get("artg_number"):

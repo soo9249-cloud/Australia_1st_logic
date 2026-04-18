@@ -88,36 +88,108 @@ def fetch_tga_detail(artg_id: str) -> dict[str, Any]:
     if m:
         stat = m.group(1).strip()
 
-    # Active ingredients — "Active Ingredient(s)" 헤더 다음 bullet 목록
+    # Active ingredients — 실측 Jina Reader 포맷 (2026-04-19 Hydrine 로그 확인):
+    #   "Ingredients\n\nhydroxycarbamide\n\nLicence category"
+    # bullet 아님. 헤더 한 줄 + 빈줄 + 평문 값. 쉼표·개행 모두 split 허용.
+    # 구 포맷(Active Ingredients + bullet) 도 보조로 수용.
+    _STOP_HEADERS = (
+        "Licence", "Sponsor", "Therapeutic", "Summary", "Strength",
+        "Dosage", "Dose", "Download", "Related", "Route",
+    )
+    _stop_re = r"(?:" + "|".join(_STOP_HEADERS) + r")"
+
     ingredients: list[str] = []
+
+    # 1차: "Ingredients" 또는 "Active Ingredient(s)" 헤더 → 빈줄 → 값 블록 → 빈줄+stop-header
     m_ing = re.search(
-        r"Active\s+Ingredient[^\n]*\n+\s*((?:\*\s+[^\n]+\n?)+)",
+        r"(?:^|\n)\s*(?:Active\s+)?Ingredient(?:s|\(s\))?\s*\n\s*\n\s*"
+        r"(.+?)"
+        r"(?=\n\s*\n\s*" + _stop_re + r"|\n\s*##\s|\Z)",
         text,
-        flags=re.IGNORECASE,
+        flags=re.IGNORECASE | re.DOTALL,
     )
     if m_ing:
-        for line in m_ing.group(1).splitlines():
-            s = line.strip()
-            if s.startswith("*"):
-                s = s.lstrip("*").strip()
-                if s:
-                    ingredients.append(s)
+        block = m_ing.group(1)
+        for raw_line in block.splitlines():
+            s = raw_line.strip().lstrip("*-+•").strip()
+            if not s:
+                continue
+            # 쉼표로 복수 성분 (복합제 대응)
+            for piece in s.split(","):
+                piece = piece.strip()
+                if piece and piece not in ingredients:
+                    ingredients.append(piece)
 
-    # Strength — TGA 상세 페이지의 "Strength" 헤더 다음 한 줄 (복구)
+    # 2차 fallback: "Ingredients: value" 또는 "Ingredients | value" (테이블 행) 한 줄
+    if not ingredients:
+        m_ing2 = re.search(
+            r"(?:^|\n)\s*(?:Active\s+)?Ingredient(?:s|\(s\))?\s*[:\|]\s*([^\n\|]+)",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if m_ing2:
+            for piece in m_ing2.group(1).split(","):
+                piece = piece.strip()
+                if piece and piece not in ingredients:
+                    ingredients.append(piece)
+
+    # Strength / Dosage form —
+    # 2026-04-19 실측: ARTG 상세 페이지에 "Strength" / "Dosage form" 필드 없음.
+    # 대신 Title 라인 / H1 에 "... 500 mg capsule blister (ARTG_ID)" 형태로 포함.
+    #   예) "# HYDROXYCARBAMIDE MEDICIANZ hydroxycarbamide (hydroxyurea) 500 mg capsule blister (313760)"
     strength: str | None = None
-    m_str = re.search(r"\bStrength\s*\n+\s*([^\n]+)", text, flags=re.IGNORECASE)
+    dosage_form: str | None = None
+
+    # 1차: 옛 "Strength\n\n값" 포맷 (다른 페이지·버전 호환)
+    m_str = re.search(r"(?:^|\n)\s*Strength\s*\n+\s*([^\n]+)", text, flags=re.IGNORECASE)
     if m_str:
         strength = m_str.group(1).strip()
 
-    # Dosage form — TGA 상세 페이지의 "Dosage form" / "Dose form" 헤더 다음 한 줄 (복구)
-    dosage_form: str | None = None
     m_df = re.search(
-        r"\bDos(?:age|e)\s+form\s*\n+\s*([^\n]+)",
+        r"(?:^|\n)\s*Dos(?:age|e)\s+form\s*\n+\s*([^\n]+)",
         text,
         flags=re.IGNORECASE,
     )
     if m_df:
         dosage_form = m_df.group(1).strip()
+
+    # 2차: Title / H1 에서 추출 — ARTG 상세 기본 포맷
+    if strength is None or dosage_form is None:
+        title_line: str | None = None
+        m_t = re.search(r"(?:^|\n)Title:\s*(.+)", text)
+        if m_t:
+            title_line = m_t.group(1).strip()
+        else:
+            m_h = re.search(r"(?:^|\n)#\s+(.+)", text)
+            if m_h:
+                title_line = m_h.group(1).strip()
+                # H1 "Title | Therapeutic Goods Administration (TGA)" 제거
+                title_line = re.split(r"\s+\|\s+Therapeutic\s+Goods", title_line)[0].strip()
+        if title_line:
+            # strength = 숫자+단위 패턴 (슬래시 구분자 흡수)
+            m_s = re.search(
+                r"(\d[\d.,]*\s*(?:mg|mcg|µg|g|ml|mL|kg|iu|IU|units?|%)"
+                r"(?:\s*/\s*[\d.]*\s*(?:mg|mcg|µg|g|ml|mL|kg|iu|IU|units?|%)?)?)",
+                title_line,
+            )
+            if m_s and strength is None:
+                strength = m_s.group(1).strip()
+                # dosage_form = strength 뒤의 소문자 단어들 (ARTG ID 괄호 / 파이프 직전까지)
+                tail = title_line[m_s.end():]
+                m_df2 = re.match(
+                    r"\s+([A-Za-z][A-Za-z\s\-,]*?)(?=\s*\(\s*\d+\s*\)|\s+\|\s+|$)",
+                    tail,
+                )
+                if m_df2 and dosage_form is None:
+                    df = m_df2.group(1).strip().rstrip(",").strip()
+                    # 용기 단어 (blister/bottle/ampoule/...) 제거 — 제형 본체만 유지
+                    df_clean = re.sub(
+                        r"\s+(blister|bottle|pack|ampoule|vial|sachet|tube|carton|pouch)\s*$",
+                        "",
+                        df,
+                        flags=re.IGNORECASE,
+                    ).strip()
+                    dosage_form = df_clean or df
 
     return {
         "tga_sponsor": sponsor,

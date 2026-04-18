@@ -66,6 +66,44 @@ def _pbs_public_url(pbs_code: str | None) -> str:
     return "https://www.pbs.gov.au/browse/medicine"
 
 
+def _split_li_form(raw: Any) -> tuple[str | None, str | None]:
+    """PBS API `li_form` 합쳐진 문자열을 (form, strength) 튜플로 분리.
+
+    실측 예시 (Hydrine 재크롤링 로그):
+      "Capsule 500 mg"            → ("Capsule", "500 mg")
+      "Tablet 10 mg"              → ("Tablet", "10 mg")
+      "Injection 10 mg/mL"        → ("Injection", "10 mg/mL")
+      "Solution for infusion 1 g/100 mL" → ("Solution for infusion", "1 g/100 mL")
+      "Powder for injection"      → ("Powder for injection", None)   # strength 없음
+      ""                          → (None, None)
+
+    분리 규칙: 끝에서부터 "<숫자><단위(mg|mcg|g|mL|IU|%|units 등)>" 를 찾고,
+    그 앞까지를 form, 뒤에서부터를 strength 로 자름. 숫자+단위 패턴을 못 찾으면
+    전체를 form 으로 반환 (strength=None).
+    """
+    if raw is None:
+        return None, None
+    s = str(raw).strip()
+    if not s:
+        return None, None
+    # strength = 첫 "<숫자>...단위..." 부터 문자열 끝까지.
+    # 단위 뒤의 슬래시·백분율·용기 문구 (/100 mL, /mL) 도 흡수.
+    m = re.search(
+        r"(\d[\d.,]*\s*(?:mg|mcg|µg|g|ml|mL|kg|iu|IU|units?|%)"
+        r"(?:\s*/\s*[\d.]*\s*(?:mg|mcg|µg|g|ml|mL|kg|iu|IU|units?|%)?)?.*)$",
+        s,
+    )
+    if not m:
+        # strength 패턴 없음 → form 만
+        return s, None
+    strength = m.group(1).strip()
+    form = s[: m.start()].strip()
+    if not form:
+        # "500 mg" 같이 strength 만 들어있는 비정상 케이스 — 역할 반전 방지
+        return None, strength
+    return form, strength
+
+
 def _safe_decimal(v: Any) -> Decimal | None:
     """Any → Decimal | None. float/int/str 모두 허용. 파싱 실패 시 None.
 
@@ -247,9 +285,18 @@ def _row_to_dto(
     dto["number_of_repeats"] = item_row.get("number_of_repeats")
     dto["pack_not_to_be_broken"] = item_row.get("pack_not_to_be_broken_ind")
 
-    # Phase 4.3-v3 — 호주 PBS 시장 제형·강도 (시장조사 비교용)
-    dto["market_form"] = item_row.get("form")
-    dto["market_strength"] = item_row.get("strength")
+    # Phase 4.3-v3 — 호주 PBS 시장 제형·강도 (시장조사 비교용).
+    # 추가 버그 수정 (Jisoo 2026-04-19) — PBS API 실제 키는 `li_form` 으로 합쳐진
+    # 문자열 ("Capsule 500 mg"). 분리 필요. 독립 키 form/strength 는 fallback 유지.
+    li_form_raw = item_row.get("li_form")
+    if li_form_raw:
+        _mf, _ms = _split_li_form(li_form_raw)
+        dto["market_form"] = _mf
+        dto["market_strength"] = _ms
+    else:
+        # 일부 응답에 독립 키로 올 수도 있어 예비 경로 유지.
+        dto["market_form"] = item_row.get("form")
+        dto["market_strength"] = item_row.get("strength")
 
     # ── 프로그램 분류 ───────────────────────────────────────────
     program_code = item_row.get("program_code")

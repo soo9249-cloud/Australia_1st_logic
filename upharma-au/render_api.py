@@ -49,6 +49,14 @@ from db.supabase_insert import TABLE_NAME, get_supabase_client  # type: ignore
 logger = logging.getLogger("render_api")
 
 
+def _normalize_au_product_row(row: dict[str, Any]) -> None:
+    """au_products 행은 DB 컬럼명이 product_code(품목 코드)임.
+    API·프론트는 기존 계약대로 product_id 키를 기대하므로 별칭을 채운다."""
+    pc = row.get("product_code")
+    if pc is not None:
+        row["product_id"] = pc
+
+
 # ─────────────────────────────────────────────────────────────────────
 # 선택적 외부 라이브러리 가용성 프로브 (dep 하나 빠져도 서버 기동은 성공)
 # - anthropic, openai, yfinance, reportlab: 누락 시 해당 엔드포인트만 503
@@ -182,7 +190,7 @@ def get_product(product_id: str) -> JSONResponse:
         resp = (
             client.table(TABLE_NAME)
             .select("*")
-            .eq("product_id", product_id)
+            .eq("product_code", product_id)
             .limit(1)
             .execute()
         )
@@ -192,7 +200,10 @@ def get_product(product_id: str) -> JSONResponse:
 
     if not rows:
         raise HTTPException(status_code=404, detail=f"not found: {product_id}")
-    return JSONResponse(content=rows[0])
+    row_one = rows[0]
+    if isinstance(row_one, dict):
+        _normalize_au_product_row(row_one)
+    return JSONResponse(content=row_one)
 
 
 @app.get("/api/data")
@@ -209,6 +220,9 @@ def list_products() -> JSONResponse:
         rows = resp.data or []
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"supabase error: {exc}")
+    for r in rows:
+        if isinstance(r, dict):
+            _normalize_au_product_row(r)
     return JSONResponse(content={"items": rows, "count": len(rows)})
 
 
@@ -1496,7 +1510,7 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
         resp = (
             client_sb.table(TABLE_NAME)
             .select("*")
-            .eq("product_id", product_id)
+            .eq("product_code", product_id)
             .limit(1)
             .execute()
         )
@@ -1506,6 +1520,8 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
     if not rows:
         raise HTTPException(status_code=404, detail=f"not found: {product_id}")
     row = rows[0]
+    if isinstance(row, dict):
+        _normalize_au_product_row(row)
 
     # 2) Claude Haiku 4.5 호출 — 크롤링 row 해석 → 10개 블록 생성
     blocks = _claude_generate_blocks(row, anthropic_key)
@@ -1529,7 +1545,7 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
     }
     try:
         client_sb.table(TABLE_NAME).update(update_data).eq(
-            "product_id", product_id
+            "product_code", product_id
         ).execute()
     except Exception as exc:
         raise HTTPException(
@@ -2082,11 +2098,13 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
             _p2_state["step"] = "extract"
             _p2_state["step_label"] = "① Supabase 품목 데이터 조회 중…"
         client_sb = get_supabase_client()
-        resp = client_sb.table(TABLE_NAME).select("*").eq("product_id", product_id).limit(1).execute()
+        resp = client_sb.table(TABLE_NAME).select("*").eq("product_code", product_id).limit(1).execute()
         rows = getattr(resp, "data", None)
         if not rows:
             raise ValueError(f"Supabase 조회 실패: product_id={product_id!r} 미존재")
         row = rows[0]
+        if isinstance(row, dict):
+            _normalize_au_product_row(row)
 
         # ── Step 2: seed 매칭 ──
         with _p2_lock:

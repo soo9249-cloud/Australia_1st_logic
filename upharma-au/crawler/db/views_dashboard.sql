@@ -1,10 +1,19 @@
--- Supabase SQL 에디터에서 한 번 실행: Table Editor 에서 테이블 대신 VIEW 이름으로 열면
--- 크롤/생성 시각 컬럼이 맨 앞에 보입니다. (원본 테이블·크롤러 코드는 변경 없음)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 단일 소스: 이 파일 전체가 Supabase 대시보드용 VIEW 정의이다. (다른 곳에서 따로 조립할 필요 없음)
+-- ═══════════════════════════════════════════════════════════════════════════
 --
--- 실행: Dashboard → SQL → 아래 전체 붙여넣기 → Run
+-- Supabase Table Editor 에서 테이블 대신 VIEW 이름으로 열면 크롤/생성 시각 컬럼이 앞에 보임.
+--
+-- 실행: Dashboard → SQL → 이 파일 내용 전체 복사 → Run (한 번)
+--
+-- Phase 4.3-v3: au_products 컬럼 변경 시 뷰 열 순서가 바뀌므로 CREATE OR REPLACE 만 쓰면 42P16 가능.
+--               아래에서 DROP VIEW 후 CREATE VIEW 로 처리함 (australia_table.sql 컬럼과 정합).
+
+DROP VIEW IF EXISTS public.v_au_crawl_log CASCADE;
+DROP VIEW IF EXISTS public.v_au_products CASCADE;
 
 -- ── au_crawl_log: started_at / finished_at / created_at 을 앞으로 ─────────────
-CREATE OR REPLACE VIEW public.v_au_crawl_log AS
+CREATE VIEW public.v_au_crawl_log AS
 SELECT
   started_at,
   finished_at,
@@ -26,7 +35,7 @@ COMMENT ON VIEW public.v_au_crawl_log IS
   '대시보드용: 실행 시각 컬럼 우선. 원본은 public.au_crawl_log';
 
 -- ── au_products: last_crawled_at / created_at / updated_at 을 앞으로 ─────────
-CREATE OR REPLACE VIEW public.v_au_products AS
+CREATE VIEW public.v_au_products AS
 SELECT
   last_crawled_at,
   created_at,
@@ -84,6 +93,8 @@ SELECT
   retail_estimation_method,
   chemist_price_aud,
   chemist_url,
+  healthylife_price_aud,
+  healthylife_url,
   originator_brand_name,
   originator_sponsor,
   top_generics,
@@ -95,6 +106,8 @@ SELECT
   similar_drug_used,
   hospital_only_flag,
   ai_deep_research_raw,
+  availability_status,
+  match_type,
   schedule_code,
   crawler_source_urls,
   error_type,

@@ -53,8 +53,8 @@ CREATE TABLE IF NOT EXISTS au_products (
   inn_normalized                TEXT,
   strength                      TEXT,
   dosage_form                   TEXT,
-  -- Case 분기 (내부 전용, UI 노출 금지)
-  case_code                     SMALLINT,
+  -- Case 분기 (내부 전용, UI 노출 금지) — Supabase 마이그레이션과 동일하게 TEXT
+  case_code                     TEXT,
   case_risk_text_ko             TEXT,
   -- TGA 블록 (최신 스냅샷 — 원본은 au_tga_artg)
   tga_found                     BOOLEAN DEFAULT false,
@@ -104,6 +104,8 @@ CREATE TABLE IF NOT EXISTS au_products (
   retail_estimation_method      TEXT,
   chemist_price_aud             DECIMAL(12,2),
   chemist_url                   TEXT,
+  healthylife_price_aud         DECIMAL(10,2),
+  healthylife_url               TEXT,
   -- 경쟁 현황 (보고서 ① · 카드용)
   originator_brand_name         TEXT,
   originator_sponsor            TEXT,
@@ -117,6 +119,8 @@ CREATE TABLE IF NOT EXISTS au_products (
   similar_drug_used             JSONB   NOT NULL DEFAULT '[]'::jsonb,
   hospital_only_flag            BOOLEAN DEFAULT false,
   ai_deep_research_raw          TEXT,
+  availability_status           TEXT,
+  match_type                    TEXT,
   -- 메타
   schedule_code                 TEXT,
   last_crawled_at               TIMESTAMPTZ,
@@ -132,6 +136,17 @@ CREATE INDEX IF NOT EXISTS idx_au_products_inn_normalized   ON au_products(inn_n
 CREATE INDEX IF NOT EXISTS idx_au_products_case_code        ON au_products(case_code);
 CREATE INDEX IF NOT EXISTS idx_au_products_last_crawled_at  ON au_products(last_crawled_at DESC);
 
+-- Supabase SQL 에디터 마이그레이션과 동일: 기존 DB 에 컬럼만 추가되는 경우
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS availability_status TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS match_type TEXT;
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS healthylife_price_aud DECIMAL(10,2);
+ALTER TABLE au_products ADD COLUMN IF NOT EXISTS healthylife_url TEXT;
+
+-- Phase 4.3-v3 — 레거시 컬럼 제거 (에디터 스크립트와 동일)
+-- 참고: case_code SMALLINT→TEXT 는 v_au_products 가 case_code 를 참조하므로
+--   먼저 DROP VIEW … 후 ALTER (Supabase SQL 에디터 일괄 스크립트와 동일 순서).
+ALTER TABLE au_products DROP COLUMN IF EXISTS tga_schedule;
+
 DROP TRIGGER IF EXISTS trg_au_products_updated_at ON au_products;
 CREATE TRIGGER trg_au_products_updated_at
   BEFORE UPDATE ON au_products
@@ -141,7 +156,8 @@ CREATE TRIGGER trg_au_products_updated_at
 COMMENT ON COLUMN au_products.product_code               IS '8 품목 내부 코드 (예: "hydrine_500")';
 COMMENT ON COLUMN au_products.product_name_ko            IS '한국 품목명';
 COMMENT ON COLUMN au_products.inn_normalized             IS '정규화된 성분명 (PubChem 기반)';
-COMMENT ON COLUMN au_products.case_code                  IS 'Case 1~6 (내부 전용, UI 노출 금지)';
+COMMENT ON COLUMN au_products.case_code                  IS
+  '크롤링 분기 Case 코드 (문자열): DIRECT | COMPONENT_SUM | ESTIMATE_withdrawal | ESTIMATE_substitute | ESTIMATE_private | ESTIMATE_hospital';
 COMMENT ON COLUMN au_products.tga_found                  IS 'TGA 등재 여부';
 COMMENT ON COLUMN au_products.tga_artg_ids               IS '매칭된 ARTG ID 배열 (1:N)';
 COMMENT ON COLUMN au_products.pbs_found                  IS 'PBS 등재 여부';
@@ -182,8 +198,13 @@ CREATE TABLE IF NOT EXISTS au_pbs_raw (
   endpoint_restrictions        JSONB NOT NULL DEFAULT '{}'::jsonb,
   api_fetched_at               TIMESTAMPTZ,
   crawled_at                   TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_at                   TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at                   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  market_form                  TEXT,
+  market_strength              TEXT
 );
+
+ALTER TABLE au_pbs_raw ADD COLUMN IF NOT EXISTS market_form TEXT;
+ALTER TABLE au_pbs_raw ADD COLUMN IF NOT EXISTS market_strength TEXT;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_au_pbs_raw_code_schedule
   ON au_pbs_raw(pbs_code, schedule_code);
@@ -198,6 +219,8 @@ COMMENT ON COLUMN au_pbs_raw.effective_date IS 'PBS 스케줄 유효 시작일';
 -- 3) au_tga_artg — TGA 등재 원본 (1:N)
 -- ════════════════════════════════════════════════════════════════════════
 -- 용도: TGA ARTG 크롤 결과. 한 품목당 여러 ARTG 매칭 가능 (함량별·제형별 분리).
+-- Phase 4.3-v3 (2026-04-18): schedule / route_of_administration / first_registered_date /
+--   sponsor_abn 컬럼은 보고서에서 미사용으로 Supabase 에서 DROP (에디터 마이그레이션과 정합).
 
 CREATE TABLE IF NOT EXISTS au_tga_artg (
   id                       BIGSERIAL PRIMARY KEY,
@@ -205,19 +228,25 @@ CREATE TABLE IF NOT EXISTS au_tga_artg (
   artg_id                  TEXT NOT NULL UNIQUE,
   product_name             TEXT,
   sponsor_name             TEXT,
-  sponsor_abn              TEXT,
   active_ingredients       JSONB NOT NULL DEFAULT '[]'::jsonb,
   strength                 TEXT,
   dosage_form              TEXT,
-  route_of_administration  TEXT,
-  schedule                 TEXT,
-  first_registered_date    DATE,
   status                   TEXT,
   artg_url                 TEXT,
+  match_type               TEXT,
   crawled_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at               TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE au_tga_artg ADD COLUMN IF NOT EXISTS match_type TEXT;
+
+-- 레거시 DB: Phase 4.3-v3 에서 DROP 한 4컬럼이 남아 있으면 제거 (에디터와 동일)
+ALTER TABLE au_tga_artg
+  DROP COLUMN IF EXISTS schedule,
+  DROP COLUMN IF EXISTS route_of_administration,
+  DROP COLUMN IF EXISTS first_registered_date,
+  DROP COLUMN IF EXISTS sponsor_abn;
 
 CREATE INDEX IF NOT EXISTS idx_au_tga_artg_product_id    ON au_tga_artg(product_id);
 CREATE INDEX IF NOT EXISTS idx_au_tga_artg_sponsor_name  ON au_tga_artg(sponsor_name);

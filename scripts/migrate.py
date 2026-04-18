@@ -234,26 +234,26 @@ def _verify_au_pbs_raw(ref: str, pat: str) -> bool:
         "api_fetched_at",
         "crawled_at",
         "created_at",
+        "market_form",
+        "market_strength",
     }
     return _verify_table_columns(ref, pat, "au_pbs_raw", expected)
 
 
 def _verify_au_tga_artg(ref: str, pat: str) -> bool:
+    # Phase 4.3-v3 — schedule / route_of_administration / first_registered_date / sponsor_abn DROP
     expected = {
         "id",
         "product_id",
         "artg_id",
         "product_name",
         "sponsor_name",
-        "sponsor_abn",
         "active_ingredients",
         "strength",
         "dosage_form",
-        "route_of_administration",
-        "schedule",
-        "first_registered_date",
         "status",
         "artg_url",
+        "match_type",
         "crawled_at",
         "created_at",
         "updated_at",

@@ -271,6 +271,14 @@ def build_product_summary(
 
     retail_aud, retail_estimation_method = _estimate_retail_price(pbs, chemist_price_aud)
 
+    # Task 5 — ESTIMATE_hospital seeds 하드코딩 AEMP 가 주입되어 있으면 해당 라벨·retail 로 덮어씀.
+    # pbs DTO 에 retail_estimation_method="fob_hardcoded_trademap" 이 찍혀 온 경우.
+    if pbs.get("retail_estimation_method") == "fob_hardcoded_trademap":
+        retail_estimation_method = "fob_hardcoded_trademap"
+        aemp_from_pbs = _to_decimal(pbs.get("aemp_aud"))
+        if aemp_from_pbs is not None and aemp_from_pbs > 0:
+            retail_aud = aemp_from_pbs.quantize(Decimal("0.01"))
+
     # Phase 4.7 — Omethyl Case 5: Healthylife OMACOR 가격을 retail_price_aud 로 직접 사용.
     # chemist dict 이 _from_healthylife_case5=True 플래그를 갖고 있으면 Chemist × 1.20 배수
     # 우회하고 HL 가격 그대로 적용. retail_estimation_method 는 고유 라벨로 구분.
@@ -304,6 +312,10 @@ def build_product_summary(
         # Task 3 — 신약·일반 경로: Healthylife 실제 장바구니 가격 직접 사용
         price_name = f"Healthylife — {chemist.get('brand_name') or 'Healthylife'}"
         price_url = chemist.get("product_url") or chemist.get("price_source_url") or ""
+    elif retail_estimation_method == "fob_hardcoded_trademap":
+        # Task 5 — Gadvoa hospital tender 하드코딩값 (TradeMap NZ→DE 역산)
+        price_name = "TradeMap 2024 NZ→DE (Bayer Gadovist 오리지널 FOB 역산)"
+        price_url = ""
     else:
         price_name = "PBS"
         price_url = (
@@ -656,6 +668,36 @@ def _load_products() -> list[dict[str, Any]]:
     return list(data.get("products", []))
 
 
+def _load_fob_hardcoded(product_id: str | None) -> dict[str, Any] | None:
+    """stage2/fob_reference_seeds.json 에서 product_id 의 fob_hardcoded_aud 블록 반환.
+
+    Task 5 (2026-04-19) — Gadvoa 같은 ESTIMATE_hospital 품목의 Bayer 오리지널 FOB
+    하드코딩값(TradeMap NZ→DE 역산) 을 AEMP 프록시로 주입할 때 사용.
+    반환 dict 예:
+      {
+        "bayer_reference_aud": 16.49,
+        "aggressive": 9.89, "average": 12.37, "conservative": 14.02,
+        "bayer_reference_source": "TradeMap 2024 NZ→DE HS 300630 ...",
+      }
+    seeds 없음·블록 없음·파일 로드 실패 → None.
+    """
+    if not product_id:
+        return None
+    seeds_path = _CRAWLER_DIR.parent / "stage2" / "fob_reference_seeds.json"
+    try:
+        with seeds_path.open(encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return None
+    for seed in data.get("seeds", []):
+        if seed.get("product_id") == product_id:
+            block = seed.get("fob_hardcoded_aud")
+            if isinstance(block, dict):
+                return block
+            return None
+    return None
+
+
 def _dispatch_pbs_by_case(product: dict[str, Any]) -> dict[str, Any]:
     """au_products.json 의 pricing_case 기준으로 PBS 조회 경로 선택.
 
@@ -684,9 +726,28 @@ def _dispatch_pbs_by_case(product: dict[str, Any]) -> dict[str, Any]:
     components = [str(c) for c in (product.get("inn_components") or []) if c]
     inn = str(product.get("inn_normalized") or "")
 
-    # Case 6 — 병원 조달, PBS skip
+    # Case 6 — 병원 조달, PBS skip.
+    # Task 5 (2026-04-19) — seeds.fob_hardcoded_aud 의 bayer_reference_aud 를 AEMP 프록시로
+    # 주입 (Gadvoa 는 PBS 가격 없음 → FOB 역산이 AEMP 를 요구하므로 하드코딩 수기값 활용).
+    # warnings 에 근거·소스 함께 기록.
     if case == "ESTIMATE_HOSPITAL":
-        return fetch_pbs_hospital_skip()
+        dto = fetch_pbs_hospital_skip()
+        try:
+            hardcoded = _load_fob_hardcoded(product.get("product_id"))
+        except Exception:
+            hardcoded = None
+        if hardcoded:
+            bayer_ref = hardcoded.get("bayer_reference_aud")
+            if isinstance(bayer_ref, (int, float)) and float(bayer_ref) > 0:
+                dto["aemp_aud"] = Decimal(str(bayer_ref))
+                dto["retail_estimation_method"] = "fob_hardcoded_trademap"
+                src_note = hardcoded.get("bayer_reference_source")
+                warnings_list = list(dto.get("warnings") or [])
+                warnings_list.append("hardcoded_aemp:true")
+                if src_note:
+                    warnings_list.append(f"ai_research_source:{src_note}")
+                dto["warnings"] = warnings_list
+        return dto
 
     # Case 1 — DIRECT
     if case == "DIRECT":

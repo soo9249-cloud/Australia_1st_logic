@@ -1588,21 +1588,140 @@ function _showCustomDrugMsg(msg, isErr) {
   el.className = 'p1-custom-msg' + (isErr ? ' err' : '');
 }
 
-/** 신약 직접 분석 — 백엔드 미연동 시 안내 (8개 등록 품목은 위 드롭다운 + 분석 실행 사용) */
+/** Task 10 (2026-04-19) — 신약 직접 분석: /api/crawl/new-drug 백엔드 연동 */
 async function runCustomPipeline() {
   const trade = (document.getElementById('custom-trade-name')?.value || '').trim();
   const inn = (document.getElementById('custom-inn')?.value || '').trim();
   const dosage = (document.getElementById('custom-dosage')?.value || '').trim();
-  if (!trade && !inn && !dosage) {
-    _showCustomDrugMsg('약품명·성분명·제형 중 하나 이상 입력해 주세요.', true);
+
+  if (!trade || !inn || !dosage) {
+    _showCustomDrugMsg('약품명·성분명·제형 3개 필드를 모두 입력해 주세요.', true);
     return;
   }
-  _showCustomDrugMsg(
-    '호주 1공정은 등록된 8개 품목(위 품목 선택) 분석을 지원합니다. 임의 신약 자동 분석 API는 추후 연동 예정입니다.',
-    false
-  );
+
+  _showCustomDrugMsg('신약 크롤링을 시작합니다. 잠시만 기다려 주세요… (약 1-2분 소요)', false);
+
+  let data;
+  try {
+    const res = await fetch('/api/crawl/new-drug', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_name_ko: trade,
+        inn: inn,
+        strength_dosage_form: dosage,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      _showCustomDrugMsg(`신약 분석 요청 실패 (${res.status}): ${err.detail || res.statusText}`, true);
+      return;
+    }
+    data = await res.json();
+  } catch (exc) {
+    _showCustomDrugMsg(`네트워크 오류: ${exc.message}`, true);
+    return;
+  }
+
+  if (!data.job_id) {
+    _showCustomDrugMsg('서버 응답 형식 오류 (job_id 없음).', true);
+    return;
+  }
+
+  _pollCustomPipeline(data.job_id);
 }
-async function _pollCustomPipeline() { /* 예약 */ }
+
+/** Task 10 — 신약 크롤 job 상태 폴링 (5초 간격, 최대 5분) */
+async function _pollCustomPipeline(jobId) {
+  const MAX_TRIES = 60;  // 5s × 60 = 300s
+  for (let i = 0; i < MAX_TRIES; i += 1) {
+    try {
+      const res = await fetch(`/api/crawl/status/${jobId}`);
+      if (res.ok) {
+        const job = await res.json();
+        if (job.status === 'done') {
+          _handleCustomCrawlResult(job);
+          return;
+        }
+        if (job.status === 'failed') {
+          _showCustomDrugMsg(`신약 분석 실패: ${job.error || '알 수 없는 오류'}`, true);
+          return;
+        }
+        // queued / running — 진행 상태 표시
+        _showCustomDrugMsg(
+          `신약 크롤링 중… (${i + 1}/${MAX_TRIES}) 상태: ${job.status}`,
+          false,
+        );
+      }
+    } catch (exc) {
+      // 네트워크 오류 시 재시도
+    }
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+  _showCustomDrugMsg('신약 분석 시간 초과 — 백엔드 로그를 확인하세요.', true);
+}
+
+/** Task 10 — 크롤 결과 분기: AEMP 있음 → 보고서 / 없음 → PDF fallback 영역 노출 */
+function _handleCustomCrawlResult(job) {
+  if (job.needs_price_upload) {
+    // PDF fallback 영역 노출 + 메시지 주입
+    const msgEl = document.getElementById('fallback-message');
+    if (msgEl) msgEl.textContent = job.message_ko || '';
+    const fallbackEl = document.getElementById('price-pdf-fallback');
+    if (fallbackEl) fallbackEl.hidden = false;
+    const btn = document.getElementById('btn-upload-price-pdf');
+    if (btn) btn.dataset.productCode = job.product_code || '';
+    _showCustomDrugMsg(
+      `신약 크롤링 완료 — 가격 데이터 추가 입력 필요. 아래에 PDF 업로드 하세요.`,
+      false,
+    );
+  } else {
+    _showCustomDrugMsg(
+      `신약 분석 완료 — product_code=${job.product_code}, AEMP=${job.aemp_aud || 'N/A'}.`,
+      false,
+    );
+    // 기존 보고서 생성 플로우로 이어짐 (렌더 로직은 결과 화면 단에서).
+  }
+}
+
+/** Task 10 — 가격 자료 PDF 업로드 (fallback UX) */
+async function uploadPricePdf() {
+  const btn = document.getElementById('btn-upload-price-pdf');
+  const productCode = btn?.dataset?.productCode || '';
+  const fileInput = document.getElementById('price-pdf-input');
+  const file = fileInput?.files?.[0];
+  if (!productCode) {
+    alert('product_code 정보 누락. 신약 분석을 먼저 완료해주세요.');
+    return;
+  }
+  if (!file) {
+    alert('PDF 파일을 선택해주세요.');
+    return;
+  }
+  const fd = new FormData();
+  fd.append('product_code', productCode);
+  fd.append('pdf_file', file);
+
+  _showCustomDrugMsg('PDF 가격 정보 추출 중… (Haiku 분석, 약 10-30초 소요)', false);
+
+  try {
+    const res = await fetch('/api/crawl/price-pdf-upload', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      _showCustomDrugMsg(`PDF 업로드 실패 (${res.status}): ${err.detail || res.statusText}`, true);
+      return;
+    }
+    const data = await res.json();
+    if (data.success) {
+      _showCustomDrugMsg(data.message_ko || 'PDF 가격 추출 완료.', false);
+      // 2공정(/api/p2/pipeline) 으로 자동 이동은 프론트 라우팅 결정에 따라 추후 연결.
+    } else {
+      _showCustomDrugMsg('PDF 가격 추출 실패.', true);
+    }
+  } catch (exc) {
+    _showCustomDrugMsg(`네트워크 오류: ${exc.message}`, true);
+  }
+}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    §10. 결과 렌더링 (U2·U3·U4·U6·B4·N3·N4)

@@ -138,13 +138,32 @@
           <div class="selector-label">신약 직접 분석</div>
           <div class="p1-custom-drug-row">
             <input type="text" id="custom-trade-name" class="p1-custom-input" placeholder="약품명 (예: Nexavar)" autocomplete="off" maxlength="200"/>
-            <input type="text" id="custom-inn" class="p1-custom-input" placeholder="성분명 (예: sorafenib)" autocomplete="off" maxlength="200"/>
+            <input type="text" id="custom-inn" class="p1-custom-input" placeholder="성분명 (단일/복합 성분 콤마 구분, 예: sorafenib 또는 drugA, drugB)" autocomplete="off" maxlength="200"/>
             <input type="text" id="custom-dosage" class="p1-custom-input" placeholder="제형 (예: 200mg tablet)" autocomplete="off" maxlength="200"/>
             <button type="button" class="btn-analyze" id="btn-custom-drug" onclick="runCustomPipeline()">
               <span>▶</span> 신약 분석
             </button>
           </div>
           <p class="p1-custom-msg" id="p1-custom-msg" style="display:none;" role="status"></p>
+
+          <!-- Task 10 (2026-04-19) — PDF 업로드 fallback 영역.
+               /api/crawl/new-drug 응답에 needs_price_upload=true 일 때 _handleCustomCrawlResult 가
+               hidden=false 로 노출. 업로드 후 /api/crawl/price-pdf-upload 로 전송. -->
+          <div id="price-pdf-fallback" class="fallback-upload" hidden>
+            <p class="soft-message" id="fallback-message">
+              호주 공개 데이터베이스에서 가격 정보를 찾지 못했어요. 보유하신 가격 자료 PDF 가 있다면 업로드해 주세요.
+            </p>
+            <label for="price-pdf-input" class="upload-zone">
+              <span>가격 자료 PDF 업로드</span>
+              <input type="file" id="price-pdf-input" accept="application/pdf" />
+            </label>
+            <small class="soft-note">
+              업로드 없어도 괜찮습니다. 그 경우 '유사계열 대체가' 기반 추정값으로 보고서가 작성됩니다 (신뢰도 낮음 표시).
+            </small>
+            <button type="button" class="btn-analyze" id="btn-upload-price-pdf" onclick="uploadPricePdf()">
+              <span>▶</span> 업로드 후 분석 계속
+            </button>
+          </div>
         </div>
 
         <!-- ③ PDF 보고서 — 생성 전 안내 / 로딩 / 다운로드 / 오류 (한 박스) -->

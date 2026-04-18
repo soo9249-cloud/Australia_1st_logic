@@ -2059,3 +2059,59 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   .process-body  { padding: 0 16px 18px; }
   .p2-three-col  { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Task 10 (2026-04-19) — 신약 분석 PDF 업로드 fallback UX
+   default hidden. _handleCustomCrawlResult (app.js) 가 needs_price_upload=true
+   일 때 hidden=false 로 노출. 따뜻한 톤 — 연한 주황 배경 + 소프트 보더.
+═══════════════════════════════════════════════════════════════════════ */
+.fallback-upload {
+  margin-top: 16px;
+  padding: 18px 20px;
+  background-color: #FFF8F0;
+  border: 1px solid #F3DBB7;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fallback-upload .soft-message {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #4A3A1A;
+  font-weight: 400;
+}
+.fallback-upload .upload-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 2px dashed #D9AE6B;
+  border-radius: 10px;
+  background-color: #FFFDF8;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.fallback-upload .upload-zone:hover {
+  background-color: #FEF5E6;
+  border-color: #C5994F;
+}
+.fallback-upload .upload-zone span {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6B4E1A;
+}
+.fallback-upload .upload-zone input[type="file"] {
+  font-size: 12px;
+}
+.fallback-upload .soft-note {
+  font-size: 11.5px;
+  color: #8B6E3B;
+  line-height: 1.5;
+}
+.fallback-upload #btn-upload-price-pdf {
+  align-self: flex-start;
+  margin-top: 4px;
+}

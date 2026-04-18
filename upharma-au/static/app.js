@@ -463,7 +463,7 @@ function _makeP2Defaults() {
   // 화폐: USD 메인 (AUD 원본은 loadExchange.window._exchangeRates.aud_usd 로 환산)
   return {
     public: [
-      { key: 'base_price', label: '기준 입찰가 (USD)', value: 0, type: 'abs_input', unit: 'USD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 PBS AEMP 또는 주별 병원조달 입찰가 참고', rationale: '호주 공공채널은 PBS 급여가격·HealthShare NSW 입찰가가 기준.' },
+      { key: 'base_price', label: '기준 입찰가 (USD)', value: 0, type: 'abs_input', unit: 'USD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 PBS AEMP 또는 주 정부 병원조달 입찰가 참고', rationale: '호주 공공채널은 PBS 급여가격·HealthShare NSW 입찰가가 기준.' },
       { key: 'exchange', label: '환율 (AUD→USD)', value: 0.65, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'AUD 입력 값을 USD 로 환산 (로드 시 실시간 aud_usd 반영)', rationale: '호주 AUD 기준가를 USD 로 맞춰 환차 위험을 줄입니다.' },
       { key: 'pub_ratio', label: '공공 수출가 산출 비율', value: 30, type: 'pct_mult', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '기준가 대비 최종 반영 비율 (수입상 30% 기본)', rationale: 'PBS 급여·병원조달·파트너 마진을 반영한 목표 비율.' },
     ],

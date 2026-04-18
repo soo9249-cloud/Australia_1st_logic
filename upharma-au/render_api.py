@@ -331,7 +331,7 @@ def crawl_status(job_id: str) -> JSONResponse:
 
 @app.get("/api/data/{product_id}")
 def get_product(product_id: str) -> JSONResponse:
-    """Supabase australia 테이블에서 product_id 단건 조회."""
+    """Supabase `au_products` 에서 품목 단건 조회 (필터 컬럼: product_code)."""
     try:
         client = get_supabase_client()
         resp = (
@@ -355,13 +355,13 @@ def get_product(product_id: str) -> JSONResponse:
 
 @app.get("/api/data")
 def list_products() -> JSONResponse:
-    """Supabase australia 테이블 전체 목록 (최신 crawled_at 순)."""
+    """Supabase `au_products` 전체 목록 (최신 last_crawled_at 순 — v2 마스터 컬럼명)."""
     try:
         client = get_supabase_client()
         resp = (
             client.table(TABLE_NAME)
             .select("*")
-            .order("crawled_at", desc=True)
+            .order("last_crawled_at", desc=True)
             .execute()
         )
         rows = resp.data or []
@@ -1106,7 +1106,7 @@ def _haiku_p2_blocks(
     """Claude Haiku 4.5 를 호출해 2공정(수출 전략 제안서) 용 8개 블록을 생성.
 
     Args:
-        row               : Supabase australia 테이블 row (1공정 크롤링 결과)
+        row               : Supabase `au_products` 행 (1공정 크롤링 결과)
         seed              : fob_reference_seeds.json 단일 엔트리 (규제·참고가 수기시드)
         dispatch_result   : fob_calculator.dispatch_by_pricing_case() 반환 dict
                              (logic / scenarios / inputs / warnings / disclaimer / blocked_reason)
@@ -1625,9 +1625,9 @@ def generate_report(payload: dict[str, Any]) -> JSONResponse:
 
 
 def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
-    """product_id 의 boundary 데이터를 읽어 LLM 으로 Block2/3 + Perplexity refs 를 생성하고
-    australia 테이블에 UPDATE 한다. 공통 6컬럼(id, product_id, market_segment,
-    fob_estimated_usd, confidence, crawled_at) 은 건드리지 않는다."""
+    """요청의 product_id(논리 키)로 `au_products` 행을 읽어 Haiku 블록·논문 refs 를 생성하고
+    동일 행(product_code)에 block2_* / block3_* / block4_* / perplexity_refs / llm_* 를 UPDATE 한다.
+    (레거시 DB 테이블명 `australia` 와 무관 — 현재 마스터는 항상 `au_products`.)"""
     product_id = str(payload.get("product_id") or "").strip()
     if not product_id:
         raise HTTPException(status_code=400, detail="product_id is required")

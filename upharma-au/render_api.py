@@ -1875,6 +1875,8 @@ def _dt_now_utc() -> str:
 
 _p2_state: dict[str, Any] = {
     "status": "idle",       # idle / running / done / error
+    # 프론트 스테퍼: extract | ai_extract | ai_analysis | report (PDF추출→가격→AI→보고서)
+    "step": "",
     "step_label": "",
     "result": None,         # 완료 시 프론트 기대 스키마
     "error_detail": None,
@@ -1931,6 +1933,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
     try:
         # ── Step 1: Supabase row 조회 ──
         with _p2_lock:
+            _p2_state["step"] = "extract"
             _p2_state["step_label"] = "① Supabase 품목 데이터 조회 중…"
         client_sb = get_supabase_client()
         resp = client_sb.table(TABLE_NAME).select("*").eq("product_id", product_id).limit(1).execute()
@@ -1941,6 +1944,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
 
         # ── Step 2: seed 매칭 ──
         with _p2_lock:
+            _p2_state["step"] = "ai_extract"
             _p2_state["step_label"] = "② FOB 시드 매칭 중…"
         seeds = _load_stage2_seeds()
         seed = next((s for s in seeds if s.get("product_id") == product_id), None)
@@ -1951,6 +1955,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
         # crawler_row=row 전달: seed.reference_retail_aud 미확보 시 Logic B 의 2순위로
         # crawler_row.retail_price_aud(시장 추정가)를 참고가로 사용 (3단계 확장).
         with _p2_lock:
+            _p2_state["step"] = "ai_extract"
             _p2_state["step_label"] = "③ FOB 3시나리오 역산 중…"
         fx_rates = _fetch_exchange_rates_simple()
         fx_krw = fx_rates.get("aud_krw") or 893.0
@@ -2003,6 +2008,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
 
         # ── Step 4: Haiku 블록 생성 ──
         with _p2_lock:
+            _p2_state["step"] = "ai_analysis"
             _p2_state["step_label"] = "④ AI(Haiku) 수출 전략 분석 중…"
         anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
         if not anthropic_key:
@@ -2011,6 +2017,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
 
         # ── Step 5: 결과 조립 (프론트 기대 스키마) ──
         with _p2_lock:
+            _p2_state["step"] = "ai_analysis"
             _p2_state["step_label"] = "⑤ 결과 조립 중…"
 
         scenarios_raw = dispatch_result.get("scenarios", {})
@@ -2090,6 +2097,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
 
         # ── Step 5.5: Supabase 저장 ──
         with _p2_lock:
+            _p2_state["step"] = "ai_analysis"
             _p2_state["step_label"] = "⑤-2 Supabase 저장 중…"
         try:
             sb_client = get_supabase_client()
@@ -2134,6 +2142,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
 
         # ── Step 6: PDF 생성 (선택) ──
         with _p2_lock:
+            _p2_state["step"] = "report"
             _p2_state["step_label"] = "⑥ PDF 보고서 생성 중…"
         # Phase 4.3-v3 — au_pbs_raw 에서 market_form/market_strength 주입 (render_pdf 와 동일)
         try:
@@ -2198,6 +2207,8 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
         print(f"[P2 Pipeline Error] {exc}\n{tb}", flush=True)
         with _p2_lock:
             _p2_state["status"] = "error"
+            if not _p2_state.get("step"):
+                _p2_state["step"] = "extract"
             _p2_state["step_label"] = f"오류: {exc}"
             _p2_state["error_detail"] = str(exc)
 
@@ -2208,6 +2219,7 @@ async def p2_pipeline_status() -> JSONResponse:
     with _p2_lock:
         return JSONResponse({
             "status": _p2_state["status"],
+            "step": _p2_state["step"],
             "step_label": _p2_state["step_label"],
         })
 
@@ -2235,7 +2247,11 @@ def p2_pipeline(payload: dict[str, Any]) -> JSONResponse:
     # 이미 실행 중이면 중복 방지
     with _p2_lock:
         if _p2_state["status"] == "running":
-            return JSONResponse({"status": "already_running", "step_label": _p2_state["step_label"]})
+            return JSONResponse({
+                "status": "already_running",
+                "step": _p2_state["step"],
+                "step_label": _p2_state["step_label"],
+            })
 
     report_filename = str(payload.get("report_filename") or "").strip()
     segment = str(payload.get("market") or "public").strip()
@@ -2254,6 +2270,7 @@ def p2_pipeline(payload: dict[str, Any]) -> JSONResponse:
     # 상태 초기화 & 백그라운드 실행
     with _p2_lock:
         _p2_state["status"] = "running"
+        _p2_state["step"] = "extract"
         _p2_state["step_label"] = "파이프라인 시작…"
         _p2_state["result"] = None
         _p2_state["error_detail"] = None
@@ -2280,6 +2297,7 @@ def p2_pipeline_result() -> JSONResponse:
         result = _p2_state["result"]
         # 결과 반환 후 상태를 idle 로 리셋 (재실행 가능)
         _p2_state["status"] = "idle"
+        _p2_state["step"] = ""
         _p2_state["step_label"] = ""
     if result is None:
         raise HTTPException(status_code=500, detail="결과가 비어 있습니다.")

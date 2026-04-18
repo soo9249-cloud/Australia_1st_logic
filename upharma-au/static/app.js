@@ -611,8 +611,42 @@ async function handleP2FileSelect(inputEl) {
   }
 }
 
-/* 2공정 진행 단계 — 1공정과 동일한 스타일 */
+/* 2공정 진행 단계 — PDF 추출 → 가격 추출 → AI 분석 → 보고서 생성 */
 const P2_STEP_ORDER = ['extract', 'ai_extract', 'ai_analysis', 'report'];
+
+/** 서버 step 값으로 스테퍼 동기화 (이전 단계 완료·현재 단계 진행 중) */
+function _applyP2PipelineStep(step) {
+  const idx = P2_STEP_ORDER.indexOf(step);
+  if (idx < 0) return;
+  const row = document.getElementById('p2-progress-row');
+  if (row) row.classList.add('visible');
+  for (let i = 0; i < P2_STEP_ORDER.length; i++) {
+    const el = document.getElementById('p2prog-' + P2_STEP_ORDER[i]);
+    if (!el) continue;
+    const dot = el.querySelector('.prog-dot');
+    if (i < idx) {
+      el.className = 'prog-step done';
+      dot.textContent = '✓';
+    } else if (i === idx) {
+      el.className = 'prog-step active';
+      dot.textContent = String(i + 1);
+    } else {
+      el.className = 'prog-step';
+      dot.textContent = String(i + 1);
+    }
+  }
+}
+
+function _markP2ProgressAllDone() {
+  const row = document.getElementById('p2-progress-row');
+  if (row) row.classList.add('visible');
+  for (let i = 0; i < P2_STEP_ORDER.length; i++) {
+    const el = document.getElementById('p2prog-' + P2_STEP_ORDER[i]);
+    if (!el) continue;
+    el.className = 'prog-step done';
+    el.querySelector('.prog-dot').textContent = '✓';
+  }
+}
 
 function _setP2Progress(currentStep, status) {
   const row = document.getElementById('p2-progress-row');
@@ -690,7 +724,7 @@ async function runP2AiPipeline() {
   if (_p2AiPollTimer) clearInterval(_p2AiPollTimer);
   _resetP2AiResultView();
   _resetP2Progress();
-  _setP2Progress('extract', 'running');
+  _applyP2PipelineStep('extract');
 
   if (runBtn) runBtn.disabled = true;
   if (runIcon) runIcon.textContent = '⏳';
@@ -718,20 +752,14 @@ async function _pollP2AiPipeline() {
     const data = await res.json();
     if (data.status === 'idle') return;
 
-    // 서버 step → 프론트 진행 단계 매핑
-    const stepMap = {
-      extract:     () => _setP2Progress('extract',     'running'),
-      ai_extract:  () => { _setP2Progress('extract', 'done'); _setP2Progress('ai_extract', 'running'); },
-      exchange:    () => { _setP2Progress('ai_extract', 'done'); _setP2Progress('ai_analysis', 'running'); },
-      ai_analysis: () => { _setP2Progress('ai_extract', 'done'); _setP2Progress('ai_analysis', 'running'); },
-      report:      () => { _setP2Progress('ai_analysis', 'done'); _setP2Progress('report', 'running'); },
-    };
-    if (stepMap[data.step]) stepMap[data.step]();
+    if (data.status === 'running' && data.step && P2_STEP_ORDER.includes(data.step)) {
+      _applyP2PipelineStep(data.step);
+    }
 
     if (data.status === 'done') {
       clearInterval(_p2AiPollTimer);
       _p2AiPollTimer = null;
-      for (const s of P2_STEP_ORDER) _setP2Progress(s, 'done');
+      _markP2ProgressAllDone();
       const rr = await fetch('/api/p2/pipeline/result');
       const result = await rr.json();
       _renderP2AiResult(result);

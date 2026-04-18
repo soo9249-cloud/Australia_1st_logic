@@ -520,6 +520,17 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   align-items: center;
 }
 /* 메인 1공정: 그리드로 칼럼 축소 시 오버플로 방지(.process-section overflow:hidden 대응) */
+#main .process-section {
+  min-width: 0;
+}
+#pb-p1 {
+  min-width: 0;
+}
+#main #pb-p1 .selector-card {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
 #main #pb-p1 .selector-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -616,7 +627,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 
 /* ── 14. 1공정 — 진행 단계 ───────────────────────────────────────────────── */
 .progress-row         { display: none; gap: 0; margin-top: 18px; }
-.progress-row.visible { display: flex; }
+.progress-row.visible { display: flex; min-width: 0; }
 
 .prog-step {
   flex: 1;
@@ -1335,10 +1346,16 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 @media (max-width: 1100px) {
   .g3 { grid-template-columns: 1fr 1fr; }
 }
-/* 1공정(시장조사): 태블릿·좁은 창 — 한 열 스택 + 스테퍼 가로 스크롤 */
-@media (max-width: 1024px) {
+/*
+ * 1공정(시장조사): 창을 줄이면 4열(품목+버튼 / 신약3+버튼)·스테퍼가 카드 밖으로 밀림.
+ * 1200px 이하에서 한 열 스택 + 스테퍼 가로 스크롤(지도 2열이 깨지기 전에 선제 대응).
+ */
+@media (max-width: 1200px) {
   #pb-p1 .selector-row {
     grid-template-columns: 1fr;
+  }
+  #pb-p1 .selector-row select#product-select {
+    max-width: 100%;
   }
   #pb-p1 .p1-custom-drug-row {
     grid-template-columns: 1fr;
@@ -1346,19 +1363,32 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   #pb-p1 .selector-row .btn-analyze,
   #pb-p1 .p1-custom-drug-row .btn-analyze {
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     justify-content: center;
   }
   #pb-p1 .progress-row.visible {
     flex-wrap: nowrap;
     overflow-x: auto;
+    overflow-y: visible;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 6px;
+    padding-bottom: 8px;
     gap: 0;
     justify-content: flex-start;
+    margin-left: -4px;
+    margin-right: -4px;
+    padding-left: 4px;
+    padding-right: 4px;
   }
   #pb-p1 .progress-row.visible .prog-step {
     flex: 0 0 auto;
     min-width: 72px;
+  }
+  #pb-p1 .progress-row.visible .prog-label {
+    font-size: 10px;
+    line-height: 1.25;
+    hyphens: auto;
+    word-break: keep-all;
   }
 }
 @media (max-width: 960px) {

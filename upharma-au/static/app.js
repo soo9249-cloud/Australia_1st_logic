@@ -565,14 +565,6 @@ function switchP2Tab(tab) {
 
 function setP2AiSeg(seg) {
   _p2AiSeg = seg === 'private' ? 'private' : 'public';
-  document.getElementById('p2-ai-seg-public')?.classList.toggle('on', _p2AiSeg === 'public');
-  document.getElementById('p2-ai-seg-private')?.classList.toggle('on', _p2AiSeg === 'private');
-  const desc = document.getElementById('p2-ai-seg-desc');
-  if (desc) {
-    desc.textContent = _p2AiSeg === 'public'
-      ? '공공 시장: PBS 공공급여 채널 · 주별 병원조달(HealthShare NSW 등) 기준'
-      : '민간 시장: Chemist Warehouse 등 약국 체인 · 소매 유통 구조 기준';
-  }
 }
 
 async function handleP2FileSelect(inputEl) {
@@ -1058,14 +1050,17 @@ function _p2FillBaseFromReport() {
 function _syncP2ReportsOptions() {
   if (!_p2Ready) return;
   const reports = _loadReports();
-  const optionHtml = ['<option value="">보고서를 선택하세요</option>']
-    .concat(reports.map((r) => `<option value="${r.id}">${_escHtml(r.report_title || r.product || '보고서')}</option>`))
+  const reportOpts = reports
+    .map((r) => `<option value="${r.id}">${_escHtml(r.report_title || r.product || '보고서')}</option>`)
     .join('');
+  const manualOptionHtml = `<option value="">보고서를 선택하세요</option>${reportOpts}`;
+  const aiOptionHtml =
+    '<option value="">01 시장조사에서 생성된 보고서가 여기에 자동 반영됩니다 (최근 24시간).</option>' + reportOpts;
 
   const manualSelect = document.getElementById('p2-report-select');
   if (manualSelect) {
     const curr = _p2SelectedReportId;
-    manualSelect.innerHTML = optionHtml;
+    manualSelect.innerHTML = manualOptionHtml;
     _p2SelectedReportId = reports.some((r) => String(r.id) === String(curr)) ? curr : '';
     manualSelect.value = _p2SelectedReportId;
   }
@@ -1073,7 +1068,7 @@ function _syncP2ReportsOptions() {
   const aiSelect = document.getElementById('p2-ai-report-select');
   if (aiSelect) {
     const curr = _p2AiSelectedReportId;
-    aiSelect.innerHTML = optionHtml;
+    aiSelect.innerHTML = aiOptionHtml;
     _p2AiSelectedReportId = reports.some((r) => String(r.id) === String(curr)) ? curr : '';
     aiSelect.value = _p2AiSelectedReportId;
   }

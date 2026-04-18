@@ -1114,6 +1114,17 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 }
 .p2-seg-btn.on { background: var(--navy); color: #fff; }
 
+.p2-market-hint {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--muted);
+  margin: 12px 0 0;
+}
+.p2-ai-run-row {
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
 /* ── 보고서 브리프 ─────────────────────────────────────────────────────── */
 .p2-brief-wrap { margin-top: 10px; }
 .p2-brief-empty { font-size: 12px; color: var(--muted); padding: 10px 0; }

@@ -194,7 +194,7 @@
           <span class="process-num">02</span>
           <div>
             <div class="process-title">수출가격 전략</div>
-            <div class="process-sub">FOB 역산 · 3가지 시나리오 · AI 분석 · PDF 보고서</div>
+            <div class="process-sub">AI 가격 분석 (중점) · 3가지 시나리오 (중점) · 커스텀 옵션 (중점) · PDF 보고서 자동 생성</div>
           </div>
         </div>
         <span class="process-arrow" id="pa-p2">▾</span>
@@ -202,25 +202,14 @@
       <div class="process-body" id="pb-p2">
         <div id="p2-wrap">
 
-          <!-- AI / 직접입력 탭 전환 (Q4-E 호주 전용 유지) -->
-          <div class="selector-card" style="margin-bottom:14px;">
-            <div class="p2-tab-row">
-              <button class="p2-tab-btn on" id="p2-tab-ai"     type="button" onclick="switchP2Tab('ai')">AI 파이프라인</button>
-              <button class="p2-tab-btn"    id="p2-tab-manual" type="button" onclick="switchP2Tab('manual')">직접 입력</button>
-            </div>
-            <div style="font-size:11.5px;color:var(--muted);margin-top:10px;" id="p2-tab-desc">
-              1공정 보고서를 기준으로 가격 정보를 추출해 최종 권고가를 자동 산정합니다.
-            </div>
-          </div>
-
-          <!-- ═══════ 탭 A: AI 파이프라인 ═══════ -->
+          <!-- ═══════ 2공정 메인 (AI 파이프라인) — 직접 입력 탭은 유지하되 기본 비표시 ═══════ -->
           <div id="p2-ai-tab" class="p2-tab-content">
 
             <div class="selector-card">
-              <div class="selector-label">1공정 보고서 선택</div>
+              <div class="selector-label">1공정 보고서 선택 &gt; 시장조사 보고서 선택</div>
               <div class="selector-row">
                 <select id="p2-ai-report-select" style="flex:1;">
-                  <option value="">저장된 1공정 보고서를 선택하세요.</option>
+                  <option value="">01 시장조사에서 생성된 보고서가 여기에 자동 반영됩니다 (최근 24시간).</option>
                 </select>
               </div>
 
@@ -236,18 +225,14 @@
               </div>
               <div id="p2-upload-status" class="p2-note" style="display:none;"></div>
 
-              <div class="selector-label" style="margin-top:14px;">시장 선택 및 분석 실행</div>
-              <div class="selector-row" style="flex-wrap:wrap;gap:10px;">
-                <div class="p2-seg-row" style="margin-bottom:0;flex:1;min-width:180px;">
-                  <button class="p2-seg-btn on" id="p2-ai-seg-public"  type="button" onclick="setP2AiSeg('public')">공공 시장</button>
-                  <button class="p2-seg-btn"    id="p2-ai-seg-private" type="button" onclick="setP2AiSeg('private')">민간 시장</button>
-                </div>
+              <p id="p2-ai-market-hint" class="p2-market-hint">
+                공공 시장: PBS 공공급여 채널 · 주별 병원조달(HealthShare NSW 등) 기준 / 민간 시장: Chemist Warehouse 등 약국 체인 · 소매 유통 구조 기준
+              </p>
+
+              <div class="selector-row p2-ai-run-row">
                 <button class="btn-analyze" id="btn-p2-ai-run" type="button" onclick="runP2AiPipeline()">
                   <span id="p2-ai-run-icon">▶</span> AI 가격 분석 실행
                 </button>
-              </div>
-              <div id="p2-ai-seg-desc" class="p2-note" style="margin-top:10px;">
-                공공 시장: PBS 공공급여 채널 · 주별 병원조달(HealthShare NSW 등) 기준
               </div>
 
               <div class="progress-row" id="p2-progress-row">

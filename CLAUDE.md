@@ -110,7 +110,8 @@ Australia_1st_logic/
 소스: `frontend_0417/` (Desktop, 팀원이 만든 싱가포르 공통 템플릿)
 원칙: UI/UX는 싱가포르와 완전 통일, 내용만 호주. 백엔드 수정 가능.
 
-- ✅ Stage 0: 결정 확정 (매크로 하드코딩, API키배지 삭제, 신약폼 삭제, 직접입력+GST 유지)
+- ✅ Stage 0: 결정 확정 (매크로 하드코딩, API키배지 삭제, 신약폼 유지 — 3필드로 단순화, 직접입력+GST 유지)
+  - (2026-04-19 Task 10 업데이트) 기존 "신약폼 삭제" → "신약폼 유지" 로 롤백. /api/crawl/new-drug + Haiku AI 유사계열 추론 + PDF 가격 fallback 까지 완전 연결되어 신약도 동일 파이프라인으로 분석 가능.
 - ✅ Stage 1: templates/index.html 전면 교체 (540줄)
 - 🔄 Stage 2: static/app.js 싱가포르 베이스 이식 + 호주 치환
 - ⬜ Stage 3: API 매핑 재작성 (호주 render_api.py 엔드포인트에 맞춤)

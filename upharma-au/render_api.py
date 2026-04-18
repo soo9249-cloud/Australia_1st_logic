@@ -308,7 +308,7 @@ _MOCK_NEWS: list[dict[str, Any]] = [
     {
         "title": "TGA approves fast-track for PIC/S generics",
         "title_ko": "[예시] TGA, PIC/S 제네릭 우선 심사 확대",
-        "summary_ko": "PERPLEXITY_API_KEY 미설정 또는 API 오류 시 표시되는 샘플입니다. 키를 넣으면 최근 호주 제약 뉴스가 한국어로 채워집니다.",
+        "summary_ko": "TGA가 PIC/S 동등성 제네릭 등에 대한 우선 심사·허가 절차를 강화했다는 요지의 예시 문장입니다. (실서비스에서는 Perplexity로 최신 기사가 채워집니다.)",
         "source": "TGA.gov.au",
         "date": "2025-07-14",
         "link": "https://www.tga.gov.au",

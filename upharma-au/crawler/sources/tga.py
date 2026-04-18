@@ -272,11 +272,54 @@ def _empty_dto(canonical_url: str) -> dict[str, Any]:
     }
 
 
-def fetch_tga_artg(ingredient: str) -> dict[str, Any]:
+# Phase Sereterol (2026-04-19) — TGA 검색 결과 정확 매칭용 헬퍼.
+# 오리지널 브랜드 보유 빅파마 스폰서 키워드. 매칭되면 첫 후보로 우선.
+_ORIGINATOR_SPONSOR_KEYWORDS: tuple[str, ...] = (
+    "glaxosmithkline", "gsk",
+    "novartis",
+    "pfizer",
+    "bayer",
+    "astrazeneca",
+    "merck",
+    "merck sharp",   # MSD 호주 법인
+    "msd",
+    "roche",
+    "sanofi",
+    "eli lilly", "lilly",
+    "boehringer",
+    "abbvie", "abbott",
+    "janssen",
+    "bristol-myers", "bristol myers", "bms",
+    "amgen",
+    "takeda",
+    "astellas",
+)
+
+
+def _sponsor_is_originator_candidate(sponsor: str | None) -> bool:
+    """스폰서명에 originator 빅파마 키워드가 포함돼 있는지 (대소문자 무시)."""
+    if not sponsor:
+        return False
+    low = str(sponsor).lower()
+    return any(kw in low for kw in _ORIGINATOR_SPONSOR_KEYWORDS)
+
+
+def fetch_tga_artg(
+    ingredient: str,
+    *,
+    expected_inns: list[str] | None = None,
+) -> dict[str, Any]:
     """검색 마크다운으로 등록 여부·ARTG ID 배열을 얻고, 상세를 merge 한다.
 
     Phase 4.3-v3 — 폐기된 4필드 코드 제거. 유지 필드:
       tga_sponsor(s), tga_licence_category, tga_licence_status, active_ingredients.
+
+    Phase Sereterol 수정 (2026-04-19):
+      `expected_inns` 가 제공되면 각 ARTG 상세에서 active_ingredients 를 가져와
+      base INN set-equality 로 필터. 후보 정렬:
+        (a) sponsor 가 originator 빅파마 키워드 포함 → 우선
+        (b) 동순위 시 ARTG ID 오름차순 (등재일 대체 프록시 — 작은 값이 오래됨)
+      필터 결과 0건이면 기존 동작(전체 검색 결과) 으로 fallback + warning.
     """
     q = (ingredient or "").strip()
     canonical = (
@@ -325,30 +368,97 @@ def fetch_tga_artg(ingredient: str) -> dict[str, Any]:
         out["sponsor_name"] = sponsor_from_filter
         out["tga_sponsors"] = [sponsor_from_filter]
 
-    # 각 ARTG 상세 페이지 수집해 sponsors dedup + 대표 1건 필드 병합
+    # Phase Sereterol — expected_inns 매칭용 base INN set 계산 (제공됐을 때)
+    expected_set: frozenset[str] | None = None
+    if expected_inns:
+        import sys as _sys
+        import os as _os
+        _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+        from utils.inn_normalize import strip_inn_salt
+
+        expected_set = frozenset(
+            s for s in (strip_inn_salt(c) for c in expected_inns) if s
+        )
+        if not expected_set:
+            expected_set = None
+
+    # 각 ARTG 상세 페이지 수집 — (ARTG ID, detail) 튜플 리스트
+    detail_pairs: list[tuple[str, dict[str, Any]]] = []
+    all_sponsors: list[str] = []
     if artg_id_list:
-        all_sponsors: list[str] = []
-        first_detail: dict[str, Any] = {}
-        for idx, aid in enumerate(artg_id_list):
+        for aid in artg_id_list:
             detail = fetch_tga_detail(aid)
-            if idx == 0:
-                first_detail = detail
+            detail_pairs.append((aid, detail))
             sp = detail.get("tga_sponsor")
             if sp and sp not in all_sponsors:
                 all_sponsors.append(sp)
 
-        # 대표 상세(첫 ARTG) 에서 라이선스·성분 필드 주입
+    # Phase Sereterol — expected_inns 있으면 set-equality 로 후보 필터
+    filtered_pairs: list[tuple[str, dict[str, Any]]] = detail_pairs
+    if expected_set is not None and detail_pairs:
+        import sys as _sys2
+        import os as _os2
+        _sys2.path.insert(0, _os2.path.dirname(_os2.path.dirname(_os2.path.abspath(__file__))))
+        from utils.inn_normalize import extract_inn_set
+
+        eligible: list[tuple[str, dict[str, Any]]] = []
+        for aid, det in detail_pairs:
+            ingredients_list = det.get("active_ingredients") or []
+            inn_set = extract_inn_set(*ingredients_list)
+            if inn_set == expected_set:
+                eligible.append((aid, det))
+        if eligible:
+            filtered_pairs = eligible
+            out["tga_filter_applied"] = "inn_set_match"
+            out["tga_filter_count_before"] = len(detail_pairs)
+            out["tga_filter_count_after"] = len(eligible)
+        else:
+            # 필터 결과 0건 → fallback. warning 만 표시, 원본 리스트 유지.
+            out["tga_filter_applied"] = "inn_set_match_failed_fallback_all"
+            out["tga_filter_count_before"] = len(detail_pairs)
+            out["tga_filter_count_after"] = 0
+
+    # Phase Sereterol — 정렬: (1) originator 빅파마 sponsor 우선, (2) ARTG ID 오름차순
+    def _sort_key(pair: tuple[str, dict[str, Any]]) -> tuple[int, int]:
+        aid_str, det = pair
+        is_originator = _sponsor_is_originator_candidate(det.get("tga_sponsor"))
+        # originator 먼저 → (0, artg_id_int) vs (1, artg_id_int). 작은 값이 먼저.
+        try:
+            aid_int = int(aid_str)
+        except ValueError:
+            aid_int = 10**12  # 비숫자 → 뒤로
+        return (0 if is_originator else 1, aid_int)
+
+    filtered_pairs = sorted(filtered_pairs, key=_sort_key)
+
+    # 대표 상세 = 정렬된 첫 번째 후보
+    if filtered_pairs:
+        first_aid, first_detail = filtered_pairs[0]
+        # tga_artg_ids 도 필터된 순서 기준으로 재구성
+        out["tga_artg_ids"] = [aid for aid, _ in filtered_pairs]
+        out["artg_id"] = str(first_aid)
+        out["artg_number"] = str(first_aid)
+        out["artg_url"] = f"{_TGA_BASE}/resources/artg/{first_aid}"
+        out["artg_source_url"] = out["artg_url"]
+
         sp0 = first_detail.get("tga_sponsor")
         if sp0:
             out["tga_sponsor"] = sp0
             out["sponsor_name"] = sp0
-        if all_sponsors:
+        # tga_sponsors 는 "필터된 후보들의 sponsors dedup" 으로 재구성
+        filtered_sponsors: list[str] = []
+        for _aid, det in filtered_pairs:
+            sp = det.get("tga_sponsor")
+            if sp and sp not in filtered_sponsors:
+                filtered_sponsors.append(sp)
+        if filtered_sponsors:
+            out["tga_sponsors"] = filtered_sponsors
+        elif all_sponsors:
             out["tga_sponsors"] = all_sponsors
 
         out["tga_licence_category"] = first_detail.get("tga_licence_category")
         out["tga_licence_status"] = first_detail.get("tga_licence_status")
         out["active_ingredients"] = first_detail.get("active_ingredients") or []
-        # Phase 4.3-v3 부분 revert — TGA strength/dosage_form 복구 (PBS 미등재 fallback)
         out["strength"] = first_detail.get("strength")
         out["dosage_form"] = first_detail.get("dosage_form")
 

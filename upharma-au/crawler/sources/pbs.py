@@ -490,6 +490,11 @@ def _filter_results(dtos: list[dict[str, Any]]) -> list[dict[str, Any]]:
             if s and s not in all_sponsors:
                 all_sponsors.append(s)
     chosen["sponsors"] = all_sponsors
+
+    # Phase Sereterol — 제네릭 선택 시에도 originator 정보를 별도 컬럼에 보존.
+    # pool 에서 innovator_indicator='Y' 행의 브랜드·스폰서를 chosen 에 주입.
+    chosen = _attach_originator_info(chosen, list(dtos))
+
     return [chosen]
 
 
@@ -511,13 +516,21 @@ def _pbs_needles(ing_raw: str) -> list[str]:
     return list(dict.fromkeys([x for x in (raw, norm) if x]))
 
 
-def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
+def fetch_pbs_by_ingredient(
+    ingredient: str,
+    *,
+    _return_all: bool = False,
+) -> list[dict[str, Any]]:
     """ingredient 로 PBS 품목을 찾아 PBSItemDTO(dict) 리스트 반환.
 
     매칭 다중 시 1 건만: originator_brand 우선, 없으면 dpmq 최저.
     없으면 [_empty_dto()]. Key 이름은 §13-5-1 PBSItemDTO 기준.
 
     중간안: /items + /item-dispensing-rule-relationships 조인.
+
+    Phase Sereterol 수정 (2026-04-19):
+      `_return_all=True` 이면 `_filter_results` 적용 없이 매칭된 전체 DTO 리스트
+      반환 — FDC set-equality 필터·originator 식별용. 내부 API.
     """
     ing_raw = (ingredient or "").strip()
     if not ing_raw:
@@ -525,6 +538,9 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
     needles = _pbs_needles(ing_raw)
     ing = needles[0] if needles else ing_raw.lower()
     out_empty = _empty_dto()
+
+    def _finalize(dtos: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return dtos if _return_all else _filter_results(dtos)
 
     try:
         schedule = fetch_latest_schedule_code()
@@ -562,7 +578,7 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
                         primary_matched.append(row)
 
         if primary_matched:
-            return _filter_results([
+            return _finalize([
                 _join_dispensing_rule(r, schedule) for r in primary_matched
             ])
 
@@ -598,7 +614,7 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
                         if isinstance(row, dict) and _row_matches_ingredient(row, needles):
                             primary_matched.append(row)
             if primary_matched:
-                return _filter_results([
+                return _finalize([
                     _join_dispensing_rule(r, schedule) for r in primary_matched
                 ])
 
@@ -630,7 +646,7 @@ def fetch_pbs_by_ingredient(ingredient: str) -> list[dict[str, Any]]:
                 break
 
         if fallback_matched:
-            return _filter_results([
+            return _finalize([
                 _join_dispensing_rule(r, schedule) for r in fallback_matched
             ])
 
@@ -661,52 +677,189 @@ def fetch_pbs_multi(ingredients: list[str]) -> list[dict[str, Any]]:
 # 위임지서: /AX 호주 final/CLAUDE_CODE_수정지시_Case별_크롤링_분기.md Phase 1.1
 # ─────────────────────────────────────────────────────────────────────
 
+def _dto_inn_set(dto: dict[str, Any]) -> frozenset[str]:
+    """DTO 에서 base INN set 추출. FDC set-equality 매칭용.
+
+    drug_name / brand_name / raw_response.items.li_drug_name·schedule_form 등
+    가능한 텍스트 필드를 모두 넘겨 utils.inn_normalize.extract_inn_set() 호출.
+    """
+    import sys
+    import os as _os
+    sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    from utils.inn_normalize import extract_inn_set
+
+    raw_resp = dto.get("raw_response") or {}
+    items = raw_resp.get("items") if isinstance(raw_resp, dict) else {}
+    if not isinstance(items, dict):
+        items = {}
+    return extract_inn_set(
+        dto.get("drug_name"),
+        dto.get("brand_name"),
+        items.get("drug_name"),
+        items.get("li_drug_name"),
+        items.get("schedule_form"),
+    )
+
+
+def _attach_originator_info(
+    chosen: dict[str, Any],
+    pool: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """pool 에서 innovator_indicator='Y' (originator_brand=True) 행을 찾아
+    originator 브랜드명·스폰서를 chosen DTO 에 주입.
+
+    PBS 제네릭 품목 여러 개가 등재돼 있을 때 오리지널 브랜드(예: Seretide Accuhaler)
+    의 정보를 별도 컬럼에 보존 — chosen 자체는 가격·선택 로직으로 결정되지만
+    originator 식별은 모든 매칭 행 풀에서 판정.
+    """
+    originator_row = next((r for r in pool if r.get("originator_brand") is True), None)
+    if originator_row is None:
+        # raw_response.items.innovator_indicator='Y' 직접 검사 (DTO 매핑 실패 대응)
+        for r in pool:
+            raw_items = (r.get("raw_response") or {}).get("items") or {}
+            flag = raw_items.get("innovator_indicator") or raw_items.get("originator_brand_indicator")
+            if flag and str(flag).strip().upper() == "Y":
+                originator_row = r
+                break
+    if originator_row is not None:
+        chosen["originator_brand_name"] = (
+            originator_row.get("brand_name")
+            or (originator_row.get("raw_response") or {}).get("items", {}).get("brand_name")
+        )
+        # sponsor / manufacturer_name 양쪽 수용
+        raw_items = (originator_row.get("raw_response") or {}).get("items") or {}
+        chosen["originator_sponsor"] = (
+            raw_items.get("manufacturer_name")
+            or raw_items.get("sponsor")
+            or originator_row.get("manufacturer_code")
+        )
+        # chosen 자체가 originator 인지 여부와 무관하게 식별 정보는 채움
+        if chosen.get("originator_brand") is None:
+            # 명시 값 없음 → chosen 이 originator 행과 동일인지 비교
+            chosen["originator_brand"] = (
+                originator_row.get("pbs_code") == chosen.get("pbs_code")
+                and originator_row.get("brand_name") == chosen.get("brand_name")
+            )
+    return chosen
+
+
 def fetch_pbs_fdc(
     components: list[str],
     fdc_search_term: str | None = None,
+    *,
+    strengths: list[str] | None = None,
 ) -> dict[str, Any]:
     """Case 1 DIRECT — 복합제가 PBS 에 FDC (Fixed-Dose Combination, 고정용량복합제)
     한 줄로 등재된 경우.
 
-    전략:
-      1) fdc_search_term(있으면) 또는 components[0] 을 anchor 로 drug_name 조회
-      2) 응답 중 drug_name·brand_name 이 모든 components 를 포함하는 행만 필터
-      3) 여러 개면 dpmq 최저행 반환 (제네릭 우선)
-      4) 매칭 0건이면 fetch_pbs_component_sum() 으로 폴백 + flag 기록
+    Phase Sereterol 수정 (2026-04-19):
+      기존 "drug_name 에 각 component 문자열 substring 포함" 부분 매칭은
+      "fluticasone+formoterol" 같은 다른 조합도 통과시켜 14449L 대신 10007Q 를
+      선택하던 버그. → base INN set-equality 로 강화.
 
-    반환: 단일 PBSItemDTO(dict). 폴백됐으면 'fdc_fallback': True 표시.
+    전략:
+      1) fdc_search_term(있으면) 또는 components[0] 을 anchor 로 drug_name 조회.
+         `_return_all=True` 로 매칭된 전체 DTO 받기 (기존 _filter_results 우회).
+      2) 각 DTO 의 활성성분 set (염 접미사 제거한 base INN) vs
+         expected = set(strip_salt(c) for c in components) 비교.
+         정확 일치 행만 통과.
+      3) 0 건 → fetch_pbs_component_sum() fallback + flag 기록.
+      4) 다 건 중 선택:
+         (a) 자사 함량 (`strengths` 리스트 와 match_strength 비교) 우선
+         (b) DPMQ 최저가 우선
+      5) originator_brand_name / originator_sponsor 식별 — pool 에 innovator_indicator='Y'
+         가 있으면 chosen 에 주입.
+
+    반환: 단일 PBSItemDTO(dict). Fallback 된 경우 'fdc_fallback': True 표시.
     """
     if not components:
         return _empty_dto()
 
-    # 1차: FDC 통째 쿼리 (API 가 and 검색 지원 안 함 — 첫 성분 기준 + 응답 필터)
+    import sys
+    import os as _os
+    sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    from utils.inn_normalize import strip_inn_salt
+
+    expected_inns: frozenset[str] = frozenset(
+        s for s in (strip_inn_salt(c) for c in components) if s
+    )
+    if not expected_inns:
+        return _empty_dto()
+
     anchor = fdc_search_term or components[0]
-    rows = fetch_pbs_by_ingredient(anchor)
+    # Phase Sereterol — 전체 매칭 행 수집 (_filter_results 우회)
+    all_rows = fetch_pbs_by_ingredient(anchor, _return_all=True)
 
-    def _all_in(dn: str) -> bool:
-        dn_low = (dn or "").lower()
-        return all(c.lower() in dn_low for c in components)
+    # base INN set-equality 필터
+    matched = [r for r in all_rows if _dto_inn_set(r) == expected_inns]
 
-    matched = [
-        r for r in rows
-        if _all_in(r.get("drug_name") or r.get("brand_name") or "")
+    if not matched:
+        fallback = fetch_pbs_component_sum(components)
+        fallback["pricing_case_applied"] = "DIRECT_FDC_fallback_to_component_sum"
+        fallback["fdc_fallback"] = True
+        return fallback
+
+    # (a) 자사 함량과 일치하는 행 우선
+    def _normalize_strength_tok(s: str) -> str:
+        # "250/50", "250/50 DPI", "500 mcg/50 mcg" 등을 단순히 숫자+슬래시 패턴으로 축약
+        t = (s or "").lower().replace(" ", "")
+        # 단위 제거
+        for u in ("mcg", "mg", "µg", "g", "ml", "iu", "units", "%"):
+            t = t.replace(u, "")
+        return t
+
+    if strengths:
+        wanted = [_normalize_strength_tok(s) for s in strengths if s]
+        preferred = []
+        for r in matched:
+            cand = _normalize_strength_tok(
+                r.get("market_strength")
+                or r.get("strength")
+                or ""
+            )
+            # 부분 포함 매칭 — "250/50" in "250/50" 또는 거꾸로
+            if cand and any(w and (w in cand or cand in w) for w in wanted):
+                preferred.append(r)
+        if preferred:
+            matched = preferred
+
+    # (b) DPMQ 최저 선택
+    def _dpmq(r: dict[str, Any]) -> Decimal:
+        v = r.get("dpmq_aud") if r.get("dpmq_aud") is not None else r.get("pbs_dpmq")
+        d = _safe_decimal(v) if v is not None else None
+        return d if d is not None else Decimal("999999")
+
+    best = dict(min(matched, key=_dpmq))
+    best["pricing_case_applied"] = "DIRECT_FDC"
+    best["_fdc_match_count"] = len(matched)
+
+    # pbs_brands / competitor_brands (_filter_results 스타일) 메타 주입
+    total_brands = len({r.get("brand_name") for r in matched if r.get("brand_name")})
+    best["pbs_total_brands"] = total_brands
+    best["pbs_brands"] = [
+        {
+            "brand_name": r.get("brand_name"),
+            "aemp_aud": r.get("aemp_aud"),
+            "dpmq_aud": r.get("dpmq_aud"),
+            "originator_brand": r.get("originator_brand"),
+            "pbs_code": r.get("pbs_code"),
+            "manufacturer_code": r.get("manufacturer_code"),
+            "brand_premium_aud": r.get("brand_premium_aud"),
+        }
+        for r in matched
+    ]
+    best["competitor_brands"] = [
+        b for b in best["pbs_brands"]
+        if not (
+            b.get("pbs_code") == best.get("pbs_code")
+            and b.get("brand_name") == best.get("brand_name")
+        )
     ]
 
-    if matched:
-        def _dpmq(r: dict[str, Any]) -> Decimal:
-            v = r.get("dpmq_aud") if r.get("dpmq_aud") is not None else r.get("pbs_dpmq")
-            d = _safe_decimal(v) if v is not None else None
-            return d if d is not None else Decimal("999999")
+    # originator 식별 — 풀에서 innovator_indicator='Y' 행 정보 주입
+    best = _attach_originator_info(best, matched)
 
-        best = dict(min(matched, key=_dpmq))
-        best["pricing_case_applied"] = "DIRECT_FDC"
-        return best
-
-    # 폴백: FDC 행 없음 → 성분별 합산으로 전환
-    fallback = fetch_pbs_component_sum(components)
-    fallback["pricing_case_applied"] = "DIRECT_FDC_fallback_to_component_sum"
-    fallback["fdc_fallback"] = True
-    return fallback
+    return best
 
 
 def fetch_pbs_component_sum(components: list[str]) -> dict[str, Any]:

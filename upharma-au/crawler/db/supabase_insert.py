@@ -137,7 +137,10 @@ _KEY_RENAME_AU_PRODUCTS: dict[str, str] = {
     "pbs_listed":            "pbs_found",
     # 기존 artg_status='registered' → 신규 tga_found (BOOLEAN 로 별도 변환)
     "crawled_at":            "last_crawled_at",
-    "price_source_url":      "chemist_url",
+    # Phase Sereterol (2026-04-19) — `price_source_url → chemist_url` rename 제거.
+    # price_source_url 은 선택된 가격 출처(PBS 또는 Chemist) 의 URL 이라
+    # chemist_url(항상 Chemist Warehouse 만) 과 의미 다름. DIRECT(PBS DPMQ) 경로에서
+    # price_source_url=PBS URL 이 chemist_url 컬럼에 오염 저장되던 버그 수정.
 }
 
 
@@ -194,7 +197,13 @@ def _row_for_upsert(summary: dict[str, Any]) -> dict[str, Any]:
         # 1) 키 rename
         new_key = _KEY_RENAME_AU_PRODUCTS.get(k, k)
         # 2) 화이트리스트 필터
-        if new_key in _ALLOWED_COLUMNS:
+        if new_key not in _ALLOWED_COLUMNS:
+            continue
+        # Phase Sereterol (2026-04-19) — rename 으로 인한 의도치 않은 덮어쓰기 방지.
+        # summary 가 이미 out[new_key] 에 명시 non-null 값을 넣어뒀으면 rename
+        # 경유로 들어온 v 가 덮어쓰지 못하게 막음. (None 또는 빈 문자열은 덮어쓰기 허용)
+        existing = out.get(new_key) if new_key in out else "__UNSET__"
+        if existing == "__UNSET__" or existing is None or existing == "":
             out[new_key] = v
     return out
 

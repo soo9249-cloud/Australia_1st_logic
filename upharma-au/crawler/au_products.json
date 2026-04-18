@@ -46,6 +46,7 @@
       "inn_normalized": "fluticasone salmeterol",
       "inn_components": ["fluticasone", "salmeterol"],
       "strength": "복합",
+      "strengths": ["250/50", "500/50"],
       "dosage_form": "inhaler",
       "hs_code_6": "300460",
       "pricing_case": "DIRECT",

@@ -52,7 +52,12 @@ def test_v1_to_v2_key_rename() -> None:
         "pbs_pricing_quantity": 1,
         "pbs_listed": True,
         "crawled_at": "2026-04-18T14:00:00Z",
+        # Phase Sereterol (2026-04-19) 이전에는 price_source_url → chemist_url 로
+        # 자동 rename 됐는데, 그 rename 이 PBS URL 을 chemist_url 컬럼에 오염
+        # 저장하던 버그의 원인이었음. rename 제거 후 chemist_url 은 caller 가 명시
+        # 주입해야만 채워짐. 테스트도 그 정책으로 갱신.
         "price_source_url": "https://www.chemistwarehouse.com.au/search?query=hydroxyurea",
+        "chemist_url": "https://www.chemistwarehouse.com.au/search?query=hydroxyurea",
         "artg_status": "registered",
     }
 
@@ -69,10 +74,37 @@ def test_v1_to_v2_key_rename() -> None:
     assert row["pricing_quantity"] == 1, "pbs_pricing_quantity → pricing_quantity"
     assert row["pbs_found"] is True, "pbs_listed → pbs_found"
     assert row["last_crawled_at"] == "2026-04-18T14:00:00Z", "crawled_at → last_crawled_at"
-    assert row["chemist_url"] == v1_summary["price_source_url"], "price_source_url → chemist_url"
+    # Phase Sereterol — 명시 chemist_url 키는 그대로 보존 (rename 없음)
+    assert row["chemist_url"] == v1_summary["chemist_url"], (
+        "명시 chemist_url 키 값은 _row_for_upsert 에서 변경되지 않아야 함"
+    )
 
     # artg_status='registered' → tga_found=True 파생
     assert row["tga_found"] is True, "artg_status='registered' → tga_found=True"
+
+
+def test_price_source_url_does_not_rename_to_chemist_url() -> None:
+    """Phase Sereterol (2026-04-19) — price_source_url 이 chemist_url 로
+    자동 rename 되지 않아야 함.
+
+    사유: DIRECT(PBS DPMQ) 경로에서 price_source_url 은 PBS 공식 URL 이 되는데,
+    기존 rename 규칙이 이를 chemist_url 컬럼에 오염 저장했음. rename 제거 확인.
+    """
+    from db.supabase_insert import _row_for_upsert
+
+    summary_pbs_only = {
+        "product_id": "au-pbs-direct-test",
+        "pbs_item_code": "9999Z",
+        "pbs_listed": True,
+        # 선택 가격 출처가 PBS 라 price_source_url 은 PBS URL
+        "price_source_url": "https://www.pbs.gov.au/medicine/item/9999Z",
+        # chemist_url 은 따로 설정하지 않음 (Chemist 데이터 신뢰 불가 케이스)
+    }
+    row = _row_for_upsert(summary_pbs_only)
+    # chemist_url 컬럼이 비어있어야 함 (PBS URL 로 오염되면 안 됨)
+    assert row.get("chemist_url") in (None, ""), (
+        f"price_source_url 이 chemist_url 컬럼에 오염 저장됨: {row.get('chemist_url')!r}"
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────

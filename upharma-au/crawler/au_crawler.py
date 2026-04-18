@@ -400,6 +400,10 @@ def build_product_summary(
         "first_listed_date": pbs.get("first_listed_date") or pbs.get("pbs_first_listed_date"),
         "authority_method": pbs.get("authority_method"),
         "originator_brand": pbs.get("originator_brand"),
+        # Phase Sereterol — originator 브랜드/스폰서 별도 컬럼 (제네릭 선택 시에도 보존).
+        # PBS 매칭 풀에 innovator_indicator='Y' 행 존재 시 그 브랜드·스폰서 정보.
+        "originator_brand_name": pbs.get("originator_brand_name"),
+        "originator_sponsor": pbs.get("originator_sponsor"),
         "therapeutic_group_id": pbs.get("therapeutic_group_id"),
         "brand_substitution_group_id": pbs.get("brand_substitution_group_id"),
         "atc_code": pbs.get("atc_code"),                       # TODO(v2-pbs-full) NULL
@@ -653,7 +657,16 @@ def _dispatch_pbs_by_case(product: dict[str, Any]) -> dict[str, Any]:
     # Case 1 — DIRECT
     if case == "DIRECT":
         if len(components) > 1:
-            return fetch_pbs_fdc(components, product.get("fdc_search_term"))
+            # Phase Sereterol — 자사 함량 우선순위 매칭용 strengths 리스트 전달.
+            # strengths(복수) 가 없으면 단일 strength 로 단일-요소 리스트 구성.
+            strengths = product.get("strengths")
+            if not strengths and product.get("strength"):
+                strengths = [str(product.get("strength"))]
+            return fetch_pbs_fdc(
+                components,
+                product.get("fdc_search_term"),
+                strengths=strengths,
+            )
         ing = components[0] if components else inn
         rows = fetch_pbs_by_ingredient(ing)
         if rows:
@@ -849,10 +862,12 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     # ── TGA ──────────────────────────────────────────────────
     tga_terms = product.get("tga_search_terms") or []
     tga_query = str(tga_terms[0] if tga_terms else product.get("inn_normalized") or "")
+    # Phase Sereterol — expected_inns 로 base INN set 정확 매칭 필터 적용.
+    tga_expected = [str(c) for c in (product.get("inn_components") or []) if c]
     _t0 = time.time()
     _tga_started = now_kst_iso()
     try:
-        tga = fetch_tga_artg(tga_query)
+        tga = fetch_tga_artg(tga_query, expected_inns=tga_expected or None)
         determine_export_viable(tga)
         log_crawl(
             run_id=run_id, product_code=product_filter, source="tga", status="success",

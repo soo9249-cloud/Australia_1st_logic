@@ -725,21 +725,19 @@ def fetch_pbs_withdrawal(
     withdrawn_component: str,
     similar_inns: list[str],
 ) -> dict[str, Any]:
-    """Case 3 ESTIMATE_withdrawal — 시장 철수 성분은 유사계열 프록시 조회 안 함.
+    """Case 3 ESTIMATE_withdrawal — 복합제 성분 중 하나가 시장 철수. Phase 1.1 원안.
 
-    결정 (Jisoo, 2026-04-18): cilostazol 같은 철수 성분 → clopidogrel proxy fetch 는
-    rate limit 21초 추가 소요 + 의미 낮음. 보고서 레이어가 similar_inns 받아서 서술.
-    (위임지서 Phase 4.9 수정 4 — Case 3 크롤러 축소)
+    **롤백 결정 (Jisoo, 2026-04-18 재결정, Phase 4.9 수정 4 폐기)**:
+    Ciloduo 는 cilostazol + rosuvastatin 복합제. rosuvastatin 만 조회하면
+    반쪽 AEMP → FOB 역산 의미 없음. clopidogrel 은 PBS 등재 확인됨
+    (13365K/13399F, 75mg×28, DPMQ $21.98, 제네릭 다수) + ATC B01AC 상위 분류
+    (항혈소판제) → cilostazol 대체로 약리학적 정당성 확보. proxy fetch 복귀.
 
     전략:
-      1) withdrawn_component 제외한 나머지 성분만 fetch_pbs_by_ingredient
-      2) 철수 성분 자체는 크롤링 skip
-      3) 메타 태깅: _withdrawn_component, _similar_inns_hint, confidence_override=0.3
-
-    예시: Ciloduo = cilostazol + rosuvastatin.
-      rosuvastatin 은 단일성분 PBS 등재 → 조회 유지
-      cilostazol 은 2020 FDA 경고 후 호주 철수 → 조회 skip
-      → 보고서에서 clopidogrel 참조로 서술.
+      1) withdrawn_component 제외한 나머지 성분은 fetch_pbs_by_ingredient 로 AEMP 확보
+      2) 철수 성분은 similar_inns[0] 유사계열 (Cilostazol → Clopidogrel) 로 AEMP 추정
+      3) 두 AEMP 를 _merge_pbs_rows 로 합산
+      4) 메타 태깅: withdrawn_component, similar_proxy_inns, confidence_override=0.3
     """
     acc: list[dict[str, Any]] = []
     for c in components:
@@ -749,11 +747,20 @@ def fetch_pbs_withdrawal(
             if valid:
                 acc.extend(valid)
 
+    # 철수 성분 → 유사계열 프록시 fetch (Phase 1.1 원안, Jisoo 2026-04-18 재승인)
+    if similar_inns:
+        sim_rows = fetch_pbs_by_ingredient(similar_inns[0])
+        valid_sim = [r for r in sim_rows if r.get("pbs_found")]
+        for r in valid_sim:
+            r["_estimated_for"] = withdrawn_component
+            r["_similar_proxy"] = similar_inns[0]
+        acc.extend(valid_sim)
+
     if not acc:
         dto = _empty_dto()
         dto["pricing_case_applied"] = "ESTIMATE_withdrawal"
-        dto["_withdrawn_component"] = withdrawn_component
-        dto["_similar_inns_hint"] = list(similar_inns) if similar_inns else []
+        dto["withdrawn_component"] = withdrawn_component
+        dto["similar_proxy_inns"] = similar_inns[:1] if similar_inns else []
         dto["confidence_override"] = 0.3
         return dto
 
@@ -761,8 +768,8 @@ def fetch_pbs_withdrawal(
     au = import_module("au_crawler")
     merged = au._merge_pbs_rows(acc)
     merged["pricing_case_applied"] = "ESTIMATE_withdrawal"
-    merged["_withdrawn_component"] = withdrawn_component
-    merged["_similar_inns_hint"] = list(similar_inns) if similar_inns else []  # 보고서 레이어 전달
+    merged["withdrawn_component"] = withdrawn_component
+    merged["similar_proxy_inns"] = similar_inns[:1] if similar_inns else []
     merged["confidence_override"] = 0.3
     return merged
 

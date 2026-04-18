@@ -582,21 +582,25 @@ def build_product_summary(
         out["similar_drug_used"] = list(product.get("similar_inns") or [])
         out["confidence"] = 0.1
 
-    # Phase 4.9 수정 5 — Case 3 ESTIMATE_withdrawal situation_summary + 메타 기록
+    # Case 3 ESTIMATE_withdrawal situation_summary + 메타 기록.
+    # Phase 1.1 원안 복귀 (Jisoo 2026-04-18 재결정): 유사계열 프록시 fetch 복귀,
+    # AEMP 는 '등재 나머지 성분 + 프록시' 합산. 서술 문구도 합산 반영으로 업데이트.
     if pricing_case_upper == "ESTIMATE_WITHDRAWAL":
         withdrawn = product.get("withdrawn_component") or ""
         similar = list(product.get("similar_inns") or [])
+        proxy_used = similar[0] if similar else "없음"
         out["situation_summary"] = (
             f"복합제 성분 중 {withdrawn} 는 호주 시장에서 상업적으로 철수한 상태입니다. "
-            f"등재된 나머지 성분 AEMP(정부 승인 출고가) 만 반영했으며, "
-            f"{withdrawn} 의 가격 추정은 유사 계열"
-            f"({', '.join(similar) if similar else '없음'}) 참조로 보고서에서 별도 처리됩니다."
+            f"등재된 나머지 성분 + 유사계열 프록시({proxy_used}) AEMP(정부 승인 출고가) 를 "
+            f"합산해 반영했습니다. 철수 배경과 재진입 장벽(TGA 소명·PBAC 재심의)은 "
+            f"보고서에서 별도 서술됩니다."
         )
         existing_warn = list(out.get("warnings") or [])
-        if "withdrawal_proxy_in_report" not in existing_warn:
-            existing_warn.append("withdrawal_proxy_in_report")
+        if "withdrawal_proxy_used" not in existing_warn:
+            existing_warn.append("withdrawal_proxy_used")
         out["warnings"] = existing_warn
-        out["similar_drug_used"] = similar
+        # similar_drug_used 는 실제 fetch 로 쓰인 프록시만 (첫 similar_inns)
+        out["similar_drug_used"] = similar[:1] if similar else []
         out["confidence"] = 0.3
 
     # Phase 4.5 — originator_brand 판정 정상화 (fallback).

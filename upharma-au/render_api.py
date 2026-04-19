@@ -2088,6 +2088,7 @@ import json as _json
 # 지연 import: stage2 모듈 로드 실패해도 서버 기동은 가능
 try:
     from stage2.fob_calculator import (  # type: ignore
+        ALPHA_MARKET_UPLIFT_PCT,
         DEFAULT_FX_AUD_TO_KRW,
         calculate_fob_logic_a,
         calculate_fob_logic_b,
@@ -2100,6 +2101,7 @@ try:
 except Exception as _stage2_err:  # noqa: BLE001
     _STAGE2_OK = False
     _STAGE2_ERR = str(_stage2_err)
+    ALPHA_MARKET_UPLIFT_PCT = 20.0  # stage2 로드 실패 시 보고서 v5 α 기본값
 
 
 _STAGE2_SEEDS_PATH = _BASE_DIR / "stage2" / "fob_reference_seeds.json"
@@ -2621,6 +2623,65 @@ def _fetch_exchange_rates_simple() -> dict[str, float | None]:
     return {"aud_krw": 893.0, "aud_usd": 0.64}
 
 
+def _build_p2_ref_price_text_v5(dispatch_result: dict[str, Any]) -> tuple[str | None, float | None]:
+    """보고서 v5와 동일 2단계 노출 — Logic A: 공시 AEMP → α → 기준 AEMP, Logic B: 소매·GST → GST 제외가.
+
+    hardcoded(병원 수기 FOB)는 α 미적용 안내.
+    """
+    logic = dispatch_result.get("logic")
+    scenarios = dispatch_result.get("scenarios") or {}
+    avg = scenarios.get("average") or {}
+    if not avg:
+        return None, None
+
+    alpha_pct = int(round(float(ALPHA_MARKET_UPLIFT_PCT)))
+
+    if logic == "A":
+        listed = avg.get("aemp_aud")
+        adj = avg.get("adjusted_aemp_aud")
+        if listed is not None and adj is not None:
+            ref_listed = float(listed)
+            adj_f = float(adj)
+            text = (
+                f"공시 AEMP AUD {ref_listed:.2f} → α {alpha_pct}% 보정 → 기준 AEMP AUD {adj_f:.2f}"
+            )
+            return text, ref_listed
+        return None, None
+
+    if logic == "B":
+        retail = avg.get("retail_aud")
+        pre_gst = avg.get("pre_gst_aud")
+        if retail is None or pre_gst is None:
+            return None, None
+        r = float(retail)
+        p = float(pre_gst)
+        gst_pct = avg.get("gst_pct")
+        if gst_pct is None:
+            gst_pct = 10.0
+        g = float(gst_pct)
+        is_rx = bool(avg.get("is_pbs_listed_rx"))
+        if is_rx:
+            text = (
+                f"소매가 AUD {r:.2f} (PBS 등재 처방, GST 면제) → GST 제외 역산가 AUD {p:.2f}"
+            )
+        else:
+            text = (
+                f"소매가 AUD {r:.2f} (GST {g:.0f}%) → GST 제외 역산가 AUD {p:.2f}"
+            )
+        return text, r
+
+    if logic == "hardcoded":
+        br = (dispatch_result.get("inputs") or {}).get("bayer_reference_aud")
+        text = "병원 tender 수기 FOB (α·표준 PBS/소매 역산 미적용)"
+        ref_aud: float | None = None
+        if br is not None:
+            ref_aud = float(br)
+            text += f" · 참조 Bayer FOB AUD {ref_aud:.2f}"
+        return text, ref_aud
+
+    return None, None
+
+
 def _p2_pipeline_worker(product_id: str, segment: str) -> None:
     """백그라운드 스레드: Supabase row 조회 → seed 매칭 → FOB 계산 → Haiku 블록 생성 → 결과 조립."""
     try:
@@ -2720,11 +2781,14 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
         avg = scenarios_raw.get("average", {})
         cons = scenarios_raw.get("conservative", {})
 
-        # 참고가 텍스트 조립 — dispatch 실제 사용값과 동일 출처가 보이도록
-        #   Logic B+크롤 소매 / Logic A+크롤 AEMP 를 먼저, 그 다음 시드
+        # 참고가 텍스트 — 보고서 v5 정합(α·GST 2단계) 우선, 없으면 출처별 레거시 문구
+        v5_text, v5_ref_aud = _build_p2_ref_price_text_v5(dispatch_result)
         _inp = dispatch_result.get("inputs") or {}
         _logic = dispatch_result.get("logic")
-        if _logic == "B" and _inp.get("retail_source") == "crawler" and _inp.get("retail_aud") is not None:
+        if v5_text is not None:
+            ref_text = v5_text
+            ref_aud = v5_ref_aud
+        elif _logic == "B" and _inp.get("retail_source") == "crawler" and _inp.get("retail_aud") is not None:
             ref_aud = float(_inp["retail_aud"])
             cr_method = row.get("retail_estimation_method")
             if cr_method == "pbs_dpmq":
@@ -2757,12 +2821,19 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
             ref_text = "참고가 미확보"
             ref_aud = None
 
-        # Logic A 공식 vs Logic B 공식
+        # Logic A 공식 vs Logic B 공식 (v5 α 문구 정합)
         logic = dispatch_result.get("logic", "?")
         if logic == "A":
-            formula_str = "FOB = AEMP ÷ (1 + 수입상 마진%)"
+            formula_str = (
+                "FOB = (공시 AEMP × (1+α)) ÷ (1 + 수입상 마진%), "
+                f"α={int(round(float(ALPHA_MARKET_UPLIFT_PCT)))}% (Logic A 전용)"
+            )
+        elif logic == "hardcoded":
+            formula_str = "FOB = 병원 tender 수기 확정 (seed.fob_hardcoded_aud, α 미적용)"
         else:
-            formula_str = "FOB = 소매가 ÷ (1+GST) ÷ (1+약국마진) ÷ (1+도매마진) ÷ (1+수입상마진)"
+            formula_str = (
+                "FOB = 소매가 ÷ (1+GST) ÷ (1+약국마진) ÷ (1+도매마진) ÷ (1+수입상마진)"
+            )
 
         frontend_result = {
             "extracted": {

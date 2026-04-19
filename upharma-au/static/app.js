@@ -498,6 +498,10 @@ function _makeP2Defaults() {
   //   WHOLESALE_MARGIN_B    = 10%
   //   IMPORTER_MARGIN       = 20%  (average 시나리오 기준)
   // 화폐: USD 메인 (AUD 원본은 loadExchange.window._exchangeRates.aud_usd 로 환산)
+  //
+  // UI 범위(위임 정합): 민간(private) = Logic B와 동일하게 gst·pharmacy·wholesale·importer 4슬라이더(+기준가·환율).
+  // 공공(public) = 입찰가·환율·비율 3항목으로 별도 단순 모델 — stage2 Logic A(공시 AEMP·α·수입상만)와
+  // 항목 수가 1:1이 아님. Logic A 역산은 AI 탭 3열 또는 /api/stage2/calculate.
   return {
     public: [
       { key: 'base_price', label: '기준 입찰가 (USD)', value: 0, type: 'abs_input', unit: 'USD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 PBS AEMP 또는 주 정부 병원조달 입찰가 참고', rationale: '호주 공공채널은 PBS 급여가격·HealthShare NSW 입찰가가 기준.' },
@@ -581,6 +585,23 @@ function initP2Strategy() {
       if (typeof _renderP2Manual === 'function') _renderP2Manual();
     });
   }
+
+  document.querySelectorAll('.p2-seg-btn[data-p2-manual-seg]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const seg = btn.getAttribute('data-p2-manual-seg') || 'public';
+      _p2ManualSeg = seg === 'private' ? 'private' : 'public';
+      document.querySelectorAll('.p2-seg-btn[data-p2-manual-seg]').forEach((b) => {
+        b.classList.toggle('on', b.getAttribute('data-p2-manual-seg') === seg);
+      });
+      const desc = document.getElementById('p2-manual-seg-desc');
+      if (desc) {
+        desc.textContent = _p2ManualSeg === 'public'
+          ? '공공 시장: PBS 공공급여 채널 · 주 정부 병원조달(HealthShare NSW 등)'
+          : '민간 시장: Chemist Warehouse 등 약국 체인 · 소매 유통 (Logic B 역산)';
+      }
+      if (typeof _renderP2Manual === 'function') _renderP2Manual();
+    });
+  });
 
   _syncP2ReportsOptions();
   _p2FillExchangeRate();

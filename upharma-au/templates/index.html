@@ -400,6 +400,14 @@
               <div id="p2-manual-seg-desc" class="p2-note" style="margin-top:10px;">
                 공공 시장: PBS 공공급여 채널 · 주 정부 병원조달(HealthShare NSW 등)
               </div>
+              <p id="p2-manual-logic-hint" class="p2-note" style="margin-top:8px;font-size:12px;line-height:1.45;color:var(--muted);">
+                <strong>직접입력 vs stage2:</strong>
+                민간 탭은 GST·약국·도매·수입상 <strong>4개</strong> 역산 슬라이더로
+                <code>fob_calculator</code> Logic B와 동일한 나눗셈 체인입니다.
+                공공 탭은 USD 입찰가·환율·비율(기본 30%)의 <strong>단순 모델</strong>이며,
+                PBS 공시 AEMP·α 20%·수입상 마진만 반영한 역산은 <strong>AI 가격 분석</strong> 탭(3열·수입상 30/20/10%) 또는
+                <code>/api/stage2/calculate</code> Logic A를 사용합니다.
+              </p>
             </div>
 
             <div class="selector-card">

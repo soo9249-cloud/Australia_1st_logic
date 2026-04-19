@@ -2096,3 +2096,313 @@ def render_p2_pdf(
     story.append(footer_tbl)
 
     doc.build(story)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 바이어 발굴 PDF (Phase 3) — 2026-04-20 신규 추가
+# 기존 render_pdf / render_p2_pdf 는 건드리지 않음. 공통 헬퍼만 재사용.
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _buyers_tier_from_source_flags(source_flags: Any) -> str:
+    """au_buyers.source_flags 에서 tier_A/B/C 추출. 없으면 'A' 반환 (기본)."""
+    if isinstance(source_flags, list):
+        for f in source_flags:
+            if isinstance(f, str) and f.startswith("tier_"):
+                return f.split("_", 1)[1]
+    return "A"
+
+
+def _buyers_load_fx() -> dict[str, float]:
+    """buyer_discovery.utils.fx_rate 재사용. 실패 시 fallback."""
+    try:
+        import sys as _sys
+        _UP = Path(__file__).resolve().parent
+        if str(_UP) not in _sys.path:
+            _sys.path.insert(0, str(_UP))
+        from buyer_discovery.utils.fx_rate import get_fx_rates
+        return get_fx_rates()
+    except Exception:
+        return {"aud_krw": 900.0, "aud_usd": 0.65}
+
+
+def _buyers_fetch_rows(product_id: str | None) -> list[dict[str, Any]]:
+    """Supabase au_buyers 에서 조회."""
+    import sys as _sys
+    _UP = Path(__file__).resolve().parent
+    if str(_UP / "crawler") not in _sys.path:
+        _sys.path.insert(0, str(_UP / "crawler"))
+    from db.supabase_insert import get_supabase_client  # type: ignore
+
+    sb = get_supabase_client()
+    q = sb.table("au_buyers").select("*")
+    if product_id:
+        q = q.eq("product_id", product_id)
+    q = q.order("product_id").order("rank")
+    rows = q.execute().data or []
+    return [r for r in rows if not (r.get("product_id") or "").startswith("_")]
+
+
+def _buyers_load_product_meta() -> dict[str, dict[str, Any]]:
+    """crawler/au_products.json 메타 로드."""
+    import json as _json
+    path = Path(__file__).resolve().parent / "crawler" / "au_products.json"
+    if not path.is_file():
+        return {}
+    try:
+        data = _json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return {p.get("product_id"): p for p in (data.get("products") or []) if p.get("product_id")}
+
+
+def render_buyers_pdf(
+    product_id: str | None = None,
+    output_dir: Path | None = None,
+) -> Path:
+    """바이어 발굴 보고서 PDF 생성.
+
+    Args:
+        product_id: 특정 품목만. None 이면 8품목 전체.
+        output_dir: 저장 디렉토리. None 이면 upharma-au/reports/.
+
+    Returns:
+        저장된 PDF 절대 경로.
+    """
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (
+        PageBreak,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+
+    _UP = Path(__file__).resolve().parent
+    if output_dir is None:
+        output_dir = _UP / "reports"
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    rows = _buyers_fetch_rows(product_id)
+    if not rows:
+        raise ValueError(
+            f"au_buyers 데이터 없음 ({'전체' if not product_id else product_id}). "
+            f"먼저 stage2_scoring.py 를 실행해서 UPSERT 하세요."
+        )
+    meta_map = _buyers_load_product_meta()
+    fx = _buyers_load_fx()
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if product_id:
+        out_path = output_dir / f"au_buyers_{product_id}_{ts}.pdf"
+    else:
+        out_path = output_dir / f"au_buyers_all_{ts}.pdf"
+
+    W, _H = A4
+    MARGIN = 18 * mm
+    CONTENT_W = W - 2 * MARGIN
+
+    base_font = _register_korean_font()
+    bold_font = f"{base_font}-Bold"
+    if base_font in ("HYSMyeongJo-Medium", "HYGothic-Medium"):
+        bold_font = base_font
+
+    C_NAVY = colors.HexColor("#1B2A4A")
+    C_BODY = colors.HexColor("#1A1A1A")
+    C_BORDER = colors.HexColor("#D0D7E3")
+    C_ALT = colors.HexColor("#F4F6F9")
+    C_MUTED = colors.HexColor("#6B7280")
+    C_TIER_A = colors.HexColor("#22c55e")
+    C_TIER_B = colors.HexColor("#3b82f6")
+    C_TIER_C = colors.HexColor("#9ca3af")
+
+    def ps(name: str, **kw) -> ParagraphStyle:
+        return ParagraphStyle(name, **kw)
+
+    s_title = ps("BTitle", fontName=bold_font, fontSize=16, leading=22,
+                 alignment=TA_CENTER, textColor=C_NAVY, spaceAfter=6)
+    s_date = ps("BDate", fontName=base_font, fontSize=9, leading=12,
+                alignment=TA_CENTER, textColor=C_MUTED)
+    s_sec = ps("BSec", fontName=bold_font, fontSize=11, leading=14,
+               textColor=C_NAVY, spaceBefore=10, spaceAfter=6)
+    s_body = ps("BBody", fontName=base_font, fontSize=9, leading=13,
+                textColor=C_BODY, alignment=TA_LEFT)
+    s_small = ps("BSmall", fontName=base_font, fontSize=8, leading=11,
+                 textColor=C_MUTED, alignment=TA_LEFT)
+
+    def tier_color(t: str):
+        if t == "A":
+            return C_TIER_A
+        if t == "B":
+            return C_TIER_B
+        return C_TIER_C
+
+    def safe(v: Any, dash: str = "—") -> str:
+        if v is None or v == "":
+            return dash
+        return str(v)
+
+    rows_by_pid: dict[str, list[dict[str, Any]]] = {}
+    for r in rows:
+        rows_by_pid.setdefault(r["product_id"], []).append(r)
+
+    doc = SimpleDocTemplate(
+        str(out_path),
+        pagesize=A4,
+        leftMargin=MARGIN,
+        rightMargin=MARGIN,
+        topMargin=MARGIN,
+        bottomMargin=MARGIN,
+        title="UPharma 호주 바이어발굴 보고서",
+        author="한국유나이티드제약",
+    )
+    story: list = []
+
+    story.append(Paragraph("호주 수출 바이어발굴 보고서", s_title))
+    story.append(Paragraph(
+        f"한국유나이티드제약 · 생성 {datetime.now().strftime('%Y-%m-%d %H:%M')} · "
+        f"실시간 환율 1 AUD = {fx.get('aud_krw', 0):.1f} KRW · {fx.get('aud_usd', 0) * 100:.2f} USD¢",
+        s_date,
+    ))
+    story.append(Spacer(1, 8))
+
+    for i, (pid, buyers) in enumerate(rows_by_pid.items()):
+        if i > 0:
+            story.append(PageBreak())
+
+        meta = meta_map.get(pid) or {}
+        pname = meta.get("product_name_ko") or pid
+        pen = meta.get("product_name_en") or ""
+        inns = " + ".join(meta.get("inn_components") or [])
+
+        story.append(Paragraph(
+            f"【 {safe(pname)} 】 {safe(pen, '')}",
+            s_sec,
+        ))
+        story.append(Paragraph(
+            f"성분: <b>{safe(inns)}</b> · 가격 케이스: {safe(meta.get('pricing_case'))} · "
+            f"바이어 TOP {len(buyers)} (최대 10)",
+            s_body,
+        ))
+        story.append(Spacer(1, 6))
+
+        header = ["#", "회사명 (바이어)", "매출 등급", "공장", "총점", "티어"]
+        tbl_data: list[list[Any]] = [header]
+        for b in buyers:
+            tier = _buyers_tier_from_source_flags(b.get("source_flags"))
+            tbl_data.append([
+                str(b.get("rank") or "?"),
+                Paragraph(safe(b.get("company_name")), s_body),
+                Paragraph(safe(b.get("annual_revenue_rank"), "-")[:30], s_small),
+                "Y" if b.get("has_au_factory") == "Y" else "-",
+                str(b.get("psi_total") or 0),
+                tier,
+            ])
+
+        col_widths = [
+            CONTENT_W * 0.05,
+            CONTENT_W * 0.38,
+            CONTENT_W * 0.28,
+            CONTENT_W * 0.07,
+            CONTENT_W * 0.10,
+            CONTENT_W * 0.12,
+        ]
+        tbl = Table(tbl_data, colWidths=col_widths, repeatRows=1)
+        tstyle = [
+            ("FONTNAME", (0, 0), (-1, -1), base_font),
+            ("FONTNAME", (0, 0), (-1, 0), bold_font),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("BACKGROUND", (0, 0), (-1, 0), C_NAVY),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("ALIGN", (1, 1), (1, -1), "LEFT"),
+            ("ALIGN", (2, 1), (2, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("BOX", (0, 0), (-1, -1), 0.5, C_BORDER),
+            ("INNERGRID", (0, 0), (-1, -1), 0.3, C_BORDER),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, C_ALT]),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]
+        for ridx in range(1, len(tbl_data)):
+            tier_val = tbl_data[ridx][5]
+            tstyle.append(("BACKGROUND", (5, ridx), (5, ridx), tier_color(tier_val)))
+            tstyle.append(("TEXTCOLOR", (5, ridx), (5, ridx), colors.white))
+            tstyle.append(("FONTNAME", (5, ridx), (5, ridx), bold_font))
+        tbl.setStyle(TableStyle(tstyle))
+        story.append(tbl)
+
+        story.append(Spacer(1, 10))
+        story.append(Paragraph("상위 3 바이어 상세", s_sec))
+
+        for b in buyers[:3]:
+            cats = b.get("therapeutic_categories") or []
+            if isinstance(cats, list):
+                cats_str = " · ".join(str(c) for c in cats) or "—"
+            else:
+                cats_str = str(cats)
+            locs = b.get("factory_locations") or []
+            if isinstance(locs, list):
+                locs_str = ", ".join(str(x) for x in locs if x) or "—"
+            else:
+                locs_str = str(locs)
+            assocs = []
+            if b.get("is_ma_member"):    assocs.append("MA")
+            if b.get("is_gbma_member"):  assocs.append("GBMA")
+            if b.get("is_gpce_exhibitor"): assocs.append("GPCE")
+            assoc_str = " · ".join(assocs) or "—"
+
+            detail_lines = [
+                f"<b>#{b.get('rank')} {safe(b.get('company_name'))}</b> "
+                f"(총점 {b.get('psi_total')}/100)",
+                f"매출 등급: {safe(b.get('annual_revenue_rank'))} · "
+                f"호주 공장: {('Y — ' + locs_str) if b.get('has_au_factory') == 'Y' else 'N'}",
+                f"치료영역: {cats_str} · 소속 협회: {assoc_str}",
+                f"TGA ARTG {b.get('tga_artg_count') or 0} 건 · "
+                f"5지표 점수: 매출 {b.get('psi_sales_scale') or 0} · "
+                f"성분 {b.get('psi_pipeline') or 0} · "
+                f"공장 {b.get('psi_manufacturing') or 0} · "
+                f"수입 {b.get('psi_import_exp') or 0} · "
+                f"약국 {b.get('psi_pharmacy_chain') or 0}",
+            ]
+            if b.get("website"):
+                detail_lines.append(f"웹사이트: {safe(b.get('website'))}")
+            if b.get("email"):
+                detail_lines.append(f"이메일: {safe(b.get('email'))}")
+            if b.get("phone"):
+                detail_lines.append(f"전화: {safe(b.get('phone'))}")
+            notes = b.get("notes")
+            if notes:
+                detail_lines.append(f"<i>메모: {safe(notes)[:300]}</i>")
+
+            for line in detail_lines:
+                story.append(Paragraph(line, s_body))
+            story.append(Spacer(1, 6))
+
+    story.append(Spacer(1, 12))
+    story.append(Paragraph(
+        "<b>5지표 가중치:</b> 매출 규모 35% · 성분 경험(파이프라인) 25% · "
+        "호주 제조소 20% · 수입 경험 10% · 약국 체인 10%",
+        s_small,
+    ))
+    story.append(Paragraph(
+        "<b>티어:</b> A = 해당 품목 INN 직접 등재 · B = 치료영역 매칭 (오리지널/제네릭 파트너) · "
+        "C = 기타 (협회·컨퍼런스 기반 잠재)",
+        s_small,
+    ))
+    story.append(Paragraph(
+        "본 보고서의 매출 등급은 Perplexity sonar-pro 웹 검색 + Claude Haiku 교차검증 결과이며, "
+        "Gemini 딥리서치 수기 데이터 (45개사) 우선 적용. 실제 바이어 접촉 시 현지 상황 별도 확인 권장.",
+        s_small,
+    ))
+
+    doc.build(story)
+    return out_path

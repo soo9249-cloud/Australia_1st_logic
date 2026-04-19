@@ -1048,12 +1048,21 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 
 #p2-ai-result-section {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
-  overflow: visible;
+  overflow-x: clip;
+  overflow-y: visible;
   min-height: min-content;
   align-content: start;
   min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
+}
+#p2-ai-result-section > .selector-card {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
 }
 #p2-ai-result-section .result-card,
 #p2-ai-result-section .report-card {
@@ -1662,9 +1671,13 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   margin-bottom: 14px;
   overflow: hidden;
 }
-/* 02 수출가격 전략: 3열 카드·옵션 행이 길어질 때 상위 overflow:hidden 에 하단(버튼)이 잘리는 것 방지 */
+/* 02 수출가격 전략: 세로는 잘리지 않게(visible), 가로는 부모 폭 안에 고정 */
 .process-section:has(#pb-p2) {
-  overflow: visible;
+  overflow-x: clip;
+  overflow-y: visible;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .process-header {
   display: flex;
@@ -1716,6 +1729,24 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 }
 .process-body.hidden { display: none; }
 
+/* 02 수출가격 전략: 옵션 행 추가 시 가로 min-content 가 상위로 전파되어 섹션·메인이 넓어지는 현상 차단 */
+#main.page {
+  overflow-x: hidden;
+  min-width: 0;
+}
+#main #pb-p2 {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+#main #pb-p2 #p2-wrap,
+#main #pb-p2 #p2-ai-tab {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* 시장조사 완료 노트 */
 .p1-result-note {
   margin-top: 12px;
@@ -1741,12 +1772,13 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   gap: 12px;
   margin-top: 14px;
   align-items: start;
-  overflow: visible;
+  overflow-x: clip;
+  overflow-y: visible;
   min-height: min-content;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  contain: layout;
+  box-sizing: border-box;
 }
 .p2-col {
   background: var(--card);
@@ -1923,6 +1955,17 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   border-bottom: 1px solid rgba(23,63,120,.05);
 }
 .p2-prod-table tr:last-child td { border-bottom: none; }
+
+/* 결과 영역 테이블이 긴 문자열로 가로 폭을 밀지 않도록 */
+#p2-ai-result-section .p2-prod-table {
+  table-layout: fixed;
+  width: 100%;
+}
+#p2-ai-result-section .p2-prod-table th,
+#p2-ai-result-section .p2-prod-table td {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    30. P3 · 바이어 테이블

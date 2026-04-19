@@ -68,6 +68,8 @@ let _p2ColData = {
   avg:  { opts: [] },
   cons: { opts: [] },
 };
+/** 미확정 옵션 입력 행(프론트만 — 새로고침 시 초기화) */
+let _p2ColPendingDrafts = { agg: [], avg: [], cons: [] };
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    §2. 탭 전환 (N1)
@@ -915,11 +917,12 @@ function recalcP2Col(col) {
   if (subEl)   subEl.textContent   = `${price.toFixed(2)} USD · ${krwTxt}`;
 }
 
-/* P2 컬럼 커스텀 옵션 렌더링 */
-function renderP2ColOptions(col, showAddForm) {
+/* P2 컬럼 커스텀 옵션 렌더링 — 확정 옵션 + 미확정 초안 행(여러 줄 가능) */
+function renderP2ColOptions(col) {
   const container = document.getElementById('p2co-' + col);
   if (!container) return;
   const opts = (_p2ColData[col] || { opts: [] }).opts;
+  const drafts = _p2ColPendingDrafts[col] || [];
 
   const typeLabel = { pct_add: '% 가산', pct_deduct: '% 차감', abs_add: 'USD 가산' };
 
@@ -932,40 +935,53 @@ function renderP2ColOptions(col, showAddForm) {
       <span class="p2c-opt-type-label">${typeLabel[opt.type] || opt.type}</span>
       <input class="p2c-opt-val" type="number" value="${opt.value}" step="0.1" min="0"
         onchange="updateP2ColOption('${col}','${_escHtml(opt.id)}',this.value)">
-      <button class="p2c-opt-del" onclick="removeP2ColOption('${col}','${_escHtml(opt.id)}')">×</button>
+      <button type="button" class="p2c-opt-del" onclick="removeP2ColOption('${col}','${_escHtml(opt.id)}')">×</button>
     </div>`).join('');
 
-  if (showAddForm) {
+  drafts.forEach((d) => {
+    const rid = String(d.id).replace(/[^a-zA-Z0-9_-]/g, '') || 'd0';
     html += `
       <div class="p2c-opt-row p2c-add-row">
-        <input class="p2c-opt-name-input" type="text" placeholder="옵션명" id="p2c-newname-${col}" maxlength="20">
-        <select class="p2c-opt-type-select" id="p2c-newtype-${col}">
+        <input class="p2c-opt-name-input" type="text" placeholder="옵션명" id="p2c-newname-${col}-${rid}" maxlength="20">
+        <select class="p2c-opt-type-select" id="p2c-newtype-${col}-${rid}">
           <option value="pct_deduct">% 차감</option>
           <option value="pct_add">% 가산</option>
           <option value="abs_add">USD 가산</option>
         </select>
-        <input class="p2c-opt-val" type="number" placeholder="값" id="p2c-newval-${col}" step="0.1" min="0">
-        <button class="p2c-confirm-btn" onclick="confirmP2ColOption('${col}')">✓</button>
+        <input class="p2c-opt-val" type="number" placeholder="값" id="p2c-newval-${col}-${rid}" step="0.1" min="0">
+        <button type="button" class="p2c-confirm-btn" onclick="confirmP2ColOption('${col}','${rid}')">✓</button>
+        <button type="button" class="p2c-draft-cancel" onclick="cancelP2ColDraft('${col}','${rid}')" title="이 줄 취소">×</button>
       </div>`;
-  }
+  });
 
   container.innerHTML = html;
 }
 
-/* 옵션 추가 (버튼 클릭) */
+/** '+ 옵션 추가' — 미확정 입력 행을 하나 더 쌓음(서버/저장 없음) */
 function addP2ColOption(col) {
-  renderP2ColOptions(col, true);
+  _p2ColPendingDrafts[col] = _p2ColPendingDrafts[col] || [];
+  _p2ColPendingDrafts[col].push({ id: 'd' + Date.now() + Math.random().toString(36).slice(2, 10) });
+  renderP2ColOptions(col);
 }
 
-/* 입력 확정 */
-function confirmP2ColOption(col) {
-  const name = (document.getElementById('p2c-newname-' + col)?.value || '').trim();
-  const type = document.getElementById('p2c-newtype-' + col)?.value || 'pct_deduct';
-  const val  = parseFloat(document.getElementById('p2c-newval-' + col)?.value || '0');
+/** 미확정 행 제거 */
+function cancelP2ColDraft(col, draftId) {
+  const arr = _p2ColPendingDrafts[col] || [];
+  _p2ColPendingDrafts[col] = arr.filter((d) => String(d.id) !== String(draftId));
+  renderP2ColOptions(col);
+}
+
+/** 입력 확정 — 해당 초안 행만 반영 후 제거 */
+function confirmP2ColOption(col, draftId) {
+  const did = String(draftId);
+  const name = (document.getElementById('p2c-newname-' + col + '-' + did)?.value || '').trim();
+  const type = document.getElementById('p2c-newtype-' + col + '-' + did)?.value || 'pct_deduct';
+  const val  = parseFloat(document.getElementById('p2c-newval-' + col + '-' + did)?.value || '0');
   if (!name || Number.isNaN(val) || val < 0) return;
   _p2ColData[col] = _p2ColData[col] || { opts: [] };
   _p2ColData[col].opts.push({ id: 'o' + Date.now(), name, type, value: val });
-  renderP2ColOptions(col, false);
+  _p2ColPendingDrafts[col] = (_p2ColPendingDrafts[col] || []).filter((d) => String(d.id) !== did);
+  renderP2ColOptions(col);
   recalcP2Col(col);
 }
 
@@ -973,7 +989,7 @@ function confirmP2ColOption(col) {
 function removeP2ColOption(col, optId) {
   if (!_p2ColData[col]) return;
   _p2ColData[col].opts = _p2ColData[col].opts.filter(o => o.id !== optId);
-  renderP2ColOptions(col, false);
+  renderP2ColOptions(col);
   recalcP2Col(col);
 }
 
@@ -1124,9 +1140,10 @@ function _renderP2AiResult(data) {
     if (baseInput) baseInput.value     = priceUsd.toFixed(2);
     if (subEl)     subEl.textContent   = `≈ ${fmtKRW(priceKrw)}`;
 
-    // 새 AI 결과 올 때마다 각 컬럼의 커스텀 옵션 초기화
+    // 새 AI 결과 올 때마다 각 컬럼의 커스텀 옵션·미확정 초안 행 초기화
     _p2ColData[col] = { opts: [] };
-    renderP2ColOptions(col, false);
+    _p2ColPendingDrafts[col] = [];
+    renderP2ColOptions(col);
   });
 
   _p2ScenarioRaw.usd_krw = usdKrw;

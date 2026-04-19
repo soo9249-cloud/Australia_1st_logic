@@ -447,6 +447,9 @@ _BUYERS_ALLOWED: frozenset[str] = frozenset({
     "psi_total",
     "source_flags",
     "evidence_urls",
+    # Stage 2 (2026-04-20) — DB 컬럼과 동기화 (선택 전달)
+    "therapeutic_categories",
+    "last_researched_at",
 })
 
 

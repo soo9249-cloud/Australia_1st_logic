@@ -1191,14 +1191,28 @@ _CLAUDE_SYSTEM_PROMPT = (
     "값이 없으면 '미확보' 또는 '크롤 데이터 없음'으로 적고 숫자를 지어내지 않습니다.\n"
     "- entry_strategy: channel, partner_direction, rationale.\n"
     "- regulatory_risk: artg_paragraph, pbac_paragraph, prescription_limit_paragraph.\n"
-    "  (ARTG·TGA·PBAC·PBS 등 첫 등장 시 한국어 괄호로 풀어 씁니다.)\n"
+    "  규제·급여 맥락은 여기서 HTML 샘플 수준으로 구체히 서술합니다(사실·크롤 근거 범위 내).\n"
     "- fast_track_applies: boolean.\n"
     "- operational_risk, product_specific_risk: 문단 (없으면 operational은 서술, product_specific_risk는 '해당 없음' 가능).\n"
     "- references: {num, source, citation, summary, body_position} 배열 — 크롤·공개 출처만. "
-    "허구 기관명 금지. 최소 1개 이상, row 에 근거가 있으면 PBS Schedule / TGA ARTG 등으로 적습니다.\n\n"
-    "【영어 약어】 첫 등장 시 예: "
-    "'AEMP (Approved Ex-Manufacturer Price · 정부 승인 출고가)', "
-    "'DPMQ (Dispensed Price for Maximum Quantity · 최대처방량 기준 약가)' 형식으로 풀이합니다.\n"
+    "허구 기관명 금지. 최소 1개 이상, row 에 근거가 있으면 PBS Schedule / TGA ARTG 등으로 적습니다. "
+    "첨부·참고 성격이므로 출처·인용 맥락은 한두 문장 더 구체적으로 적어도 됩니다.\n\n"
+    "【영어 약어 — PBS·TGA·DPMQ·AEMP·ARTG·PBAC 등】\n"
+    "- 보고서 본문 전체 기준으로, **각 약어는 최초 1회만** "
+    "'약어 (영문 풀네임 · 한글 설명)' 형식으로 풀어 씁니다. 예: "
+    "'DPMQ (Dispensed Price for Maximum Quantity · 최대처방량 기준 약가)'. "
+    "그 뒤에는 'PBS', 'TGA', 'DPMQ'처럼 짧게 반복해도 됩니다(문단마다 다시 풀지 않음).\n"
+    "- 시장 개요·경쟁 등 앞부분에서 이미 푼 약어는 뒤 문단·규제·유의사항에서 **중복 풀이 생략**.\n"
+    "【사실·중립 서술 — PBAC·철수·우월성】\n"
+    "- 크롤 JSON에 없는 규제 결론·사업 적합성 단정을 하지 않습니다.\n"
+    "- PBAC 임상우월성(superiority)·비교임상 요구, 상업적 철수(Commercial Withdrawal) 등은 "
+    "입력 데이터에 해당 플래그·연도·사유가 있을 때만 사실로 전달하고, "
+    "‘반드시 필요’ ‘시장성 없음’ 같은 확정적 사업 판단 문구는 쓰지 않습니다.\n"
+    "- 호주 PBS/PBAC의 일반적 심사 구조(신규·복합제에서 비교임상·비용효과 자료가 논의될 수 있음 등)는 "
+    "공개 제도 설명 수준으로만 쓰고, 품목별로 요구 여부는 ‘개별 PBAC 심의 대상’임을 분명히 합니다.\n"
+    "- 상업 철수 이력이 있으면 데이터에 기록된 사실(연도 등)만 언급하고, "
+    "재진입·재평가 필요성은 ‘건별로 상이하며 별도 검토 대상’으로 서술합니다.\n"
+    "- 독자에게 문안을 직접 작성하라고 요구하는 표현(‘직접 기입’, ‘담당자가 채움’ 등)은 쓰지 않습니다.\n"
     "【환각 금지】 크롤 JSON에 없는 숫자·코드·브랜드명·가격을 만들지 않습니다.\n"
     "【마크다운 금지】 **, #, 백틱, 링크 문법 사용하지 않습니다.\n"
 )
@@ -1223,6 +1237,10 @@ def _row_summary_for_llm(row: dict[str, Any]) -> dict[str, Any]:
         "retail_price_aud", "price_source_name", "retail_estimation_method",
         "export_viable", "reason_code", "nsw_note",
         "inn_normalized", "dosage_form", "strength", "hs_code_6",
+        # 시드·메타가 row에 붙은 경우만 — PBAC/철수 사실 전달용(해석 단정 금지는 시스템 프롬프트)
+        "pbac_superiority_required",
+        "commercial_withdrawal_flag",
+        "commercial_withdrawal_year",
     ]
     return {k: row.get(k) for k in keys}
 
@@ -1474,6 +1492,12 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "- 위 매핑에 따라 각 scenario_* 에 해당 시나리오의 fob_aud 만 인용 (다른 키의 숫자를 섞지 않음).\n"
     "- pricing_case / warnings / disclaimer 를 논리에 반영.\n"
     "- 모르는 사실은 '제공 데이터 범위 외로 별도 검증 필요함' 으로 명시.\n\n"
+    "【사실·중립 — PBAC·철수·우월성】\n"
+    "- seed.warnings·dispatch.warnings·pricing_case 에 적힌 사실만 반영하고, "
+    "그 범위를 넘는 사업 적합성·‘반드시’·‘불가’ 단정은 하지 않습니다.\n"
+    "- PBAC 임상우월성·비교임상, 상업적 철수 이력은 ‘제도상 이런 논의가 있을 수 있음’·‘데이터상 이력이 있음’ 수준으로 쓰고, "
+    "최종 필요 여부·재진입 가능성은 개별 심의·검토 대상임을 밝힙니다.\n"
+    "- 독자에게 특정 칸을 직접 채우라고 지시하는 문구는 쓰지 않습니다.\n\n"
     "【품질 규칙】\n"
     "1. block_extract · block_fob_intro · block_strategy · block_risks · block_positioning 각 3~5문장 (문장 40~100자).\n"
     "2. scenario_* 3개는 각각 1~2문장 (60~140자), 지정된 fob_aud 인용 필수.\n"
@@ -2522,7 +2546,8 @@ def stage2_calculate(payload: dict[str, Any]) -> JSONResponse:
     if seed:
         if seed.get("pbac_superiority_required"):
             warnings.append(
-                "복합제/신규 등재 품목: PBAC(호주 의약품급여자문위원회) 임상우월성 입증 필요 (등재 지연·거절 리스크)."
+                "시드 플래그: 복합제·신규 등재 품목군 — PBAC 심의에서 단일성분 대비 비교임상·우월성 "
+                "입증이 논의될 수 있음(품목별 상이, 등재 일정·결과는 개별 심의 대상)."
             )
         if seed.get("hospital_channel_only"):
             warnings.append(
@@ -3285,10 +3310,11 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
         with _p2_lock:
             _p2_state["step"] = "report"
             _p2_state["step_label"] = "⑥ PDF 보고서 생성 중…"
+        # Step 5 upsert 실패 시 sb_client 미할당 → NameError 방지: Step 1 의 client_sb 사용
         # Phase 4.3-v3 — au_pbs_raw 에서 market_form/market_strength 주입 (render_pdf 와 동일)
         try:
             raw_resp = (
-                sb_client.table("au_pbs_raw")
+                client_sb.table("au_pbs_raw")
                 .select("market_form,market_strength")
                 .eq("product_id", product_id)
                 .order("crawled_at", desc=True)
@@ -3304,7 +3330,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
         # Phase 4.3-v3 부분 revert — PBS 미등재 품목 fallback 용 au_tga_artg 주입
         try:
             tga_resp = (
-                sb_client.table("au_tga_artg")
+                client_sb.table("au_tga_artg")
                 .select("strength,dosage_form")
                 .eq("product_id", product_id)
                 .order("crawled_at", desc=True)

@@ -42,6 +42,15 @@ _INN_SALT_SUFFIXES: tuple[str, ...] = (
     "hemihydrate", "monohydrate", "dihydrate", "trihydrate",
     "hydrate", "anhydrous",
     "ethyl", "esters", "ester",    # omega-3-acid ethyl esters → omega-3-acid
+    # 2026-04-20 추가 — TGA 에서 발견된 복합 salt 꼬리
+    "hydrogen",                      # "clopidogrel hydrogen sulfate" → sulfate 먼저 제거되고 남는 "hydrogen"
+    "propylene glycol solvate",      # "atorvastatin calcium propylene glycol solvate"
+    "propylene glycol",
+    "solvate",
+    "bromide", "chloride", "iodide", "fluoride",   # quaternary 암모늄·할로겐염
+    "trihydrate", "pentahydrate", "heptahydrate",  # 고수화물
+    "citrate dihydrate", "potassium dihydrate",
+    "bitartrate", "bicarbonate",
 )
 
 

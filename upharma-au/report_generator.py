@@ -26,6 +26,31 @@ from stage1_schema import (
     coerce_dict_to_report_r1,
 )
 
+
+_V8_REF_DUMP_MARKERS = (
+    "product_name_ko:",
+    "artg_status:",
+    "pbs_listed:",
+    "dosage_form:",
+    "generic_name:",
+)
+
+
+def _v8_single_reference_looks_like_dump(r: Any) -> bool:
+    """한 건의 citation/summary가 DB 필드 덤프인지."""
+    t = f"{getattr(r, 'citation', '') or ''}{getattr(r, 'summary', '') or ''}"
+    return any(m in t for m in _V8_REF_DUMP_MARKERS)
+
+
+def _v8_references_look_like_field_dump(refs: list[Any]) -> bool:
+    """Haiku가 citation/summary에 DB 필드 덤프를 넣은 경우 — 별첨 A를 다른 출처로 대체."""
+    if not refs:
+        return False
+    for r in refs:
+        if _v8_single_reference_looks_like_dump(r):
+            return True
+    return False
+
 ROOT = Path(__file__).resolve().parent
 
 _FONT_CACHE: str | None = None
@@ -680,8 +705,9 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     v8 = MarketAnalysisV8.model_validate(raw)
 
     W, _H = A4
-    MARGIN_X = 24 * mm
-    MARGIN_Y = 20 * mm
+    # 본문 폭 확보·가독성: 여백을 약간 줄임 (시장분석 v8 공통)
+    MARGIN_X = 18 * mm
+    MARGIN_Y = 16 * mm
     CONTENT_W = W - 2 * MARGIN_X
 
     base_font = _register_korean_font()
@@ -711,8 +737,8 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     s_title = ps(
         "V8Title",
         fontName=bold_font,
-        fontSize=26,
-        leading=30,
+        fontSize=22,
+        leading=26,
         alignment=TA_CENTER,
         textColor=C_TITLE,
         spaceAfter=6,
@@ -720,8 +746,8 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     s_date = ps(
         "V8Date",
         fontName=base_font,
-        fontSize=13,
-        leading=16,
+        fontSize=11,
+        leading=14,
         alignment=TA_CENTER,
         textColor=C_MUTED,
         spaceAfter=10,
@@ -729,7 +755,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     s_sec = ps(
         "V8Sec",
         fontName=bold_font,
-        fontSize=18,
+        fontSize=15,
         textColor=C_TITLE,
         spaceBefore=18,
         spaceAfter=8,
@@ -737,7 +763,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     s_sub = ps(
         "V8Sub",
         fontName=bold_font,
-        fontSize=15,
+        fontSize=13,
         textColor=C_TITLE,
         spaceBefore=14,
         spaceAfter=6,
@@ -745,33 +771,52 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     s_cell = ps(
         "V8Cell",
         fontName=base_font,
-        fontSize=13,
+        fontSize=11,
         textColor=C_BODY,
-        leading=20,
+        leading=17,
         wordWrap="CJK",
     )
     s_bar = ps(
         "V8Bar",
         fontName=bold_font,
-        fontSize=15,
+        fontSize=13,
         textColor=colors.white,
-        leading=18,
+        leading=16,
         wordWrap="CJK",
     )
     s_cell_h = ps(
         "V8H",
         fontName=bold_font,
-        fontSize=10,
+        fontSize=9,
         textColor=C_TITLE,
-        leading=14,
+        leading=13,
         wordWrap="CJK",
     )
     s_small = ps(
         "V8Sm",
         fontName=base_font,
-        fontSize=12,
+        fontSize=10,
         textColor=colors.HexColor("#555555"),
-        leading=17,
+        leading=15,
+        wordWrap="CJK",
+    )
+    # 별첨 A/B 공통 — 상자 안 본문
+    s_apx = ps(
+        "V8Apx",
+        fontName=base_font,
+        fontSize=9,
+        textColor=colors.HexColor("#444444"),
+        leading=13,
+        wordWrap="CJK",
+    )
+    s_apx_head = ps(
+        "V8ApxHead",
+        fontName=bold_font,
+        fontSize=10,
+        textColor=C_TITLE,
+        leading=14,
+        spaceBefore=4,
+        spaceAfter=2,
         wordWrap="CJK",
     )
 
@@ -812,10 +857,18 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     )
     story: list = []
 
-    story.append(Paragraph(_rx("한국유나이티드제약 호주 시장분석 보고서"), s_title))
+    # 제목에서 "시장분석"과 "보고서" 사이 불필요한 줄바꿈 완화 (좁은 열에서 단어 단위 줄바꿈 방지)
+    story.append(
+        Paragraph(_rx("한국유나이티드제약 호주 시장분석\u00a0보고서"), s_title)
+    )
     story.append(Paragraph(_rx(payload.report_date or datetime.now().strftime("%Y-%m-%d")), s_date))
 
-    bar_en = f"{payload.inn} · {payload.strength_form}  |  HS CODE: {payload.hs_code or '—'}"
+    pn = (payload.product_name or "").strip()
+    inn_sf = f"{payload.inn} · {payload.strength_form}".strip(" ·")
+    if pn:
+        bar_en = f"{pn} — {inn_sf}  |  HS CODE: {payload.hs_code or '—'}"
+    else:
+        bar_en = f"{inn_sf}  |  HS CODE: {payload.hs_code or '—'}"
     bar_tbl = Table([[Paragraph(_rx(bar_en), s_bar)]], colWidths=[CONTENT_W])
     bar_tbl.setStyle(
         TableStyle(
@@ -838,7 +891,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
             [
                 Paragraph(
                     _rx(f"진출 적합 판정: {vc}"),
-                    ps("V8VTitle", fontName=bold_font, fontSize=15, textColor=colors.HexColor("#2a5f2d"), leading=20),
+                    ps("V8VTitle", fontName=bold_font, fontSize=13, textColor=colors.HexColor("#2a5f2d"), leading=18),
                 )
             ],
             [Paragraph(_rx(_trunc(v8.verdict.narrative, 3500)), s_cell)],
@@ -898,7 +951,8 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
             ex_cb.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor("#f7f9fc")))
     if len(cb_rows) == 1:
         cb_rows.append([Paragraph(_rx("—"), s_cell), Paragraph(_rx("해당 데이터 없음"), s_cell)])
-    cb_t = Table(cb_rows, colWidths=[CONTENT_W * 0.28, CONTENT_W * 0.72])
+    # 구분 열이 너무 좁으면 한글 단어가 어색하게 쪼개짐 — 약간 넓힘
+    cb_t = Table(cb_rows, colWidths=[CONTENT_W * 0.35, CONTENT_W * 0.65])
     cb_t.setStyle(TableStyle(_base_tbl_style(ex_cb)))
     story.append(cb_t)
 
@@ -952,9 +1006,9 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     cross_ps = ps(
         "V8Cross",
         fontName=base_font,
-        fontSize=12,
+        fontSize=10,
         textColor=C_TITLE,
-        leading=17,
+        leading=14,
         wordWrap="CJK",
     )
     cross_text = (
@@ -1036,27 +1090,82 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
 
     story.append(PageBreak())
 
-    story.append(Paragraph(_rx("[별첨 A] 참고자료"), s_sec))
-    if v8.references:
-        for r in v8.references:
-            line = f"[{r.num}] {_trunc(r.citation, 500)} — {_trunc(r.summary, 800)}"
-            story.append(Paragraph(_rx(line), s_small))
-            story.append(Spacer(1, 8))
-    elif payload.refs_perplexity:
-        for i, p in enumerate(payload.refs_perplexity, 1):
-            line = f"[{i}] {p.source or ''} — {_trunc(p.title, 400)} — {_trunc(p.summary_ko, 800)}"
-            story.append(Paragraph(_rx(line), s_small))
-            story.append(Spacer(1, 8))
-    else:
-        story.append(Paragraph(_rx("참고자료 없음"), s_small))
+    # 별첨 A: 하이브리드 검색(Perplexity 등) + Haiku 학술 근거 최대 2건 — 병합·상자 스타일(별첨 B와 동일 계열)
+    refs_bad = _v8_references_look_like_field_dump(v8.references)
+    v8_academic: list[Any] = []
+    for r in v8.references or []:
+        if _v8_single_reference_looks_like_dump(r):
+            continue
+        v8_academic.append(r)
+    v8_academic = v8_academic[:2]
+
+    apx_a_rows: list[list] = [
+        [Paragraph(_rx("[별첨 A] 참고자료"), s_apx_head)],
+    ]
+    pplx = list(payload.refs_perplexity or [])
+    num = 0
+    if pplx:
+        apx_a_rows.append(
+            [
+                Paragraph(
+                    _rx("검색·요약 근거 (Semantic Scholar / PubMed / Perplexity 등)"),
+                    s_apx_head,
+                )
+            ]
+        )
+        for p in pplx:
+            num += 1
+            line = (
+                f"[{num}] {p.source or ''} — {_trunc(p.title, 400)} — {_trunc(p.summary_ko, 800)}"
+            )
+            apx_a_rows.append([Paragraph(_rx(line), s_apx)])
+    if v8_academic:
+        apx_a_rows.append(
+            [Paragraph(_rx("학술·문헌 근거 (본문 자동 생성)"), s_apx_head)]
+        )
+        for r in v8_academic:
+            num += 1
+            line = f"[{num}] {_trunc(r.citation, 500)} — {_trunc(r.summary, 800)}"
+            apx_a_rows.append([Paragraph(_rx(line), s_apx)])
+    if not pplx and not v8_academic:
+        if refs_bad and not pplx:
+            apx_a_rows.append(
+                [
+                    Paragraph(
+                        _rx(
+                            "자동 생성 참고문헌 형식이 비정상이며, 검색 기반 참고자료도 없습니다."
+                        ),
+                        s_apx,
+                    )
+                ]
+            )
+        else:
+            apx_a_rows.append([Paragraph(_rx("참고자료 없음"), s_apx)])
+
+    apx_a = Table(apx_a_rows, colWidths=[CONTENT_W])
+    apx_a.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), C_APPENDIX_BG),
+                ("BOX", (0, 0), (-1, -1), 1, C_APPENDIX_BR),
+                ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
+    )
+    story.append(apx_a)
+    story.append(Spacer(1, 16))
 
     apx_rows = [
-        [Paragraph(_rx("[별첨 B] 용어집"), s_small)],
-        [Paragraph(_rx("TGA (Therapeutic Goods Administration · 호주 식약처): 의약품 심사·허가·안전관리 주관 기관"), s_small)],
-        [Paragraph(_rx("ARTG (Australian Register of Therapeutic Goods · 호주 의약품 등록부): 호주 공급 전 등록 필수 목록"), s_small)],
-        [Paragraph(_rx("PBS (Pharmaceutical Benefits Scheme · 호주 의약품급여제도): 공적 급여 목록·가격 체계"), s_small)],
-        [Paragraph(_rx("PBAC (Pharmaceutical Benefits Advisory Committee · 약값 심사 위원회): PBS 등재·가격 심의·권고"), s_small)],
-        [Paragraph(_rx("AEMP / DPMQ: 정부 승인 출고가 / 최대처방량 기준 약가"), s_small)],
+        [Paragraph(_rx("[별첨 B] 용어집"), s_apx_head)],
+        [Paragraph(_rx("TGA (Therapeutic Goods Administration · 호주 식약처): 의약품 심사·허가·안전관리 주관 기관"), s_apx)],
+        [Paragraph(_rx("ARTG (Australian Register of Therapeutic Goods · 호주 의약품 등록부): 호주 공급 전 등록 필수 목록"), s_apx)],
+        [Paragraph(_rx("PBS (Pharmaceutical Benefits Scheme · 호주 의약품급여제도): 공적 급여 목록·가격 체계"), s_apx)],
+        [Paragraph(_rx("PBAC (Pharmaceutical Benefits Advisory Committee · 약값 심사 위원회): PBS 등재·가격 심의·권고"), s_apx)],
+        [Paragraph(_rx("AEMP / DPMQ: 정부 승인 출고가 / 최대처방량 기준 약가"), s_apx)],
     ]
     apx = Table(apx_rows, colWidths=[CONTENT_W])
     apx.setStyle(
@@ -1065,7 +1174,10 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
                 ("BACKGROUND", (0, 0), (-1, -1), C_APPENDIX_BG),
                 ("BOX", (0, 0), (-1, -1), 1, C_APPENDIX_BR),
                 ("LEFTPADDING", (0, 0), (-1, -1), 14),
-                ("TOPPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ]
         )
     )
@@ -1075,10 +1187,10 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     disc = ps(
         "V8Disc",
         fontName=base_font,
-        fontSize=11,
+        fontSize=9,
         textColor=C_MUTED,
         alignment=TA_CENTER,
-        leading=14,
+        leading=12,
     )
     story.append(
         Paragraph(
@@ -1570,7 +1682,7 @@ def render_p2_pdf(
     )
 
     W, _H = A4
-    MARGIN = 20 * mm
+    MARGIN = 18 * mm
     CONTENT_W = W - 2 * MARGIN
 
     base_font = _register_korean_font()
@@ -1591,22 +1703,22 @@ def render_p2_pdf(
     def ps(name: str, **kw) -> ParagraphStyle:
         return ParagraphStyle(name, **kw)
 
-    s_title = ps("P2Title", fontName=bold_font, fontSize=18, leading=24,
+    s_title = ps("P2Title", fontName=bold_font, fontSize=16, leading=22,
                  alignment=TA_CENTER, textColor=C_NAVY, spaceAfter=6)
-    s_date = ps("P2Date", fontName=base_font, fontSize=10, leading=13,
+    s_date = ps("P2Date", fontName=base_font, fontSize=9, leading=12,
                 alignment=TA_CENTER, textColor=colors.HexColor("#6B7280"))
-    s_section = ps("P2Section", fontName=bold_font, fontSize=11, textColor=C_NAVY,
-                   leading=15, spaceBefore=10, spaceAfter=6)
-    s_sub = ps("P2SubSection", fontName=bold_font, fontSize=10, textColor=C_NAVY,
-               leading=14, spaceBefore=8, spaceAfter=4)
-    s_cell_h = ps("P2CellH", fontName=bold_font, fontSize=10, textColor=C_NAVY,
-                  leading=14, wordWrap="CJK")
-    s_cell = ps("P2Cell", fontName=base_font, fontSize=10, textColor=C_BODY,
-                leading=15, wordWrap="CJK")
-    s_bar = ps("P2Bar", fontName=bold_font, fontSize=10, textColor=colors.white,
-               leading=14, wordWrap="CJK")
-    s_hdr = ps("P2HdrWhite", fontName=bold_font, fontSize=9, textColor=colors.white,
+    s_section = ps("P2Section", fontName=bold_font, fontSize=10, textColor=C_NAVY,
+                   leading=14, spaceBefore=10, spaceAfter=6)
+    s_sub = ps("P2SubSection", fontName=bold_font, fontSize=9, textColor=C_NAVY,
+               leading=13, spaceBefore=8, spaceAfter=4)
+    s_cell_h = ps("P2CellH", fontName=bold_font, fontSize=9, textColor=C_NAVY,
+                  leading=13, wordWrap="CJK")
+    s_cell = ps("P2Cell", fontName=base_font, fontSize=9, textColor=C_BODY,
+                leading=14, wordWrap="CJK")
+    s_bar = ps("P2Bar", fontName=bold_font, fontSize=9, textColor=colors.white,
                leading=13, wordWrap="CJK")
+    s_hdr = ps("P2HdrWhite", fontName=bold_font, fontSize=8, textColor=colors.white,
+               leading=12, wordWrap="CJK")
     s_cell_sm = ps("P2CellSm", fontName=base_font, fontSize=8,
                    textColor=colors.HexColor("#6B7280"), leading=11, wordWrap="CJK")
 
@@ -1941,13 +2053,17 @@ def render_p2_pdf(
     warn_text = " / ".join(w for w in warnings if w) if warnings else "없음"
     flags = []
     if seed.get("pbac_superiority_required"):
-        flags.append("PBAC 임상우월성(superiority) 입증 필요")
+        flags.append(
+            "시드 표시: PBS 신규 등재 시 PBAC에서 비교임상·우월성이 논의될 수 있는 품목군(개별 심의 대상)"
+        )
     if seed.get("hospital_channel_only"):
-        flags.append("병원조달 전용 (약국 유통 불가)")
+        flags.append("시드 표시: 병원조달·입찰 채널 중심(약국 일반 유통 아님)")
     if seed.get("section_19a_flag"):
-        flags.append("Section 19A 일시수입 경로")
+        flags.append("시드 표시: Section 19A(일시수입) 경로 언급")
     if seed.get("commercial_withdrawal_flag"):
-        flags.append("Commercial Withdrawal 이력")
+        flags.append(
+            "데이터: 상업적 철수(Commercial Withdrawal) 이력 있음 — 재진입·재평가는 건별 검토 대상"
+        )
     flag_text = " / ".join(flags) if flags else "없음"
     footer_rows = [
         [
@@ -1957,7 +2073,7 @@ def render_p2_pdf(
                     f"· 분석 경로: Logic {logic} ({_rx(str(seed.get('pricing_case', '—')))} )<br/>"
                     f"· 적용 환율: {_rx(fx_str)}<br/>"
                     f"· 경고 사항: {_rx(warn_text)}<br/>"
-                    f"· 규제 플래그: {_rx(flag_text)}<br/>"
+                    f"· 시드·데이터 표시: {_rx(flag_text)}<br/>"
                     f"· 면책 조항: {_rx(_trunc(disclaimer or '없음', 500))}"
                 ),
                 s_cell_sm,

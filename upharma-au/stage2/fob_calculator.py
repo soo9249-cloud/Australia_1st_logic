@@ -484,9 +484,14 @@ def dispatch_by_pricing_case(
             "scenarios": {},
             "inputs": {"product_id": pid, "pricing_case": case},
             "warnings": [
-                f"Commercial Withdrawal 이력(연도: {seed.get('commercial_withdrawal_year')}). "
-                "재진입 시 TGA에 철수 사유 소명 필요.",
-                "PBAC 임상우월성 입증 장벽 동시 존재." if seed.get("pbac_superiority_required") else "",
+                f"Commercial Withdrawal 이력(연도: {seed.get('commercial_withdrawal_year')}) — "
+                "데이터에 기록된 사실이며, 재진입·재등재 조건은 건별로 상이함(TGA·PBAC 개별 검토 대상).",
+                (
+                    "시드 플래그: PBAC 심의에서 비교임상·우월성 논의가 나올 수 있는 품목군으로 표시됨 "
+                    "(실제 요구 여부는 개별 심의 대상)."
+                    if seed.get("pbac_superiority_required")
+                    else ""
+                ),
             ],
             "disclaimer": get_disclaimer_text("blocked"),
             "blocked_reason": "commercial_withdrawal",
@@ -495,8 +500,8 @@ def dispatch_by_pricing_case(
     # --- 플래그 수집 (공통) ---
     if seed.get("pbac_superiority_required"):
         warnings.append(
-            "복합제가 PBS 신규 등재시 PBAC에 단일성분 대비 임상우월성(예: 심혈관 이벤트 감소) "
-            "입증 필요. 등재 지연·거절 리스크 높음."
+            "시드 플래그: PBS 신규 등재 시 PBAC에서 단일성분 대비 비교임상·우월성 자료가 "
+            "논의될 수 있는 품목군(실제 요구 범위·일정은 개별 심의 대상)."
         )
     if seed.get("hospital_channel_only"):
         warnings.append(
@@ -509,7 +514,8 @@ def dispatch_by_pricing_case(
         )
     if seed.get("restricted_benefit"):
         warnings.append(
-            "PBS Restricted Benefit/Authority — 처방 적응증 제한. 시장 규모 재추정 필요."
+            "PBS Restricted Benefit/Authority — 처방 적응증 제한. 적용 환자군·시장 규모는 "
+            "품목 고지문·Schedule 기준으로 별도 확인 대상."
         )
     confidence = seed.get("confidence_score")
     if isinstance(confidence, (int, float)) and confidence < 0.7:
@@ -615,8 +621,8 @@ def dispatch_by_pricing_case(
         sub_name = seed.get("substitute_ingredient") or "대체계열"
         if seed.get("commercial_withdrawal_flag"):
             warnings.append(
-                f"Commercial Withdrawal 이력(연도: {seed.get('commercial_withdrawal_year')}). "
-                "아래 FOB는 대체계열 참고가 기준이며 표준 PBS 역산이 아님."
+                f"Commercial Withdrawal 이력(연도: {seed.get('commercial_withdrawal_year')}) — "
+                "데이터 기록 사실이며, 아래 FOB는 대체계열 참고가 기준(표준 PBS 동일품목 역산 아님)."
             )
         if isinstance(cr_aemp, (int, float)) and float(cr_aemp) > 0:
             aemp_use = float(cr_aemp)

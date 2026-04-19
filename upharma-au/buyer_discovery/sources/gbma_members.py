@@ -1,5 +1,15 @@
-"""GBMA(호주 제네릭·바이오시밀러 협회, Generic and Biosimilar Medicines Australia)
-회원사 목록. 회원 페이지 HTML 크롤.
+"""GBMA(호주 제네릭·바이오시밀러 협회) 회원사.
+
+회원 페이지 HTML 크롤. 실제 DOM 구조 (2026-04-19 확인):
+  <a href="https://company-url" target="_blank">
+    <img alt="..." src="..."/>
+  </a>
+  <h6 class="wp-block-heading">
+    <a href="https://company-url" target="_blank" rel="noopener">Company Name Pty Ltd</a>
+  </h6>
+
+→ 셀렉터: `h6.wp-block-heading a` — 텍스트를 회사명으로, href 를 웹사이트로. 헤더·
+네비 단어는 blacklist 로 제거하고 whitelist (Pty Ltd / Pharma 등) 통과한 것만.
 """
 from __future__ import annotations
 
@@ -7,6 +17,8 @@ from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup
+
+from .ma_members import _accept_company_name  # 동일 whitelist/블랙리스트 재사용
 
 _GBMA_URL = "https://gbma.com.au/gbma-members/"
 _TIMEOUT = 30.0
@@ -17,7 +29,7 @@ _USER_AGENT = (
 
 
 def fetch_gbma_members() -> list[dict[str, Any]]:
-    """GBMA 회원사 리스트. 실패·구조변경 시 빈 리스트."""
+    """GBMA 회원사 `h6.wp-block-heading a` 텍스트 추출 + whitelist 필터."""
     try:
         r = httpx.get(
             _GBMA_URL,
@@ -38,23 +50,34 @@ def fetch_gbma_members() -> list[dict[str, Any]]:
     members: list[dict[str, Any]] = []
     seen: set[str] = set()
 
-    for sel in ("a[title]", ".member-name", "h3", "h4", "div.member a"):
-        for el in soup.select(sel):
-            name = (
-                (el.get("title") if hasattr(el, "get") else None)
-                or el.get_text(strip=True)
-            )
-            name = (name or "").strip()
-            if not name or len(name) < 3:
-                continue
-            # 제목류 헤더 제외 (너무 포괄적인 단어)
-            if name.lower() in ("gbma members", "members", "our members", "menu", "home"):
+    # 1차: h6.wp-block-heading 내부 anchor 텍스트
+    for h in soup.select("h6.wp-block-heading a, h6.wp-block-heading"):
+        name = h.get_text(strip=True)
+        if not _accept_company_name(name):
+            continue
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        href = h.get("href") if hasattr(h, "get") else None
+        members.append({
+            "name": name,
+            "source": "gbma",
+            "is_gbma_member": True,
+            "website": href if isinstance(href, str) and href.startswith("http") else None,
+        })
+
+    # 2차 fallback: target="_blank" 링크 중 whitelist 통과하는 텍스트
+    if len(members) < 5:
+        for a in soup.select('a[target="_blank"]'):
+            name = a.get_text(strip=True)
+            if not _accept_company_name(name):
                 continue
             key = name.lower()
             if key in seen:
                 continue
             seen.add(key)
-            href = el.get("href") if hasattr(el, "get") else None
+            href = a.get("href")
             members.append({
                 "name": name,
                 "source": "gbma",

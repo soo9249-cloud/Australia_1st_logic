@@ -12,6 +12,11 @@
     {"pattern": "burst health pharmacy", "reason": "조제약국, 바이어 아님"},
     {"pattern": "surgical specialties",  "reason": "의료기기 전문, 완제 의약품 아님"},
     {"pattern": "neilmed",          "reason": "비강세척 OTC 전용, ETC(전문의약품) 아님"},
-    {"pattern": "centre for digestive diseases", "reason": "병원 (바이어 아님, 프로모션 채널 별도)"}
+    {"pattern": "centre for digestive diseases", "reason": "병원 (바이어 아님, 프로모션 채널 별도)"},
+    {"pattern": "medicines australia on linkedin", "reason": "HTML 파서 링크 텍스트 노이즈"},
+    {"pattern": "site information", "reason": "페이지 헤딩 노이즈"},
+    {"pattern": "linkedin",         "reason": "소셜 네비 노이즈"},
+    {"pattern": "twitter",          "reason": "소셜 네비 노이즈"},
+    {"pattern": "facebook",         "reason": "소셜 네비 노이즈"}
   ]
 }

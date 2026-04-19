@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .sources.db_sponsors import (
+    fetch_all_products_tga_sponsors,
     fetch_pbs_sponsors_for_product,
     fetch_sponsors_by_inn,
     fetch_tga_sponsors_for_product,
@@ -50,15 +51,16 @@ async def collect_all_sources(product_code: str) -> dict[str, list[dict[str, Any
     similar = product.get("similar_inns", []) or []
 
     loop = asyncio.get_event_loop()
-    tga_task  = loop.run_in_executor(None, fetch_tga_sponsors_for_product, product_code)
-    pbs_task  = loop.run_in_executor(None, fetch_pbs_sponsors_for_product, product_code)
-    ma_task   = loop.run_in_executor(None, fetch_ma_members)
-    gbma_task = loop.run_in_executor(None, fetch_gbma_members)
-    gpce_task = loop.run_in_executor(None, fetch_gpce_exhibitors)
-    inn_task  = loop.run_in_executor(None, fetch_sponsors_by_inn, inns, similar)
+    tga_task       = loop.run_in_executor(None, fetch_tga_sponsors_for_product, product_code)
+    tga_all_task   = loop.run_in_executor(None, fetch_all_products_tga_sponsors)  # 전 품목 합집합
+    pbs_task       = loop.run_in_executor(None, fetch_pbs_sponsors_for_product, product_code)
+    ma_task        = loop.run_in_executor(None, fetch_ma_members)
+    gbma_task      = loop.run_in_executor(None, fetch_gbma_members)
+    gpce_task      = loop.run_in_executor(None, fetch_gpce_exhibitors)
+    inn_task       = loop.run_in_executor(None, fetch_sponsors_by_inn, inns, similar)
 
-    tga, pbs, ma, gbma, gpce, inn = await asyncio.gather(
-        tga_task, pbs_task, ma_task, gbma_task, gpce_task, inn_task,
+    tga, tga_all, pbs, ma, gbma, gpce, inn = await asyncio.gather(
+        tga_task, tga_all_task, pbs_task, ma_task, gbma_task, gpce_task, inn_task,
         return_exceptions=True,
     )
 
@@ -68,8 +70,26 @@ async def collect_all_sources(product_code: str) -> dict[str, list[dict[str, Any
             return []
         return x or []
 
+    # 전 품목 TGA 스폰서 합집합을 tga_sponsors 배열에 병합. source 는 동일 "tga".
+    tga_list = _safe(tga)
+    tga_all_list = _safe(tga_all)
+    # 이름 기준 dedup — product-specific 행의 artg_count 가 우선, 이후 전체 합집합 보강
+    merged_tga: dict[str, dict[str, Any]] = {}
+    for row in tga_list + tga_all_list:
+        name = (row.get("name") or "").strip()
+        if not name:
+            continue
+        if name not in merged_tga:
+            merged_tga[name] = row
+        else:
+            cur = merged_tga[name]
+            cur["artg_count"] = max(
+                int(cur.get("artg_count") or 0),
+                int(row.get("artg_count") or 0),
+            )
+
     return {
-        "tga_sponsors":        _safe(tga),
+        "tga_sponsors":        list(merged_tga.values()),
         "pbs_sponsors":        _safe(pbs),
         "ma_members":          _safe(ma),
         "gbma_members":        _safe(gbma),

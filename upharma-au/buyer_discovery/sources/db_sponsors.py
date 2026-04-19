@@ -55,8 +55,10 @@ def _walk_jsonb_orgs(orgs: Any) -> list[dict[str, Any]]:
 def fetch_tga_sponsors_for_product(product_id: str) -> list[dict[str, Any]]:
     """au_products.tga_sponsors(JSONB) 에서 TGA 스폰서 빈도 집계.
 
-    주의: v2 스키마 테이블명은 `au_products` (구 `australia` 아님). FK = `product_id`.
-    같은 product_id 가 여러 행 있을 수 있으므로 전부 합산 후 빈도로 artg_count 추정.
+    주의: v2 스키마에서 `au_products` 테이블의 FK 컬럼은 **`product_code`** 이다.
+    (참조 — supabase_insert._KEY_RENAME_AU_PRODUCTS: product_id → product_code 리네임).
+    반면 `au_pbs_raw` 와 `au_tga_artg` 는 `product_id` 를 그대로 씀.
+    같은 product_code 가 여러 행 있을 수 있으므로 전부 합산 후 빈도로 artg_count 추정.
     """
     if not product_id:
         return []
@@ -65,7 +67,7 @@ def fetch_tga_sponsors_for_product(product_id: str) -> list[dict[str, Any]]:
         rows = (
             sb.table("au_products")
             .select("tga_sponsors")
-            .eq("product_id", product_id)
+            .eq("product_code", product_id)   # ★ au_products 는 product_code 필드
             .execute()
             .data
         ) or []
@@ -84,6 +86,22 @@ def fetch_tga_sponsors_for_product(product_id: str) -> list[dict[str, Any]]:
     ]
 
 
+def _is_valid_company_name(name: str) -> bool:
+    """PBS/DB 에서 추출한 이름이 회사명으로 쓸만한지.
+
+    탈락:
+      · 길이 < 4
+      · 전부 대문자 약어 (길이 <= 5 & 알파벳만, 소문자 없음) — PBS manufacturer_code
+        "LM", "AS", "NVR" 같은 2~3글자 코드 걸러냄.
+    """
+    s = (name or "").strip()
+    if len(s) < 4:
+        return False
+    if len(s) <= 5 and s.replace(".", "").replace("-", "").isalpha() and s.isupper():
+        return False
+    return True
+
+
 def fetch_pbs_sponsors_for_product(product_id: str) -> list[dict[str, Any]]:
     """PBS 스폰서 — 2 소스 병합 (v2 스키마 기준):
       (1) au_products.originator_sponsor  — TEXT, 오리지네이터 1건
@@ -97,12 +115,12 @@ def fetch_pbs_sponsors_for_product(product_id: str) -> list[dict[str, Any]]:
     sb = get_supabase_client()
     sponsors: set[str] = set()
 
-    # (1) au_products.originator_sponsor
+    # (1) au_products.originator_sponsor — au_products FK 는 product_code (v2 리네임)
     try:
         op = (
             sb.table("au_products")
             .select("originator_sponsor")
-            .eq("product_id", product_id)
+            .eq("product_code", product_id)   # ★ au_products 는 product_code
             .execute()
             .data
         ) or []
@@ -133,9 +151,11 @@ def fetch_pbs_sponsors_for_product(product_id: str) -> list[dict[str, Any]]:
     except Exception as exc:
         print(f"[db_sponsors] endpoint_organisations 조회 실패 ({product_id}): {exc}", flush=True)
 
+    # 2글자 manufacturer_code 같은 약어 배제
     return [
         {"name": s, "source": "pbs", "pbs_listed": True}
         for s in sorted(sponsors)
+        if _is_valid_company_name(s)
     ]
 
 
@@ -144,6 +164,44 @@ def _active_ingredient_str(ing: Any) -> str:
     if isinstance(ing, dict):
         return str(ing.get("name") or ing.get("ingredient") or "").lower()
     return str(ing or "").lower()
+
+
+def fetch_all_products_tga_sponsors() -> list[dict[str, Any]]:
+    """au_products 전 품목의 tga_sponsors(JSONB) 합집합.
+
+    시장조사 때 각 품목의 경쟁 스폰서를 수집해둔 결과를 재활용. `au_tga_artg`
+    에 상세 행이 많지 않더라도 `au_products.tga_sponsors` JSONB 에는 품목별 경쟁
+    스폰서 배열이 담겨있음 → 이걸 전수 flatten 해서 폭넓은 바이어 후보 풀 구성.
+
+    중복 스폰서는 최고 artg_count (등장 횟수) 로 통합.
+    """
+    try:
+        sb = get_supabase_client()
+        rows = (
+            sb.table("au_products")
+            .select("product_code, tga_sponsors")
+            .execute()
+            .data
+        ) or []
+    except Exception as exc:
+        print(f"[db_sponsors] au_products.tga_sponsors 전수 조회 실패: {exc}", flush=True)
+        return []
+
+    counts: dict[str, int] = {}
+    for r in rows:
+        sponsors = r.get("tga_sponsors") or []
+        if not isinstance(sponsors, list):
+            continue
+        for s in sponsors:
+            if isinstance(s, str) and s.strip():
+                key = s.strip()
+                counts[key] = counts.get(key, 0) + 1
+
+    return [
+        {"name": k, "source": "tga", "artg_count": v}
+        for k, v in counts.items()
+        if _is_valid_company_name(k)
+    ]
 
 
 def fetch_sponsors_by_inn(

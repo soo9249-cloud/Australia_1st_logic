@@ -401,7 +401,7 @@ function renderReportTab() {
     container.innerHTML = `
       <div class="rep-empty">
         아직 생성된 보고서가 없습니다.<br>
-        시장조사 분석을 실행하면 여기에 자동으로 등록됩니다.
+        메인에서 분석을 실행하면 여기에 자동으로 등록됩니다.
       </div>`;
     return;
   }

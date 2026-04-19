@@ -445,28 +445,32 @@
       </div>
       <div class="process-body" id="pb-p3">
         <div class="selector-card">
-          <div class="p3-note" id="p3-note">품목을 선택하면 해당 품목의 호주 바이어 TOP 10 이 표시됩니다. (교차검증 점수 + 5지표 가중치 기반)</div>
+          <!-- 시작/재분석 버튼 -->
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+            <button class="btn-analyze" id="p3-run-btn" type="button" onclick="triggerBuyerDiscovery()">
+              <span id="p3-run-icon">▶</span> 바이어 발굴 실행
+            </button>
+            <span id="p3-progress" style="font-size:13px; color:#6b7280;"></span>
+          </div>
+          <div class="p3-note" id="p3-note">위 드롭다운에서 품목을 선택하고 <b>[바이어 분석 시작]</b> 버튼을 누르면 Top 10 바이어가 표시됩니다.</div>
           <div class="p3-meta" id="p3-meta" style="display:none;"></div>
-          <div class="p3-buyer-table">
+          <div class="p3-buyer-table" id="p3-buyer-table" style="display:none;">
             <table class="p3-table">
               <thead>
                 <tr>
-                  <th style="width:36px;">#</th>
-                  <th>회사명 (바이어)</th>
-                  <th style="width:150px;">매출 등급</th>
-                  <th style="width:80px;">호주공장</th>
-                  <th style="width:70px;">총점</th>
-                  <th style="width:90px;">정보</th>
+                  <th style="width:36px;">순위</th>
+                  <th>회사명</th>
+                  <th style="width:130px;">매출 순위</th>
+                  <th style="width:160px;">주력 제품군</th>
+                  <th style="width:130px;">제조소 보유</th>
+                  <th style="width:140px;">동일 성분 보유</th>
                 </tr>
               </thead>
-              <tbody id="p3-buyer-tbody">
-                <tr><td colspan="6" class="p3-empty-cell">품목을 선택해 주세요 (위 시장조사 탭의 품목 드롭다운).</td></tr>
-              </tbody>
+              <tbody id="p3-buyer-tbody"></tbody>
             </table>
           </div>
           <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
             <button class="btn-download" id="p3-dl-btn" onclick="generateBuyersPdf()" disabled>📄 바이어 보고서 PDF 다운로드</button>
-            <span id="p3-fx-note" class="p3-fx-note" style="font-size:12px; color:#666;"></span>
           </div>
         </div>
       </div>

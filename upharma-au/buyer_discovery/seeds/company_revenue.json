@@ -1,0 +1,1741 @@
+{
+  "_meta": {
+    "description": "바이어 발굴 매출 규모 조사. Perplexity sonar-pro + Haiku 교차검증. 주 1회 수동 재실행. 등급: TOP 5 (100점) → TOP 50 (50점) → niche (30) → unknown (0).",
+    "last_updated": "2026-04-19T19:44:53.993844+00:00",
+    "total": 65,
+    "rank_distribution": {
+      "niche": 38,
+      "TOP 10": 7,
+      "TOP 50": 4,
+      "TOP 20": 1,
+      "unknown": 15
+    }
+  },
+  "revenue": {
+    "arrotex_pharmaceuticals": {
+      "canonical_name": "Arrotex Pharmaceuticals Pty Ltd",
+      "rank": "niche",
+      "score": 4,
+      "confidence": 0.15,
+      "reasoning": "Perplexity claims TOP 20 ranking with $1.52B revenue, but local evidence contradicts this: only 5 ARTG registrations, no Australian manufacturing facility, not MA member, and not PBS listed. GBMA membership suggests generics focus, inconsistent with claimed market leader status. The cited sources lack verifiable pharmaceutical industry authority, and the revenue claim appears unsupported by TGA re",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/arrotex-australia-group-pty-ltd/522181/",
+        "https://www.datanyze.com/companies/arrotex-pharmaceuticals/474651502",
+        "https://www.pharmaspecialists.com/2024/02/op-20-pharmaceutical-companies-in-australia.html",
+        "https://www.zoominfo.com/c/arrotex-pharmaceuticals-pty-ltd/474651502",
+        "https://rocketreach.co/arrotex-pharmaceuticals-profile_b42b94f7fe0493b2"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 20\",\"reasoning\":\"Arrotex Pharmaceuticals is listed as #3 in the Top 20 Pharmaceutical Companies in Australia for 2023-2024 based on annual revenue, R&D expenditure, and innovation. This is corroborated by its reported 2023 revenue of $1.52 billion from IBISWorld, positioning it among the market leaders despite lower estimates from other sources.\",\"sources\":[\"https://www.pharmaspecialists.com/2024/02/op-20-pharmaceutical-companies-in-australia.html\",\"https://www.ibisworld.com/australia/company/arrotex-australia-group-pty-ltd/522181/\",\"https://www.datanyze.com/companies/arrotex-pharmaceuticals/474651502\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "gbma",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 5,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": true,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "viatris": {
+      "canonical_name": "Alphapharm Pty Ltd",
+      "rank": "niche",
+      "score": 10,
+      "confidence": 0.35,
+      "reasoning": "Local evidence contradicts TOP 50 claim: only 2 ARTG registrations, no PBS listing, and GBMA membership (generics association) indicate a small-scale niche player, not mid-tier. While Perplexity cites Growjo revenue ($53.3M) and market reports, the minimal ARTG footprint and generics-only positioning suggest Alphapharm operates in a specialized niche rather than competitive mid-tier ranking.",
+      "evidence_urls": [
+        "https://growjo.com/company/Alphapharm",
+        "https://www.marketreportanalytics.com/reports/australia-pharmaceutical-market-94566",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://announcements.asx.com.au/asxpdf/20240830/pdf/0679lz5nps5fsf.pdf",
+        "https://acci.com.au/Common/Uploaded%20files/Smart%20Suite/Smart%20Library/6fa6f601-d27e-4c0e-805d-e3f2d6951f49/ACCI_Annual_Report_2024_Digital.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 50\",\"reasoning\":\"Alphapharm's estimated annual revenue is $53.3M, positioning it below top competitors like Pharmacy 777 ($130M) and MSD Australia ($130.4M) on Growjo's list, but within a competitive mid-tier[1]. Leading Australian pharmaceutical market reports for 2023-2025 list dominant players such as CSL, AbbVie, Pfizer, and Novartis with implied multi-billion revenues in a $25-30B market, excluding Alphapharm from top rankings[2][3].\",\"sources\":[\"https://growjo.com/company/Alphapharm\",\"https://www.marketreportanalytics.com/reports/australia-pharmaceutical-market-94566\",\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "gbma",
+          "gpce",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 2,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": true,
+        "is_gpce": true
+      },
+      "has_factory": true
+    },
+    "pfizer": {
+      "canonical_name": "Pfizer (Perth) Pty Ltd",
+      "rank": "TOP 10",
+      "score": 61,
+      "confidence": 0.72,
+      "reasoning": "Perplexity claim of TOP 10 is supported by Pfizer's MA membership (Big Pharma association) and $1.16B revenue scale, which aligns with major player status. However, confidence is moderated by the surprisingly low ARTG count (1) and absence of Australian manufacturing, suggesting the revenue may be primarily from imports/distribution rather than local product portfolio depth. The claim remains plau",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/pfizer/revenue/",
+        "https://www.pharmaceutical-technology.com/news/pfizer-boasts-over-30-increase-in-q3-revenues-against-previous-year/",
+        "https://www.ibisworld.com/australia/company/pfizer-australia-holdings-pty-limited/12915/",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/",
+        "https://investors.pfizer.com/Investors/Financials/Annual-Reports/default.aspx"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 10\",\"reasoning\":\"Pfizer Australia Holdings Pty Limited generated approximately $1.16 billion in revenue in 2024, positioning it as a major player in the Australian pharmaceutical market likely within the **TOP 10** given its scale relative to typical market leaders[3]. No exact 2023-2024 rankings are available in the results, but its revenue size supports high-tier status among Australian pharma firms[1][3].\",\"sources\":[\"https://www.ibisworld.com/australia/company/pfizer-australia-holdings-pty-limited/12915/\",\"https://companiesmarketcap.com/pfizer/revenue/\",\"https://insights.citeline.com/pharma-insights/the-worlds-top-100-pharma-companies-2024-sales-rankings-Z47XBTXVNJEXFCKYU7Q4EJ45XI/\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "ma",
+          "gpce",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "gsk": {
+      "canonical_name": "GlaxoSmithKline Australia Pty Ltd",
+      "rank": "TOP 50",
+      "score": 17,
+      "confidence": 0.35,
+      "reasoning": "Perplexity claim of TOP 10 is significantly downgraded based on local evidence: GSK Australia has only 1 ARTG registration, no Australian manufacturing facility, is not a Medicines Australia member, and is not PBS-listed—indicators inconsistent with top-tier market positioning. While GSK is a global pharma giant, the Australian subsidiary's minimal local regulatory footprint and lack of major asso",
+      "evidence_urls": [
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://companiesmarketcap.com/aud/glaxo-smith-kline/revenue/",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/",
+        "https://www.gsk.com/media/wrvfwob1/annual-report-2024.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 10\",\"reasoning\":\"GlaxoSmithKline (GSK) is explicitly listed among the key players in the Australian pharmaceutical market alongside major companies like CSL Ltd., Pfizer Australia Pty Ltd., AstraZeneca Pty Ltd., and AbbVie Pty Ltd., indicating its position within the top tier of the market.[1] As a global pharma giant with significant presence and no contradictory data excluding it from top rankings, GSK Australia ranks in the TOP 10 for 2023-2024 revenue.\",\"sources\":[\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\",\"https://www.imarcgroup.com/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "gpce",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "sandoz": {
+      "canonical_name": "Sandoz Pty Ltd",
+      "rank": "TOP 20",
+      "score": 50,
+      "confidence": 0.72,
+      "reasoning": "Perplexity's 'unknown' ranking conflicts with local evidence showing Sandoz is a TGA-registered sponsor with Australian manufacturing capability and GBMA membership (generics association), indicating established market presence. However, only 3 ARTG registrations and no PBS listing suggest limited portfolio depth in Australia, supporting a TOP 20 rather than TOP 10 position. Global $10.4B revenue ",
+      "evidence_urls": [
+        "https://www.thepharmaletter.com/sandoz-reports-strong-2024-results",
+        "https://sandoz-com.cms.sandoz.com/sites/default/files/Media%20Documents/Sandoz_2024_annual_report.pdf",
+        "https://www.statista.com/statistics/1538632/sandoz-net-sales-by-segment/",
+        "https://sandoz-com.cms.sandoz.com/sites/default/files/Media%20Documents/2023-Integrated-Annual-Report.pdf",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide specific annual revenue data or rankings for Sandoz Pty Ltd (Australia) within the Australian pharmaceutical market for 2023-2024. Global Sandoz revenues are reported (e.g., $10.4 billion in 2024), and Australian market size is ~USD 25 billion, but no Australia-specific figures or top company rankings are available.[1][5]\",\"sources\":[\"https://www.thepharmaletter.com/sandoz-reports-strong-2024-results\",\"https://sandoz-com.cms.sandoz.com/sites/default/files/Media%20Documents/Sandoz_2024_annual_report.pdf\",\"https://www.imarcgroup.com/australia-pharmaceutical-market\",\"https://www.kenresearch.com/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "gbma",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 3,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": true,
+        "is_gpce": false
+      },
+      "has_factory": true
+    },
+    "bayer": {
+      "canonical_name": "Bayer Australia Ltd",
+      "rank": "niche",
+      "score": 7,
+      "confidence": 0.25,
+      "reasoning": "Perplexity claim of TOP 20 status contradicts local evidence: only 1 ARTG registration, no Australian manufacturing facility, not MA member, and not PBS listed. While revenue figures may be accurate for global Bayer operations, the minimal local regulatory footprint (1 ARTG) and absence of industry association membership indicate Bayer Australia operates as a niche player in the domestic market ra",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/bayer-australia-ltd/698/",
+        "https://www.grandviewresearch.com/horizon/outlook/pharmaceutical-market/australia",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.bayer.com/sites/default/files/2025-03/bayer-annual-report-2024.pdf",
+        "http://bullfincher.io/ranking/top-pharmaceutical-companies-in-australia-by-revenue"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 20\",\"reasoning\":\"Bayer Australia Ltd reported total revenue of $659.81 million in 2024, exceeding the top-ranked Mayne Pharma Group's $588.73 million, positioning it within the top pharmaceutical companies by revenue in Australia[1][5]. While exact rankings beyond the top few are unavailable and the overall market size varies across sources (e.g., ~AUD 22-36B in 2025), this revenue level indicates a top 20 status given typical market distribution[2][3].\",\"sources\":[\"https://www.ibisworld.com/australia/company/bayer-australia-ltd/698/\",\"http://bullfincher.io/ranking/top-pharmaceutical-companies-in-australia-by-revenue\",\"https://www.grandviewresearch.com/horizon/outlook/pharmaceutical-market/australia\",\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "cipla_australia": {
+      "canonical_name": "Cipla Australia Pty Ltd",
+      "rank": "niche",
+      "score": 4,
+      "confidence": 0.15,
+      "reasoning": "Perplexity claims TOP 20 ranking based on global metrics, but local Australian evidence contradicts this: only 1 ARTG registration, no manufacturing facility, not a member of MA or GBMA industry associations, and not PBS-listed. The claim relies on global revenue data rather than Australian market presence. With minimal local market footprint, Cipla Australia should be classified as niche, not TOP",
+      "evidence_urls": [
+        "https://www.cipla.com/sites/default/files/Annual-Report-2023-24-(Double%20page).pdf",
+        "https://www.statista.com/statistics/986087/india-cipla-global-revenue-by-region/",
+        "https://in.marketscreener.com/quote/stock/CIPLA-LIMITED-9058821/news/Cipla-Annual-Report-2023-24-Single-page-47483922/",
+        "https://www.cipla.com/sites/default/files/Annual-Report-FY-2022-23.pdf",
+        "https://www.scribd.com/document/781377968/Annual-Report-2023-24-CIPLA"
+      ],
+      "perplexity_raw": "{\"rank\": \"TOP 20\", \"reasoning\": \"Cipla Australia is ranked 9th among the top 20 pharmaceutical companies in Australia for 2023-2024 based on annual revenue, R&D expenditure, and innovation.[8] No specific revenue figures for Cipla Australia are available in Cipla's global annual reports, which focus on overall or other regional performance.[1][3]\", \"sources\": [\"https://www.pharmaspecialists.com/2024/02/op-20-pharmaceutical-companies-in-australia.html\", \"https://www.cipla.com/sites/default/files/Annual-Report-2023-24-(Double%20page).pdf\", \"https://in.marketscreener.com/quote/stock/CIPLA-LIMITED-9058821/news/Cipla-Annual-Report-2023-24-Single-page-47483922/\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "orion_pharma_pty": {
+      "canonical_name": "Orion Pharma (AUS) Pty Limited",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking is contradicted by local evidence showing Orion Pharma (AUS) has only 1 ARTG, no manufacturing facility, no PBS listing, and no association memberships (MA/GBMA). This profile is definitively niche, not unknown. The global EUR 1.5B parent company revenue is irrelevant to Australian market positioning.",
+      "evidence_urls": [
+        "https://www.orionpharma.com/newsroom/all-news/releases/stock-releases/2025/orion-group-financial-statement-release-januarydecember-2024/",
+        "https://stockanalysis.com/quote/dse/ORIONPHARM/revenue/",
+        "https://companiesmarketcap.com/aud/orion-corp/revenue/",
+        "https://www.orionpharma.com/investors/orion-highlights-2024/",
+        "https://www.orionpharma.com/newsroom/all-news/releases/stock-releases/2026/orion-group-financial-statement-release-januarydecember-2025/"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide Orion Pharma (AUS) Pty Limited's specific annual revenue or ranking within the Australian pharmaceutical market for 2023-2024; available data covers global/group net sales (e.g., EUR 1,542.4 million in 2024) or unrelated entities like a Bangladeshi Orion Pharma, without Australian subsidiary breakdowns or market rankings.\",\"sources\":[\"https://www.orionpharma.com/newsroom/all-news/releases/stock-releases/2025/orion-group-financial-statement-release-januarydecember-2024/\",\"https://companiesmarketcap.com/aud/orion-corp/revenue/\",\"https://www.orionpharma.com/492a14/globalassets/investors/reports-and-presentations/2024/orion-financial-statement-release-2024.pdf\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "medreich_australia": {
+      "canonical_name": "Medreich Australia Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' rank is inconsistent with local evidence showing Medreich is a TGA-registered sponsor with 3 ARTG products. While not in top-tier rankings (no MA membership, no PBS listing, no manufacturing facility), the company has active market presence warranting 'niche' classification rather than 'unknown'. Perplexity's reliance on market-wide data without company-specific registry che",
+      "evidence_urls": [
+        "https://www.sphericalinsights.com/reports/australia-pharmaceuticals-market",
+        "https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/",
+        "https://www.statista.com/statistics/1198795/australia-pharmacy-and-cosmetic-goods-retail-turnover/",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.ibisworld.com/blog/top-100-manufacturers-2025/61/5644/"
+      ],
+      "perplexity_raw": "{\n  \"rank\": \"unknown\",\n  \"reasoning\": \"Search results provide overall Australian pharmaceutical market sizes ranging from USD 12.51 billion in 2023 to $17.5 billion in 2024 but no specific revenue data or rankings for Medreich Australia Pty Ltd. IBISWorld's Top 100 Manufacturers list mentions leaders like Pfizer at 67th but does not reference Medreich, indicating it is not among the top-ranked firms.\",\n  \"sources\": [\n    \"https://www.sphericalinsights.com/reports/australia-pharmaceuticals-market\",\n    \"https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/\",\n    \"https://www.ibisworld.com/blog/top-100-manufacturers-2025/61/5644/\"\n  ]\n}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 3,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "pharmacor": {
+      "canonical_name": "Pharmacor Pty Ltd",
+      "rank": "niche",
+      "score": 27,
+      "confidence": 0.92,
+      "reasoning": "Perplexity's niche classification is strongly supported by local evidence: only 2 TGA ARTG registrations, no PBS listing, no manufacturing facility, and non-membership in MA/GBMA industry associations. The $3.59M revenue estimate aligns with a small niche player. However, confidence is not higher due to only 4 citation URLs provided (requirement is 2+, met), with 1 URL (prospeo.io) being a commerc",
+      "evidence_urls": [
+        "https://prospeo.io/c/pharmacor-revenue",
+        "https://www.verifiedmarketresearch.com/product/australia-pharmaceutical-market/",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.asx.com.au/asxpdf/20211215/pdf/4545gqmkn60vwp.pdf",
+        "https://cmaustralia.org.au/wp-content/uploads/CMA-Snapshot-2024.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"niche\",\"reasoning\":\"Pharmacor Pty Ltd has an estimated annual revenue of $3.59 million, which is a tiny fraction (less than 0.015%) of the Australian pharmaceutical market valued at approximately USD 25 billion in 2024[1][2][3]. No top rankings or significant market share data for Pharmacor appears in industry reports, confirming its niche position in the generic medicines segment[1].\",\"sources\":[\"https://prospeo.io/c/pharmacor-revenue\",\"https://www.verifiedmarketresearch.com/product/australia-pharmaceutical-market/\",\"https://www.imarcgroup.com/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 2,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "gm_pharma_international": {
+      "canonical_name": "GM Pharma International Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking is reasonable given absence from major revenue reports, but local evidence shows GM Pharma is an active TGA sponsor with 2 ARTG registrations and no manufacturing facility or major association membership, positioning it as a niche player rather than truly unknown. The company operates in the Australian market with regulatory presence but lacks the scale, distribution",
+      "evidence_urls": [
+        "https://www.iqvia.com/-/media/iqvia/pdfs/canada/2024-trends/english/top10worldwidesales_24.pdf",
+        "http://bullfincher.io/ranking/top-pharmaceutical-companies-in-australia-by-revenue",
+        "https://www.sgs.com/-/media/sgscorp/documents/corporate/reports-and-presentations/2020s/2025/sgs-2024-integrated-report-en.cdn.en.pdf",
+        "https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2024/10/MA_Annual-Report-2024_Final_Digital.pdf",
+        "https://www.maynepharma.com/wp-content/uploads/2024/10/MYX-FY24-Annual-Report-FINAL-interactive.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Search results list the top pharmaceutical companies in Australia by revenue (e.g., Mayne Pharma Group, Vitura Health, Vita Life Sciences, Medical Developments International in the top 5), but GM Pharma International Pty Ltd is not mentioned in any top rankings or reports for 2023-2024[2]. Other sources cover global markets, industry reports, or major players like CSL and Mayne Pharma without referencing GM Pharma[1][5][6].\",\"sources\":[\"http://bullfincher.io/ranking/top-pharmaceutical-companies-in-australia-by-revenue\",\"https://www.iqvia.com/-/media/iqvia/pdfs/canada/2024-trends/english/top10worldwidesales_24.pdf\",\"https://www.maynepharma.com/wp-content/uploads/2024/10/MYX-FY24-Annual-Report-FINAL-interactive.pdf\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 2,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "sun_pharma_anz": {
+      "canonical_name": "Sun Pharma ANZ Pty Ltd",
+      "rank": "niche",
+      "score": 22,
+      "confidence": 0.75,
+      "reasoning": "Perplexity claims ~AUD $91.1M revenue (2025) but local evidence shows only 2 ARTG registrations, no manufacturing facility, and no MA/GBMA membership. This revenue-to-footprint mismatch suggests Sun Pharma ANZ operates as a niche player (likely API supplier or limited portfolio distributor) rather than a major market participant. The 'unknown' ranking is downgraded to 'niche' based on minimal loca",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/aud/sun-pharmaceutical/revenue/",
+        "https://www.ibisworld.com/australia/company/sun-pharma-anz-pty-ltd/468778/",
+        "https://www.grandviewresearch.com/horizon/outlook/active-pharmaceutical-ingredients-market/australia",
+        "https://sunpharma.com/wp-content/uploads/2024/07/Sun-Pharma-ANZ-Pty-Ltd.pdf",
+        "https://www.scribd.com/document/805224729/Fy2024-Sun-Pharma"
+      ],
+      "perplexity_raw": "```json\n{\n  \"rank\": \"unknown\",\n  \"reasoning\": \"While Sun Pharma ANZ Pty Ltd generated AUD $80.8 million in revenue for the year ended March 31, 2024[4], and approximately AUD $91.1 million in 2025[2], the search results do not provide comparative data on the overall Australian pharmaceutical market or rankings of other major pharmaceutical companies operating in Australia, making it impossible to determine this company's market position.\",\n  \"sources\": [\n    \"https://sunpharma.com/wp-content/uploads/2024/07/Sun-Pharma-ANZ-Pty-Ltd.pdf\",\n    \"https://www.ibisworld.com/australia/company/sun-pharma-anz-pty-ltd/468778/\"\n  ]\n}\n```",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 2,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "medsurge": {
+      "canonical_name": "Medsurge Pharma Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking is contradicted by local evidence showing Medsurge is a TGA-registered sponsor with an Australian manufacturing facility, indicating active market participation. However, only 2 ARTG registrations, no PBS listing, and non-membership in MA/GBMA associations confirm niche market positioning rather than top-tier status.",
+      "evidence_urls": [
+        "https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.ibisworld.com/blog/top-100-manufacturers-2025/61/5644/",
+        "https://cmaustralia.org.au/wp-content/uploads/CMA-Snapshot-2024.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results mention Medsurge Pharma Pty Ltd or provide a revenue ranking for it within the Australian pharmaceutical market for 2023-2024. Available data discusses overall market size (e.g., $17.5B in 2024) and top manufacturers like CSL, but lacks company-specific rankings beyond leaders.\",\"sources\":[\"https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/\",\"https://www.ibisworld.com/blog/top-100-manufacturers-2025/61/5644/\",\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 2,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": true
+    },
+    "boucher_&_muir": {
+      "canonical_name": "Boucher & Muir Pty Ltd",
+      "rank": "niche",
+      "score": 27,
+      "confidence": 0.92,
+      "reasoning": "Perplexity claim of 'niche' status is strongly supported by local evidence: only 1 ARTG registration, no Australian manufacturing facility, not PBS-listed, and no MA/GBMA association membership. The $4 million revenue figure aligns with a small niche player profile. However, confidence is not higher due to only 1 of 4 Perplexity citations being directly relevant (RocketReach profile) and market re",
+      "evidence_urls": [
+        "https://www.grandviewresearch.com/horizon/outlook/pharmaceutical-market/australia",
+        "https://www.verifiedmarketresearch.com/product/australia-pharmaceutical-market/",
+        "https://www.marketreportanalytics.com/reports/australia-pharmaceutical-market-94566",
+        "https://rocketreach.co/boucher-muir-pty-ltd-profile_b5cb4c4cf42e1457",
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market"
+      ],
+      "perplexity_raw": "{\"rank\":\"niche\",\"reasoning\":\"Boucher & Muir Pty Ltd has an annual revenue of $4 million, far below the top Australian pharmaceutical companies like Mayne Pharma Group ($588.73 million) and Vitura Health ($183.51 million), placing it outside the top 50 rankings.[4][6]\",\"sources\":[\"https://rocketreach.co/boucher-muir-pty-ltd-profile_b5cb4c4cf42e1457\",\"http://bullfincher.io/ranking/top-pharmaceutical-companies-in-australia-by-revenue\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "helix_pharmaceuticals": {
+      "canonical_name": "Helix Pharmaceuticals Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking is contradicted by local evidence showing Helix has only 1 ARTG, no PBS listing, no manufacturing facility, and no industry association membership. These indicators collectively point to a niche player rather than an unranked company. The 4 citations provided are generic market reports lacking company-specific data, insufficient to validate any market position claim.",
+      "evidence_urls": [
+        "https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.kenresearch.com/australia-pharmaceutical-market",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.ibisworld.com/blog/top-100-manufacturers-2025/61/5644/"
+      ],
+      "perplexity_raw": "```json\n{\n  \"rank\": \"unknown\",\n  \"reasoning\": \"The search results provided do not contain specific information about Helix Pharmaceuticals Pty Ltd or its market ranking within Australia's pharmaceutical sector for 2023-2024. While the results reference leading manufacturers like CSL and provide overall market data, no data on Helix Pharmaceuticals' revenue or competitive position is available.\",\n  \"sources\": [\n    \"https://www.ibisworld.com/blog/top-100-manufacturers-2025/61/5644/\",\n    \"https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2024/10/MA_Annual-Report-2024_Final_Digital.pdf\"\n  ]\n}\n```",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "micro_labs": {
+      "canonical_name": "Micro Labs Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking is contradicted by local evidence showing Micro Labs Pty Ltd is a TGA sponsor with 1 ARTG listing, no manufacturing facility, and no major association memberships. This profile—small ARTG count, no factory, non-member status—definitively indicates niche market position rather than unknown status. The Perplexity citations are weak (Indian parent company filings and un",
+      "evidence_urls": [
+        "https://www.microlabsltd.com/returns-report",
+        "https://sunpharma.com/wp-content/uploads/2025/07/SPIL-Annual-Report-2024-25.pdf",
+        "https://announcements.asx.com.au/asxpdf/20250226/pdf/06fyvf9lxnwtsk.pdf"
+      ],
+      "perplexity_raw": "{\n  \"rank\": \"unknown\",\n  \"reasoning\": \"No search results provide revenue data or market rankings for Micro Labs Pty Ltd (Australia) in the Australian pharmaceutical market for 2023-2024. The available results reference Indian filings for Micro Labs Limited, an unrelated Sun Pharma report, and Microba's interim report, none of which address the Australian subsidiary's position.\",\n  \"sources\": [\n    \"https://www.microlabsltd.com/returns-report\",\n    \"https://sunpharma.com/wp-content/uploads/2025/07/SPIL-Annual-Report-2024-25.pdf\",\n    \"https://announcements.asx.com.au/asxpdf/20250226/pdf/06fyvf9lxnwtsk.pdf\"\n  ]\n}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "avallon_pharmaceuticals": {
+      "canonical_name": "Avallon Pharmaceuticals Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking is contradicted by local evidence showing Avallon is a TGA sponsor with only 1 ARTG, no manufacturing facility, and no industry association membership. This profile indicates a niche player, not an unknown entity. The Perplexity citations appear to reference unrelated companies (Avalon Pharma Saudi Arabia, sunscreen markets) rather than Avallon Pharmaceuticals Pty Lt",
+      "evidence_urls": [
+        "https://avalon-cms-old.media-bots.com/storage/uploads/2025/05/07/Avalon-2024-Annual-Report---EN_uid_681b4a0d5059a.pdf",
+        "https://www.avalonpharmaceutical.com/annual-reports",
+        "https://www.crefc.org/common/Uploaded%20files/CLE/Reading%20Materials%20-%20Miami%202026%20CLE.pdf",
+        "https://www.grandviewresearch.com/industry-analysis/mineral-sunscreen-market-report",
+        "https://www.jama.or.jp/english/reports/docs/MIoJ2024_e.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide revenue data or rankings for Avallon Pharmaceuticals Pty Ltd specifically in the Australian pharmaceutical market for 2023-2024. The available information references Avalon Pharma (likely a Saudi Arabian company based on contact details), reporting 394 million (currency unspecified) in 2024 revenue, but this is unrelated to the Australian entity and lacks Australian market context or comparisons.\",\"sources\":[\"https://avalon-cms-old.media-bots.com/storage/uploads/2025/05/07/Avalon-2024-Annual-Report---EN_uid_681b4a0d5059a.pdf\",\"https://www.avalonpharmaceutical.com/annual-reports\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "generic_health": {
+      "canonical_name": "Generic Health Pty Ltd",
+      "rank": "niche",
+      "score": 4,
+      "confidence": 0.15,
+      "reasoning": "Perplexity claims TOP 50 with $119.4M revenue, but local evidence shows only 1 ARTG registration, no PBS listing, no manufacturing facility, and non-membership in MA/GBMA industry associations. This profile is inconsistent with a TOP 50 company; the single ARTG count and lack of market infrastructure suggest niche/specialty status. Citation URLs provided are generic market reports lacking company-",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/generic-health-pty-ltd/468779/",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.kenresearch.com/australia-generic-pharmaceuticals-market",
+        "https://market.us/report/generic-pharmaceuticals-market/"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 50\",\"reasoning\":\"Generic Health Pty Ltd reported revenue of approximately $119.4 million AUD in 2025, representing about 0.5% of the total Australian pharmaceutical market size of AUD 22.38 billion in 2025[1][3]. This positions it outside the top 20 but within the top 50, as no top company rankings list it among leaders like CSL, Pfizer, or GSK, and its revenue is modest relative to the market[3].\",\"sources\":[\"https://www.ibisworld.com/australia/company/generic-health-pty-ltd/468779/\",\"https://www.imarcgroup.com/australia-pharmaceutical-market\",\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "sanofi-aventis_australia": {
+      "canonical_name": "Sanofi-Aventis Australia Pty Ltd",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.25,
+      "reasoning": "Perplexity claim of TOP 10 status based on $739.5M revenue (7.3% market share) conflicts sharply with local evidence: only 1 ARTG registration, no PBS listing, and non-membership in MA/GBMA industry associations. While manufacturing presence is confirmed, the minimal product registration footprint suggests either the revenue figure is misattributed, applies to a parent entity rather than the Austr",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/sanofi-aventis-australia-pty-limited/1051/",
+        "https://www.statista.com/statistics/266510/sanofi-aventis-change-in-revenue-with-top-pharmaceuticals/",
+        "https://companiesmarketcap.com/sanofi/revenue/",
+        "https://www.sanofi.com/assets/dotcom/pressreleases/2025/2025-01-30-06-30-00-3017713-en.pdf",
+        "https://www.pharmiweb.com/article/top-10-pharmaceutical-companies-in-australia-2024"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 10\",\"reasoning\":\"Sanofi-Aventis Australia Pty Ltd reported $739.5 million in revenue for 2024, representing about 7.3% of the Australian pharmaceutical market's projected $10.16 billion total, positioning it among the top revenue generators[1][5]. No explicit ranking list is available, but this market share indicates a TOP 10 status given the market size and typical concentration among leading players.\",\"sources\":[\"https://www.ibisworld.com/australia/company/sanofi-aventis-australia-pty-limited/1051/\",\"https://www.pharmiweb.com/article/top-10-pharmaceutical-companies-in-australia-2024\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": true
+    },
+    "southern_cross_pharma": {
+      "canonical_name": "Southern Cross Pharma Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity claim of 'niche' status is strongly supported by local evidence: only 1 ARTG registration, no PBS listing, not a member of MA or GBMA industry associations, and not a GPCE conference attendee. While the company does have TGA sponsor status and an Australian manufacturing facility, the minimal product portfolio (1 ARTG) and lack of major market presence indicators confirm niche positioni",
+      "evidence_urls": [
+        "https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/",
+        "https://www.grandviewresearch.com/horizon/outlook/pharmaceutical-market/australia",
+        "https://www.kenresearch.com/australia-pharmaceutical-market",
+        "http://bullfincher.io/ranking/top-pharmaceutical-companies-in-australia-by-revenue",
+        "https://www.csl.com/-/media/shared/documents/annual-report/csl-annual-report-2024.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"niche\",\"reasoning\":\"Southern Cross Pharma Pty Ltd has annual revenue under $5 million according to ZoomInfo and approximately $4 million per RocketReach, far below the top Australian pharmaceutical companies like Mayne Pharma ($588.73M) and even the 3rd-ranked Vita Life Sciences, placing it outside the TOP 50 in a market exceeding $17B.[4][6][7]\",\"sources\":[\"http://bullfincher.io/ranking/top-pharmaceutical-companies-in-australia-by-revenue\",\"https://www.zoominfo.com/c/southern-cross-pharma-pty-ltd/345812046\",\"https://rocketreach.co/southern-cross-pharma-pty-ltd-profile_b4578facfca4574c\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": true
+    },
+    "strides_pharma_science": {
+      "canonical_name": "Strides Pharma Science Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' rank is contradicted by local evidence showing Strides has only 1 ARTG, no Australian manufacturing, no PBS listing, and no MA/GBMA membership—all indicators of a niche player rather than a major market competitor. The global revenue figures cited ($0.51B USD) are irrelevant to Australian market positioning; local footprint data clearly establishes niche status.",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/strides-pharma/revenue/",
+        "https://au.investing.com/pro/NSEI:STAR/explorer/total_rev",
+        "https://www.careratings.com/upload/CompanyFiles/PR/202512161209_STRIDES_PHARMA_SCIENCE_LIMITED.pdf",
+        "https://portal.tradebrains.in/stocks/STAR",
+        "https://www.strides.com/Upload/PDF/strides-annual-report-2022-23.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide specific annual revenue figures or market share data for Strides Pharma Science Pty Ltd within the Australian pharmaceutical market for 2023-2024, nor any rankings among Australian competitors. Sources mention Australia as one of Strides' regulated markets but focus on global or India-reported revenues (e.g., $0.51B USD in 2024) without Australian breakdowns.[1][3]\",\"sources\":[\"https://companiesmarketcap.com/strides-pharma/revenue/\",\"https://www.careratings.com/upload/CompanyFiles/PR/202512161209_STRIDES_PHARMA_SCIENCE_LIMITED.pdf\",\"https://au.investing.com/pro/NSEI:STAR/explorer/total_rev\",\"https://portal.tradebrains.in/stocks/STAR\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "baxter_healthcare": {
+      "canonical_name": "Baxter Healthcare Pty Ltd",
+      "rank": "TOP 50",
+      "score": 31,
+      "confidence": 0.62,
+      "reasoning": "Perplexity claim of TOP 10 based on $1.07B revenue is contradicted by local evidence: only 1 ARTG registration, no PBS listing, and non-membership in MA/GBMA associations indicate a niche/specialized player rather than a top-tier pharmaceutical market leader. While Baxter has Australian manufacturing and TGA sponsorship status, the minimal ARTG footprint and lack of major association membership su",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/baxter-healthcare-pty-limited/3030/",
+        "https://www.baxter.com/sites/g/files/ebysai3896/files/2024-02/Baxter_Reports_Fourth-Quarter_and_Full-Year_2023_Results_Press_Release_FINAL.pdf",
+        "https://www.baxter.com/baxter-newsroom/baxter-reports-fourth-quarter-and-full-year-2024-results",
+        "https://www.biospace.com/press-releases/baxter-reports-fourth-quarter-and-full-year-2024-results",
+        "https://investor.baxter.com/investors/events-and-news/news/press-release-details/2024/Baxter-Reports-Fourth-Quarter-and-Full-Year-2023-Results/default.aspx"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 10\",\"reasoning\":\"Baxter Healthcare Pty Ltd generated $1.07 billion in total revenue in 2024 in Australia, primarily from medical and surgical equipment manufacturing, indicating a significant player in the pharmaceutical and healthcare market[1]. This substantial revenue positions it among the top revenue generators, likely in the **TOP 10** given the scale relative to typical Australian pharma market leaders.\",\"sources\":[\"https://www.ibisworld.com/australia/company/baxter-healthcare-pty-limited/3030/\",\"https://www.baxter.com/sites/g/files/ebysai3896/files/2024-02/Baxter_Reports_Fourth-Quarter_and_Full-Year_2023_Results_Press_Release_FINAL.pdf\",\"https://www.zoominfo.com/c/baxter-healthcare-pty-ltd/552831977\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": true
+    },
+    "demogen_australia_pty_ltd_trading_as_demogen_pharmaceuticals": {
+      "canonical_name": "Demogen Australia Pty Ltd trading as DEMOGEN Pharmaceuticals",
+      "rank": "niche",
+      "score": 27,
+      "confidence": 0.92,
+      "reasoning": "Perplexity's 'unknown' rank is partially supported by absence from major market reports, but local evidence reveals Demogen is an active TGA sponsor with 1 ARTG product, no PBS listing, no MA/GBMA membership, and no manufacturing facility. This profile—small ARTG count, sponsor status, non-association membership—classifies the company as a niche player rather than truly unknown. Perplexity's 4 cit",
+      "evidence_urls": [
+        "https://www.sphericalinsights.com/reports/australia-pharmaceuticals-market",
+        "https://www.grandviewresearch.com/horizon/outlook/pharmaceutical-market/australia",
+        "https://www.marketreportanalytics.com/reports/australia-pharmaceutical-market-94566",
+        "https://www.datainsightsmarket.com/reports/australia-pharmaceutical-market-8107",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results mention Demogen Australia Pty Ltd or DEMOGEN Pharmaceuticals (Australia) in any context, including company rankings, top players, or market share data for 2023-2024. Top companies listed include AbbVie, Amgen, AstraZeneca, Eli Lilly, Pfizer, Sanofi, Novartis, and CSL Limited, with no reference to Demogen.[4][8]\",\"sources\":[\"https://www.datainsightsmarket.com/reports/australia-pharmaceutical-market-8107\",\"https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market/companies\",\"https://www.sphericalinsights.com/reports/australia-pharmaceuticals-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "ipca_pharma": {
+      "canonical_name": "Ipca Pharma (Australia) Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking conflicts with local evidence showing only 1 ARTG, no manufacturing facility, and no industry association membership. These indicators strongly suggest niche market presence rather than top-tier status. The cited AUD $53-56M ANZ figure (if accurate) would place IPCA well below Mayne Pharma's $588.73M, but the minimal local regulatory footprint indicates limited Austr",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/gbp/ipca-laboratories/revenue/",
+        "https://companiesmarketcap.com/ipca-laboratories/revenue/",
+        "https://www.equitymaster.com/research-it/annual-results-analysis/IPLB/IPCA-LABS-2023-24-Annual-Report-Analysis/10647",
+        "https://www.ipca.com/wp-content/pdf/financials/annual-reports/annual_report_2023_24.pdf",
+        "http://bullfincher.io/ranking/top-pharmaceutical-companies-in-australia-by-revenue"
+      ],
+      "perplexity_raw": "```json\n{\n  \"rank\": \"unknown\",\n  \"reasoning\": \"While IPCA Laboratories generated ₹283.03 Crores (~AUD $53-56 million) from Australia and New Zealand combined in FY2024-25[6], this figure cannot be isolated to Australia alone. The top Australian pharmaceutical company, Mayne Pharma Group, has revenue of $588.73 million[5], but without IPCA's Australia-specific revenue data, a definitive ranking cannot be determined.\",\n  \"sources\": [\n    \"https://ipca.com/wp-content/pdf/financials/annual-reports/annual_report_2024_25.pdf\",\n    \"http://bullfincher.io/ranking/top-pharmaceutical-companies-in-australia-by-revenue\"\n  ]\n}\n```",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "johnson_&_johnson_pacific": {
+      "canonical_name": "Johnson & Johnson Pacific Pty Ltd",
+      "rank": "TOP 10",
+      "score": 61,
+      "confidence": 0.72,
+      "reasoning": "Perplexity's $1.34B revenue claim (5% of ~$22-25B market) mathematically supports TOP 10 positioning, supported by 2+ citations. However, local evidence shows only 1 ARTG registration and no MA membership, suggesting a narrower product portfolio than typical TOP 10 players. The Australian manufacturing facility presence and TGA sponsor status validate operational scale, but the minimal ARTG count ",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/johnson-johnson-australia-pty-ltd/571590/",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://xbrl.us/wp-content/uploads/2025/08/APPENDIX-JJ-Results-of-Search.pdf",
+        "https://www.biospace.com/business/j-j-reigns-as-top-pharma-by-revenue-while-lilly-leapfrogs-on-strong-obesity-sales"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Johnson & Johnson (Australia) Pty Ltd reported $1.34 billion in revenue in 2024[1], representing roughly 5% of the Australian pharmaceutical market size of ~AUD 22-25 billion[2][3], but no search results provide a direct revenue ranking or list of top companies for 2023-2024 to confirm its position within TOP 5, TOP 10, etc.\",\"sources\":[\"https://www.ibisworld.com/australia/company/johnson-johnson-australia-pty-ltd/571590/\",\"https://www.imarcgroup.com/australia-pharmaceutical-market\",\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": true
+    },
+    "lumacina_australia": {
+      "canonical_name": "LumaCina Australia Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking is partially supported by absence from major market lists, but local evidence reveals LumaCina is a TGA-registered sponsor with an Australian manufacturing facility and 1 ARTG product. This operational footprint (factory + TGA registration) contradicts a purely 'unknown' status and indicates a specialized/niche player rather than an unverified entity. The lack of PBS",
+      "evidence_urls": [
+        "https://www.prnewswire.com/apac/Sitemap_Index_Jul_2024.xml.gz",
+        "https://www.anzca.edu.au/getContentAsset/d8402efb-afbb-4300-8c72-c86edd93edad/80feb437-d24d-46b8-a858-4a2a28b9b970/2025_Blue_Book_PDF.pdf?language=en",
+        "https://www.pharmiweb.com/article/top-10-pharmaceutical-companies-in-australia-2024",
+        "https://wpstaq-ap-southeast-2-media.s3.amazonaws.com/mtpconnect-national/wp-content/uploads/media/2025/05/MTPConnect_FY2024_Annual_Report.pdf",
+        "https://macaubusiness.com/post-sitemap226.xml"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results mention LumaCina Australia Pty Ltd or provide its revenue data, annual ranking, or position within the Australian pharmaceutical market for 2023-2024. Available results discuss general market projections and top companies but exclude this firm from any lists.[3]\",\"sources\":[\"https://www.pharmiweb.com/article/top-10-pharmaceutical-companies-in-australia-2024\",\"https://wpstaq-ap-southeast-2-media.s3.amazonaws.com/mtpconnect-national/wp-content/uploads/media/2025/05/MTPConnect_FY2024_Annual_Report.pdf\",\"https://www.anzca.edu.au/getContentAsset/d8402efb-afbb-4300-8c72-c86edd93edad/80feb437-d24d-46b8-a858-4a2a28b9b970/2025_Blue_Book_PDF.pdf?language=en\"]}",
+      "local_evidence": {
+        "sources": [
+          "tga",
+          "tga_inn_match"
+        ],
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": true
+    },
+    "organon": {
+      "canonical_name": "Organon",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.75,
+      "reasoning": "Perplexity's 'unknown' ranking is supported by local evidence showing Organon has 0 ARTG registrations, no Australian manufacturing facility, and is not a TGA sponsor or PBS-listed entity, despite MA/GBMA membership. The global revenue figures ($6.4B) do not translate to measurable Australian market presence via standard regulatory channels, confirming lack of specific Australian pharmaceutical ma",
+      "evidence_urls": [
+        "https://www.organon.com/news/organon-reports-results-for-the-fourth-quarter-and-full-year-ended-december-31-2024/",
+        "https://companiesmarketcap.com/aud/organon/earnings/",
+        "https://www.organon.com/wp-content/uploads/sites/2/2024/04/2023-FY-Annual-Report.pdf",
+        "https://companiesmarketcap.com/aud/organon/revenue/",
+        "https://www.organon.com/news/organon-reports-results-for-the-fourth-quarter-and-full-year-ended-december-31-2025/"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Search results provide Organon's global revenue figures (e.g., $6.4B in 2024, $6.3B in 2023) with mentions of operations in Australia, but no data on its specific Australian revenue or ranking within the Australian pharmaceutical market for 2023-2024.[1][3][8]\",\"sources\":[\"https://www.organon.com/news/organon-reports-results-for-the-fourth-quarter-and-full-year-ended-december-31-2024/\",\"https://www.organon.com/wp-content/uploads/sites/2/2024/04/2023-FY-Annual-Report.pdf\",\"https://www.organon.com/wp-content/uploads/sites/2/2025/05/2024-FY-Annual-Report.pdf\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma",
+          "gbma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": true,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "sanofi": {
+      "canonical_name": "Sanofi",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' rank is appropriate given lack of Australian-specific revenue data. Local evidence confirms Sanofi is MA member (Big Pharma association), but zero ARTG count, no TGA sponsorship, no PBS listing, and no Australian manufacturing facility indicate minimal direct market presence in Australia, making any TOP 5/10/20/50 ranking unsupportable despite global scale.",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/sanofi/revenue/",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.sanofi.com/assets/dotcom/pressreleases/2025/2025-01-30-06-30-00-3017713-en.pdf",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/",
+        "https://www.sanofi.com/assets/dotcom/pressreleases/2024/2024-02-01-06-30-00-2821667-en.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Search results provide Sanofi's global revenue (e.g., €41.1 billion in 2024) and Australian pharmaceutical market size (AUD 22.38 billion in 2025), but lack specific data on Sanofi's Australian revenue or any 2023-2024 rankings within the Australian market.[1][2][3]\",\"sources\":[\"https://companiesmarketcap.com/sanofi/revenue/\",\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\",\"https://www.sanofi.com/assets/dotcom/pressreleases/2025/2025-01-30-06-30-00-3017713-en.pdf\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "astellas": {
+      "canonical_name": "Astellas",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking is appropriate given the lack of Australia-specific data. Local evidence confirms Astellas has MA membership (indicating global pharma scale) but zero ARTG registrations, no TGA sponsorship, no PBS listing, and no Australian manufacturing—suggesting either minimal local operations or distribution through other entities. The global TOP 5-10 status does not translate t",
+      "evidence_urls": [
+        "https://www.statista.com/statistics/825549/astellas-pharma-inc-revenue/",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/",
+        "https://www.astellas.com/content/dam/astellas-com/global/en/documents/financial-results/full-year-and-4q-fy2024-financial-results-en.pdf",
+        "https://www.astellas.com/content/dam/astellas-com/global/en/documents/integrated-reports/about-astellas-integrated-report-2024.pdf",
+        "https://www.astellas.com/content/dam/astellas-com/global/en/documents/integrated-reports/integrated-report-2025-en_20251023.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Search results provide global revenue data for Astellas Pharma Inc., such as ¥1.91 trillion in FY2024, but no specific information on Astellas Australia's revenue or its ranking within the Australian pharmaceutical market for 2023-2024.[1][3]\",\"sources\":[\"https://www.statista.com/statistics/825549/astellas-pharma-inc-revenue/\",\"https://www.astellas.com/content/dam/astellas-com/global/en/documents/financial-results/full-year-and-4q-fy2024-financial-results-en.pdf\",\"https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma",
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "chiesi_australia": {
+      "canonical_name": "Chiesi Australia Pty Ltd",
+      "rank": "niche",
+      "score": 21,
+      "confidence": 0.72,
+      "reasoning": "Perplexity's 'unknown' ranking conflicts with local evidence showing Chiesi Australia is an MA member (Big Pharma association) with GPCE conference attendance, indicating established market presence. However, zero ARTG registrations, no TGA sponsor status, no PBS listing, and no manufacturing facility suggest a niche player focused on distribution/representation rather than a major market competit",
+      "evidence_urls": [
+        "https://www.prnewswire.com/news-releases/chiesi-groups-2023-revenue-surpasses-3-billion-mark-reflecting-10-growth-year-on-year-12-cer-underlining-commitment-to-innovative-sustainable-practices-302123170.html",
+        "https://www.chiesi.com/en/media-hub/press-releases/2024-growth-innovation-sustainability",
+        "https://www.drugdiscoverytrends.com/2025-pharma50/chiesi-farmaceutici/",
+        "https://www.chemanalyst.com/ChemAnalyst/PharmaCompanies",
+        "https://www.santhera.com/assets/files/financial_reports/Consolidated_Annual_Report_2024-with-Audit-Report_FINAL.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide specific revenue data or rankings for Chiesi Australia Pty Ltd within the Australian pharmaceutical market for 2023-2024; available information covers only the global Chiesi Group revenues (e.g., €3 billion in 2023, €3.4 billion in 2024). Australian market rankings for subsidiaries like Chiesi Australia are not mentioned in the results.\",\"sources\":[\"https://www.prnewswire.com/news-releases/chiesi-groups-2023-revenue-surpasses-3-billion-mark-reflecting-10-growth-year-on-year-12-cer-underlining-commitment-to-innovative-sustainable-practices-302123170.html\",\"https://www.chiesi.com/en/media-hub/press-releases/2024-growth-innovation-sustainability\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma",
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "novartis": {
+      "canonical_name": "Novartis",
+      "rank": "TOP 10",
+      "score": 61,
+      "confidence": 0.72,
+      "reasoning": "Perplexity claim of TOP 10 is supported by MA membership (Big Pharma association) and Australian manufacturing facility presence, indicating significant market participation. However, the zero ARTG count and non-PBS listing status suggest Novartis operates primarily through imported products or specialized channels rather than direct TGA registration, which moderately constrains confidence in the ",
+      "evidence_urls": [
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.researchandmarkets.com/reports/6189801/australia-pharmaceutical-market-forecast",
+        "https://www.novartis.com/sites/novartiscom/files/novartis-annual-report-2024.pdf",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/",
+        "https://www.novartis.com/sites/novartiscom/files/novartis-integrated-report-2024.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 10\",\"reasoning\":\"Novartis Pharmaceuticals Australia Pty Ltd. is consistently listed among the key players in the Australian pharmaceutical market alongside leaders like CSL Ltd., AbbVie Pty Ltd., AstraZeneca Pty Ltd., Pfizer, GSK, Eli Lilly, Johnson & Johnson, and Sanofi, indicating a top-tier position likely within the TOP 10 for 2023-2024.[1]\",\"sources\":[\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\",\"https://www.researchandmarkets.com/reports/6189801/australia-pharmaceutical-market-forecast\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma",
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": true
+    },
+    "abbvie": {
+      "canonical_name": "abbvie",
+      "rank": "TOP 10",
+      "score": 61,
+      "confidence": 0.72,
+      "reasoning": "Perplexity's claim of 'unknown' Australian ranking conflicts with strong local evidence: AbbVie is a Medicines Australia (MA) member, indicating major pharma status in Australia, despite zero ARTG registrations and no local manufacturing. The global TOP 5 ranking is well-supported by citations, and MA membership typically correlates with TOP 10 Australian market presence through distribution partn",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/inr/abbvie/revenue/",
+        "https://www.statista.com/statistics/417051/revenue-of-abbvie-by-region/",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/",
+        "https://www.abbvie.com/who-we-are/key-facts.html",
+        "https://insights.citeline.com/pharma-insights/the-worlds-top-100-pharma-companies-2024-sales-rankings-Z47XBTXVNJEXFCKYU7Q4EJ45XI/"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Search results provide AbbVie's global revenue figures (e.g., $56.33B in 2024) and rank it among the world's top 5 pharma companies, but contain no specific data on its revenue or ranking within the Australian pharmaceutical market for 2023-2024.[3][5] Australian market context is limited to overall biopharma size (~USD 7.6B in 2025) without company breakdowns.[8]\",\"sources\":[\"https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/\",\"https://insights.citeline.com/pharma-insights/the-worlds-top-100-pharma-companies-2024-sales-rankings-Z47XBTXVNJEXFCKYU7Q4EJ45XI/\",\"https://www.grandviewresearch.com/horizon/outlook/biopharmaceutical-market/australia\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "amgen": {
+      "canonical_name": "Amgen",
+      "rank": "TOP 10",
+      "score": 61,
+      "confidence": 0.72,
+      "reasoning": "Perplexity claim of TOP 10 is supported by MA membership (Big Pharma association) and cited revenue figures ($565.5M in 2024), indicating significant market presence. However, local evidence shows zero ARTG registrations and no Australian manufacturing facility, suggesting Amgen's Australian revenue derives from imported products rather than local manufacturing/sponsorship. The discrepancy between",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/amgen-australia-pty-limited/13091/",
+        "https://www.biospectrumasia.com/company-results/89/25637/amgens-2024-revenue-soars-19-amid-strong-product-sales-and-strategic-investments.html",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market/companies",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 10\",\"reasoning\":\"Amgen Australia generated $565.5 million in revenue in 2024, representing a significant share in the Australian pharmaceutical market valued at approximately AUD 22 billion in 2025[1][3]. Mordor Intelligence ranks Amgen among the top 5 Australia pharmaceuticals companies based on 2023-2024 market share, placing it firmly in the TOP 10[4].\",\"sources\":[\"https://www.ibisworld.com/australia/company/amgen-australia-pty-limited/13091/\",\"https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market/companies\",\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "boehringer_ingelheim": {
+      "canonical_name": "Boehringer Ingelheim",
+      "rank": "TOP 50",
+      "score": 36,
+      "confidence": 0.72,
+      "reasoning": "Perplexity claim of TOP 50 is supported by MA membership (Big Pharma association) and $385M revenue figure from cited sources. However, confidence is moderated by the absence of any TGA ARTG registrations, no manufacturing facility, and no PBS listings—suggesting Boehringer Ingelheim operates primarily as a wholesaler/distributor in Australia rather than a direct pharmaceutical manufacturer, which",
+      "evidence_urls": [
+        "https://www.statista.com/statistics/266652/boehringer-ingelheim-revenues-by-region/",
+        "https://www.ibisworld.com/australia/company/boehringer-ingelheim-pty-limited/11636/",
+        "https://boehringer-ingelheim.com/annualreport/2024/facts-and-figures/",
+        "https://www.boehringer-ingelheim.com/at/en/about-us/who-we-are/fact-figures-boehringer-ingelheim-rcv",
+        "https://www.boehringer-ingelheim.com/annualreport/2025/files/Boehringer-Ingelheim-Annual-Report-Highlights-2025.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 50\",\"reasoning\":\"Boehringer Ingelheim Pty Limited reported revenue of approximately $385 million in 2024 in Australia, operating primarily in pharmaceuticals wholesaling with 228 employees[2]. Without a direct 2023-2024 Australian pharmaceutical market ranking or total market size from sources, its revenue positions it as a mid-tier player likely within the TOP 50, but not TOP 10 or TOP 20[2].\",\"sources\":[\"https://www.ibisworld.com/australia/company/boehringer-ingelheim-pty-limited/11636/\",\"https://www.statista.com/statistics/266652/boehringer-ingelheim-revenues-by-region/\",\"https://boehringer-ingelheim.com/annualreport/2024/facts-and-figures/\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "kyowa_kirin": {
+      "canonical_name": "Kyowa Kirin",
+      "rank": "niche",
+      "score": 21,
+      "confidence": 0.72,
+      "reasoning": "Perplexity claims AUD 158M revenue (ANZ combined) but local evidence shows 0 ARTG registrations, no TGA sponsorship, no PBS listing, and no Australian manufacturing facility. Despite MA membership indicating Big Pharma status, the complete absence of registered products in Australia contradicts a TOP 50 ranking; the revenue likely derives from NZ or regional distribution rather than direct Austral",
+      "evidence_urls": [
+        "https://pdf.irpocket.com/C2503/bffO/K8q3/GZqB.pdf",
+        "https://ir.kyowakirin.com/en/library/earnings/earnings0/main/0111115/teaserItems1/00/linkList/01/link/presentation_2024_q4_en_rev.pdf",
+        "https://ir.kyowakirin.com/en/library/earnings/earnings0/main/0118/teaserItems1/00/linkList/01/link/presentation_2025_q4_en_rev2.pdf",
+        "https://ir.kyowakirin.com/en/library/annual/main/01/teaserItems1/0/linkList/0/link/ar2022_en_rev2.pdf",
+        "https://insights.citeline.com/pharma-insights/the-worlds-top-100-pharma-companies-2024-sales-rankings-Z47XBTXVNJEXFCKYU7Q4EJ45XI/"
+      ],
+      "perplexity_raw": "```json\n{\n  \"rank\": \"unknown\",\n  \"reasoning\": \"While search results show Kyowa Kirin generated AUD 158 million revenue in Australia and New Zealand combined for Q2 FY2025[1], specific ranking data within the Australian pharmaceutical market is not provided in the search results. The available data does not contain comparative market share information or rankings of Australian pharmaceutical companies needed to determine Kyowa Kirin's position.\",\n  \"sources\": [\n    \"https://pdf.irpocket.com/C2503/bffO/K8q3/GZqB.pdf\",\n    \"https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2024/10/MA_Annual-Report-2024_Final_Digital.pdf\"\n  ]\n}\n```",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "lilly": {
+      "canonical_name": "Lilly",
+      "rank": "TOP 10",
+      "score": 61,
+      "confidence": 0.72,
+      "reasoning": "Perplexity's TOP 20 claim is supported by MA membership (Big Pharma association) and the $462M revenue figure (~2% market share) aligns with top-tier positioning. However, zero ARTG registrations and no Australian manufacturing facility suggest Lilly operates primarily through imports/distribution rather than local production, which typically characterizes TOP 10 players. The revenue scale and MA ",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/eli-lilly-australia-pty-limited/8587/",
+        "https://companiesmarketcap.com/aud/eli-lilly/revenue/",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 20\",\"reasoning\":\"Eli Lilly Australia generated $462 million in revenue in 2024-2025, representing roughly 2% of the Australian pharmaceutical market valued at ~AUD 22-25 billion. It is listed among key players like CSL, Pfizer, and GSK in market reports, positioning it within the top 20 but not top 5 or 10.\",\"sources\":[\"https://www.ibisworld.com/australia/company/eli-lilly-australia-pty-limited/8587/\",\"https://www.imarcgroup.com/australia-pharmaceutical-market\",\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "menarini": {
+      "canonical_name": "Menarini",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.75,
+      "reasoning": "Perplexity's 'unknown' rank aligns with local evidence showing zero ARTG registrations, no TGA sponsor status, and no Australian manufacturing facility. However, MA membership suggests Menarini operates in Australia through distribution/import channels rather than direct product registration, indicating potential presence that cannot be quantified from available data. The claim is appropriately co",
+      "evidence_urls": [
+        "https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://insights.citeline.com/pharma-insights/the-worlds-top-100-pharma-companies-2024-sales-rankings-Z47XBTXVNJEXFCKYU7Q4EJ45XI/"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"The provided search results detail the overall Australian pharmaceutical market size (e.g., $17.5 billion in 2024) and global top pharma company rankings but contain no specific revenue data, rankings, or mentions of Menarini (Australia) for 2023-2024.[1][3][4]\",\"sources\":[\"https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/\",\"https://www.imarcgroup.com/australia-pharmaceutical-market\",\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "merck": {
+      "canonical_name": "Merck",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.75,
+      "reasoning": "Perplexity's 'unknown' rank is supported by local evidence showing 0 ARTG registrations, no Australian manufacturing, and no PBS listing—indicating minimal direct market presence in Australia despite MA membership. The claim's reliance on global revenue data rather than Australian-specific metrics aligns with the absence of local regulatory footprint.",
+      "evidence_urls": [
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/",
+        "https://companiesmarketcap.com/sgd/merck/revenue/",
+        "https://www.merck.com/wp-content/uploads/sites/124/2024/08/Merck_ImpactReport_2023-2024.pdf",
+        "https://www.merckgroup.com/en/news/q4-2024-06-03-2025.html"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide specific annual revenue data or rankings for Merck (Australia) within the Australian pharmaceutical market for 2023-2024. Available sources discuss global Merck revenues or general Australian market size without company-specific Australian breakdowns or rankings.[1][2]\",\"sources\":[\"https://www.imarcgroup.com/australia-pharmaceutical-market\",\"https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "roche": {
+      "canonical_name": "Roche",
+      "rank": "TOP 10",
+      "score": 61,
+      "confidence": 0.72,
+      "reasoning": "Perplexity's 'unknown' ranking contradicts strong local evidence: Roche is an MA member (Big Pharma association) with an Australian manufacturing facility, indicating significant market presence despite zero ARTG registrations (likely due to supply via parent company or alternative regulatory pathways). Global revenue of $71.88B USD and MA membership status support TOP 10 Australian ranking, thoug",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/roche/revenue/",
+        "https://www.roche.com/investors/annualreport24",
+        "https://roche.com/fb24e.pdf",
+        "https://assets.roche.com/f/176343/x/b4e99fb76c/hy24e.pdf",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Search results provide Roche's global revenue figures for 2023 ($71.88B USD) and 2024 (CHF 46.171B in pharmaceuticals), but contain no data on Roche's specific revenue or ranking within the Australian pharmaceutical market for 2023-2024.[1][2]\",\"sources\":[\"https://companiesmarketcap.com/roche/revenue/\",\"https://www.roche.com/investors/annualreport24\",\"https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2024/10/MA_Annual-Report-2024_Final_Digital.pdf\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": true
+    },
+    "takeda": {
+      "canonical_name": "Takeda",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.25,
+      "reasoning": "Perplexity claim of TOP 20 based on A$265M revenue conflicts sharply with local evidence: zero ARTG registrations, no TGA sponsor status, no PBS listings, and no Australian manufacturing facility indicate minimal direct market presence in Australia despite MA membership. Revenue figure cannot be verified against provided citations (only 2 URLs are functional market data sources, not company-specif",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/aud/takeda-pharmaceutical/revenue/",
+        "https://www.statista.com/statistics/796960/takeda-pharmaceutical-revenue/",
+        "https://www.ibisworld.com/australia/company/takeda-pharmaceuticals-australia-pty-ltd/509119/",
+        "https://www.grandviewresearch.com/horizon/outlook/biopharmaceutical-market/australia",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 20\",\"reasoning\":\"Takeda Pharmaceuticals Australia generated A$265 million in revenue in 2025 (latest available, close to 2023-2024 period), within a biopharma market of ~A$11.4 billion (USD 7.6B converted), positioning it as a mid-tier player likely in the TOP 20 given its scale relative to market leaders[3][4]. No exact 2023-2024 rankings found, but revenue data supports TOP 20 over TOP 10 or niche status[1][3].\",\"sources\":[\"https://www.ibisworld.com/australia/company/takeda-pharmaceuticals-australia-pty-ltd/509119/\",\"https://www.grandviewresearch.com/horizon/outlook/biopharmaceutical-market/australia\",\"https://companiesmarketcap.com/aud/takeda-pharmaceutical/revenue/\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "besins_healthcare": {
+      "canonical_name": "Besins Healthcare",
+      "rank": "niche",
+      "score": 21,
+      "confidence": 0.72,
+      "reasoning": "Perplexity correctly identifies no Australia-specific revenue data, supporting 'unknown' globally. However, local evidence shows MA membership (Big Pharma association) despite 0 ARTG registrations and no manufacturing facility, indicating Besins operates in Australia through distribution/partnerships rather than direct market presence. This profile—MA member with zero local registrations—is charac",
+      "evidence_urls": [
+        "https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/",
+        "https://www.similarweb.com/company/besins-healthcare.com/"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Search results provide overall Australian pharmaceutical market sizes (e.g., $17.5B in 2024[1], AUD 22.38B in 2025[3]) but no specific revenue figures or rankings for Besins Healthcare (Australia) in 2023-2024. Global Besins Healthcare revenue is vaguely reported as 75M-1B up to 2025/2026[5], with no Australia-specific breakdown or market rank.\",\"sources\":[\"https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/\",\"https://www.similarweb.com/company/besins-healthcare.com/\",\"https://www.imarcgroup.com/australia-pharmaceutical-market\",\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "norgine": {
+      "canonical_name": "Norgine",
+      "rank": "TOP 50",
+      "score": 36,
+      "confidence": 0.72,
+      "reasoning": "Perplexity's 'unknown' ranking conflicts with local evidence showing Norgine is an MA member (Big Pharma association), indicating significant market presence despite zero ARTG registrations and no Australian manufacturing. MA membership suggests TOP 50 ranking at minimum, likely through imported products or distribution arrangements not captured in ARTG data.",
+      "evidence_urls": [
+        "https://straitsresearch.com/report/iv-and-oral-iron-drugs-market",
+        "https://smart-pharma.com/wp-content/uploads/2025/05/Smart-Pharma-2016-2024-Complete-collection.pdf",
+        "https://www.medicinesaustralia.com.au/media-release-taxonomy/media-release/page/5/",
+        "https://www.arnoldporter.com/en/people/w/willcocks-jeremy",
+        "https://www.stifel.com/newsletters/investmentbanking/bal/marketing/healthcare/biopharma_timopler/2025/BiopharmaMarketUpdate_042125.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide specific data on Norgine Australia's annual revenue or its ranking within the Australian pharmaceutical market for 2023-2024. While global Norgine revenues exceed €550 million are mentioned, no Australian market rankings or localized figures are available.[5]\",\"sources\":[\"https://www.stifel.com/newsletters/investmentbanking/bal/marketing/healthcare/biopharma_timopler/2025/BiopharmaMarketUpdate_042125.pdf\",\"https://straitsresearch.com/report/iv-and-oral-iron-drugs-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "argenx_australia": {
+      "canonical_name": "Argenx Australia Pty Ltd",
+      "rank": "niche",
+      "score": 22,
+      "confidence": 0.75,
+      "reasoning": "Perplexity correctly identifies lack of Australian-specific revenue data, but local evidence shows Argenx is MA member (Big Pharma association) with zero ARTG registrations and no manufacturing presence. This profile—association membership without local product registrations—indicates a niche player focused on global/regional operations rather than direct Australian market penetration. Upgrade fro",
+      "evidence_urls": [
+        "https://www.us.argenx.com/news/2024/argenx-reports-full-year-2023-financial-results-and-provides-fourth-quarter-business-update",
+        "https://argenx.com/content/dam/argenx-corp/media-documents/PressRelease_argenx_Strategic_Outlook_20240108.pdf",
+        "https://www.biospace.com/press-releases/argenx-reports-full-year-2024-financial-results-and-provides-fourth-quarter-business-update",
+        "https://companiesmarketcap.com/aud/argenx/revenue/",
+        "https://reports.argenx.com/2024/financial-review/overview.html"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide specific revenue data or rankings for Argenx Australia Pty Ltd within the Australian pharmaceutical market for 2023-2024; all available information details global revenues (e.g., $1.2 billion in 2023, $2.2 billion in 2024) without Australian breakdowns.[1][5]\",\"sources\":[\"https://www.us.argenx.com/news/2024/argenx-reports-full-year-2023-financial-results-and-provides-fourth-quarter-business-update\",\"https://reports.argenx.com/2024/financial-review/overview.html\",\"https://www.biospace.com/press-releases/argenx-reports-full-year-2024-financial-results-and-provides-fourth-quarter-business-update\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "daiichi-sankyo": {
+      "canonical_name": "Daiichi-Sankyo",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.85,
+      "reasoning": "Perplexity claim of 'unknown' is well-supported by local evidence: Daiichi-Sankyo has zero ARTG registrations, no Australian manufacturing, and is not a TGA sponsor or PBS-listed entity, despite MA membership. The global revenue figures provided by Perplexity are irrelevant to Australian market ranking. Local evidence confirms absence of measurable Australian pharmaceutical market presence, valida",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/daiichi-sankyo/revenue/",
+        "https://www.statista.com/statistics/799029/daiichi-sankyo-company-limited-revenue/",
+        "https://stockanalysis.com/quote/tyo/4568/revenue/",
+        "https://www.daiichisankyo.com/files/investors/library/annual_report/index/pdf/VR2025/VR2025_en_all_0925_03.pdf",
+        "https://www.daiichisankyo.com/files/investors/library/annual_report/index/pdf/VR2024/At%20a%20Glance.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Search results provide global revenue figures for Daiichi Sankyo (e.g., $10.58B USD in 2023, 1.89T JPY in FY2025) but contain no data on its Australian subsidiary's revenue or ranking within the Australian pharmaceutical market for 2023-2024. No sources mention Australia-specific sales or market rankings.\",\"sources\":[\"https://companiesmarketcap.com/daiichi-sankyo/revenue/\",\"https://www.statista.com/statistics/799029/daiichi-sankyo-company-limited-revenue/\",\"https://www.daiichisankyo.com/files/investors/library/annual_report/index/pdf/VR2025/VR2025_en_all_0925_03.pdf\",\"https://insights.citeline.com/pharma-insights/the-worlds-top-100-pharma-companies-2024-sales-rankings-Z47XBTXVNJEXFCKYU7Q4EJ45XI/\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "ptc_therapeutics": {
+      "canonical_name": "PTC therapeutics",
+      "rank": "niche",
+      "score": 22,
+      "confidence": 0.75,
+      "reasoning": "Perplexity's 'unknown' ranking is contradicted by local evidence showing PTC Therapeutics is an MA member (Big Pharma association), indicating significant market presence despite zero ARTG approvals and no Australian manufacturing. The absence of TGA sponsorship and PBS listing suggests niche positioning in Australia, likely focused on imported specialty/rare disease treatments rather than broad m",
+      "evidence_urls": [
+        "https://www.investing.com/news/company-news/ptc-therapeutics-reports-814-million-in-2024-revenue-surpassing-goals-3809507",
+        "https://ir.ptcbio.com/news-releases/news-release-details/ptc-therapeutics-provides-corporate-update-and-reports-first-2",
+        "https://ir.ptcbio.com/news-releases/news-release-details/ptc-therapeutics-provides-corporate-update-and-reports-fourth-3?mobile=1",
+        "https://www.prnewswire.com/news-releases/ptc-therapeutics-provides-corporate-update-and-reports-fourth-quarter-and-full-year-2024-financial-results-302387888.html",
+        "https://ir.ptcbio.com/news-releases/news-release-details/ptc-therapeutics-provides-corporate-update-and-reports-fourth-2"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide PTC Therapeutics' specific revenue figures or market share for the Australian pharmaceutical market in 2023-2024; available data shows global revenues of approximately $807 million in 2024 but no Australia-specific breakdown.[1][4] The Australian rare diseases treatment market was USD 2,041 million in 2024, but PTC's contribution within it or the broader pharma market is not detailed.[7]\",\"sources\":[\"https://www.investing.com/news/company-news/ptc-therapeutics-reports-814-million-in-2024-revenue-surpassing-goals-3809507\",\"https://ir.ptcbio.com/news-releases/news-release-details/ptc-therapeutics-provides-corporate-update-and-reports-fourth-3?mobile=1\",\"https://www.prnewswire.com/news-releases/ptc-therapeutics-provides-corporate-update-and-reports-fourth-quarter-and-full-year-2024-financial-results-302387888.html\",\"https://www.grandviewresearch.com/horizon/outlook/rare-diseases-treatment-market/australia\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "healthcare_logistics": {
+      "canonical_name": "Healthcare Logistics",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' rank is appropriate given lack of company-level revenue data in public sources. Local evidence confirms Healthcare Logistics is a logistics/supply chain operator (MA member, Australian manufacturing facility) rather than a pharmaceutical manufacturer (0 ARTG registrations, not TGA sponsor, not PBS listed), which aligns with the claim's focus on market data gaps for specific ",
+      "evidence_urls": [
+        "https://www.grandviewresearch.com/horizon/outlook/pharmaceutical-logistics-market/australia",
+        "https://www.grandviewresearch.com/horizon/outlook/healthcare-third-party-logistics-market/australia",
+        "https://www.databridgemarketresearch.com/nucleus/australia-healthcare-logistics-market",
+        "https://www.imarcgroup.com/australia-healthcare-cold-chain-logistics-market",
+        "https://www.6wresearch.com/industry-report/australia-healthcare-logistics-market"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide specific revenue figures, rankings, or mentions of Healthcare Logistics (Australia) within the Australian pharmaceutical market for 2023-2024. Available data covers overall market sizes (e.g., USD 1,471.7 million for pharmaceutical logistics in 2024) and segments but lacks company-level details or top player lists.[1][3]\",\"sources\":[\"https://www.grandviewresearch.com/horizon/outlook/pharmaceutical-logistics-market/australia\",\"https://www.databridgemarketresearch.com/nucleus/australia-healthcare-logistics-market\",\"https://www.grandviewresearch.com/horizon/outlook/healthcare-third-party-logistics-market/australia\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": true
+    },
+    "iqvia": {
+      "canonical_name": "IQVIA",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking is well-supported by local evidence: IQVIA has 0 ARTG registrations, no Australian manufacturing facility, and is not a TGA sponsor or PBS-listed entity. While IQVIA is an MA member, this reflects its role as a global pharmaceutical services/data company rather than a direct pharmaceutical manufacturer/marketer in Australia. The claim appropriately reflects the absen",
+      "evidence_urls": [
+        "https://www.iqvia.com/-/media/iqvia/pdfs/canada/2024-trends/english/top10worldwidesales_24.pdf",
+        "https://www.iqvia.com/-/media/iqvia/pdfs/australia-and-new-zealand/white-papers/iqvia-anz-evolving-beyond-the-pbs-whitepaper.pdf",
+        "https://companiesmarketcap.com/aud/iqvia/revenue/",
+        "https://www.iqvia.com/newsroom/2025/02/iqvia-reports-fourth-quarter-and-full-year-2024-results",
+        "https://www.iqvia.com/-/media/iqvia/pdfs/china/viewpoints/iqvia-institute-general-use-of-medicines-2024-for-print.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide IQVIA's annual revenue ranking within the Australian pharmaceutical market for 2023-2024; available data covers IQVIA's global revenue (e.g., $15.4B USD in 2024) and Australian market trends like non-PBS sales, but lacks company-specific rankings or Australian revenue figures for IQVIA.\",\"sources\":[\"https://www.iqvia.com/-/media/iqvia/pdfs/australia-and-new-zealand/white-papers/iqvia-anz-evolving-beyond-the-pbs-whitepaper.pdf\",\"https://companiesmarketcap.com/aud/iqvia/revenue/\",\"https://www.iqvia.com/newsroom/2025/02/iqvia-reports-fourth-quarter-and-full-year-2024-results\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "prospection": {
+      "canonical_name": "Prospection",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking is supported by local evidence: Prospection has 0 ARTG registrations, no Australian manufacturing facility, and is not a TGA sponsor or PBS-listed entity. However, MA membership suggests some pharmaceutical industry involvement, though this contradicts the absence of registered products in Australia. The claim requires verification of whether Prospection operates as ",
+      "evidence_urls": [
+        "https://www.grandviewresearch.com/horizon/outlook/pharmacy-market/australia",
+        "https://www.sphericalinsights.com/reports/australia-pharmaceuticals-market",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.statista.com/outlook/hmo/pharmaceuticals/australia"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"The provided search results offer overall market size estimates for the Australian pharmaceutical and pharmacy sectors (e.g., USD 12.51B in 2023, AUD 20-22B in 2025) but contain no specific data on Prospection's revenue or its ranking among companies in the market for 2023-2024.\",\"sources\":[\"https://www.sphericalinsights.com/reports/australia-pharmaceuticals-market\",\"https://www.imarcgroup.com/australia-pharmaceutical-market\",\"https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "ma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": true,
+        "is_gbma": false,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "accord_australia": {
+      "canonical_name": "Accord Australia",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking conflicts with local evidence showing Accord Australia is a GBMA member (generics association) with zero ARTG registrations, no TGA sponsorship, no PBS listing, and no Australian manufacturing. This profile indicates a niche generics player, likely importing or distributing rather than manufacturing locally. The 'unknown' claim is technically correct due to lack of s",
+      "evidence_urls": [
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.compass-group.com/content/dam/compass-group/corporate/oar-2024/annual-report-2024.pdf",
+        "https://www.ifpma.org/wp-content/uploads/2025/02/IFPMA_Always_Innovating_Facts__Figures_Report.pdf",
+        "https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2025/10/Medicines-Australia_Annual-Report-2025_SCREEN_20251028.pdf",
+        "https://www.iqvia.com/-/media/iqvia/pdfs/events/presentation_global-meds-webinar_public.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"The provided search results discuss the overall Australian pharmaceutical market size (e.g., USD 25.3 billion in 2025) and general industry reports but contain no specific data on Accord Australia's revenue, market share, or ranking for 2023-2024.[1][4][8]\",\"sources\":[\"https://www.imarcgroup.com/australia-pharmaceutical-market\",\"https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2025/10/Medicines-Australia_Annual-Report-2025_SCREEN_20251028.pdf\",\"https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2024/10/MA_Annual-Report-2024_Final_Digital.pdf\"]}",
+      "local_evidence": {
+        "sources": [
+          "gbma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": true,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "fresenius_kabi_australia": {
+      "canonical_name": "Fresenius Kabi Australia Pty Ltd",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.15,
+      "reasoning": "Perplexity claims TOP 10 ranking based on $174.4M revenue, but local evidence shows zero ARTG registrations, no Australian manufacturing facility, and no TGA sponsor status. While GBMA membership confirms generics distribution presence, the absence of any registered products in Australia contradicts a TOP 10 pharmaceutical manufacturer claim—Fresenius Kabi Australia appears to operate primarily as",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/fresenius-kabi-australia-pty-limited/432665/",
+        "https://growjo.com/company/Fresenius_Kabi_Australia_Pty",
+        "https://www.fresenius.com/sites/default/files/2025-03/Fresenius_Annual_Report_2024.pdf",
+        "https://www.statista.com/topics/12543/fresenius/",
+        "https://www.fresenius.com/sites/default/files/2024-05/Fresenius_Annual_Report_2023_0.pdf"
+      ],
+      "perplexity_raw": "```json\n{\n  \"rank\": \"TOP 10\",\n  \"reasoning\": \"Fresenius Kabi Australia generated approximately $174.4 million in revenue in 2025[1], positioning it within the top tier of Australian pharmaceutical companies. Based on competitor revenue data from 2024, the company ranks among the top 10 pharmaceutical manufacturers and wholesalers in Australia, competing with companies like MSD Australia ($130.4M) and Pharmacy 777 ($130M)[2].\",\n  \"sources\": [\n    \"https://www.ibisworld.com/australia/company/fresenius-kabi-australia-pty-limited/432665/\",\n    \"https://growjo.com/company/Fresenius_Kabi_Australia_Pty\"\n  ]\n}\n```",
+      "local_evidence": {
+        "sources": [
+          "gbma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": true,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "teva_pharmaceuticals_australia": {
+      "canonical_name": "Teva Pharmaceuticals Australia Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity correctly identifies insufficient data on Australian subsidiary revenue, but local evidence reveals Teva has zero ARTG registrations, no manufacturing facility, and is not a TGA sponsor or PBS-listed entity in Australia. Despite GBMA membership indicating generic operations, the complete absence of registered products and local infrastructure downgrades the ranking from 'unknown' to 'ni",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/teva-pharmaceutical-industries/earnings/",
+        "https://ir.tevapharm.com/news-and-events/press-releases/press-release-details/2024/Teva-Reports-Growth-in-Fourth-Quarter-and-Full-Year-2023/default.aspx",
+        "https://companiesmarketcap.com/teva-pharmaceutical-industries/revenue/",
+        "https://ir.tevapharm.com/news-and-events/press-releases/press-release-details/2025/Teva-Delivers-Second-Consecutive-Year-of-Growth-Announces-Strong-Financial-Results-in-Fourth-Quarter-and-Full-Year-2024-Led-by-Generics-Performance-and-Innovative-Portfolio-Growth/default.aspx",
+        "https://ir.tevapharm.com/news-and-events/press-releases/press-release-details/2024/Teva-Announces-Strong-Financial-Results-for-the-Third-Quarter-of-2024-led-by-Generics-Performance-and-Innovative-Portfolio-Growth-Raises-2024-Financial-Outlook-including-on-Revenues-Adjusted-EBITDA-and-Non-GAAP-EPS/default.aspx"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"The search results provide global revenue figures for Teva Pharmaceutical Industries (e.g., $15.84B in 2023, $16.5B in 2024) but contain no data on Teva Pharmaceuticals Australia Pty Ltd's specific revenue or ranking within the Australian pharmaceutical market for 2023-2024. No Australian market rankings or subsidiary financials are mentioned in the results.\",\"sources\":[\"https://companiesmarketcap.com/teva-pharmaceutical-industries/revenue/\",\"https://ir.tevapharm.com/news-and-events/press-releases/press-release-details/2024/Teva-Reports-Growth-in-Fourth-Quarter-and-Full-Year-2023/default.aspx\",\"https://ir.tevapharm.com/news-and-events/press-releases/press-release-details/2025/Teva-Delivers-Second-Consecutive-Year-of-Growth-Announces-Strong-Financial-Results-in-Fourth-Quarter-and-Full-Year-2024-Led-by-Generics-Performance-and-Innovative-Portfolio-Growth/default.aspx\"]}",
+      "local_evidence": {
+        "sources": [
+          "gbma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": true,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "sinapse": {
+      "canonical_name": "Sinapse Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking aligns with local evidence showing zero TGA ARTG registrations, no manufacturing facility, and no PBS listing. However, GBMA membership indicates active participation in the generics sector, suggesting Sinapse operates as a niche player (likely importer/distributor) rather than a manufacturer or major market participant. Downgrade from 'unknown' to 'niche' based on G",
+      "evidence_urls": [
+        "https://www1.hkexnews.hk/app/sehk/2026/108330/documents/sehk26032501680.pdf",
+        "https://synapse.patsnap.com/organization/4bd346ec0e3230c4c27e72ba6f7916f6",
+        "https://www.asx.com.au/asxpdf/20211215/pdf/4545gqmkn60vwp.pdf",
+        "https://www.pharmiweb.com/article/top-10-pharmaceutical-companies-in-australia-2024",
+        "https://www.wesfarmers.com.au/docs/default-source/reports/2024-wesfarmers-annual-report---interactive.pdf?sfvrsn=1bc5e4bb_3"
+      ],
+      "perplexity_raw": "{\n  \"rank\": \"unknown\",\n  \"reasoning\": \"No search results mention Sinapse Pty Ltd or provide its revenue figures, rankings, or position within the Australian pharmaceutical market for 2023-2024. Available results discuss general market projections (e.g., US$10.16bn total revenue in 2024) and other unrelated companies, but lack specific data on this firm.\",\n  \"sources\": [\n    \"https://www.pharmiweb.com/article/top-10-pharmaceutical-companies-in-australia-2024\",\n    \"https://synapse.patsnap.com/organization/4bd346ec0e3230c4c27e72ba6f7916f6\"\n  ]\n}",
+      "local_evidence": {
+        "sources": [
+          "gbma"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": true,
+        "is_gpce": false
+      },
+      "has_factory": false
+    },
+    "aspen": {
+      "canonical_name": "Aspen Pharmacare Australia",
+      "rank": "niche",
+      "score": 21,
+      "confidence": 0.72,
+      "reasoning": "Perplexity's 'unknown' ranking conflicts with local evidence showing Aspen has an Australian manufacturing facility and GPCE conference presence, indicating active market participation. However, zero ARTG registrations, no TGA sponsorship, no PBS listing, and non-membership in MA/GBMA associations confirm a niche player status rather than top-tier ranking. The global revenue figures cited by Perpl",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/aspen-pharmacare/revenue/",
+        "https://stockanalysis.com/quote/jse/APN/revenue/",
+        "https://www.aspenpharma.com/wp-content/uploads/2023/08/Aspen-2023-Annual-Results-Presentation.pdf",
+        "https://www.aspenpharma.com/aspen-delivers-encouraging-results-driven-by-strong-commercial-pharma-reshaped-manufacturing-and-value-realisation-from-apac-divestment/",
+        "https://www.aspenpharma.com/wp-content/uploads/2024/09/FY-2024-Annual-Results-Presentation.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Search results provide global revenue figures for Aspen Pharmacare (e.g., $2.47B USD in 2024, 43.36B ZAR FY2025) but no specific data on Aspen Pharmacare Australia's revenue or its ranking within the Australian pharmaceutical market for 2023-2024. Mentions of APAC performance note currency impacts like the weakening Australian Dollar, but lack Australia-specific sales or market share rankings.\",\"sources\":[\"https://companiesmarketcap.com/aspen-pharmacare/revenue/\",\"https://stockanalysis.com/quote/jse/APN/revenue/\",\"https://www.aspenpharma.com/wp-content/uploads/2023/08/Aspen-2023-Annual-Results-Presentation.pdf\",\"https://www.aspenpharma.com/aspen-delivers-encouraging-results-driven-by-strong-commercial-pharma-reshaped-manufacturing-and-value-realisation-from-apac-divestment/\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": true
+    },
+    "inmunotek_australia": {
+      "canonical_name": "Inmunotek Australia Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' rank is partially supported by local evidence showing zero ARTG registrations, no TGA sponsorship, no PBS listing, and no MA/GBMA membership. However, GPCE conference attendance indicates active market participation in allergy/immunology niche. Downgrade from 'unknown' to 'niche' is justified given the company operates in a specialized segment without mainstream pharmaceutic",
+      "evidence_urls": [
+        "https://www.grandviewresearch.com/horizon/outlook/biopharmaceutical-market/australia",
+        "https://www.statista.com/statistics/1341919/australia-largest-drug-stores-and-pharmaceutical-companies-by-revenue/",
+        "https://www.ibisworld.com/blog/top-100-manufacturers-2025/61/5644/",
+        "https://www.statista.com/statistics/1198794/australia-leading-biotechnology-companies-on-the-asx-by-market-cap/",
+        "http://www.valutech.com.au/page/page/Biotech2024A.html"
+      ],
+      "perplexity_raw": "```json\n{\n  \"rank\": \"unknown\",\n  \"reasoning\": \"While search results identify Inmunotek Australia Pty Ltd as an allergy and immunology medical devices company[6], no specific revenue figures or market ranking data for this company during 2023-2024 are provided in the available search results. The results contain rankings for major players like CSL, EBOS Group, and Chemist Warehouse, but Inmunotek is not mentioned among these top-tier companies.\",\n  \"sources\": [\n    \"https://www.medicalsearch.com.au/inmunotek-australia-pty-ltd/s/69856\",\n    \"https://www.statista.com/statistics/1341919/australia-largest-drug-stores-and-pharmaceutical-companies-by-revenue/\",\n    \"https://www.grandviewresearch.com/horizon/outlook/biopharmaceutical-market/australia\"\n  ]\n}\n```",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "inova_pharmaceuticals": {
+      "canonical_name": "iNova Pharmaceuticals",
+      "rank": "niche",
+      "score": 4,
+      "confidence": 0.15,
+      "reasoning": "Perplexity claims TOP 50 based on $170-175M revenue, but local evidence shows 0 ARTG registrations, no TGA sponsor status, no PBS listing, and non-membership in MA/GBMA. Despite Australian manufacturing presence and GPCE attendance, the absence of any registered products in Australia contradicts a TOP 50 domestic market position. The company appears to operate as a niche player in Australia, likel",
+      "evidence_urls": [
+        "https://growjo.com/company/iNova_Pharmaceuticals",
+        "https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/",
+        "https://community.ionanalytics.com/asian-private-equity-venture-capital-awards-shortlist-2023/exit-of-the-year-large-cap-2023",
+        "https://rocketreach.co/inova-pharmaceuticals-profile_b5d59038f42e3a54",
+        "https://www.zoominfo.com/c/inova-pharmaceuticals-pty-ltd/351034762"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 50\",\"reasoning\":\"iNova Pharmaceuticals has an estimated annual revenue of approximately $170-175 million USD (AUD ~250-260M), representing about 1.4-1.5% of the Australian pharmaceutical market's $17.5 billion total in 2024[1][2][4]. This positions it outside the top 20 but within the top 50, as it exceeds many listed competitors and aligns with mid-tier players in a fragmented market lacking precise 2023-2024 rankings.\",\"sources\":[\"https://growjo.com/company/iNova_Pharmaceuticals\",\"https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/\",\"https://rocketreach.co/inova-pharmaceuticals-profile_b5d59038f42e3a54\",\"https://www.zoominfo.com/c/inova-pharmaceuticals-pty-ltd/351034762\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": true
+    },
+    "msd_australia": {
+      "canonical_name": "Merck Sharp & Dohme",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.25,
+      "reasoning": "Perplexity claims TOP 20 based on $571.1M revenue, but local evidence shows zero ARTG registrations, no TGA sponsorship, no PBS listing, no MA membership, and no Australian manufacturing facility. The revenue figure cannot be verified against the 4 citations provided (only 2 are URLs; citations [9] and [3] are incomplete/invalid). The claimed $571.1M revenue is inconsistent with zero local regulat",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/merck-sharp-dohme-holdings-pty-ltd/3248/",
+        "https://companiesmarketcap.com/sgd/merck/revenue/",
+        "https://druganddeviceworld.com/2025/03/04/top-10-highest-grossing-drugs-in-2024-by-sales/",
+        "https://www.msd.com/wp-content/uploads/sites/9/2024/08/MSD_ImpactReport_2023-2024.pdf",
+        "https://www.merckgroup.com/investors/reports-and-financials/earnings-materials/2024-q4/en/2024-Q4-Report-EN.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 20\",\"reasoning\":\"Merck Sharp & Dohme (Australia) generated $571.1 million in revenue in 2024, indicating a significant presence in the Australian pharmaceutical market given its scale relative to typical market leaders[1]. While exact rankings are unavailable, this revenue positions it likely within the TOP 20, as it aligns with major multinational subsidiaries in industry reports[9].\",\"sources\":[\"https://www.ibisworld.com/australia/company/merck-sharp-dohme-holdings-pty-ltd/3248/\",\"https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2024/10/MA_Annual-Report-2024_Final_Digital.pdf\",\"https://www.msd.com/wp-content/uploads/sites/9/2024/08/MSD_ImpactReport_2023-2024.pdf\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "novo_nordisk": {
+      "canonical_name": "Novo Nordisk",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.25,
+      "reasoning": "Perplexity claims TOP 20 based on $906.5M revenue, but local evidence shows zero ARTG registrations, no TGA sponsorship, no PBS listing, and no manufacturing facility in Australia. The revenue figure appears to reference global or regional wholesaling rather than Australian pharmaceutical market presence. Without local product registrations or regulatory footprint, the claim cannot be validated ag",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/novo-nordisk/revenue/",
+        "https://www.getreskilled.com/pharmaceutical-companies/",
+        "https://www.ibisworld.com/australia/company/novo-nordisk-pharmaceuticals-pty-limited/3866/",
+        "https://annualreport.novonordisk.com/2024/strategic-aspirations/financials.html",
+        "https://www.novonordisk.com/content/dam/nncorp/global/en/investors/irmaterial/annual_report/2025/novo-nordisk-annual-report-2024.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 20\",\"reasoning\":\"Novo Nordisk Pharmaceuticals Pty Limited generated $906,542,000 in total revenue in Australia for 2024, indicating a significant presence in the market[3]. While exact rankings for the Australian pharmaceutical market in 2023-2024 are unavailable in the results, this substantial revenue from pharmaceuticals wholesaling positions it likely within the **TOP 20** among Australian pharma companies[3][9].\",\"sources\":[\"https://www.ibisworld.com/australia/company/novo-nordisk-pharmaceuticals-pty-limited/3866/\",\"https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2024/10/MA_Annual-Report-2024_Final_Digital.pdf\",\"https://companiesmarketcap.com/novo-nordisk/revenue/\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "actor_pharmaceuticals": {
+      "canonical_name": "Actor Pharmaceuticals",
+      "rank": "niche",
+      "score": 27,
+      "confidence": 0.92,
+      "reasoning": "Perplexity claim of 'niche' status is strongly supported by local evidence: zero TGA ARTG registrations, no PBS listing, no MA/GBMA membership, and no Australian manufacturing facility. The estimated $1.1M revenue aligns with a micro-market player. However, confidence is not higher due to only 2 valid citation URLs provided (prospeo.io and pharmiweb.com) when 3+ were required, and prospeo.io reven",
+      "evidence_urls": [
+        "https://prospeo.io/c/actor-pharmaceuticals-pty-revenue",
+        "https://www.molnlycke.com/globalassets/global/annual-reports/molnlycke-annual-report-2024-digital.pdf",
+        "https://investor.ti.com/static-files/b38dfb94-9aaa-4fda-95a4-06e83fab06a0",
+        "https://www.pharmiweb.com/article/top-10-pharmaceutical-companies-in-australia-2024",
+        "https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2024/10/MA_Annual-Report-2024_Final_Digital.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"niche\",\"reasoning\":\"Actor Pharmaceuticals Pty has an estimated annual revenue of $1,112,215, which is a very small fraction of the Australian pharmaceutical market's total projected revenue of US$10.16bn in 2024, placing it far outside the top rankings[1][4]. No sources list Actor Pharmaceuticals among the top 10, 20, or 50 companies in the Australian market for 2023-2024[4].\",\"sources\":[\"https://prospeo.io/c/actor-pharmaceuticals-pty-revenue\",\"https://www.pharmiweb.com/article/top-10-pharmaceutical-companies-in-australia-2024\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "aft_pharmaceuticals": {
+      "canonical_name": "AFT Pharmaceuticals",
+      "rank": "niche",
+      "score": 27,
+      "confidence": 0.92,
+      "reasoning": "Perplexity claim of 'niche' is strongly supported by local evidence: AFT has 0 TGA ARTG registrations, no Australian manufacturing facility, no TGA sponsor status, no PBS listing, and is not a member of MA or GBMA. Despite global revenue of ~$195M AUD (FY24), the complete absence of local regulatory presence and product registrations confirms AFT operates outside the Australian pharmaceutical mark",
+      "evidence_urls": [
+        "https://www.aftpharm.com/us-en/news/aft-delivers-10th-consecutive-first-half-revenue-increase/",
+        "https://investors.aftpharm.com/FormBuilder/_Resource/_module/p2XGBX4eEUuPk0R-Ti1BoQ/docs/annual-reports/2024/FY24_Results_Announcement.pdf",
+        "https://companiesmarketcap.com/aft-pharmaceuticals/revenue/",
+        "https://www.aftpharm.com/news/aft-pharma-reports-growth-and-global-expansion/",
+        "https://www.aftpharm.com/us-en/news/aft-poised-to-accelerate-momentum-in-2024/"
+      ],
+      "perplexity_raw": "{\"rank\":\"niche\",\"reasoning\":\"AFT Pharmaceuticals' Australian revenue was approximately $66.5 million in 1H 2025 (31% growth), with total FY24 revenue of $195.4 million (AUD ~$190 million), but no specific ranking data in Australian pharmaceutical market reports for 2023-2024; top firms like CSL have billions in revenue, placing AFT outside TOP 50.[1][2][6]\",\"sources\":[\"https://www.aftpharm.com/us-en/news/aft-delivers-10th-consecutive-first-half-revenue-increase/\",\"https://investors.aftpharm.com/FormBuilder/_Resource/_module/p2XGBX4eEUuPk0R-Ti1BoQ/docs/annual-reports/2024/FY24_Results_Announcement.pdf\",\"https://www.ibisworld.com/australia/company/aft-pharmaceuticals-limited/441668/\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "ego_pharmaceuticals": {
+      "canonical_name": "Ego Pharmaceuticals",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking conflicts with local evidence showing zero TGA ARTG registrations, no PBS listing, and non-membership in MA/GBMA. Despite $242.9M revenue (2025), Ego operates as a cosmetics/toiletries company outside the pharmaceutical regulatory framework, making 'niche' more accurate than 'unknown'. The Australian manufacturing facility and GPCE attendance suggest dermatological f",
+      "evidence_urls": [
+        "https://growjo.com/company/Ego_Pharmaceuticals",
+        "https://www.egopharm.com/au/en/news/ibis-top-500-2025.html",
+        "https://www.ibisworld.com/australia/company/ego-pharmaceuticals-holdings-pty-ltd/12716/",
+        "https://companiesmarketcap.com/largest-companies-by-revenue?download=csv",
+        "https://www.agfa.com/corporate/wp-content/uploads/sites/2/2025/04/Agfa-Annual-Report-2024_online.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide Ego Pharmaceuticals' specific ranking or revenue position within the Australian pharmaceutical market for 2023-2024; available data shows $191.4M revenue (Growjo, undated) and $242.9M in 2025 (IBISWorld), primarily from cosmetics/toiletries, with a #359 rank on IBISWorld Top 500 Private Companies (2025).[1][2][3]\",\"sources\":[\"https://growjo.com/company/Ego_Pharmaceuticals\",\"https://www.egopharm.com/au/en/news/ibis-top-500-2025.html\",\"https://www.ibisworld.com/australia/company/ego-pharmaceuticals-holdings-pty-ltd/12716/\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": true
+    },
+    "eli_lilly_australia": {
+      "canonical_name": "Eli Lilly Australia Pty Ltd",
+      "rank": "unknown",
+      "score": 0,
+      "confidence": 0.15,
+      "reasoning": "Perplexity claims TOP 20 with $461.96M revenue, but local evidence shows zero ARTG registrations, no TGA sponsor status, no PBS listing, no MA/GBMA membership, and no Australian manufacturing facility. This contradicts a TOP 20 market position in Australia. The company appears to operate as a regional office/distributor rather than a registered pharmaceutical manufacturer in Australia, making the ",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/eli-lilly-australia-pty-limited/8587/",
+        "https://companiesmarketcap.com/aud/eli-lilly/revenue/",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/",
+        "https://www.statista.com/statistics/1200294/australia-share-of-pharmaceutical-sales-by-class/"
+      ],
+      "perplexity_raw": "{\"rank\":\"TOP 20\",\"reasoning\":\"Eli Lilly Australia Pty Ltd generated $461.96 million in revenue in 2024, representing approximately 1.8-2% of the Australian pharmaceutical market size of around USD 25 billion (roughly AUD 37.5 billion at typical exchange rates).[1][3] This positions it among leading players like CSL, GSK, Novartis, Pfizer, Roche, and Sanofi, but not in the absolute top 5-10, aligning with a TOP 20 ranking in the market.\",\"sources\":[\"https://www.ibisworld.com/australia/company/eli-lilly-australia-pty-limited/8587/\",\"https://www.imarcgroup.com/australia-pharmaceutical-market\",\"https://companiesmarketcap.com/aud/eli-lilly/revenue/\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "lundbeck_australia": {
+      "canonical_name": "Lundbeck Australia Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity claims 'unknown' rank citing global revenue and Australia as a 'larger market,' but local evidence shows zero TGA ARTG registrations, no manufacturing facility, no PBS listing, and non-membership in MA/GBMA. Despite global scale, Lundbeck Australia's actual local market presence is minimal, warranting downgrade to 'niche' rather than 'unknown.'",
+      "evidence_urls": [
+        "https://www.lundbeck.com/content/dam/lundbeck-com/masters/global-site/global-site/investors/2024/fy24/Corporate%20Release%20FY2024%20Final.pdf",
+        "https://www.thepharmaletter.com/lundbeck-reached-record-revenue-in-2024",
+        "https://www.statista.com/statistics/954288/revenue-of-h-lundbeck/",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/",
+        "https://companiesmarketcap.com/lundbeck/revenue/"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Search results provide Lundbeck's global revenue of DKK 22 billion in 2024 and mention Australia as one of its larger markets (e.g., alongside China, Canada, Brazil), but no specific revenue figure for Lundbeck Australia Pty Ltd or its ranking in the Australian pharmaceutical market for 2023-2024 is available.[1][6]\",\"sources\":[\"https://www.lundbeck.com/content/dam/lundbeck-com/masters/global-site/global-site/investors/2024/fy24/Corporate%20Release%20FY2024%20Final.pdf\",\"https://www.lundbeck.com/au/about-us/This-is-Lundbeck/At-a-glance\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "mayne_pharma": {
+      "canonical_name": "Mayne Pharma",
+      "rank": "niche",
+      "score": 21,
+      "confidence": 0.72,
+      "reasoning": "Perplexity claims 'unknown' due to lack of market ranking data, but local evidence reveals Mayne Pharma has zero TGA ARTG registrations, is not a PBS-listed sponsor, holds no MA/GBMA membership, yet maintains an Australian manufacturing facility and attends GPCE conferences. This profile—substantial revenue (~$408m FY25) with zero local product registrations—indicates a contract manufacturing/expo",
+      "evidence_urls": [
+        "https://companiesmarketcap.com/gbp/mayne-pharma-group/revenue/",
+        "https://www.maynepharma.com/wp-content/uploads/2023/11/MPG-AR-2023-artwork-FINAL.pdf",
+        "https://www.maynepharma.com/wp-content/uploads/2025/10/2025-Annual-Report-FINAL-ID-18403-MYX-FY25_v03.2-Interactive.pdf",
+        "https://www.ibisworld.com/australia/company/mayne-pharma-group-limited/419558/",
+        "https://www.maynepharma.com/wp-content/uploads/2023/11/2023-AGM-Presentation-FINAL.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"Search results provide Mayne Pharma's revenue figures (e.g., $183.6m in FY23, ~$408m in FY25 per annual reports), but lack any Australian pharmaceutical market rankings, top company lists, or total market size data for 2023-2024 to determine its position.[2][3][4]\",\"sources\":[\"https://www.maynepharma.com/wp-content/uploads/2023/11/MPG-AR-2023-artwork-FINAL.pdf\",\"https://www.maynepharma.com/wp-content/uploads/2025/10/2025-Annual-Report-FINAL-ID-18403-MYX-FY25_v03.2-Interactive.pdf\",\"https://www.ibisworld.com/australia/company/mayne-pharma-group-limited/419558/\",\"https://companiesmarketcap.com/gbp/mayne-pharma-group/revenue/\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": true
+    },
+    "stallergenes_australia": {
+      "canonical_name": "Stallergenes Australia Pty Ltd",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' ranking is contradicted by local evidence showing zero ARTG registrations, no TGA sponsor status, no PBS listing, and no manufacturing facility in Australia. Despite GPCE conference attendance, the absence of registered products and non-membership in MA/GBMA indicates Stallergenes Australia operates as a niche player (likely distribution/support only) rather than a market-ra",
+      "evidence_urls": [
+        "https://www.sec.gov/Archives/edgar/data/901832/000110465919012881/a19-3601_1ex15d1.htm",
+        "https://www.stallergenesgreer.com/sites/default/files/annual_report_2020/stallergenes_greer_2023_company_report_web_final.pdf",
+        "https://www.grandviewresearch.com/industry-analysis/food-allergy-treatment-market-report",
+        "https://www.pharmiweb.com/article/top-10-pharmaceutical-companies-in-australia-2024",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC11612360/"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide specific annual revenue data or rankings for Stallergenes Australia Pty Ltd within the Australian pharmaceutical market for 2023-2024. Available sources discuss the parent company Stallergenes Greer globally, the overall Australian pharma market size (~US$10.16bn in 2024), and allergy treatments, but lack company-specific Australian revenue or ranking information.[2][4]\",\"sources\":[\"https://www.stallergenesgreer.com/sites/default/files/annual_report_2020/stallergenes_greer_2023_company_report_web_final.pdf\",\"https://www.pharmiweb.com/article/top-10-pharmaceutical-companies-in-australia-2024\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    },
+    "theramex": {
+      "canonical_name": "Theramex",
+      "rank": "niche",
+      "score": 25,
+      "confidence": 0.85,
+      "reasoning": "Perplexity's 'unknown' rank conflicts with local evidence showing zero ARTG registrations, no TGA sponsorship, no PBS listing, and no MA/GBMA membership—all indicators of niche/minimal Australian market presence. However, GPCE conference attendance suggests some regional engagement. The global $115.6M revenue claim is irrelevant to Australian ranking without local market penetration.",
+      "evidence_urls": [
+        "https://growjo.com/company/THERAMEX",
+        "https://www.grandviewresearch.com/industry-analysis/menopause-market",
+        "https://smart-pharma.com/wp-content/uploads/2025/05/Smart-Pharma-2016-2024-Complete-collection.pdf",
+        "https://www1.hkexnews.hk/listedco/listconews/sehk/2025/1202/2025120200034.pdf",
+        "https://www.navlindaily.com/upload/newsletter/attachment/250903114714_NAVLIN_Insights_Newsletter_Issue_76.pdf"
+      ],
+      "perplexity_raw": "{\"rank\":\"unknown\",\"reasoning\":\"No search results provide Theramex's specific revenue or ranking in the Australian pharmaceutical market for 2023-2024; global estimates indicate $115.6M annual revenue[1], while Australia's total pharma market is projected at US$10.16bn in 2024 with a top 10 list that does not mention Theramex[7]. Theramex is noted as a player in the global menopause market but without Australia-specific data[2].\",\"sources\":[\"https://growjo.com/company/THERAMEX\",\"https://www.pharmiweb.com/article/top-10-pharmaceutical-companies-in-australia-2024\",\"https://www.grandviewresearch.com/industry-analysis/menopause-market\"]}",
+      "local_evidence": {
+        "sources": [
+          "gpce"
+        ],
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma": false,
+        "is_gbma": false,
+        "is_gpce": true
+      },
+      "has_factory": false
+    }
+  }
+}

@@ -2497,86 +2497,99 @@ resetProgress();
     return v;
   }
 
-  // ───── 행 렌더 (기본 + 상세 펼침 2행) ─────
-  function renderBuyerRow(buyer, fx) {
-    const tier = (buyer.source_flags || []).find ? null : null;
-    // source_flags 는 JSON array 또는 dict (DB 스키마에 따라)
-    let tierLabel = '';
-    const sf = buyer.source_flags;
-    if (Array.isArray(sf)) {
-      for (const f of sf) if (typeof f === 'string' && f.startsWith('tier_')) tierLabel = f.slice(5);
+  // ───── ingredient_case → 한국어 라벨 ─────
+  function ingredientLabelKr(source_flags, buyer) {
+    // source_flags 에 'tier_A' 있으면 "직접 보유", 'tier_B' 는 "계열 매칭", 'tier_C' 는 "기타"
+    const sf = Array.isArray(source_flags) ? source_flags : [];
+    let tier = '';
+    for (const f of sf) {
+      if (typeof f === 'string' && f.startsWith('tier_')) tier = f.slice(5);
     }
-    const theraKr = (buyer.therapeutic_categories || []).join(' · ') || '—';
-    const categoriesRaw = Array.isArray(buyer.therapeutic_categories) ? buyer.therapeutic_categories : [];
+    if (tier === 'A') return { label: '직접 보유', color: '#16a34a', icon: '⭐' };
+    if (tier === 'B') return { label: '계열 매칭', color: '#2563eb', icon: '○' };
+    return { label: '간접 (참고)', color: '#9ca3af', icon: '·' };
+  }
 
-    const factoryIcon = buyer.has_au_factory === 'Y' ? '🏭 Y' :
-                        buyer.has_au_factory === 'N' ? '✗' : '?';
-    const factoryColor = buyer.has_au_factory === 'Y' ? '#22c55e' : '#9ca3af';
-    const revColor = rankColor(buyer.annual_revenue_rank);
+  // ───── 점수 테이블 한 줄 ─────
+  function scoreRow(label, score, weightPct) {
+    const s = Math.round(Number(score || 0));
+    const color = s >= 70 ? '#16a34a' : s >= 40 ? '#3b82f6' : '#9ca3af';
+    return `
+      <div style="display:flex; align-items:baseline; padding:5px 0; border-bottom:1px solid #f3f4f6; font-size:13px;">
+        <span style="flex:1; color:#374151;">${label}</span>
+        <span style="font-variant-numeric:tabular-nums; font-weight:600; color:${color}; width:60px; text-align:right;">${s}<span style="color:#9ca3af; font-weight:400;">/100</span></span>
+        <span style="color:#9ca3af; font-size:11px; width:38px; text-align:right;">×${weightPct}%</span>
+      </div>
+    `;
+  }
+
+  // ───── 행 렌더 (6컬럼 + 펼침) ─────
+  function renderBuyerRow(buyer) {
     const rowId = 'p3-row-' + buyer.id;
     const detailId = 'p3-detail-' + buyer.id;
-    const total = Number(buyer.psi_total || 0);
 
-    const assocBadges = [];
-    if (buyer.is_ma_member)   assocBadges.push(badge('MA', '#6366f1'));
-    if (buyer.is_gbma_member) assocBadges.push(badge('GBMA', '#0ea5e9'));
-    if (buyer.is_gpce_exhibitor) assocBadges.push(badge('GPCE', '#a855f7'));
-
-    const evidenceUrls = Array.isArray(buyer.evidence_urls) ? buyer.evidence_urls : [];
-    const evidenceHtml = evidenceUrls.length
-      ? evidenceUrls.slice(0, 3).map(function (u) {
-          return `<a href="${escHtml(u)}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;font-size:12px;display:block;">${escHtml(u.substring(0, 80))}${u.length > 80 ? '…' : ''}</a>`;
-        }).join('')
-      : '<span style="color:#9ca3af;font-size:12px;">근거 URL 없음</span>';
-
+    const theraKr = (buyer.therapeutic_categories || []).slice(0, 3).join(' · ') || '—';
     const factoryLocs = Array.isArray(buyer.factory_locations) ? buyer.factory_locations.filter(Boolean) : [];
+    const factoryCell = buyer.has_au_factory === 'Y'
+      ? `<span style="color:#16a34a;">보유</span>${factoryLocs.length ? ' <span style="color:#6b7280;font-size:11px;">('+ escHtml(factoryLocs.join(', ')) +')</span>' : ''}`
+      : '<span style="color:#9ca3af;">미보유</span>';
+
+    const ing = ingredientLabelKr(buyer.source_flags, buyer);
+    const rankNum = buyer.rank || '?';
+
+    const hasContact = buyer.website || buyer.email || buyer.phone;
 
     return `
       <tr id="${rowId}" class="p3-row" style="cursor:pointer;" onclick="toggleBuyerDetail('${detailId}')">
-        <td><span class="p3-rank" style="display:inline-block;background:${tierColor(tierLabel)};color:white;padding:2px 8px;border-radius:999px;font-weight:bold;font-size:12px;">${buyer.rank}</span></td>
-        <td>
-          <div style="font-weight:600;">${escHtml(buyer.company_name)}</div>
-          <div style="font-size:11px;color:#6b7280;margin-top:2px;">${theraKr}</div>
-        </td>
-        <td style="color:${revColor};font-weight:600;font-size:12px;">${escHtml(buyer.annual_revenue_rank || '—')}</td>
-        <td style="color:${factoryColor};text-align:center;font-weight:600;">${factoryIcon}</td>
-        <td style="text-align:center;"><b style="font-size:16px;">${fmtInt(total)}</b>/100</td>
-        <td style="text-align:center;">
-          ${assocBadges.join('')}
-          <span style="color:#6b7280;font-size:14px;">▾</span>
+        <td style="text-align:center;"><b>${rankNum}</b></td>
+        <td><b>${escHtml(buyer.company_name)}</b></td>
+        <td style="font-size:12px;">${escHtml(buyer.annual_revenue_rank || '—')}</td>
+        <td style="font-size:12px; color:#374151;">${theraKr}</td>
+        <td style="font-size:12px;">${factoryCell}</td>
+        <td style="font-size:12px;">
+          <span style="color:${ing.color}; font-weight:600;">${ing.icon} ${ing.label}</span>
+          <span style="float:right; color:#9ca3af;">▾</span>
         </td>
       </tr>
       <tr id="${detailId}" class="p3-detail-row" style="display:none;">
-        <td colspan="6" style="background:#f9fafb;padding:14px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <td colspan="6" style="background:#f9fafb; padding:16px;">
+          <div style="display:grid; grid-template-columns:320px 1fr; gap:24px;">
+            <!-- 좌측: 5지표 점수 (숫자 테이블) -->
             <div>
-              <div style="font-weight:600;margin-bottom:8px;">5 지표 점수</div>
-              <table style="width:100%;font-size:13px;">
-                <tr><td style="padding:4px 0;">① 매출 규모</td><td style="text-align:right;"><b>${fmtInt(buyer.psi_sales_scale)}</b>/100 <span style="color:#9ca3af;">×35%</span></td></tr>
-                <tr><td>② 파이프라인 (성분 경험)</td><td style="text-align:right;"><b>${fmtInt(buyer.psi_pipeline)}</b>/100 <span style="color:#9ca3af;">×25%</span></td></tr>
-                <tr><td>③ 호주 제조소</td><td style="text-align:right;"><b>${fmtInt(buyer.psi_manufacturing)}</b>/100 <span style="color:#9ca3af;">×20%</span></td></tr>
-                <tr><td>④ 수입 경험</td><td style="text-align:right;"><b>${fmtInt(buyer.psi_import_exp)}</b>/100 <span style="color:#9ca3af;">×10%</span></td></tr>
-                <tr><td>⑤ 약국 체인 운영</td><td style="text-align:right;"><b>${fmtInt(buyer.psi_pharmacy_chain)}</b>/100 <span style="color:#9ca3af;">×10%</span></td></tr>
-                <tr style="border-top:2px solid #e5e7eb;"><td style="padding-top:6px;font-weight:bold;">총점 (psi_total)</td><td style="text-align:right;padding-top:6px;"><b style="font-size:18px;color:#1d4ed8;">${fmtInt(total)}</b></td></tr>
-              </table>
+              <div style="font-weight:600; margin-bottom:8px; color:#1f2937; font-size:13px;">5 지표 점수</div>
+              ${scoreRow('① 매출 규모', buyer.psi_sales_scale, 35)}
+              ${scoreRow('② 파이프라인', buyer.psi_pipeline, 25)}
+              ${scoreRow('③ 호주 제조소', buyer.psi_manufacturing, 20)}
+              ${scoreRow('④ 수입 경험', buyer.psi_import_exp, 10)}
+              ${scoreRow('⑤ 약국 체인', buyer.psi_pharmacy_chain, 10)}
+              <div style="display:flex; align-items:baseline; padding:8px 0 0 0; margin-top:6px; border-top:2px solid #cbd5e1; font-size:13px;">
+                <span style="flex:1; font-weight:700; color:#0f172a;">총점</span>
+                <span style="font-size:20px; font-weight:700; color:#1d4ed8; font-variant-numeric:tabular-nums;">${fmtInt(buyer.psi_total)}</span>
+                <span style="color:#9ca3af; font-size:12px;">&nbsp;/100</span>
+              </div>
             </div>
+            <!-- 우측: 추천 근거 + 연락처 -->
             <div>
-              <div style="font-weight:600;margin-bottom:8px;">상세 정보</div>
-              <div style="font-size:13px;line-height:1.7;">
-                <div><b>매출 등급:</b> <span style="color:${revColor};">${escHtml(buyer.annual_revenue_rank || '—')}</span></div>
-                <div><b>TGA ARTG 등록 수:</b> ${fmtInt(buyer.tga_artg_count)} 건</div>
-                <div><b>호주 공장:</b> ${buyer.has_au_factory === 'Y' ? 'Y — ' + (factoryLocs.join(', ') || '(위치 미상)') : 'N (본사 글로벌 공장 수입 의존)'}</div>
-                <div><b>치료영역:</b> ${theraKr}</div>
-                <div><b>소속 협회:</b> ${assocBadges.length ? assocBadges.join('') : '<span style="color:#9ca3af;">없음</span>'}</div>
-                ${buyer.website ? `<div><b>웹사이트:</b> <a href="${escHtml(buyer.website)}" target="_blank" style="color:#2563eb;">${escHtml(buyer.website)}</a></div>` : ''}
-                ${buyer.email ? `<div><b>이메일:</b> ${escHtml(buyer.email)}</div>` : ''}
-                ${buyer.phone ? `<div><b>전화:</b> ${escHtml(buyer.phone)}</div>` : ''}
-              </div>
-              ${buyer.notes ? `<div style="margin-top:8px;padding:8px;background:white;border-radius:4px;font-size:12px;color:#374151;">${escHtml(buyer.notes)}</div>` : ''}
-              <div style="margin-top:10px;">
-                <div style="font-weight:600;font-size:12px;margin-bottom:4px;color:#6b7280;">근거 URL</div>
-                ${evidenceHtml}
-              </div>
+              ${buyer.notes ? `
+                <div style="margin-bottom:12px;">
+                  <div style="font-weight:600; color:#1f2937; font-size:13px; margin-bottom:6px;">추천 근거</div>
+                  <div style="padding:10px 12px; background:white; border-left:3px solid #3b82f6; border-radius:3px; font-size:13px; line-height:1.6; color:#1f2937;">${escHtml(buyer.notes)}</div>
+                </div>
+              ` : `
+                <div style="margin-bottom:12px; color:#9ca3af; font-size:12px;">추천 근거 데이터 없음 (딥리서치 미완료)</div>
+              `}
+              ${hasContact ? `
+                <div>
+                  <div style="font-weight:600; color:#1f2937; font-size:13px; margin-bottom:6px;">연락처</div>
+                  <div style="font-size:13px; line-height:1.9;">
+                    ${buyer.website ? `<div>🌐 <a href="${escHtml(buyer.website)}" target="_blank" rel="noopener" style="color:#2563eb;">${escHtml(buyer.website)}</a></div>` : ''}
+                    ${buyer.email ? `<div>📧 <a href="mailto:${escHtml(buyer.email)}" style="color:#2563eb;">${escHtml(buyer.email)}</a></div>` : ''}
+                    ${buyer.phone ? `<div>📞 ${escHtml(buyer.phone)}</div>` : ''}
+                  </div>
+                </div>
+              ` : `
+                <div style="color:#9ca3af; font-size:12px;">연락처 미수집</div>
+              `}
             </div>
           </div>
         </td>
@@ -2597,56 +2610,78 @@ resetProgress();
     const note = document.getElementById('p3-note');
     const meta = document.getElementById('p3-meta');
     const tbody = document.getElementById('p3-buyer-tbody');
+    const tableWrap = document.getElementById('p3-buyer-table');
     const dlBtn = document.getElementById('p3-dl-btn');
-    const fxNote = document.getElementById('p3-fx-note');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p3-empty-cell" style="padding:20px;color:#6b7280;">로딩 중...</td></tr>';
+    const progress = document.getElementById('p3-progress');
+
+    if (progress) progress.textContent = '조회 중...';
     if (dlBtn) dlBtn.disabled = true;
 
     try {
       const r = await fetch('/api/buyers/' + encodeURIComponent(productId));
       if (!r.ok) {
         if (r.status === 404) {
-          if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p3-empty-cell" style="padding:20px;color:#6b7280;">아직 바이어 데이터가 없습니다. (Stage 2 scoring 실행 필요)</td></tr>';
+          if (note) { note.style.display = 'block'; note.textContent = '아직 바이어 데이터가 없습니다. (Stage 2 scoring 실행 필요)'; }
+          if (tableWrap) tableWrap.style.display = 'none';
         } else {
-          if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p3-empty-cell" style="padding:20px;color:#dc2626;">조회 실패: HTTP ${r.status}</td></tr>`;
+          if (note) { note.style.display = 'block'; note.textContent = `조회 실패: HTTP ${r.status}`; note.style.color = '#dc2626'; }
         }
+        if (progress) progress.textContent = '';
         return;
       }
       const data = await r.json();
       const buyers = data.buyers || [];
-      const fx = data.fx || {};
 
-      // 상단 메타
+      // 상단 메타 (간결)
       if (note) note.style.display = 'none';
       if (meta) {
         meta.style.display = 'block';
         const inns = (data.inn_components || []).join(' + ');
         meta.innerHTML = `
-          <div style="padding:10px;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:4px;font-size:13px;margin-bottom:10px;">
+          <div style="padding:8px 12px; background:#eff6ff; border-left:3px solid #3b82f6; border-radius:3px; font-size:13px; margin-bottom:10px;">
             <b>${escHtml(data.product_name_ko || productId)}</b>
-            ${data.product_name_en ? '(' + escHtml(data.product_name_en) + ')' : ''}
             — 성분: <code>${escHtml(inns)}</code>
-            <span style="float:right;color:#6b7280;font-size:12px;">총 ${buyers.length} 명 · 점수 = 교차검증(TGA·PBS·협회) + 5지표 가중치(매출 35% · 성분 25% · 공장 20% · 수입 10% · 약국 10%)</span>
+            <span style="float:right; color:#6b7280;">총 ${buyers.length} 명</span>
           </div>
         `;
       }
-      if (fxNote && fx.aud_krw) {
-        fxNote.textContent = `(실시간 환율 1 AUD = ${fx.aud_krw.toFixed(2)} KRW · ${(fx.aud_usd * 100).toFixed(2)} USD¢)`;
-      }
 
+      if (tableWrap) tableWrap.style.display = 'block';
       if (tbody) {
         if (!buyers.length) {
-          tbody.innerHTML = '<tr><td colspan="6" class="p3-empty-cell" style="padding:20px;color:#6b7280;">바이어 없음</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color:#6b7280;">바이어 없음</td></tr>';
         } else {
-          tbody.innerHTML = buyers.map(function (b) { return renderBuyerRow(b, fx); }).join('');
+          tbody.innerHTML = buyers.map(function (b) { return renderBuyerRow(b); }).join('');
         }
       }
       if (dlBtn) dlBtn.disabled = false;
+      if (progress) progress.textContent = `완료 (${buyers.length} 명)`;
     } catch (exc) {
       console.error('[buyers] 조회 예외', exc);
-      if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p3-empty-cell" style="padding:20px;color:#dc2626;">조회 예외: ${escHtml(String(exc))}</td></tr>`;
+      if (note) { note.style.display = 'block'; note.textContent = `조회 예외: ${String(exc)}`; note.style.color = '#dc2626'; }
+      if (progress) progress.textContent = '';
     }
   }
+
+  // ───── 시작 버튼 (02 탭 "AI 가격 분석 실행" 과 동일 패턴) ─────
+  window.triggerBuyerDiscovery = async function () {
+    const pid = currentProductId();
+    if (!pid) {
+      if (typeof showToast === 'function') showToast('품목을 먼저 선택하세요');
+      else alert('품목을 먼저 선택하세요');
+      return;
+    }
+    const btn = document.getElementById('p3-run-btn');
+    const icon = document.getElementById('p3-run-icon');
+    if (btn) btn.disabled = true;
+    if (icon) icon.textContent = '⏳';
+    try {
+      await loadBuyersForProduct(pid);
+    } finally {
+      if (btn) btn.disabled = false;
+      if (icon) icon.textContent = '▶';
+    }
+  };
 
   // ───── 바이어 PDF 다운로드 ─────
   window.generateBuyersPdf = async function () {

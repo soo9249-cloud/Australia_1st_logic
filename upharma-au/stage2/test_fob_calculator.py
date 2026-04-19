@@ -142,14 +142,14 @@ def test_dispatch_withdrawal_blocked() -> None:
 
 
 # --------------------------------------------------------------------------
-# TEST 7: 3 시나리오 순서 — margin이 커질수록 FOB는 작아져야 함
+# TEST 7: 3 시나리오 순서 — 수입 스폰서 마진이 클수록 FOB는 작아져야 함
 # --------------------------------------------------------------------------
 def test_scenario_monotonicity() -> None:
-    print("\n[T7] 시나리오 단조성: margin↑ → FOB↓")
+    print("\n[T7] 시나리오 단조성: 수입상 마진↑ → FOB↓ (저가진입 < 기준 < 프리미엄 FOB)")
     sc = calculate_three_scenarios(logic="A", aemp_aud=31.92)
     _assert_true(
-        sc["aggressive"]["fob_aud"] > sc["average"]["fob_aud"] > sc["conservative"]["fob_aud"],
-        "aggressive(10%) > average(20%) > conservative(30%)",
+        sc["aggressive"]["fob_aud"] < sc["average"]["fob_aud"] < sc["conservative"]["fob_aud"],
+        "aggressive(30%) < average(20%) < conservative(10%) [FOB]",
     )
 
 

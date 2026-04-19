@@ -2304,12 +2304,12 @@ def stage2_calculate(payload: dict[str, Any]) -> JSONResponse:
                 raise HTTPException(status_code=400, detail="Logic A: base_aemp (>0) 필요")
 
             margin_default = float(overrides.get("importer_margin") or 20.0)
-            # 사용자가 입력한 단일 margin 을 average 로 고정하되,
-            # 공격(-10)/보수(+10) 범위 제한은 seed 의 typical band 를 따른다
+            # 수입 스폰서 마진: aggressive=저가진입(마진↑) → FOB↓, conservative=프리미엄(마진↓) → FOB↑
+            # center 기준 ±10%p, 상한 40% (research doc 5~40% 밴드)
             presets = {
-                "aggressive":   max(0.0, margin_default - 10.0),
+                "aggressive":   min(40.0, margin_default + 10.0),
                 "average":      margin_default,
-                "conservative": margin_default + 10.0,
+                "conservative": max(0.0, margin_default - 10.0),
             }
             scenarios = calculate_three_scenarios(
                 logic="A", aemp_aud=aemp, fx_aud_to_krw=fx, presets_pct=presets
@@ -2352,9 +2352,9 @@ def stage2_calculate(payload: dict[str, Any]) -> JSONResponse:
         wholesale_pct = float(overrides.get("wholesale_margin") or 10.0)
         margin_default = float(overrides.get("importer_margin") or 20.0)
         presets = {
-            "aggressive":   max(0.0, margin_default - 5.0),
+            "aggressive":   min(40.0, margin_default + 10.0),
             "average":      margin_default,
-            "conservative": margin_default + 10.0,
+            "conservative": max(0.0, margin_default - 10.0),
         }
         scenarios = calculate_three_scenarios(
             logic="B",

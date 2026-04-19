@@ -340,6 +340,38 @@ function _renderCustomTodos(state) {
 
 const REPORTS_LS_KEY = 'au_upharma_reports_v1';
 
+/**
+ * 수출가격 전략(AI 파이프라인) 3시나리오 — 호주 수입 스폰서(수입상) 마진(%) UI 표기.
+ * (수출사 마진이 아님.) 마진이 클수록 동일 소매가 기준 FOB는 낮아짐 → 저가 진입 열이 가장 낮은 FOB.
+ * 백엔드 `stage2/fob_calculator.py` 의 `DEFAULT_PRESETS_PCT` 와 일치해야 함.
+ */
+const P2_IMPORTER_MARGIN_DISPLAY_PCT = { agg: 30, avg: 20, cons: 10 };
+
+/**
+ * @param {object|undefined} s 시나리오 객체 (백엔드가 importer_margin_pct 를 주면 우선)
+ * @param {number} idx 0=agg 1=avg 2=cons
+ */
+function _p2ImporterMarginPctFromAiScenario(s, idx) {
+  if (s && s.importer_margin_pct != null && !Number.isNaN(Number(s.importer_margin_pct))) {
+    return Number(s.importer_margin_pct);
+  }
+  const keys = ['agg', 'avg', 'cons'];
+  const k = keys[idx];
+  return k ? P2_IMPORTER_MARGIN_DISPLAY_PCT[k] : null;
+}
+
+/** 3열 카드 상단 '수입상 마진 n%' 문구 갱신 */
+function _p2UpdateImporterMarginHints(scenarios) {
+  const cols = ['agg', 'avg', 'cons'];
+  cols.forEach((col, idx) => {
+    const el = document.getElementById('p2c-importer-hint-' + col);
+    if (!el) return;
+    const s = Array.isArray(scenarios) ? scenarios[idx] : null;
+    const pct = _p2ImporterMarginPctFromAiScenario(s, idx);
+    el.textContent = pct != null ? `수입상 마진 ${pct}%` : '수입상 마진 —';
+  });
+}
+
 function _loadReports() {
   try   { return JSON.parse(localStorage.getItem(REPORTS_LS_KEY) || '[]'); }
   catch { return []; }
@@ -969,6 +1001,10 @@ function _renderP2AiResult(data) {
         const scAud = Number(s.price_aud || 0);
         const scUsd = audToUsd(scAud);
         const scKrw = audToKrw(scAud);
+        const impPct = _p2ImporterMarginPctFromAiScenario(s, idx);
+        const impLine = impPct != null
+          ? `<div class="p2-scenario-margin" style="font-size:11px;color:var(--muted);margin-top:2px;">수입상 마진 ${impPct}%</div>`
+          : '';
         return `
           <div class="p2-scenario p2-scenario--${cls}">
             <div class="p2-scenario-top">
@@ -977,6 +1013,7 @@ function _renderP2AiResult(data) {
                 <span style="font-size:11px;color:var(--muted);margin-left:4px;">≈ ${fmtKRW(scKrw)}</span>
               </span>
             </div>
+            ${impLine}
           </div>`;
       }).join('');
     } else {
@@ -1029,6 +1066,8 @@ function _renderP2AiResult(data) {
     _p2ColData[col] = { opts: [] };
     renderP2ColOptions(col, false);
   });
+
+  _p2UpdateImporterMarginHints(scenarios);
 
   // 경쟁가 분포 (DOM 있으면 USD 기준 표기 — Stage 1 HTML 에는 없음, 향후 추가 대비)
   if (scenarios.length >= 3) {

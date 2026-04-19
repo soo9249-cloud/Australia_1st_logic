@@ -18,9 +18,9 @@
 {
   "logic": "A" | "B" | "blocked",
   "scenarios": {
-    "aggressive":  {"importer_margin_pct": 10, "fob_aud": ..., "fob_krw": ..., ...},
+    "aggressive":  {"importer_margin_pct": 30, "fob_aud": ..., "fob_krw": ..., ...},
     "average":     {"importer_margin_pct": 20, ...},
-    "conservative":{"importer_margin_pct": 30, ...},
+    "conservative":{"importer_margin_pct": 10, ...},
   },
   "inputs":  {...},           # 계산 입력값 스냅샷 (AEMP, retail, FX 등)
   "warnings": [str, ...],     # PBAC/withdrawal/substitute 등 플래그 메시지
@@ -88,8 +88,11 @@ def calculate_aemp_from_dpmq(dpmq: float | int | None) -> float | None:
 
 
 # ---- 프리셋 / 기본값 -------------------------------------------------------
-DEFAULT_PRESETS_PCT = {"aggressive": 10, "average": 20, "conservative": 30}
-# Research doc 권고: importer margin 5~40% 슬라이더, 10/20/30을 3 시나리오로 고정 노출
+# 호주 수입 스폰서(수입상) 마진 %.  FOB = AEMP ÷ (1 + 수입상마진%) 이므로
+# 수입상 마진이 클수록 수출 FOB는 낮아짐(저가 진입·침투 가격).
+# aggressive=저가 진입(수입상 마진↑) → FOB 최저 / conservative=프리미엄(수입상 마진↓) → FOB 최고
+DEFAULT_PRESETS_PCT = {"aggressive": 30, "average": 20, "conservative": 10}
+# Research doc 권고: importer margin 5~40% 슬라이더, 30/20/10을 3 시나리오로 고정 노출
 
 DEFAULT_FX_AUD_TO_KRW = 900.0  # 참고 환율, UI에서 override 가능
 
@@ -193,7 +196,7 @@ def calculate_three_scenarios(
     presets_pct: dict[str, float] | None = None,
     logic_b_kwargs: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, float]]:
-    """10/20/30% 프리셋 기준 3 시나리오를 한 번에 계산."""
+    """30/20/10% (기본) 프리셋 기준 3 시나리오를 한 번에 계산."""
     presets = presets_pct or DEFAULT_PRESETS_PCT
     b_kwargs = logic_b_kwargs or {}
     out: dict[str, dict[str, float]] = {}
@@ -251,7 +254,7 @@ def dispatch_by_pricing_case(
     Args:
         seed: fob_reference_seeds.json 단일 엔트리 (수기 조사 + 규제 플래그)
         fx_aud_to_krw: AUD → KRW 환율
-        presets_pct: importer margin 프리셋 (기본 aggressive=10/average=20/conservative=30)
+        presets_pct: 수입 스폰서 마진 프리셋 (기본 aggressive=30/average=20/conservative=10)
         logic_b_kwargs: Logic B 마진 파라미터 (GST, pharmacy, wholesale) 덮어쓰기
         crawler_row: 크롤러 실시간 row (선택). Logic B 에서 seed.reference_retail_aud 가
                      없을 때 crawler_row.retail_price_aud 를 2순위 참고가로 사용.

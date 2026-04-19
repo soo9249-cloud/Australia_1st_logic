@@ -891,7 +891,17 @@ function toggleP2ColDetail(col) {
   if (btn) btn.textContent = (willOpen ? '▾ ' : '▸ ') + '역산 · 옵션 편집';
 }
 
-/* P2 3열 카드: 기준가/수수료/운임/커스텀옵션 변경 시 가격 재계산 */
+/** 커스텀 옵션 한 건을 가격에 반영 (% 가산·% 차감·USD 가산) */
+function _p2ApplyOptToPrice(price, type, rawVal) {
+  const v = parseFloat(rawVal);
+  if (Number.isNaN(v) || v < 0) return price;
+  if (type === 'pct_add') return price * (1 + v / 100);
+  if (type === 'pct_deduct') return price * (1 - v / 100);
+  if (type === 'abs_add') return price + v;
+  return price;
+}
+
+/* P2 3열 카드: 기준가/수수료/운임/커스텀옵션 변경 시 가격 재계산 — 확정 옵션 + 미확정 초안 행 모두 상단 메인 금액에 반영 */
 function recalcP2Col(col) {
   const base    = parseFloat(document.getElementById('p2ci-base-' + col)?.value || 0);
   const fee     = parseFloat(document.getElementById('p2ci-fee-' + col)?.value || 0);
@@ -901,9 +911,15 @@ function recalcP2Col(col) {
 
   const opts = _p2ColData[col]?.opts || [];
   for (const opt of opts) {
-    if (opt.type === 'pct_add')   price *= (1 + opt.value / 100);
-    else if (opt.type === 'pct_deduct') price *= (1 - opt.value / 100);
-    else if (opt.type === 'abs_add')    price += opt.value;
+    price = _p2ApplyOptToPrice(price, opt.type, opt.value);
+  }
+  const drafts = _p2ColPendingDrafts[col] || [];
+  for (const d of drafts) {
+    const rid = String(d.id).replace(/[^a-zA-Z0-9_-]/g, '') || 'd0';
+    const type = document.getElementById('p2c-newtype-' + col + '-' + rid)?.value || 'pct_deduct';
+    const raw = document.getElementById('p2c-newval-' + col + '-' + rid)?.value;
+    if (raw === undefined || raw === '') continue;
+    price = _p2ApplyOptToPrice(price, type, raw);
   }
   price = Math.max(0, price);
 
@@ -943,18 +959,20 @@ function renderP2ColOptions(col) {
     html += `
       <div class="p2c-opt-row p2c-add-row">
         <input class="p2c-opt-name-input" type="text" placeholder="옵션명" id="p2c-newname-${col}-${rid}" maxlength="20">
-        <select class="p2c-opt-type-select" id="p2c-newtype-${col}-${rid}">
+        <select class="p2c-opt-type-select" id="p2c-newtype-${col}-${rid}" onchange="recalcP2Col('${col}')">
           <option value="pct_deduct">% 차감</option>
           <option value="pct_add">% 가산</option>
           <option value="abs_add">USD 가산</option>
         </select>
-        <input class="p2c-opt-val" type="number" placeholder="값" id="p2c-newval-${col}-${rid}" step="0.1" min="0">
+        <input class="p2c-opt-val" type="number" placeholder="값" id="p2c-newval-${col}-${rid}" step="0.1" min="0"
+          oninput="recalcP2Col('${col}')">
         <button type="button" class="p2c-confirm-btn" onclick="confirmP2ColOption('${col}','${rid}')">✓</button>
         <button type="button" class="p2c-draft-cancel" onclick="cancelP2ColDraft('${col}','${rid}')" title="이 줄 취소">×</button>
       </div>`;
   });
 
   container.innerHTML = html;
+  recalcP2Col(col);
 }
 
 /** '+ 옵션 추가' — 미확정 입력 행을 하나 더 쌓음(서버/저장 없음) */
@@ -982,7 +1000,6 @@ function confirmP2ColOption(col, draftId) {
   _p2ColData[col].opts.push({ id: 'o' + Date.now(), name, type, value: val });
   _p2ColPendingDrafts[col] = (_p2ColPendingDrafts[col] || []).filter((d) => String(d.id) !== did);
   renderP2ColOptions(col);
-  recalcP2Col(col);
 }
 
 /* 옵션 삭제 */
@@ -990,7 +1007,6 @@ function removeP2ColOption(col, optId) {
   if (!_p2ColData[col]) return;
   _p2ColData[col].opts = _p2ColData[col].opts.filter(o => o.id !== optId);
   renderP2ColOptions(col);
-  recalcP2Col(col);
 }
 
 /* 옵션 값 수정 */

@@ -2030,15 +2030,19 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
     except Exception as exc:
         print(f"[au_tga_artg strength/dosage_form 조회 경고] {exc}", flush=True)
 
-    # 8) PDF 보고서 생성 (reportlab) — 서버 디스크 reports/ 에 저장
+    # 8) PDF 보고서 생성 (reportlab) — v3 ReportR1Payload → 서버 디스크 reports/ 에 저장
     pdf_name: str | None = None
     try:
         from report_generator import render_pdf
+        from stage1_schema import build_report_r1_payload_from_pipeline
+
         from datetime import datetime as _dt
+
         _ts = _dt.now().strftime("%Y%m%d_%H%M%S")
         pdf_name = f"au_report_{product_id}_{_ts}.pdf"
         pdf_path = _REPORTS_DIR / pdf_name
-        render_pdf(row, blocks, refs, meta, pdf_path)
+        r1_payload = build_report_r1_payload_from_pipeline(row, blocks, refs, meta)
+        render_pdf(r1_payload, pdf_path)
     except Exception as exc:
         # PDF 실패는 치명적이지 않음 — 응답은 내보내되 pdf_name 은 None
         print(f"[render_pdf error] {exc}", flush=True)

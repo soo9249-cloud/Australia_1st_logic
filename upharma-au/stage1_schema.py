@@ -100,6 +100,158 @@ class ReportR1Payload(BaseModel):
         return self
 
 
+def _format_hs_code(row_hs: Any) -> str:
+    """hs_code_6 숫자/문자열 → 3004.90 형식."""
+    s = str(row_hs or "").strip()
+    if len(s) >= 6:
+        return f"{s[:4]}.{s[4:6]}"
+    return s
+
+
+def _sanitize_legacy_jargon(text: str) -> str:
+    """Haiku/레거시에 섞인 v2 금지 표현 제거 (검증 통과용)."""
+    if not text:
+        return ""
+    s = text
+    s = re.sub(r"가능\s*\(\s*High\s+Confidence\s*\)", "가능", s, flags=re.IGNORECASE)
+    s = re.sub(r"Case\s+[A-F]\b", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"Case\s+[1-6]\b", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"신뢰도\s*[0-9]+%?", "", s)
+    s = re.sub(r"\s{2,}", " ", s)
+    return s.strip()
+
+
+def _format_reference_prices(row: dict[str, Any]) -> str:
+    """au_products 행의 AEMP·DPMQ → 참고 가격 문장."""
+    parts: list[str] = []
+    for key, label in (
+        ("aemp_aud", "AEMP(정부 승인 출고가)"),
+        ("dpmq_aud", "DPMQ(최대처방량 총약가)"),
+    ):
+        v = row.get(key)
+        if v is None or str(v).strip() == "":
+            continue
+        try:
+            parts.append(f"{label} {float(v):.2f} AUD")
+        except (TypeError, ValueError):
+            parts.append(f"{label} {v} AUD")
+    return " · ".join(parts) if parts else ""
+
+
+def _verdict_from_export_viable(ev_raw: Any) -> Literal["가능", "조건부", "불가"]:
+    ev = str(ev_raw or "").lower().strip()
+    if ev == "viable":
+        return "가능"
+    if ev == "not_viable":
+        return "불가"
+    return "조건부"
+
+
+def default_stage1_db_references() -> list[DbReference]:
+    """1공정 PDF 4-2 기본 행 (크롤·검색 소스 설명)."""
+    return [
+        DbReference(
+            name="TGA ARTG",
+            desc_ko="호주 치료제 등록부(ARTG) — 등록번호·스폰서·스케줄 조회",
+            url="https://www.tga.gov.au/products/australian-register-therapeutic-goods-artg",
+        ),
+        DbReference(
+            name="PBS Schedule",
+            desc_ko="호주 의약품 급여제도 공개 스케줄 — item code·DPMQ·innovator 지위",
+            url="https://www.pbs.gov.au",
+        ),
+        DbReference(
+            name="Chemist Warehouse",
+            desc_ko="호주 최대 약국 체인 소매가 참조",
+            url="https://www.chemistwarehouse.com.au",
+        ),
+        DbReference(
+            name="NSW Health Procurement",
+            desc_ko="뉴사우스웨일스주 공공조달 계약 공시",
+            url="https://buy.nsw.gov.au",
+        ),
+    ]
+
+
+def build_report_r1_payload_from_pipeline(
+    row: dict[str, Any],
+    blocks: dict[str, Any],
+    refs: list[dict[str, Any]],
+    meta: dict[str, Any],
+) -> ReportR1Payload:
+    """`/api/report/generate` 파이프라인 산출물 → ReportR1Payload (PDF v3).
+
+    - block2_channel → 경쟁 브랜드·유통(호주 프롬프트와 정합)
+    - block2_regulatory + block2_procurement → 규제·조달 통합
+    - block2_trade → 무역 단독
+    """
+    from datetime import datetime
+
+    b = {k: str(v or "") for k, v in (blocks or {}).items()}
+
+    ev = meta.get("export_viable", row.get("export_viable"))
+    verdict = _verdict_from_export_viable(ev)
+
+    reason = str(meta.get("reason_code") or row.get("reason_code") or "").strip()
+    if not reason:
+        reason = str(row.get("situation_summary") or "").strip()
+    verdict_summary = _sanitize_legacy_jargon(reason)[:200]
+
+    st = str(row.get("strength") or "").strip()
+    form = str(row.get("dosage_form") or "").strip()
+    strength_form = " ".join(x for x in (st, form) if x).strip() or "—"
+
+    reg = b.get("block2_regulatory", "").strip()
+    proc = b.get("block2_procurement", "").strip()
+    basis_regulatory = _sanitize_legacy_jargon("\n\n".join(x for x in (reg, proc) if x))
+
+    paper_models: list[PerplexityPaper] = []
+    for r in refs or []:
+        if not isinstance(r, dict):
+            continue
+        paper_models.append(
+            PerplexityPaper(
+                title=_sanitize_legacy_jargon(str(r.get("title") or "")),
+                source=_sanitize_legacy_jargon(str(r.get("source") or "")),
+                url=str(r.get("url") or "").strip(),
+                summary_ko=_sanitize_legacy_jargon(
+                    str(
+                        r.get("korean_summary")
+                        or r.get("summary_ko")
+                        or r.get("tldr")
+                        or r.get("abstract")
+                        or ""
+                    )
+                ),
+            )
+        )
+
+    data: dict[str, Any] = {
+        "product_name": _sanitize_legacy_jargon(
+            str(row.get("product_name_ko") or row.get("product_name") or "—")
+        ),
+        "inn": _sanitize_legacy_jargon(str(row.get("inn_normalized") or "—")),
+        "strength_form": _sanitize_legacy_jargon(strength_form),
+        "hs_code": _format_hs_code(row.get("hs_code_6")),
+        "report_date": datetime.now().strftime("%Y-%m-%d"),
+        "verdict": verdict,
+        "verdict_summary": verdict_summary,
+        "basis_market_medical": _sanitize_legacy_jargon(b.get("block2_market", "")),
+        "basis_competitor_brands": _sanitize_legacy_jargon(b.get("block2_channel", "")),
+        "basis_regulatory": basis_regulatory,
+        "basis_trade": _sanitize_legacy_jargon(b.get("block2_trade", "")),
+        "basis_reference_price": _sanitize_legacy_jargon(_format_reference_prices(row)),
+        "strat_entry_channel": _sanitize_legacy_jargon(b.get("block3_channel", "")),
+        "strat_partner_direction": _sanitize_legacy_jargon(b.get("block3_partners", "")),
+        "strat_price_positioning": _sanitize_legacy_jargon(b.get("block3_pricing", "")),
+        "strat_risk_conditions": _sanitize_legacy_jargon(b.get("block3_risks", "")),
+        "refs_perplexity": paper_models,
+        "refs_databases": default_stage1_db_references(),
+    }
+
+    return ReportR1Payload.model_validate(data)
+
+
 def coerce_dict_to_report_r1(raw: dict[str, Any]) -> ReportR1Payload:
     """CC v2 페이로드 등 느슨한 dict → v3 필드로 보정 (누락 시 빈 문자열).
 
@@ -142,13 +294,13 @@ def coerce_dict_to_report_r1(raw: dict[str, Any]) -> ReportR1Payload:
     if "basis_competitor_brands" not in d:
         d["basis_competitor_brands"] = str(blocks.get("block2_channel") or "")
     if "basis_regulatory" not in d:
-        d["basis_regulatory"] = str(blocks.get("block2_regulatory") or "")
+        reg = str(blocks.get("block2_regulatory") or "").strip()
+        proc = str(blocks.get("block2_procurement") or "").strip()
+        d["basis_regulatory"] = "\n\n".join(x for x in (reg, proc) if x)
     if "basis_trade" not in d:
-        proc = str(blocks.get("block2_procurement") or "")
-        trade = str(blocks.get("block2_trade") or "")
-        d["basis_trade"] = "\n".join(x for x in (trade, proc) if x).strip()
+        d["basis_trade"] = str(blocks.get("block2_trade") or "")
     if "basis_reference_price" not in d:
-        d["basis_reference_price"] = ""
+        d["basis_reference_price"] = _format_reference_prices(d)
 
     if "strat_entry_channel" not in d:
         d["strat_entry_channel"] = str(blocks.get("block3_channel") or "")
@@ -182,8 +334,8 @@ def coerce_dict_to_report_r1(raw: dict[str, Any]) -> ReportR1Payload:
                 )
         d["refs_perplexity"] = out
 
-    if "refs_databases" not in d:
-        d["refs_databases"] = []
+    if "refs_databases" not in d or not d.get("refs_databases"):
+        d["refs_databases"] = [m.model_dump() for m in default_stage1_db_references()]
 
     # 최종: 알 수 없는 키는 무시하기 위해 ReportR1Payload 허용 키만 통과
     allowed = set(ReportR1Payload.model_fields.keys())

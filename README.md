@@ -4,6 +4,8 @@
 
 **에이전트/개발 규칙·용어·구조 상세:** 저장소 루트 [`CLAUDE.md`](./CLAUDE.md)
 
+> **문서 정리 예정:** 운영·개발 안내를 `README.md`와 `CLAUDE.md`에 나눠 두었는데, 이후 **한 번에 읽는 통합 README**로 재구성할 계획입니다. 당시에는 중복·충돌 문단을 정리하고, 본 파일은 “실행·배포·업로드 지침”, `CLAUDE.md`는 “규칙·톤·스키마·에이전트”에 가깝게 유지하는 방향을 검토합니다.
+
 ---
 
 ## 동작 원칙 (요약)
@@ -83,6 +85,28 @@ python au_crawler.py --product au-hydrine-004
 ```
 
 품목 지정은 **`--product` / `--all` 만 사용**합니다. 과거에 쓰이던 `PRODUCT_FILTER` 환경변수는 제거되었으며, 동시 요청 시 프로세스 간 경합을 피하기 위해 **코드에서 읽지 않습니다.** Render 대시보드에 `PRODUCT_FILTER` 를 넣어 두었다면 **삭제해도 됩니다** (웹의 `/api/crawl` 은 요청 body 의 `product_id` 만 사용).
+
+---
+
+## 가격 자료 PDF 업로드 (지침)
+
+크롤로 AEMP·소매가 등을 못 잡았을 때, 사용자가 **가격 근거 PDF**를 올리면 서버가 숫자를 추출해 `au_products`에 반영하는 경로입니다. **엔드포인트:** `POST /api/crawl/price-pdf-upload` (`multipart`: `product_code`, `pdf_file`).
+
+### 처리 순서 (내부 동작)
+
+1. **텍스트 추출:** `pypdf` → 실패 시 `pdfplumber`. **스캔 PDF**(글자 레이어 없음)는 텍스트가 안 나와 실패할 수 있음.
+2. **구조화 추출:** 추출된 텍스트(앞부분 약 3만 자)를 **Claude Haiku**에 넘기고, 도구 호출로 다음을 채움 — `aemp_aud`, `dpmq_aud`, `retail_price_aud`, `currency_detected`(AUD/USD/KRW/EUR/unknown), `confidence` 등.
+3. **환산:** 통화가 AUD가 아니면 서버에서 환율 로직으로 AUD에 맞춤.
+4. **DB:** 해당 `product_code` 행에 가격 필드 갱신, `retail_estimation_method`는 `user_pdf_upload` 등으로 표시.
+
+### 업로드용 PDF 작성 시 권장 사항
+
+- **가능하면 “선택 가능한 텍스트” PDF** (워드·엑셀에서 PDF 저장, 또는 PBS/공식 자료의 텍스트 레이어). **스캔 이미지만 있는 PDF**는 OCR 없이는 추출이 안 됨.
+- 문서 안에 **AEMP(정부 승인 출고가)·DPMQ·소매가** 등 **어떤 가격인지 구분되는 표기**가 있으면 추출이 안정적임. 통화는 **AUD**를 명시하거나, 원문 통화를 적어 두면 `currency_detected`에 반영됨.
+- **한 PDF에는 가능하면 한 품목**만 (여러 품목이 섞이면 모델이 혼동할 수 있음).
+- **페이지 수:** 서버 정책상 **최대 4페이지**까지 업로드 허용(비용·처리 시간 통제). `requirements.txt`에 `pypdf`·`pdfplumber`가 설치되어 있어야 페이지 수·텍스트 추출이 동작함.
+
+> **참고:** 수출가격 전략 탭의 **PDF 직접 업로드**(`/api/p2/upload` → `product_code`는 UI 상단 품목 선택값)은 **별도 저장 경로**이며, 위 “가격 자료 PDF 업로드”와 목적이 다를 수 있음. 통합 지침은 향후 UI·문서 정리 시 한 장으로 묶을 예정.
 
 ---
 

@@ -134,6 +134,9 @@ def extract_inn_set(*texts: str | None) -> frozenset[str]:
                 p,
                 flags=re.IGNORECASE,
             ).strip()
+            # 꼬리 숫자 제거 — "omega-3-acid ethyl esters 90" → "omega-3-acid ethyl esters"
+            # (TGA active_ingredients 에 순도/용량이 성분명 뒤에 단위 없이 붙는 케이스)
+            p = re.sub(r"\s+\d[\d.,]*\s*$", "", p).strip()
             # 여러 공백 정규화
             p = re.sub(r"\s+", " ", p)
             base = strip_inn_salt(p)

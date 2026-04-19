@@ -904,11 +904,11 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
 
     story.append(Paragraph(_rx("1-3. 시장 구도"), s_sub))
     ms = v8.market_structure
+    ms_tag = _rx(ms.tag or "")
+    ms_para = _rx(_trunc(ms.paragraph))
+    ms_text = f"<b>{ms_tag}</b>. {ms_para}" if ms_tag else ms_para
     story.append(
-        Paragraph(
-            _rx(f"<b>{_rx(ms.tag)}</b>. {_rx(_trunc(ms.paragraph))}"),
-            s_cell,
-        )
+        Paragraph(ms_text, s_cell)
     )
     story.append(Spacer(1, 8))
 
@@ -957,21 +957,12 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         leading=17,
         wordWrap="CJK",
     )
-    cross_tbl = Table(
-        [
-            [
-                Paragraph(
-                    _rx(
-                        "※ 본 표는 호주 정부 공시 약가 스냅샷입니다. "
-                        "호주 수출가(FOB · 본선 인도가) 3시나리오 역산은 동일 품목의 "
-                        "「한국유나이티드제약 호주 수출전략 제안서」를 참조해 주시길 바랍니다."
-                    ),
-                    cross_ps,
-                )
-            ]
-        ],
-        colWidths=[CONTENT_W],
+    cross_text = (
+        "※ 본 표는 호주 정부 공시 약가 스냅샷입니다. "
+        "호주 수출가(FOB · 본선 인도가) 3시나리오 역산은 동일 품목의 "
+        "<b>「한국유나이티드제약 호주 수출전략 제안서」</b>를 참조해 주시길 바랍니다."
     )
+    cross_tbl = Table([[Paragraph(cross_text, cross_ps)]], colWidths=[CONTENT_W])
     cross_tbl.setStyle(
         TableStyle(
             [
@@ -1059,10 +1050,15 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     else:
         story.append(Paragraph(_rx("참고자료 없음"), s_small))
 
-    apx = Table(
-        [[Paragraph(_rx("[별첨 B] 용어집 — TGA · PBS · PBAC · ARTG 등은 시장분석 정식 용어를 따릅니다."), s_small)]],
-        colWidths=[CONTENT_W],
-    )
+    apx_rows = [
+        [Paragraph(_rx("[별첨 B] 용어집"), s_small)],
+        [Paragraph(_rx("TGA (Therapeutic Goods Administration · 호주 식약처): 의약품 심사·허가·안전관리 주관 기관"), s_small)],
+        [Paragraph(_rx("ARTG (Australian Register of Therapeutic Goods · 호주 의약품 등록부): 호주 공급 전 등록 필수 목록"), s_small)],
+        [Paragraph(_rx("PBS (Pharmaceutical Benefits Scheme · 호주 의약품급여제도): 공적 급여 목록·가격 체계"), s_small)],
+        [Paragraph(_rx("PBAC (Pharmaceutical Benefits Advisory Committee · 약값 심사 위원회): PBS 등재·가격 심의·권고"), s_small)],
+        [Paragraph(_rx("AEMP / DPMQ: 정부 승인 출고가 / 최대처방량 기준 약가"), s_small)],
+    ]
+    apx = Table(apx_rows, colWidths=[CONTENT_W])
     apx.setStyle(
         TableStyle(
             [
@@ -1588,10 +1584,6 @@ def render_p2_pdf(
     C_BORDER = colors.HexColor("#D0D7E3")
     C_ALT    = colors.HexColor("#F4F6F9")
     C_BAR    = colors.HexColor("#3a4a5e")
-    # 시나리오 강조색
-    C_PENE   = colors.HexColor("#2563EB")  # 저가 진입 — 파랑
-    C_REF    = colors.HexColor("#059669")  # 기준가   — 초록
-    C_PREM   = colors.HexColor("#D97706")  # 프리미엄 — 오렌지
 
     COL1 = CONTENT_W * 0.26
     COL2 = CONTENT_W * 0.74
@@ -1605,6 +1597,8 @@ def render_p2_pdf(
                 alignment=TA_CENTER, textColor=colors.HexColor("#6B7280"))
     s_section = ps("P2Section", fontName=bold_font, fontSize=11, textColor=C_NAVY,
                    leading=15, spaceBefore=10, spaceAfter=6)
+    s_sub = ps("P2SubSection", fontName=bold_font, fontSize=10, textColor=C_NAVY,
+               leading=14, spaceBefore=8, spaceAfter=4)
     s_cell_h = ps("P2CellH", fontName=bold_font, fontSize=10, textColor=C_NAVY,
                   leading=14, wordWrap="CJK")
     s_cell = ps("P2Cell", fontName=base_font, fontSize=10, textColor=C_BODY,
@@ -1710,11 +1704,11 @@ def render_p2_pdf(
     ]
     sum_ex: list[tuple] = [("BACKGROUND", (0, 0), (-1, 0), C_NAVY)]
     scen_labels = [
-        ("aggressive", "저가 진입", "scenario_penetration", C_PENE),
-        ("average", "기준가 ★권장", "scenario_reference", C_REF),
-        ("conservative", "프리미엄", "scenario_premium", C_PREM),
+        ("aggressive", "저가 진입", "scenario_penetration"),
+        ("average", "기준가 ★권장", "scenario_reference"),
+        ("conservative", "프리미엄", "scenario_premium"),
     ]
-    for idx, (skey, label_ko, p2k, _c) in enumerate(scen_labels, 1):
+    for idx, (skey, label_ko, p2k) in enumerate(scen_labels, 1):
         sc = scenarios.get(skey, {})
         fob_aud = float(sc.get("fob_aud") or 0)
         fob_usd = fob_aud * aud_usd_rate
@@ -1735,116 +1729,216 @@ def render_p2_pdf(
     story.append(Paragraph(_rx("수출 가격 3시나리오 — 결론 요약"), s_section))
     story.append(sum_tbl)
     story.append(Spacer(1, 8))
+    cross_top = Table(
+        [[
+            Paragraph(
+                "※ 호주 시장 전반 분석·경쟁 브랜드·규제 리스크 안내는 동일 품목의 "
+                "<b>「한국유나이티드제약 호주 시장분석 보고서」</b>를 참조해 주시길 바랍니다.",
+                s_cell_sm,
+            )
+        ]],
+        colWidths=[CONTENT_W],
+    )
+    cross_top.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f5f8fb")),
+                ("LINEBEFORE", (0, 0), (0, -1), 3, colors.HexColor("#7a9bc1")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
+    )
+    story.append(cross_top)
+    story.append(Spacer(1, 10))
+
+    avg_sc = scenarios.get("average", {}) if isinstance(scenarios, dict) else {}
+    dispatch_inputs = dispatch.get("inputs") or {}
+    listed_aemp_aud = avg_sc.get("aemp_aud") or dispatch_inputs.get("aemp_aud")
+    adjusted_aemp_aud = avg_sc.get("adjusted_aemp_aud")
+    if adjusted_aemp_aud is None and listed_aemp_aud is not None:
+        try:
+            adjusted_aemp_aud = float(listed_aemp_aud) * 1.2
+        except Exception:
+            adjusted_aemp_aud = None
+    alpha_pct: float | None = None
+    if listed_aemp_aud and adjusted_aemp_aud:
+        try:
+            alpha_pct = (float(adjusted_aemp_aud) / float(listed_aemp_aud) - 1.0) * 100.0
+        except Exception:
+            alpha_pct = None
+    if alpha_pct is None:
+        alpha_pct = 20.0
+
+    # ── 1. 기준 가격 산정 근거 (v5 양식 순서) ──
+    story.append(Paragraph(_rx("1. 기준 가격 산정 근거"), s_section))
+    story.append(Paragraph(_rx("1-1. 공시 AEMP (출발점)"), s_sub))
     story.append(
         Paragraph(
             _rx(
-                "※ 호주 시장 전반 분석은 동일 품목의 「한국유나이티드제약 호주 시장분석 보고서」를 참조해 주시길 바랍니다."
+                "호주 공시 가격 중 AEMP (정부 승인 출고가)를 수출가 역산의 출발점으로 사용합니다. "
+                f"현재 분석 기준 환율은 {fx_str}입니다."
             ),
-            s_cell_sm,
+            s_cell,
         )
     )
-    story.append(Spacer(1, 10))
 
-    # Phase 4.3-v3 — 0. 제품 정보 (자사 vs 호주 PBS 시장) — render_pdf 와 동일
-    story.extend(_build_product_info_flowables(
-        row,
-        content_width=CONTENT_W,
-        base_font=base_font,
-        bold_font=bold_font,
-    ))
+    story.append(Paragraph(_rx("1-2. 시장 보정 (α)"), s_sub))
+    story.append(
+        Paragraph(
+            _rx(
+                f"공시 AEMP에 시장 보정 계수 α={alpha_pct:.0f}%를 반영해 기준 AEMP를 산정합니다. "
+                "이는 공시가격과 실거래가격 괴리를 완화하기 위한 내부 기준입니다."
+            ),
+            s_cell,
+        )
+    )
 
-    # ── 1. 추출정보 요약 ──
-    story.append(Paragraph(_rx("1. 품목 추출정보"), s_section))
-    story.append(_kv_table([
-        ("분석 경로", f"Logic {logic} ({seed.get('pricing_case', '—')})"),
-        ("적용 환율", fx_str),
-        ("AI 분석",  p2_blocks.get("block_extract", "—")),
-    ]))
+    story.append(Paragraph(_rx("1-3. 기준 AEMP (최종값)"), s_sub))
+    calc_rows = [
+        [Paragraph(_rx("항목"), s_cell_h), Paragraph(_rx("값"), s_cell_h), Paragraph(_rx("설명"), s_cell_h)],
+        [
+            Paragraph(_rx("공시 AEMP"), s_cell),
+            Paragraph(
+                _rx(
+                    f"AUD {float(listed_aemp_aud):.2f} / USD {float(listed_aemp_aud) * aud_usd_rate:.2f}"
+                ) if listed_aemp_aud is not None else _rx("미확보"),
+                s_cell,
+            ),
+            Paragraph(_rx("호주 공시 출고가"), s_cell),
+        ],
+        [
+            Paragraph(_rx("시장 보정 계수 (α)"), s_cell),
+            Paragraph(_rx(f"+{alpha_pct:.0f}%"), s_cell),
+            Paragraph(_rx("공시가와 실거래 괴리 보정"), s_cell),
+        ],
+        [
+            Paragraph(_rx("기준 AEMP (보정 완료)"), s_cell_h),
+            Paragraph(
+                _rx(
+                    f"AUD {float(adjusted_aemp_aud):.2f} / USD {float(adjusted_aemp_aud) * aud_usd_rate:.2f}"
+                ) if adjusted_aemp_aud is not None else _rx("미확보"),
+                s_cell_h,
+            ),
+            Paragraph(_rx("3시나리오 FOB 산정 출발점"), s_cell),
+        ],
+    ]
+    calc_tbl = Table(calc_rows, colWidths=[CONTENT_W * 0.26, CONTENT_W * 0.30, CONTENT_W * 0.44])
+    calc_tbl.setStyle(
+        TableStyle(
+            _base_style(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), C_NAVY),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("BACKGROUND", (0, 3), (-1, 3), colors.HexColor("#fff8e1")),
+                ]
+            )
+        )
+    )
+    story.append(calc_tbl)
     story.append(Spacer(1, 6))
 
-    # ── 2. FOB 3시나리오 역산 ──
-    story.append(Paragraph(_rx("2. FOB 3시나리오 역산"), s_section))
-    story.append(Paragraph(_rx(p2_blocks.get("block_fob_intro", "")), s_cell))
+    # ── 2. 호주 수출가(FOB) 3시나리오 ──
+    story.append(Paragraph(_rx("2. 호주 수출가(FOB) 3시나리오"), s_section))
+    story.append(Paragraph(_rx("2-1. 호주 제약 스폰서 유통 구조"), s_sub))
+    story.append(
+        Paragraph(
+            _rx(
+                "한국유나이티드제약(제조) → 호주 스폰서(수입상) → 도매상 → 약국 → 환자 구조를 따릅니다. "
+                "수입상 마진이 커질수록 제조사 FOB는 낮아지는 구조입니다."
+            ),
+            s_cell,
+        )
+    )
+
+    story.append(Paragraph(_rx("2-2. 계산식"), s_sub))
+    formula_rows = [
+        [Paragraph(_rx("1단계"), s_cell_h), Paragraph(_rx("공시 AEMP × (1+α) = 기준 AEMP"), s_cell)],
+        [Paragraph(_rx("2단계"), s_cell_h), Paragraph(_rx("기준 AEMP ÷ (1 + 수입상 마진%) = FOB"), s_cell)],
+    ]
+    formula_tbl = Table(formula_rows, colWidths=[CONTENT_W * 0.14, CONTENT_W * 0.86])
+    formula_tbl.setStyle(
+        TableStyle(
+            _base_style(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff8e1")),
+                    ("LINEBEFORE", (0, 0), (0, -1), 2, colors.HexColor("#c4a84e")),
+                ]
+            )
+        )
+    )
+    story.append(formula_tbl)
     story.append(Spacer(1, 6))
 
-    # 시나리오 테이블: 시나리오명 | FOB (AUD) | FOB (KRW) | 마진% | 전략 근거
-    w_name = CONTENT_W * 0.18
-    w_aud  = CONTENT_W * 0.13
-    w_krw  = CONTENT_W * 0.15
-    w_mar  = CONTENT_W * 0.10
-    w_rea  = CONTENT_W * 0.44
-
+    story.append(Paragraph(_rx("2-3. 시나리오 비교 표"), s_sub))
     sce_header = [
         Paragraph("시나리오", s_hdr),
-        Paragraph("FOB (AUD)", s_hdr),
-        Paragraph("FOB (KRW)", s_hdr),
-        Paragraph("마진%", s_hdr),
-        Paragraph("전략 근거", s_hdr),
+        Paragraph("핵심 수치", s_hdr),
+        Paragraph("전략", s_hdr),
     ]
     sce_rows: list[list] = [sce_header]
     sce_extras: list[tuple] = [("BACKGROUND", (0, 0), (-1, 0), C_NAVY)]
-    scenario_colors = [C_PENE, C_REF, C_PREM]
-
-    for idx, (key, label, block_key) in enumerate(_SCENARIO_LABELS, 1):
-        sc = scenarios.get(key, {})
-        fob_aud = sc.get("fob_aud", 0)
-        fob_krw = sc.get("fob_krw", 0)
-        margin = sc.get("importer_margin_pct", "—")
-        reason = p2_blocks.get(block_key, "—")
-        sce_rows.append([
-            Paragraph(_rx(label), s_cell_h),
-            Paragraph(f"${fob_aud:.2f}" if fob_aud else "—", s_cell),
-            Paragraph(f"₩{fob_krw:,.0f}" if fob_krw else "—", s_cell),
-            Paragraph(f"{margin}%", s_cell),
-            Paragraph(_rx(_trunc(reason, 300)), s_cell),
-        ])
+    short_labels = {
+        "aggressive": "저가 진입 (Penetration)",
+        "average": "기준가 (Reference, 권장)",
+        "conservative": "프리미엄 (Premium)",
+    }
+    for idx, (key, _label, block_key) in enumerate(_SCENARIO_LABELS, 1):
+        sc = scenarios.get(key, {}) if isinstance(scenarios, dict) else {}
+        fob_aud = float(sc.get("fob_aud") or 0)
+        fob_krw = float(sc.get("fob_krw") or (fob_aud * aud_krw_rate))
+        fob_usd = fob_aud * aud_usd_rate
+        margin_val = sc.get("importer_margin_pct")
+        try:
+            margin_num = float(margin_val)
+            margin_txt = f"{margin_num:.0f}%"
+        except Exception:
+            margin_num = None
+            margin_txt = "—"
+        formula_txt = "계산식 정보 없음"
+        if adjusted_aemp_aud is not None and margin_num is not None:
+            formula_txt = f"{float(adjusted_aemp_aud):.2f} ÷ (1 + {margin_num:.0f}%)"
+        nums = (
+            f"수입상 마진 {margin_txt}\n"
+            f"FOB USD {fob_usd:.2f}\n"
+            f"AUD {fob_aud:.2f} / KRW {fob_krw:,.0f}원\n"
+            f"= {formula_txt}"
+        )
+        sce_rows.append(
+            [
+                Paragraph(_rx(short_labels.get(key, key)), s_cell_h),
+                Paragraph(_rx(nums), s_cell),
+                Paragraph(_rx(_trunc(p2_blocks.get(block_key, "—"), 420)), s_cell),
+            ]
+        )
         if idx % 2 == 0:
             sce_extras.append(("BACKGROUND", (0, idx), (-1, idx), C_ALT))
-
-    sce_tbl = Table(sce_rows, colWidths=[w_name, w_aud, w_krw, w_mar, w_rea])
+    sce_tbl = Table(sce_rows, colWidths=[CONTENT_W * 0.20, CONTENT_W * 0.27, CONTENT_W * 0.53])
     sce_tbl.setStyle(TableStyle(_base_style(sce_extras)))
     story.append(sce_tbl)
     story.append(Spacer(1, 8))
 
-    # ── 3. 권장 진입 전략 ──
-    story.append(Paragraph(_rx("3. 권장 진입 전략"), s_section))
-    story.append(_kv_table([
-        ("전략 요약", p2_blocks.get("block_strategy", "—")),
-    ]))
+    # ── 3. 본 품목 유의사항 ──
+    story.append(Paragraph(_rx("3. 본 품목 유의사항"), s_section))
+    story.append(Paragraph(_rx("3-1. 처방 물량 제한 (급여 조건)"), s_sub))
+    story.append(Paragraph(_rx(_trunc(p2_blocks.get("block_risks", "—"), 1200)), s_cell))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(_rx("3-2. 수출 조건"), s_sub))
+    story.append(
+        Paragraph(
+            _rx(
+                "FOB(본선 인도가) 조건에서 한국유나이티드제약의 역할은 한국 항구 선적 시점까지입니다. "
+                "국제 운송·호주 통관·현지 등재 실무는 스폰서(수입상)와 협의가 필요합니다."
+            ),
+            s_cell,
+        )
+    )
+    story.append(Spacer(1, 8))
 
-    story.append(PageBreak())
-
-    # ── Page 2 ──
-
-    # ── 4. 리스크 분석 ──
-    story.append(Paragraph(_rx("4. 리스크 분석"), s_section))
-    story.append(_kv_table([
-        ("리스크 요약", p2_blocks.get("block_risks", "—")),
-    ]))
-    story.append(Spacer(1, 6))
-
-    # ── 5. 경쟁사 포지셔닝 ──
-    story.append(Paragraph(_rx("5. 경쟁사 포지셔닝"), s_section))
-    competitors = seed.get("competitor_brands_on_pbs") or []
-    comp_text = ", ".join(competitors) if competitors else "경쟁 브랜드 미확인"
-    story.append(_kv_table([
-        ("PBS 등재 경쟁사", comp_text),
-        ("포지셔닝 분석", p2_blocks.get("block_positioning", "—")),
-    ]))
-    story.append(Spacer(1, 6))
-
-    # ── 6. 산출 조건 및 면책 ──
-    story.append(Paragraph(_rx("6. 산출 조건 및 면책사항"), s_section))
-
-    # 경고 사항
+    # ── 분석 근거 및 용어 정리 박스 ──
     warn_text = " / ".join(w for w in warnings if w) if warnings else "없음"
-    cond_rows: list[tuple[str, str]] = [
-        ("pricing_case", seed.get("pricing_case", "—")),
-        ("confidence", str(seed.get("confidence_score", "—"))),
-        ("경고 사항", warn_text),
-        ("면책 조항", disclaimer),
-    ]
-    # 규제 플래그
     flags = []
     if seed.get("pbac_superiority_required"):
         flags.append("PBAC 임상우월성(superiority) 입증 필요")
@@ -1854,9 +1948,35 @@ def render_p2_pdf(
         flags.append("Section 19A 일시수입 경로")
     if seed.get("commercial_withdrawal_flag"):
         flags.append("Commercial Withdrawal 이력")
-    if flags:
-        cond_rows.append(("규제 플래그", " / ".join(flags)))
-
-    story.append(_kv_table(cond_rows))
+    flag_text = " / ".join(flags) if flags else "없음"
+    footer_rows = [
+        [
+            Paragraph(
+                (
+                    "<b>분석 근거 및 용어 정리</b><br/>"
+                    f"· 분석 경로: Logic {logic} ({_rx(str(seed.get('pricing_case', '—')))} )<br/>"
+                    f"· 적용 환율: {_rx(fx_str)}<br/>"
+                    f"· 경고 사항: {_rx(warn_text)}<br/>"
+                    f"· 규제 플래그: {_rx(flag_text)}<br/>"
+                    f"· 면책 조항: {_rx(_trunc(disclaimer or '없음', 500))}"
+                ),
+                s_cell_sm,
+            )
+        ]
+    ]
+    footer_tbl = Table(footer_rows, colWidths=[CONTENT_W])
+    footer_tbl.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fafaf7")),
+                ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#e5e5dd")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+            ]
+        )
+    )
+    story.append(footer_tbl)
 
     doc.build(story)

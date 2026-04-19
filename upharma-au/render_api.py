@@ -1174,6 +1174,11 @@ _CLAUDE_SYSTEM_PROMPT = (
     "한국어 존댓말('-합니다', '-습니다', '-해주시길 바랍니다')로 채웁니다.\n\n"
     "보고서 제목은 고정: 「한국유나이티드제약 호주 시장분석 보고서」에 대응합니다.\n"
     "회사 표기는 '한국유나이티드제약'만 사용합니다 (UPharma 금지).\n\n"
+    "【판정 정합】\n"
+    "- verdict.category 는 크롤 JSON의 export_viable 과 논리적으로 맞춥니다: "
+    "viable → 가능, conditional → 조건부, not_viable → 불가. "
+    "export_viable 가 비어 있으면 조건부로 두고 근거를 서술합니다.\n"
+    "- verdict.narrative 에는 reason_code(있을 경우)와 PBS/TGA 판단 요지를 녹입니다.\n\n"
     "【계층 필드】\n"
     "- verdict.category: 가능 | 조건부 | 불가 중 하나.\n"
     "- verdict.narrative: 판정 근거 3~4문장.\n"
@@ -1181,14 +1186,20 @@ _CLAUDE_SYSTEM_PROMPT = (
     "- market_overview.disease_block: 질환 설명 배열 {name_ko, short_en, plain_desc}.\n"
     "- competitor_brands: {role, detail} 배열 — role 예: 오리지널|제네릭 대표|자사 브랜드 상태.\n"
     "- market_structure: {paragraph, tag} — tag 예: 제네릭 경쟁 구도|오리지널 독점|블루오션.\n"
-    "- price_snapshot: aemp_aud, aemp_usd, dpmq_aud, dpmq_usd, market_class, pbs_code (문자열, 크롤 값 반영).\n"
+    "- price_snapshot: aemp_aud, aemp_usd, dpmq_aud, dpmq_usd, market_class, pbs_code 는 **문자열**로, "
+    "pbs_price_aud·pbs_dpmq·pbs_item_code 등 크롤 필드와 숫자·코드가 일치하도록 옮깁니다. "
+    "값이 없으면 '미확보' 또는 '크롤 데이터 없음'으로 적고 숫자를 지어내지 않습니다.\n"
     "- entry_strategy: channel, partner_direction, rationale.\n"
     "- regulatory_risk: artg_paragraph, pbac_paragraph, prescription_limit_paragraph.\n"
+    "  (ARTG·TGA·PBAC·PBS 등 첫 등장 시 한국어 괄호로 풀어 씁니다.)\n"
     "- fast_track_applies: boolean.\n"
     "- operational_risk, product_specific_risk: 문단 (없으면 operational은 서술, product_specific_risk는 '해당 없음' 가능).\n"
-    "- references: {num, source, citation, summary, body_position} 배열 — 본문 각주 순서와 일치.\n\n"
-    "【영어 약어】 첫 등장 시 'AEMP (Approved Ex-Manufacturer Price · 정부 승인 출고가)' 형식으로 풀이합니다.\n"
-    "【환각 금지】 크롤 JSON에 없는 숫자·코드·브랜드명을 만들지 않습니다.\n"
+    "- references: {num, source, citation, summary, body_position} 배열 — 크롤·공개 출처만. "
+    "허구 기관명 금지. 최소 1개 이상, row 에 근거가 있으면 PBS Schedule / TGA ARTG 등으로 적습니다.\n\n"
+    "【영어 약어】 첫 등장 시 예: "
+    "'AEMP (Approved Ex-Manufacturer Price · 정부 승인 출고가)', "
+    "'DPMQ (Dispensed Price for Maximum Quantity · 최대처방량 기준 약가)' 형식으로 풀이합니다.\n"
+    "【환각 금지】 크롤 JSON에 없는 숫자·코드·브랜드명·가격을 만들지 않습니다.\n"
     "【마크다운 금지】 **, #, 백틱, 링크 문법 사용하지 않습니다.\n"
 )
 
@@ -1201,16 +1212,17 @@ def _claude_blocks_schema():
 
 
 def _row_summary_for_llm(row: dict[str, Any]) -> dict[str, Any]:
-    """LLM 프롬프트에 넣을 21개 지정 컬럼 + product_name_ko 를 추려서 반환."""
+    """LLM 프롬프트에 넣을 지정 컬럼 + 판정·가격 출처 보조 필드를 추려서 반환."""
     keys = [
-        "product_name_ko",                                              # 품목 식별용
-        "artg_status", "artg_number", "tga_schedule", "tga_sponsor",    # TGA (4)
+        "product_name_ko",
+        "product_code",  # DB 품목 코드 (있으면)
+        "artg_status", "artg_number", "tga_schedule", "tga_sponsor",
         "pbs_listed", "pbs_item_code", "pbs_price_aud", "pbs_dpmq",
         "pbs_patient_charge", "pbs_brand_name", "pbs_innovator",
-        "pbs_formulary",                                                # PBS (8)
-        "retail_price_aud", "price_source_name",                        # Chemist (2)
-        "export_viable", "reason_code", "nsw_note",                     # 판정/NSW (3)
-        "inn_normalized", "dosage_form", "strength", "hs_code_6",       # 품목 메타 (4)
+        "pbs_formulary",
+        "retail_price_aud", "price_source_name", "retail_estimation_method",
+        "export_viable", "reason_code", "nsw_note",
+        "inn_normalized", "dosage_form", "strength", "hs_code_6",
     ]
     return {k: row.get(k) for k in keys}
 
@@ -1375,9 +1387,12 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, Any]
 
     # Decimal 등 비JSON 타입 직렬화 (수출전략 Haiku 경로와 동일)
     user_content = (
-        "다음 품목의 크롤링 데이터를 해석하여 시장분석 보고서 v8 계층 JSON을 작성합니다.\n"
-        "존댓말을 사용합니다. price_snapshot 의 약가·코드는 크롤 JSON의 "
-        "pbs_price_aud, pbs_dpmq, pbs_item_code 등 실제 필드와 일치시킵니다.\n\n"
+        "다음 품목의 크롤링 데이터를 해석하여 시장분석 보고서 v8 계층 JSON(tool: emit_market_analysis_v8)을 작성합니다.\n"
+        "【필수】\n"
+        "- export_viable 값과 verdict.category 를 위 시스템 지침대로 정합시킵니다.\n"
+        "- price_snapshot 은 pbs_price_aud·pbs_dpmq·pbs_item_code 등과 수치·코드가 어긋나지 않게 옮깁니다.\n"
+        "- 소매가는 retail_estimation_method(추정 근거)가 있으면 서술에 반영합니다.\n"
+        "- 데이터가 비어 있는 항목은 환각으로 채우지 말고 '미확보' 등으로 명시합니다.\n\n"
         "```json\n"
         + _json.dumps(_row_summary_for_llm(row), ensure_ascii=False, indent=2, default=str)
         + "\n```"
@@ -1402,7 +1417,10 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, Any]
         user_content=user_content,
         schema_cls=ReportBlocks,
         tool_name="emit_market_analysis_v8",
-        tool_description="시장분석 v8 계층 JSON (MarketAnalysisV8) 단일 객체 반환",
+        tool_description=(
+            "호주 시장분석 보고서 v8 — MarketAnalysisV8 스키마 단일 객체. "
+            "크롤 JSON 수치와 verdict·price_snapshot 정합 필수."
+        ),
         usage_log_fn=_log_usage,
     )
 
@@ -1428,19 +1446,24 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "(3) fob_calculator 가 이미 계산한 3시나리오 FOB 결과를 종합해 "
     "'수출 전략 제안서'에 들어갈 한국어 보고서체 블록 8개를 작성함.\n\n"
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    "【시나리오 키 매핑 — 반드시 준수】\n"
+    "dispatch.scenarios 는 aggressive / average / conservative 세 키를 가짐. "
+    "본문 필드와의 대응은 다음과 같음 (수입상 마진 % 는 stage2 기본 프리셋: aggressive 30%, average 20%, conservative 10%).\n"
+    "  · scenario_penetration  ← scenarios.aggressive.fob_aud  (저가 FOB 진입 · Penetration)\n"
+    "  · scenario_reference    ← scenarios.average.fob_aud     (기준 FOB · Reference)\n"
+    "  · scenario_premium      ← scenarios.conservative.fob_aud (고 FOB · Premium)\n"
+    "각 scenario_* 문장에는 해당 키의 fob_aud 를 AUD 소수 둘째 자리로 반드시 인용함.\n\n"
     "【필드 정의】\n"
     "  block_extract        : 1문단(3~5문장). 제품명·참고가(AEMP 또는 retail)·TGA/PBS 판정 요약.\n"
-    "  block_fob_intro      : 1문단(3~5문장). 왜 본 품목이 Logic A(AEMP) 또는 Logic B(Private) 로 역산되는지, "
-    "                         3시나리오 가격대(AUD 범위)를 한 줄로 언급.\n"
-    "  scenario_penetration : '저가 진입 시나리오 (Penetration Pricing)' 근거 1~2문장.\n"
-    "    — 경쟁사보다 낮은 가격으로 수출, 초기 시장점유율 빠르게 확대 후 필요 시 가격 인상. (수입상 마진 10% 전제.)\n"
-    "  scenario_reference   : '기준가 기반 시나리오 (Reference Pricing)' 근거 1~2문장.\n"
-    "    — 타깃 시장의 경쟁사 가격이나 시장 평균 가격을 준거로 자사 FOB 설정, 협상 기반 마련. (마진 20% 전제.)\n"
-    "  scenario_premium     : '프리미엄 시나리오 (Premium Pricing)' 근거 1~2문장.\n"
-    "    — 제품 혁신성·고품질 강조, 경쟁제품보다 높은 가격 책정으로 고마진 추구, 고객층 차별화. (마진 30% 전제.)\n"
-    "  block_strategy       : 1문단(3~5문장). 권장 진입 채널(PBS/Private/Hospital)·파트너 발굴·타이밍.\n"
-    "  block_risks          : 1문단(3~5문장). 규제(TGA/PBAC/Section 19A 등)·환율·경쟁 리스크.\n"
-    "  block_positioning    : 1문단(3~5문장). 경쟁사 브랜드(seed.competitor_brands_on_pbs) 대비 포지셔닝.\n\n"
+    "  block_fob_intro      : 1문단(3~5문장). dispatch.logic(A 또는 B 등)에 따라 왜 해당 역산 경로인지, "
+    "                         3시나리오 FOB(AUD) 범위를 한 줄로 요약.\n"
+    "  scenario_penetration : 저가 진입(Penetration) 근거 1~2문장 — aggressive.fob_aud 인용.\n"
+    "  scenario_reference   : 기준가(Reference) 근거 1~2문장 — average.fob_aud 인용.\n"
+    "  scenario_premium     : 프리미엄(Premium) 근거 1~2문장 — conservative.fob_aud 인용.\n"
+    "  block_strategy       : 1문단(3~5문장). 권장 진입 채널·파트너·타이밍. "
+    "segment=public 이면 PBS·공공조달 언어, private 이면 소매·약국·비급여 채널 언어를 사용.\n"
+    "  block_risks          : 1문단(3~5문장). 규제(TGA·PBAC·PBS 등)·환율·경쟁 리스크.\n"
+    "  block_positioning    : 1문단(3~5문장). seed 의 경쟁 브랜드 정보가 있으면 대비 포지셔닝.\n\n"
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     "【어투 규칙 — 절대 준수】\n"
     "- 한국어 존댓말('-합니다', '-습니다', '-됩니다', '-해주시길 바랍니다')로 작성합니다.\n"
@@ -1448,23 +1471,23 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "- 이모지·특수 기호 장식 금지.\n\n"
     "【환각 방지 규칙 — 최우선】\n"
     "- 제공된 JSON(row/seed/dispatch) 에 없는 숫자·법령·브랜드는 **창작 금지**.\n"
-    "- dispatch.scenarios 의 fob_aud 숫자는 scenario_* 필드 본문에 **반드시 소수점 2자리로 인용**.\n"
-    "- pricing_case / pbs_section / pbs_status / flags 값을 논리 전개에 활용하되 값 자체를 정확히 읽음.\n"
+    "- 위 매핑에 따라 각 scenario_* 에 해당 시나리오의 fob_aud 만 인용 (다른 키의 숫자를 섞지 않음).\n"
+    "- pricing_case / warnings / disclaimer 를 논리에 반영.\n"
     "- 모르는 사실은 '제공 데이터 범위 외로 별도 검증 필요함' 으로 명시.\n\n"
     "【품질 규칙】\n"
     "1. block_extract · block_fob_intro · block_strategy · block_risks · block_positioning 각 3~5문장 (문장 40~100자).\n"
-    "2. scenario_* 3개는 각각 1~2문장 (60~140자), 반드시 fob_aud 값 인용.\n"
-    "3. segment='public'(PBS/공공) 이면 PBS AEMP/DPMQ 기반 논리, 'private' 이면 소매가 역산·비급여 채널 논리로 각각 다르게 작성.\n"
+    "2. scenario_* 3개는 각각 1~2문장 (60~140자), 지정된 fob_aud 인용 필수.\n"
+    "3. segment='public' 이면 PBS·AEMP/DPMQ 중심, 'private' 이면 소매·GST·약국 유통 중심으로 서술.\n"
     "4. 'TBD', '추후', '데이터 부족' 같은 플레이스홀더 금지.\n"
     "5. 8개 필드 모두 반드시 채움.\n\n"
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     "【Few-shot 좋은 예시 — scenario_penetration】\n"
-    "입력: fob_aud=26.50, product=Hydrine, pricing_case=DIRECT, pbs_section=85\n"
-    '  "Hydrine FOB AUD 26.50(수입상 마진 10% 전제)로 PBS General Schedule 내 제네릭 경쟁 가격대 하단에 '
-    "진입, 초기 처방 점유율 확보를 우선함. 제조원가 대비 마진은 제한적이나 채널 확보 후 물량 확대 가능함.\"\n\n"
+    "입력: scenarios.aggressive.fob_aud=26.50, pricing_case=DIRECT, segment=public\n"
+    '  "PBS 기준 역산 FOB AUD 26.50(aggressive 시나리오·수입상 마진 프리셋 반영)으로 General Schedule '
+    "내 제네릭 대비 하단 가격대에 진입, 초기 처방 점유 확보를 우선함.\"\n\n"
     "【Few-shot 나쁜 예시 — 금지】\n"
-    '  "저가로 진입하면 좋습니다. 마진이 낮아요." '
-    "→ FOB 숫자 미인용, 보고서체 위반, 근거 빈약. 절대 이렇게 작성 금지."
+    '  "저가로 진입하면 좋습니다." '
+    "→ FOB 숫자 미인용. 절대 금지."
 )
 
 
@@ -1535,9 +1558,11 @@ def _haiku_p2_blocks(
 
     user_content = (
         "다음 품목의 (1) 크롤링 row, (2) Stage 2 seed, (3) fob_calculator dispatch 결과를 종합해 "
-        "수출 전략 제안서용 8개 블록을 한국어 존댓말로 작성합니다.\n"
-        "scenario_* 3개는 dispatch.scenarios 안의 fob_aud 값을 반드시 소수점 2자리로 인용.\n"
-        f"segment={segment!r} 기준으로 공공/민간 채널 프레이밍 구분.\n\n"
+        "수출 전략 제안서용 8개 블록(tool: emit_p2_blocks)을 한국어 존댓말로 작성합니다.\n"
+        "【숫자 인용】 scenario_penetration ← scenarios.aggressive.fob_aud, "
+        "scenario_reference ← scenarios.average.fob_aud, "
+        "scenario_premium ← scenarios.conservative.fob_aud (각각 AUD 소수 둘째 자리).\n"
+        f"segment={segment!r} (public=공공 PBS 조달, private=민간 소매·약국) 에 맞춰 용어를 선택.\n\n"
         "```json\n"
         + _json.dumps(
             {
@@ -1572,7 +1597,10 @@ def _haiku_p2_blocks(
         user_content=user_content,
         schema_cls=P2Blocks,
         tool_name="emit_p2_blocks",
-        tool_description="수출 전략 제안서용 8개 블록을 구조화해서 반환",
+        tool_description=(
+            "수출 전략 제안서 8블록 — dispatch.scenarios aggressive/average/conservative 의 "
+            "fob_aud 를 scenario_penetration/reference/premium 에 각각 인용."
+        ),
         usage_log_fn=_log_usage_p2,
     )
 

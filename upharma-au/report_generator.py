@@ -751,6 +751,10 @@ def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
             .replace(">", "&gt;")
         )
 
+    def _xml_amp_only(text: str) -> str:
+        """reportlab Paragraph XML — 신뢰된 본문만. & 만 이스케이프 (<b> 등 태그 유지)."""
+        return (text or "").replace("&", "&amp;")
+
     def _trunc(text: str, limit: int = 2000) -> str:
         s = (text or "").strip()
         return s if len(s) <= limit else s[:limit] + "…"
@@ -975,7 +979,7 @@ def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
             [Paragraph(_rx("[별첨] 규제 기관 용어집"), s_apx_title)],
             [
                 Paragraph(
-                    _rx(
+                    _xml_amp_only(
                         "<b>TGA</b> (Therapeutic Goods Administration): "
                         "호주 의약품·의료기기 허가·감독 기관. 수입·유통을 위해 "
                         "<b>ARTG(호주 의약품 등록)</b> 등록이 선행됩니다."
@@ -985,7 +989,7 @@ def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
             ],
             [
                 Paragraph(
-                    _rx(
+                    _xml_amp_only(
                         "<b>PBS</b> (Pharmaceutical Benefits Scheme, "
                         "호주 의약품급여제도): 공적 급여로 등재 품목은 "
                         "<b>AEMP(정부 승인 출고가)</b>·<b>DPMQ(최대처방량 총약가)</b> "
@@ -996,7 +1000,7 @@ def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
             ],
             [
                 Paragraph(
-                    _rx(
+                    _xml_amp_only(
                         "<b>PBAC</b> (Pharmaceutical Benefits Advisory Committee, "
                         "약값 심사 위원회): PBS 등재·가격 재조정 안건을 심의·권고합니다."
                     ),
@@ -1005,7 +1009,7 @@ def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
             ],
             [
                 Paragraph(
-                    _rx(
+                    _xml_amp_only(
                         "<b>ABF</b> (Australian Border Force): "
                         "의약품 수입 통관·국경·세관 관련 절차를 관할합니다."
                     ),

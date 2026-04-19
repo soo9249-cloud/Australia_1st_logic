@@ -20,7 +20,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from stage1_schema import ReportR1Payload, coerce_dict_to_report_r1
+from stage1_schema import (
+    MarketAnalysisV8,
+    ReportR1Payload,
+    coerce_dict_to_report_r1,
+)
 
 ROOT = Path(__file__).resolve().parent
 
@@ -626,8 +630,411 @@ def _render_pdf_legacy_v2(
     doc.build(story)
 
 
+def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
+    """시장분석 양식 v8 (04191700) — 판정 카드·시장 개요·가격 스냅샷·별첨."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (
+        PageBreak,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+
+    raw = payload.v8_market_analysis or {}
+    v8 = MarketAnalysisV8.model_validate(raw)
+
+    W, _H = A4
+    MARGIN_X = 24 * mm
+    MARGIN_Y = 20 * mm
+    CONTENT_W = W - 2 * MARGIN_X
+
+    base_font = _register_korean_font()
+    bold_font = f"{base_font}-Bold"
+    if base_font == "HYSMyeongJo-Medium":
+        bold_font = base_font
+
+    C_TITLE = colors.HexColor("#3a4a5e")
+    C_BAR = colors.HexColor("#3a4a5e")
+    C_BODY = colors.HexColor("#1A1A1A")
+    C_MUTED = colors.HexColor("#888888")
+    C_BORDER = colors.HexColor("#d0d0d0")
+    C_HDR_BG = colors.HexColor("#f0f3f7")
+    C_VERDICT_BG = colors.HexColor("#eef7ee")
+    C_VERDICT_BR = colors.HexColor("#b6d6b8")
+    C_VERDICT_LEFT = colors.HexColor("#3f8b42")
+    C_APPENDIX_BG = colors.HexColor("#fafaf7")
+    C_APPENDIX_BR = colors.HexColor("#e5e5dd")
+    C_FT_BG = colors.HexColor("#fff8e1")
+
+    COL_L = CONTENT_W * 0.28
+    COL_R = CONTENT_W * 0.72
+
+    def ps(name: str, **kw: Any) -> ParagraphStyle:
+        return ParagraphStyle(name, **kw)
+
+    s_title = ps(
+        "V8Title",
+        fontName=bold_font,
+        fontSize=26,
+        leading=30,
+        alignment=TA_CENTER,
+        textColor=C_TITLE,
+        spaceAfter=6,
+    )
+    s_date = ps(
+        "V8Date",
+        fontName=base_font,
+        fontSize=13,
+        leading=16,
+        alignment=TA_CENTER,
+        textColor=C_MUTED,
+        spaceAfter=10,
+    )
+    s_sec = ps(
+        "V8Sec",
+        fontName=bold_font,
+        fontSize=18,
+        textColor=C_TITLE,
+        spaceBefore=14,
+        spaceAfter=6,
+    )
+    s_sub = ps(
+        "V8Sub",
+        fontName=bold_font,
+        fontSize=15,
+        textColor=C_TITLE,
+        spaceBefore=12,
+        spaceAfter=4,
+    )
+    s_cell = ps(
+        "V8Cell",
+        fontName=base_font,
+        fontSize=13,
+        textColor=C_BODY,
+        leading=18,
+        wordWrap="CJK",
+    )
+    s_bar = ps(
+        "V8Bar",
+        fontName=bold_font,
+        fontSize=15,
+        textColor=colors.white,
+        leading=18,
+        wordWrap="CJK",
+    )
+    s_cell_h = ps(
+        "V8H",
+        fontName=bold_font,
+        fontSize=9,
+        textColor=C_TITLE,
+        leading=13,
+        wordWrap="CJK",
+    )
+    s_small = ps(
+        "V8Sm",
+        fontName=base_font,
+        fontSize=12,
+        textColor=colors.HexColor("#555555"),
+        leading=17,
+        wordWrap="CJK",
+    )
+
+    def _rx(text: str) -> str:
+        return (
+            (text or "")
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+
+    def _trunc(text: str, limit: int = 4000) -> str:
+        s = (text or "").strip()
+        return s if len(s) <= limit else s[:limit] + "…"
+
+    def _base_tbl_style(extras: list | None = None) -> list:
+        cmds: list = [
+            ("GRID", (0, 0), (-1, -1), 1, C_BORDER),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+            ("BACKGROUND", (0, 0), (0, -1), C_HDR_BG),
+        ]
+        if extras:
+            cmds.extend(extras)
+        return cmds
+
+    doc = SimpleDocTemplate(
+        str(out_path),
+        pagesize=A4,
+        leftMargin=MARGIN_X,
+        rightMargin=MARGIN_X,
+        topMargin=MARGIN_Y,
+        bottomMargin=MARGIN_Y,
+        title=f"한국유나이티드제약 호주 시장분석 보고서 — {payload.product_name}",
+    )
+    story: list = []
+
+    story.append(Paragraph(_rx("한국유나이티드제약 호주 시장분석 보고서"), s_title))
+    story.append(Paragraph(_rx(payload.report_date or datetime.now().strftime("%Y-%m-%d")), s_date))
+
+    bar_en = f"{payload.inn} · {payload.strength_form}  |  HS CODE: {payload.hs_code or '—'}"
+    bar_tbl = Table([[Paragraph(_rx(bar_en), s_bar)]], colWidths=[CONTENT_W])
+    bar_tbl.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), C_BAR),
+                ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
+    )
+    story.append(bar_tbl)
+    story.append(Spacer(1, 16))
+
+    vc = v8.verdict.category
+    verdict_tbl = Table(
+        [
+            [
+                Paragraph(
+                    _rx(f"진출 적합 판정: {vc}"),
+                    ps("V8VTitle", fontName=bold_font, fontSize=15, textColor=colors.HexColor("#2a5f2d"), leading=20),
+                )
+            ],
+            [Paragraph(_rx(_trunc(v8.verdict.narrative, 3500)), s_cell)],
+        ],
+        colWidths=[CONTENT_W - 24],
+    )
+    verdict_tbl.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), C_VERDICT_BG),
+                ("BOX", (0, 0), (-1, -1), 1, C_VERDICT_BR),
+                ("LINEBEFORE", (0, 0), (0, -1), 5, C_VERDICT_LEFT),
+                ("LEFTPADDING", (0, 0), (-1, -1), 16),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 16),
+                ("TOPPADDING", (0, 0), (-1, -1), 12),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+            ]
+        )
+    )
+    story.append(verdict_tbl)
+    story.append(Spacer(1, 20))
+
+    story.append(Paragraph(_rx("1. 시장 현황"), s_sec))
+    story.append(Paragraph(_rx("1-1. 시장 개요"), s_sub))
+    story.append(Paragraph(_rx(_trunc(v8.market_overview.paragraph)), s_cell))
+    story.append(Spacer(1, 8))
+    for d in v8.market_overview.disease_block:
+        term_txt = f"<b>{_rx(d.name_ko)}</b> ({_rx(d.short_en)}) — {_rx(d.plain_desc)}"
+        term_box = Table([[Paragraph(term_txt, s_small)]], colWidths=[CONTENT_W])
+        term_box.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f7f8fa")),
+                    ("LINEBEFORE", (0, 0), (0, -1), 3, colors.HexColor("#c0cada")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                    ("TOPPADDING", (0, 0), (-1, -1), 10),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ]
+            )
+        )
+        story.append(term_box)
+        story.append(Spacer(1, 6))
+
+    story.append(Paragraph(_rx("1-2. 경쟁 브랜드 현황"), s_sub))
+    cb_rows: list[list] = [
+        [Paragraph(_rx("구분"), s_cell_h), Paragraph(_rx("상세"), s_cell_h)]
+    ]
+    ex_cb: list[tuple] = [("BACKGROUND", (0, 0), (-1, 0), C_HDR_BG)]
+    for i, c in enumerate(v8.competitor_brands, 1):
+        cb_rows.append(
+            [
+                Paragraph(_rx(c.role), s_cell),
+                Paragraph(_rx(_trunc(c.detail, 1200)), s_cell),
+            ]
+        )
+        if i % 2 == 0:
+            ex_cb.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor("#f7f9fc")))
+    if len(cb_rows) == 1:
+        cb_rows.append([Paragraph(_rx("—"), s_cell), Paragraph(_rx("해당 데이터 없음"), s_cell)])
+    cb_t = Table(cb_rows, colWidths=[CONTENT_W * 0.28, CONTENT_W * 0.72])
+    cb_t.setStyle(TableStyle(_base_tbl_style(ex_cb)))
+    story.append(cb_t)
+
+    story.append(Paragraph(_rx("1-3. 시장 구도"), s_sub))
+    ms = v8.market_structure
+    story.append(
+        Paragraph(
+            _rx(f"<b>{_rx(ms.tag)}</b>. {_rx(_trunc(ms.paragraph))}"),
+            s_cell,
+        )
+    )
+    story.append(Spacer(1, 8))
+
+    story.append(Paragraph(_rx("1-4. 공시 가격 스냅샷"), s_sub))
+    psn = v8.price_snapshot
+    snap_rows: list[list] = [
+        [
+            Paragraph(_rx("항목"), s_cell_h),
+            Paragraph(_rx("공시값"), s_cell_h),
+            Paragraph(_rx("출처"), s_cell_h),
+        ]
+    ]
+    snap_ex: list[tuple] = [("BACKGROUND", (0, 0), (-1, 0), C_HDR_BG)]
+    snap_data = [
+        (
+            "AEMP (Approved Ex-Manufacturer Price · 정부 승인 출고가)",
+            f"AUD {psn.aemp_aud} / USD {psn.aemp_usd}",
+            f"PBS item {psn.pbs_code}",
+        ),
+        (
+            "DPMQ (Dispensed Price for Maximum Quantity · 최대 처방량 총약가)",
+            f"AUD {psn.dpmq_aud} / USD {psn.dpmq_usd}",
+            f"PBS item {psn.pbs_code}",
+        ),
+        ("시장 구분", psn.market_class, "—"),
+    ]
+    for i, (a, b, c) in enumerate(snap_data, 1):
+        snap_rows.append(
+            [
+                Paragraph(_rx(a), s_cell),
+                Paragraph(_rx(b), s_cell),
+                Paragraph(_rx(c), s_cell),
+            ]
+        )
+        if i % 2 == 0:
+            snap_ex.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor("#f7f9fc")))
+    st_snap = Table(snap_rows, colWidths=[CONTENT_W * 0.36, CONTENT_W * 0.28, CONTENT_W * 0.36])
+    st_snap.setStyle(TableStyle(_base_tbl_style(snap_ex)))
+    story.append(st_snap)
+    story.append(Spacer(1, 14))
+
+    story.append(Paragraph(_rx("2. 진출 전략"), s_sec))
+    es = v8.entry_strategy
+    story.append(Paragraph(_rx("2-1. 진입 채널"), s_sub))
+    story.append(Paragraph(_rx(_trunc(es.channel)), s_cell))
+    story.append(Paragraph(_rx("2-2. 우선 접근 파트너 방향성"), s_sub))
+    story.append(Paragraph(_rx(_trunc(es.partner_direction)), s_cell))
+    story.append(Paragraph(_rx("2-3. 협력 우선순위 근거"), s_sub))
+    story.append(Paragraph(_rx(_trunc(es.rationale)), s_cell))
+    story.append(Spacer(1, 14))
+
+    story.append(Paragraph(_rx("3. 유의사항 · 리스크"), s_sec))
+    rr = v8.regulatory_risk
+    story.append(Paragraph(_rx("3-1. 규제 리스크"), s_sub))
+    story.append(
+        Paragraph(
+            _rx(
+                _trunc(
+                    "\n\n".join(
+                        x
+                        for x in (
+                            rr.artg_paragraph,
+                            rr.pbac_paragraph,
+                            rr.prescription_limit_paragraph,
+                        )
+                        if x
+                    ),
+                    4000,
+                )
+            ),
+            s_cell,
+        )
+    )
+    if v8.fast_track_applies:
+        ft_tbl = Table(
+            [[Paragraph(_rx("▶ 패스트트랙(COR 등) 경로는 시장분석 본문 기준으로 검토합니다."), s_small)]],
+            colWidths=[CONTENT_W],
+        )
+        ft_tbl.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), C_FT_BG),
+                    ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#e0d4a0")),
+                    ("LINEBEFORE", (0, 0), (0, -1), 3, colors.HexColor("#c4a84e")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                    ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ]
+            )
+        )
+        story.append(Spacer(1, 8))
+        story.append(ft_tbl)
+
+    story.append(Paragraph(_rx("3-2. 데이터 · 운영 유의사항"), s_sub))
+    story.append(Paragraph(_rx(_trunc(v8.operational_risk)), s_cell))
+    story.append(Paragraph(_rx("3-3. 본 품목 고유 리스크"), s_sub))
+    story.append(Paragraph(_rx(_trunc(v8.product_specific_risk)), s_cell))
+
+    story.append(PageBreak())
+
+    story.append(Paragraph(_rx("[별첨 A] 참고자료"), s_sec))
+    if v8.references:
+        for r in v8.references:
+            line = f"[{r.num}] {_trunc(r.citation, 500)} — {_trunc(r.summary, 800)}"
+            story.append(Paragraph(_rx(line), s_small))
+            story.append(Spacer(1, 8))
+    elif payload.refs_perplexity:
+        for i, p in enumerate(payload.refs_perplexity, 1):
+            line = f"[{i}] {p.source or ''} — {_trunc(p.title, 400)} — {_trunc(p.summary_ko, 800)}"
+            story.append(Paragraph(_rx(line), s_small))
+            story.append(Spacer(1, 8))
+    else:
+        story.append(Paragraph(_rx("참고자료 없음"), s_small))
+
+    apx = Table(
+        [[Paragraph(_rx("[별첨 B] 용어집 — TGA · PBS · PBAC · ARTG 등은 시장분석 정식 용어를 따릅니다."), s_small)]],
+        colWidths=[CONTENT_W],
+    )
+    apx.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), C_APPENDIX_BG),
+                ("BOX", (0, 0), (-1, -1), 1, C_APPENDIX_BR),
+                ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                ("TOPPADDING", (0, 0), (-1, -1), 12),
+            ]
+        )
+    )
+    story.append(Spacer(1, 16))
+    story.append(apx)
+    story.append(Spacer(1, 16))
+    disc = ps(
+        "V8Disc",
+        fontName=base_font,
+        fontSize=11,
+        textColor=C_MUTED,
+        alignment=TA_CENTER,
+        leading=14,
+    )
+    story.append(
+        Paragraph(
+            _rx(
+                "본 보고서는 공개된 데이터 기반 자동 생성본이며, "
+                "실제 계약·가격 협상 시 현지 파트너와의 별도 확인이 필요합니다."
+            ),
+            disc,
+        )
+    )
+    doc.build(story)
+
+
 def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
     """시장분석 보고서 PDF v3 — HS CODE·4블록·참고자료 표·별첨 용어집."""
+    if payload.v8_market_analysis:
+        _render_pdf_market_v8(payload, out_path)
+        return
+
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.enums import TA_CENTER
@@ -1113,7 +1520,7 @@ def render_p2_pdf(
     C_BODY   = colors.HexColor("#1A1A1A")
     C_BORDER = colors.HexColor("#D0D7E3")
     C_ALT    = colors.HexColor("#F4F6F9")
-    C_BAR    = colors.HexColor("#1E3A5F")
+    C_BAR    = colors.HexColor("#3a4a5e")
     # 시나리오 강조색
     C_PENE   = colors.HexColor("#2563EB")  # 저가 진입 — 파랑
     C_REF    = colors.HexColor("#059669")  # 기준가   — 초록
@@ -1203,16 +1610,14 @@ def render_p2_pdf(
     )
     story: list = []
 
-    # ── 타이틀 + 날짜 ──
-    story.append(Paragraph(_rx("수출 전략 제안 보고서"), s_title))
+    # ── 타이틀 + 날짜 (양식 v5) ──
+    story.append(Paragraph(_rx("한국유나이티드제약 호주 수출전략 제안서"), s_title))
     story.append(Paragraph(_rx(generated_date), s_date))
     story.append(Spacer(1, 6))
 
-    # ── 제품 바 (시장조사 PDF와 동일 디자인) ──
+    # ── 제품 바 — 영문 성분·제형 중심 (양식 샘플과 동일 계열) ──
     str_form = " ".join(x for x in [strength, dosage] if x).strip()
-    bar_txt = f"{product_name} — {inn}"
-    if str_form:
-        bar_txt += f" · {str_form}"
+    bar_txt = f"{inn} · {str_form}" if str_form else str(inn)
     bar_txt += f"  |  HS CODE: {hs}"
     bar_tbl = Table([[Paragraph(_rx(bar_txt), s_bar)]], colWidths=[CONTENT_W])
     bar_tbl.setStyle(TableStyle([
@@ -1224,6 +1629,53 @@ def render_p2_pdf(
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]))
     story.append(bar_tbl)
+    story.append(Spacer(1, 8))
+
+    aud_usd_rate = float(aud_usd) if aud_usd else 0.64
+    aud_krw_rate = float(aud_krw) if aud_krw else 893.0
+
+    sum_rows: list[list] = [
+        [
+            Paragraph(_rx("시나리오"), s_hdr),
+            Paragraph(_rx("수출가 (FOB)"), s_hdr),
+            Paragraph(_rx("핵심 전략"), s_hdr),
+        ]
+    ]
+    sum_ex: list[tuple] = [("BACKGROUND", (0, 0), (-1, 0), C_NAVY)]
+    scen_labels = [
+        ("aggressive", "저가 진입", "scenario_penetration", C_PENE),
+        ("average", "기준가 ★권장", "scenario_reference", C_REF),
+        ("conservative", "프리미엄", "scenario_premium", C_PREM),
+    ]
+    for idx, (skey, label_ko, p2k, _c) in enumerate(scen_labels, 1):
+        sc = scenarios.get(skey, {})
+        fob_aud = float(sc.get("fob_aud") or 0)
+        fob_usd = fob_aud * aud_usd_rate
+        fob_krw = float(sc.get("fob_krw") or (fob_aud * aud_krw_rate))
+        price_line = f"USD {fob_usd:.2f} / KRW {fob_krw:,.0f}원"
+        reason = p2_blocks.get(p2k, "—")
+        sum_rows.append(
+            [
+                Paragraph(_rx(label_ko), s_cell_h),
+                Paragraph(_rx(price_line), s_cell),
+                Paragraph(_rx(_trunc(reason, 400)), s_cell),
+            ]
+        )
+        if idx % 2 == 0:
+            sum_ex.append(("BACKGROUND", (0, idx), (-1, idx), C_ALT))
+    sum_tbl = Table(sum_rows, colWidths=[CONTENT_W * 0.22, CONTENT_W * 0.33, CONTENT_W * 0.45])
+    sum_tbl.setStyle(TableStyle(_base_style(sum_ex)))
+    story.append(Paragraph(_rx("수출 가격 3시나리오 — 결론 요약"), s_section))
+    story.append(sum_tbl)
+    story.append(Spacer(1, 6))
+    story.append(
+        Paragraph(
+            _rx(
+                "※ 호주 시장 전반 분석은 동일 품목의 「한국유나이티드제약 호주 시장분석 보고서」를 참조해 주시길 바랍니다."
+            ),
+            s_cell_sm,
+        )
+    )
     story.append(Spacer(1, 10))
 
     # Phase 4.3-v3 — 0. 제품 정보 (자사 vs 호주 PBS 시장) — render_pdf 와 동일

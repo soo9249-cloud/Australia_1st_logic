@@ -1065,83 +1065,35 @@ def get_exchange() -> JSONResponse:
 _CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 
 _CLAUDE_SYSTEM_PROMPT = (
-    "당신은 한국유나이티드제약(주)의 호주 수출 전문 애널리스트임. "
-    "주어진 품목의 실제 크롤링 데이터(TGA·PBS·Chemist·NSW)만을 근거로 "
-    "아래 10개 필드를 한국어 보고서체로 작성함.\n\n"
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    "Block 2 — 수출 적합성 판정 근거 (5축):\n"
-    "  block2_market      : 시장/의료 현황 분석 (호주 시장에서 해당 품목의 위치, 경쟁 구도)\n"
-    "  block2_regulatory  : TGA/ARTG 규제 분석 (등재번호·스케줄·라이선스 카테고리)\n"
-    "  block2_trade       : KAFTA 관세/무역 분석 (HS 코드별 관세율, 원산지증명)\n"
-    "  block2_procurement : PBS/NSW 조달 경로 분석 (급여·DPMQ·공공조달 경로)\n"
-    "  block2_channel     : 유통 채널 분석 (스폰서·브랜드·도매 구조)\n\n"
-    "Block 3 — 시장 진출 전략 (4축):\n"
-    "  block3_channel     : 진입 채널 전략 (PBS vs 민간 vs 병원 입찰)\n"
-    "  block3_pricing     : 가격 포지셔닝 전략 (PBS DPMQ 기준 FOB 역산 고려)\n"
-    "  block3_partners    : 파트너 발굴 전략 (현지 스폰서·유통사 섭외 방향)\n"
-    "  block3_risks       : 리스크 및 선결 조건 (TGA 등재 일정·GMP·환율·경쟁)\n\n"
-    "Block 4 — 규제 체크포인트 (5개 법령, 이 품목 실무 영향):\n"
-    "  block4_regulatory : 반드시 아래 번호 형식으로 작성 (프론트 파싱용):\n"
-    "    ① TGA Act 1989: [이 품목 영향 1~2문장]\n"
-    "    ② GMP PIC/S: [이 품목 영향 1~2문장]\n"
-    "    ③ PBS National Health Act 1953: [이 품목 영향 1~2문장]\n"
-    "    ④ KAFTA: [이 품목 영향 1~2문장]\n"
-    "    ⑤ Customs Regulations: [이 품목 영향 1~2문장]\n"
-    "    (①~⑤ 사이 줄바꿈만. 다른 서식·마크다운 금지.)\n\n"
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    "【어투 규칙 — 절대 준수】\n"
-    "- 보고서 문체: 종결어미 '~함', '~임', '~됨', '~가능함', '~필요함'만 사용.\n"
-    "- 금지 종결어미: '~입니다', '~합니다', '~있습니다', '~해요', '~이에요' 일체 금지.\n"
-    "- 마크다운 금지: **굵게**, *기울임*, # 제목, - 리스트, `코드`, [링크]() 전부 X.\n"
-    "- 이모지·특수 기호 장식 금지.\n\n"
-    "【환각 방지 규칙 — 최우선】\n"
-    "- 제공된 JSON 데이터에 없는 숫자·날짜·법령 조항·통계는 **절대 창작 금지**.\n"
-    "- 모르는 사실은 '제공 데이터 범위 외이므로 별도 검증 필요함' 으로 명시.\n"
-    "- 일반 지식을 쓸 때는 연도·출처 기관을 구체적으로 언급하지 말 것 (예: 'WHO 2023 통계' X).\n"
-    "- 제공 데이터의 값이 null 인 필드는 언급하지 말거나 '데이터 미수집'으로 명시.\n\n"
-    "【품질 규칙】\n"
-    "1. Block 2·3 각 필드: 3~5 문장, 각 문장 40~100자.\n"
-    "2. Block 4 각 법령: 1~2 문장.\n"
-    "3. 각 필드에 **제공 데이터의 실제 값 최소 2개** 구체 인용 "
-    "(ARTG 번호, PBS item code, DPMQ, 소매가, 스폰서명 등).\n"
-    "4. '생성 예정', 'TBD', '추후 분석', '데이터 부족' 같은 플레이스홀더 문구 금지.\n"
-    "5. 모든 10개 필드를 반드시 채워서 반환.\n\n"
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    "【Few-shot 좋은 예시】\n"
-    "block2_regulatory (입력: Hydrine, artg_number=313760, tga_sponsor=Medsurge Pharma, pbs_innovator=Y):\n"
-    '  "Hydrine은 ARTG 313760으로 Registered 상태이며, 스폰서 Medsurge Pharma Pty Ltd가 호주 '
-    "내 판매 대행을 수행함. PBS innovator 지위(Y)를 보유하여 참고 의약품 지정 대상에 해당함. "
-    "PIC/S 회원국 한국의 제조시설은 TGA 실사 면제 협의가 가능하여 규제 진입 장벽이 상대적으로 낮음. "
-    '정식 ARTG 등재를 확보한 상태이므로 병렬 수입 가능성 없이 스폰서 경로로만 진입 가능함."\n\n'
-    "【Few-shot 나쁜 예시 — 금지】\n"
-    '  "TGA 규제가 적용됩니다. 등재가 필요해요. 추가 검토가 필요합니다."  '
-    "→ 구체 수치 없음, 보고서체 위반, 빈약함. 절대 이렇게 작성하지 말 것."
+    "당신은 한국유나이티드제약의 호주 수출 전문 애널리스트입니다. "
+    "주어진 크롤링 JSON(TGA·PBS·Chemist·NSW)만 근거로, 아래 계층 필드를 "
+    "한국어 존댓말('-합니다', '-습니다', '-해주시길 바랍니다')로 채웁니다.\n\n"
+    "보고서 제목은 고정: 「한국유나이티드제약 호주 시장분석 보고서」에 대응합니다.\n"
+    "회사 표기는 '한국유나이티드제약'만 사용합니다 (UPharma 금지).\n\n"
+    "【계층 필드】\n"
+    "- verdict.category: 가능 | 조건부 | 불가 중 하나.\n"
+    "- verdict.narrative: 판정 근거 3~4문장.\n"
+    "- market_overview.paragraph: 시장 개요 문단.\n"
+    "- market_overview.disease_block: 질환 설명 배열 {name_ko, short_en, plain_desc}.\n"
+    "- competitor_brands: {role, detail} 배열 — role 예: 오리지널|제네릭 대표|자사 브랜드 상태.\n"
+    "- market_structure: {paragraph, tag} — tag 예: 제네릭 경쟁 구도|오리지널 독점|블루오션.\n"
+    "- price_snapshot: aemp_aud, aemp_usd, dpmq_aud, dpmq_usd, market_class, pbs_code (문자열, 크롤 값 반영).\n"
+    "- entry_strategy: channel, partner_direction, rationale.\n"
+    "- regulatory_risk: artg_paragraph, pbac_paragraph, prescription_limit_paragraph.\n"
+    "- fast_track_applies: boolean.\n"
+    "- operational_risk, product_specific_risk: 문단 (없으면 operational은 서술, product_specific_risk는 '해당 없음' 가능).\n"
+    "- references: {num, source, citation, summary, body_position} 배열 — 본문 각주 순서와 일치.\n\n"
+    "【영어 약어】 첫 등장 시 'AEMP (Approved Ex-Manufacturer Price · 정부 승인 출고가)' 형식으로 풀이합니다.\n"
+    "【환각 금지】 크롤 JSON에 없는 숫자·코드·브랜드명을 만들지 않습니다.\n"
+    "【마크다운 금지】 **, #, 백틱, 링크 문법 사용하지 않습니다.\n"
 )
 
 
 def _claude_blocks_schema():
-    """Pydantic 모델을 지연 로드(임포트 부담 줄이기)."""
-    from pydantic import BaseModel, Field
+    """시장분석 v8 — stage1_schema.MarketAnalysisV8 (단일 tool 호출)."""
+    from stage1_schema import MarketAnalysisV8
 
-    class ReportBlocks(BaseModel):
-        block2_market: str = Field(description="시장·의료 관점 분석 (보고서체 ~함/~임)")
-        block2_regulatory: str = Field(description="규제 관점 분석 (보고서체 ~함/~임)")
-        block2_trade: str = Field(description="무역 관점 분석 (보고서체 ~함/~임)")
-        block2_procurement: str = Field(description="조달 관점 분석 (보고서체 ~함/~임)")
-        block2_channel: str = Field(description="유통 관점 분석 (보고서체 ~함/~임)")
-        block3_channel: str = Field(description="진입 채널 전략 (보고서체 ~함/~임)")
-        block3_pricing: str = Field(description="가격 포지셔닝 전략 (보고서체 ~함/~임)")
-        block3_partners: str = Field(description="파트너·스폰서 전략 (보고서체 ~함/~임)")
-        block3_risks: str = Field(description="리스크·선결 조건 (보고서체 ~함/~임)")
-        block4_regulatory: str = Field(
-            description=(
-                "5개 법령의 이 품목 영향. 반드시 다음 번호 형식으로 작성: "
-                "'① TGA Act 1989: ...\\n② GMP PIC/S: ...\\n③ PBS National Health Act 1953: ...\\n"
-                "④ KAFTA: ...\\n⑤ Customs Regulations: ...' — 보고서체 ~함/~임, 각 법령 1~2문장."
-            )
-        )
-
-    return ReportBlocks
+    return MarketAnalysisV8
 
 
 def _row_summary_for_llm(row: dict[str, Any]) -> dict[str, Any]:
@@ -1175,7 +1127,7 @@ def _anthropic_tool_input_schema(schema_cls: Any) -> dict[str, Any]:
     return _strip_titles(_copy.deepcopy(raw))
 
 
-def _try_parse_blocks_from_assistant_text(text: str, schema_cls: Any) -> dict[str, str] | None:
+def _try_parse_blocks_from_assistant_text(text: str, schema_cls: Any) -> dict[str, Any] | None:
     """tool_use 대신 텍스트로만 JSON 이 온 경우 마지막 수단으로 파싱."""
     import json as _json
     import re
@@ -1218,7 +1170,7 @@ def _claude_messages_tool_blocks(
     tool_name: str,
     tool_description: str,
     usage_log_fn: Any | None = None,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Anthropic Messages API 표준 — tool_use 로 구조화 출력 (OpenAI/parse API 혼용 금지)."""
     import anthropic
     from anthropic.types import TextBlock, ToolUseBlock
@@ -1309,9 +1261,8 @@ def _claude_messages_tool_blocks(
     return parsed.model_dump()
 
 
-def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]:
-    """Anthropic Claude Haiku 4.5 호출. tool_use 로 10 필드 파싱.
-    크롤링 row 의 수치/필드를 읽어 한국어 보고서체 블록을 생성한다."""
+def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, Any]:
+    """Anthropic Claude Haiku 4.5 — 시장분석 v8 계층 스키마 단일 tool 호출."""
     import anthropic
     import json as _json
 
@@ -1320,8 +1271,9 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]
 
     # Decimal 등 비JSON 타입 직렬화 (수출전략 Haiku 경로와 동일)
     user_content = (
-        "다음 품목의 크롤링 데이터를 해석하여 10개 블록을 보고서체(~함/~임)로 작성하라.\n"
-        "실제 숫자/문자열 값(ARTG 번호, DPMQ, PBS item code, 스폰서명 등)을 본문에 반드시 인용.\n\n"
+        "다음 품목의 크롤링 데이터를 해석하여 시장분석 보고서 v8 계층 JSON을 작성합니다.\n"
+        "존댓말을 사용합니다. price_snapshot 의 약가·코드는 크롤 JSON의 "
+        "pbs_price_aud, pbs_dpmq, pbs_item_code 등 실제 필드와 일치시킵니다.\n\n"
         "```json\n"
         + _json.dumps(_row_summary_for_llm(row), ensure_ascii=False, indent=2, default=str)
         + "\n```"
@@ -1345,8 +1297,8 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]
         system=_CLAUDE_SYSTEM_PROMPT,
         user_content=user_content,
         schema_cls=ReportBlocks,
-        tool_name="emit_report_blocks",
-        tool_description="10개 보고서 블록을 구조화해서 반환",
+        tool_name="emit_market_analysis_v8",
+        tool_description="시장분석 v8 계층 JSON (MarketAnalysisV8) 단일 객체 반환",
         usage_log_fn=_log_usage,
     )
 
@@ -1387,8 +1339,7 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "  block_positioning    : 1문단(3~5문장). 경쟁사 브랜드(seed.competitor_brands_on_pbs) 대비 포지셔닝.\n\n"
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     "【어투 규칙 — 절대 준수】\n"
-    "- 보고서 문체: 종결어미 '~함', '~임', '~됨', '~가능함', '~필요함'만 사용.\n"
-    "- 금지 종결어미: '~입니다', '~합니다', '~있습니다', '~해요', '~이에요' 일체 금지.\n"
+    "- 한국어 존댓말('-합니다', '-습니다', '-됩니다', '-해주시길 바랍니다')로 작성합니다.\n"
     "- 마크다운 금지: **굵게**, *기울임*, # 제목, - 리스트, `코드`, [링크]() 전부 X.\n"
     "- 이모지·특수 기호 장식 금지.\n\n"
     "【환각 방지 규칙 — 최우선】\n"
@@ -1480,7 +1431,7 @@ def _haiku_p2_blocks(
 
     user_content = (
         "다음 품목의 (1) 크롤링 row, (2) Stage 2 seed, (3) fob_calculator dispatch 결과를 종합해 "
-        "수출 전략 제안서용 8개 블록을 보고서체(~함/~임) 로 작성하라.\n"
+        "수출 전략 제안서용 8개 블록을 한국어 존댓말로 작성합니다.\n"
         "scenario_* 3개는 dispatch.scenarios 안의 fob_aud 값을 반드시 소수점 2자리로 인용.\n"
         f"segment={segment!r} 기준으로 공공/민간 채널 프레이밍 구분.\n\n"
         "```json\n"
@@ -2027,11 +1978,17 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
     if refs and openai_key:
         refs = _openai_summarize_refs_ko(refs, openai_key)
 
-    # 5) Supabase UPDATE — 공통 6컬럼 제외
+    # 5) Supabase UPDATE — v8 계층이면 flat block2_* 로 변환 후 저장 (프론트·레거시 호환)
     from datetime import datetime, timezone
+
+    from stage1_schema import flatten_v8_to_legacy_blocks, is_v8_market_blocks
+
     generated_at = datetime.now(timezone.utc).isoformat()
+    flat_blocks = (
+        flatten_v8_to_legacy_blocks(blocks) if is_v8_market_blocks(blocks) else blocks
+    )
     update_data: dict[str, Any] = {
-        **blocks,
+        **flat_blocks,
         "perplexity_refs": refs if refs else None,
         "llm_model": _CLAUDE_MODEL,
         "llm_generated_at": generated_at,
@@ -2142,7 +2099,8 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
                 "product_id": product_id,
                 "llm_model": _CLAUDE_MODEL,
                 "llm_generated_at": generated_at,
-                "blocks": blocks,
+                "blocks": flat_blocks,
+                "market_analysis_v8": blocks if is_v8_market_blocks(blocks) else None,
                 "refs_count": len(refs),
                 "refs": refs,
                 "meta": meta,

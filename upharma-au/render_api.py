@@ -923,10 +923,42 @@ def _normalize_news_item(raw: dict[str, Any], link_fallback: str = "") -> dict[s
     }
 
 
-def _parse_perplexity_news_json_array(content: str) -> list[Any] | None:
-    """모델이 마크다운 펜스·전후 설명을 붙여도 JSON 배열만 추출."""
+def _json_loads_news_payload(s: str) -> Any | None:
+    """JSON 파싱 — 후행 쉼표 등 경미한 비표준 출력 1회 보정."""
     import json as _json
 
+    s = (s or "").strip()
+    if not s:
+        return None
+    candidates = [s]
+    # 배열/객체 닫는 괄호 직전의 불필요한 쉼표 제거(모델이 자주 붙임)
+    fixed = re.sub(r",(\s*[\]}])", r"\1", s)
+    if fixed != s:
+        candidates.append(fixed)
+    for cand in candidates:
+        try:
+            return _json.loads(cand)
+        except Exception:
+            continue
+    return None
+
+
+def _normalize_parsed_news_list(parsed: Any) -> list[Any] | None:
+    """배열·{'items':[...]}·단일 기사 객체 등을 리스트로 통일."""
+    if isinstance(parsed, list):
+        return parsed
+    if isinstance(parsed, dict):
+        for key in ("items", "news", "articles", "results", "data"):
+            v = parsed.get(key)
+            if isinstance(v, list):
+                return v
+        if any(parsed.get(k) for k in ("title", "title_ko", "link", "url")):
+            return [parsed]
+    return None
+
+
+def _parse_perplexity_news_json_array(content: str) -> list[Any] | None:
+    """모델이 마크다운 펜스·설명·객체 래핑을 붙여도 뉴스 배열을 복원."""
     s = (content or "").strip()
     if not s:
         return None
@@ -934,21 +966,54 @@ def _parse_perplexity_news_json_array(content: str) -> list[Any] | None:
     fence = re.search(r"```(?:json)?\s*([\s\S]*?)```", s, re.IGNORECASE)
     if fence:
         s = fence.group(1).strip()
-    try:
-        parsed = _json.loads(s)
-        if isinstance(parsed, list):
-            return parsed
-    except Exception:
-        pass
+    parsed = _json_loads_news_payload(s)
+    if parsed is not None:
+        return _normalize_parsed_news_list(parsed)
     try:
         start = s.index("[")
         end = s.rindex("]") + 1
-        parsed = _json.loads(s[start:end])
-        if isinstance(parsed, list):
-            return parsed
-    except Exception:
+        parsed = _json_loads_news_payload(s[start:end])
+        if parsed is not None:
+            return _normalize_parsed_news_list(parsed)
+    except ValueError:
+        pass
+    try:
+        start = s.index("{")
+        end = s.rindex("}") + 1
+        parsed = _json_loads_news_payload(s[start:end])
+        if parsed is not None:
+            return _normalize_parsed_news_list(parsed)
+    except ValueError:
         pass
     return None
+
+
+def _extract_perplexity_citation_urls(data: dict[str, Any]) -> list[str]:
+    """응답 루트·choices[0]·message 등 어디에 있든 citation URL 을 순서대로 수집."""
+    out: list[str] = []
+    seen: set[str] = set()
+
+    def add_raw(raw: Any) -> None:
+        if not raw or not isinstance(raw, list):
+            return
+        for c in raw:
+            u = c if isinstance(c, str) else (c.get("url") if isinstance(c, dict) else "")
+            if isinstance(u, str) and u.startswith("http") and u not in seen:
+                seen.add(u)
+                out.append(u)
+
+    add_raw(data.get("citations"))
+    add_raw(data.get("search_results"))
+    try:
+        ch0 = (data.get("choices") or [{}])[0]
+        if isinstance(ch0, dict):
+            add_raw(ch0.get("citations"))
+            msg = ch0.get("message")
+            if isinstance(msg, dict):
+                add_raw(msg.get("citations"))
+    except Exception:
+        pass
+    return out
 
 
 _MOCK_NEWS: list[dict[str, Any]] = [
@@ -1021,7 +1086,8 @@ def get_news() -> JSONResponse:
                         "role": "system",
                         "content": (
                             "You are a news aggregator for a Korean pharmaceutical export dashboard focused on Australia. "
-                            f"Return EXACTLY {_NEWS_LIST_SIZE} recent news items as a JSON array ONLY (no markdown, no prose). "
+                            f"Return EXACTLY {_NEWS_LIST_SIZE} recent news items as a JSON array ONLY, or one JSON object with key "
+                            "\"items\" whose value is that array (no markdown fences, no prose outside JSON). "
                             "Each item MUST have these keys: "
                             "\"title\" (headline as published — may be English or Korean if the original article is Korean), "
                             "\"title_ko\" (Korean, concise headline for UI), "
@@ -1037,9 +1103,9 @@ def get_news() -> JSONResponse:
                     {
                         "role": "user",
                         "content": (
-                            f"Find exactly {_NEWS_LIST_SIZE} online TEXT articles (not video pages) published within the LAST 24 HOURS. "
-                            f"If {_NEWS_LIST_SIZE} are not available in 24h, you may include the most recent from YESTERDAY only — "
-                            "do NOT use anything older than the previous calendar day. "
+                            f"Find exactly {_NEWS_LIST_SIZE} online TEXT articles (not video pages) from roughly the LAST 7 DAYS, "
+                            f"preferring the most recent (last 48–72 hours when possible). "
+                            f"If fewer than {_NEWS_LIST_SIZE} qualify, widen within the same week — do not use stale articles. "
                             "Topic relevance (each article must clearly touch pharma/biotech/healthcare policy AND Australia in a substantive way): "
                             "e.g. TGA, PBS, ARTG, hospital/pharmacy, Australian public health policy; OR Korea–Australia pharma trade, "
                             "exports/imports, partnerships, clinical/regulatory stories involving Australia; OR Korean-language press "
@@ -1054,7 +1120,7 @@ def get_news() -> JSONResponse:
                 ],
                 "return_citations": True,
             },
-            timeout=45.0,
+            timeout=60.0,
         )
         if r.status_code != 200:
             logger.warning(
@@ -1068,6 +1134,17 @@ def get_news() -> JSONResponse:
         logger.warning("[api/news] mock: 요청 예외 %s: %s", type(exc).__name__, exc)
         return _news_api_response(mock_items, source="mock")
 
+    if isinstance(data, dict):
+        err_top = data.get("error")
+        if isinstance(err_top, dict) and (err_top.get("message") or err_top.get("type")):
+            logger.warning("[api/news] mock: Perplexity 응답 error 필드 %s", err_top)
+            return _news_api_response(mock_items, source="mock")
+
+    choices = data.get("choices") if isinstance(data, dict) else None
+    if not choices:
+        logger.warning("[api/news] mock: choices 비어 있음")
+        return _news_api_response(mock_items, source="mock")
+
     content = ""
     try:
         content = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
@@ -1079,8 +1156,7 @@ def get_news() -> JSONResponse:
         logger.warning("[api/news] mock: message content 비어 있음")
         return _news_api_response(mock_items, source="mock")
 
-    citations = data.get("citations") or data.get("search_results") or []
-    link_list = [c if isinstance(c, str) else (c.get("url") if isinstance(c, dict) else "") for c in citations]
+    link_list = _extract_perplexity_citation_urls(data if isinstance(data, dict) else {})
 
     items = _parse_perplexity_news_json_array(content)
     if items is None:

@@ -1,0 +1,3898 @@
+{
+  "_meta": {
+    "description": "TGA Manufacturer Licence Register (호주 의약품 제조허가) 432건. Australian_Manufacturers.xls (XML 포맷) 에서 파싱. 월 1회 TGA 사이트에서 재다운로드 → 본 스크립트 재실행.",
+    "source_file": "Australian_Manufacturers.xls",
+    "last_synced": "2026-04-19T19:09:48.865292+00:00",
+    "total": 432
+  },
+  "entries": [
+    {
+      "issue_date": "2026-04-02",
+      "licence_number": "MI-2025-LI-01053-1",
+      "manufacturer_id": "76465",
+      "address": "585 River Avenue, Merbein, VIC, 3505",
+      "state": "VIC",
+      "manufacturer": "ANALYTICAL LABORATORIES AND TECHNICAL SERVICES AUSTRALIA PTY LTD",
+      "normalized": "analyticallaboratoriesandtechnicalservices"
+    },
+    {
+      "issue_date": "2026-03-11",
+      "licence_number": "MI-2025-LI-04268-1",
+      "manufacturer_id": "",
+      "address": "9-19 Macgregor Place, Richlands, QLD, 4077",
+      "state": "QLD",
+      "manufacturer": "AdvanCell Pty Limited",
+      "normalized": "advancell"
+    },
+    {
+      "issue_date": "2026-03-10",
+      "licence_number": "MI-2024-LI-08741-1",
+      "manufacturer_id": "79078",
+      "address": "11-13 Chambers Road, Altona North, VIC, 3025",
+      "state": "VIC",
+      "manufacturer": "UA Manufacturing Pty Ltd",
+      "normalized": "uamanufacturing"
+    },
+    {
+      "issue_date": "2026-03-06",
+      "licence_number": "MI-2019-LI-04564-1",
+      "manufacturer_id": "69739",
+      "address": "Level 2 South Wing Building 500 Cnr Manning Road and Townsing Drive, Resources and Chemistry Precinct, Bentley, WA, 6102",
+      "state": "WA",
+      "manufacturer": "ChemCentre",
+      "normalized": "chemcentre"
+    },
+    {
+      "issue_date": "2026-03-06",
+      "licence_number": "MI-06122004-LI-000279-1",
+      "manufacturer_id": "",
+      "address": "189-209 Camp Road, BROADMEADOWS, VIC, 3047",
+      "state": "VIC",
+      "manufacturer": "CSL Behring (Australia) Pty Ltd",
+      "normalized": "cslbehring"
+    },
+    {
+      "issue_date": "2026-03-05",
+      "licence_number": "MI-26102004-LI-000070-1",
+      "manufacturer_id": "32027",
+      "address": "767 Bischoffs Rd, COOMINYA, QLD, 4311",
+      "state": "QLD",
+      "manufacturer": "Comvita Australia Pty Ltd",
+      "normalized": "comvita"
+    },
+    {
+      "issue_date": "2026-02-20",
+      "licence_number": "MI-2023-LI-12484-1",
+      "manufacturer_id": "",
+      "address": "Unit 12 1 Reliance Drive, Tuggerah, NSW, 2259",
+      "state": "NSW",
+      "manufacturer": "Quality Global Supply Australia Pty Ltd",
+      "normalized": "qualityglobalsupply"
+    },
+    {
+      "issue_date": "2026-02-16",
+      "licence_number": "MI-2024-LI-14418-1",
+      "manufacturer_id": "69538",
+      "address": "11-13 Ash Road, Prestons, NSW, 2170",
+      "state": "NSW",
+      "manufacturer": "PharmaCare Operations No 1 Pty Ltd",
+      "normalized": "pharmacareno1"
+    },
+    {
+      "issue_date": "2026-02-04",
+      "licence_number": "MI-2025-LI-06565-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Cheltenham, Suite G02 13-15 Chesterville Road, Cheltenham, VIC, 3192",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2026-01-29",
+      "licence_number": "MI-2025-LI-03348-1",
+      "manufacturer_id": "",
+      "address": "181C Adelaide Street, HAZELMERE, WA, 6055",
+      "state": "WA",
+      "manufacturer": "Toll Transport Pty Ltd",
+      "normalized": "tolltransport"
+    },
+    {
+      "issue_date": "2026-01-15",
+      "licence_number": "MI-10052005-LI-000547-1",
+      "manufacturer_id": "656",
+      "address": "428-440 Victoria Street, WETHERILL PARK, NSW, 2164",
+      "state": "NSW",
+      "manufacturer": "BOC Limited",
+      "normalized": "boc"
+    },
+    {
+      "issue_date": "2026-01-06",
+      "licence_number": "MI-2012-LI-00949-3",
+      "manufacturer_id": "379",
+      "address": "17-19 Orion Road, LANE COVE WEST, NSW, 2066",
+      "state": "NSW",
+      "manufacturer": "Phebra Pty Ltd",
+      "normalized": "phebra"
+    },
+    {
+      "issue_date": "2026-01-06",
+      "licence_number": "MI-18102004-LI-000013-1",
+      "manufacturer_id": "81787",
+      "address": "15 Brodie Hall Drive Technology Park, BENTLEY, WA, 6102",
+      "state": "WA",
+      "manufacturer": "Bridgewest Perth Pharma Pty Ltd",
+      "normalized": "bridgewestperth"
+    },
+    {
+      "issue_date": "2025-12-22",
+      "licence_number": "MI-25102004-LI-000055-1",
+      "manufacturer_id": "12527",
+      "address": "105-113 Bronte Road, BONDI JUNCTION, NSW, 2022",
+      "state": "NSW",
+      "manufacturer": "Arthropharm Pty Ltd",
+      "normalized": "arthropharm"
+    },
+    {
+      "issue_date": "2025-12-22",
+      "licence_number": "MI-2024-LI-09505-1",
+      "manufacturer_id": "84943",
+      "address": "27 Expansion Street, Molendinar, QLD, 4214",
+      "state": "QLD",
+      "manufacturer": "Biomecentric Pty Ltd",
+      "normalized": "biomecentric"
+    },
+    {
+      "issue_date": "2025-12-22",
+      "licence_number": "MI-2012-LI-00095-3",
+      "manufacturer_id": "27664",
+      "address": "119 Magowar Road, GIRRAWEEN, NSW, 2145",
+      "state": "NSW",
+      "manufacturer": "Chemika Pty Ltd",
+      "normalized": "chemika"
+    },
+    {
+      "issue_date": "2025-12-11",
+      "licence_number": "MI-2024-LI-01585-1",
+      "manufacturer_id": "",
+      "address": "240 MacArthur Avenue, Hamilton, QLD, 4007",
+      "state": "QLD",
+      "manufacturer": "Vaxxas Pty Ltd",
+      "normalized": "vaxxas"
+    },
+    {
+      "issue_date": "2025-12-10",
+      "licence_number": "MI-2022-LI-12676-1",
+      "manufacturer_id": "",
+      "address": "Unit 1&2 / 6-7 Gilda Court, MULGRAVE, VIC, 3170",
+      "state": "VIC",
+      "manufacturer": "Medsurge Healthcare Pty Ltd",
+      "normalized": "medsurge"
+    },
+    {
+      "issue_date": "2025-12-04",
+      "licence_number": "MI-19032005-LI-000476-2",
+      "manufacturer_id": "59442",
+      "address": "101 Seaford Place, SEAFORD, VIC, 3198",
+      "state": "VIC",
+      "manufacturer": "ACP Pharmaceuticals Pty Ltd",
+      "normalized": "acp"
+    },
+    {
+      "issue_date": "2025-12-03",
+      "licence_number": "MI-24062005-LI-000646-1",
+      "manufacturer_id": "12770",
+      "address": "211 Victoria Road, DUNDAS, NSW, 2117",
+      "state": "NSW",
+      "manufacturer": "Wesley Community Services Ltd",
+      "normalized": "wesleycommunityservices"
+    },
+    {
+      "issue_date": "2025-11-14",
+      "licence_number": "MI-2025-LI-10677-1",
+      "manufacturer_id": "",
+      "address": "Units 9 and 10, 52 Wirraway Drive, Port Melbourne, VIC, 3207",
+      "state": "VIC",
+      "manufacturer": "Syntro Pty Ltd trading as Syntro Health",
+      "normalized": "syntrotradingassyntrohealth"
+    },
+    {
+      "issue_date": "2025-10-29",
+      "licence_number": "MI-2021-LI-11314-1",
+      "manufacturer_id": "78933",
+      "address": "167 Rous Road, Rous, NSW, 2477",
+      "state": "NSW",
+      "manufacturer": "Eir Health Pty Ltd",
+      "normalized": "eirhealth"
+    },
+    {
+      "issue_date": "2025-10-10",
+      "licence_number": "MI-2023-LI-12573-1",
+      "manufacturer_id": "68876",
+      "address": "51 Hutton Road, Kiamba, QLD, 4560",
+      "state": "QLD",
+      "manufacturer": "PharmaCrop Pty Ltd",
+      "normalized": "pharmacrop"
+    },
+    {
+      "issue_date": "2025-10-07",
+      "licence_number": "MI-2024-LI-14357-1",
+      "manufacturer_id": "",
+      "address": "Unit 3, 139 Bryants RD, Loganholme, QLD, 4129",
+      "state": "QLD",
+      "manufacturer": "Apex Labs Pty Ltd",
+      "normalized": "apexlabs"
+    },
+    {
+      "issue_date": "2025-09-04",
+      "licence_number": "MI-2021-LI-04554-1",
+      "manufacturer_id": "33521",
+      "address": "Level 1 / 229 Great North Road, FIVE DOCK, NSW, 2046",
+      "state": "NSW",
+      "manufacturer": "Centre for Digestive Diseases Pty Ltd",
+      "normalized": "centrefordigestivediseases"
+    },
+    {
+      "issue_date": "2025-08-19",
+      "licence_number": "MI-2022-LI-06074-1",
+      "manufacturer_id": "",
+      "address": "2/26 Rodborough Road, Frenchs Forest, NSW, 2086",
+      "state": "NSW",
+      "manufacturer": "Australian Tissue Donation Network",
+      "normalized": "australiantissuedonationnetwork"
+    },
+    {
+      "issue_date": "2025-08-15",
+      "licence_number": "MI-2024-LI-09135-1",
+      "manufacturer_id": "",
+      "address": "158 Fulham Road, Alphington, VIC, 3078",
+      "state": "VIC",
+      "manufacturer": "Cannexx Pty Ltd",
+      "normalized": "cannexx"
+    },
+    {
+      "issue_date": "2025-08-01",
+      "licence_number": "MI-2023-LI-08741-1",
+      "manufacturer_id": "",
+      "address": "14 Dingu Place, Kemps Creek, NSW, 2178",
+      "state": "NSW",
+      "manufacturer": "Probiotec Multipack Pty Ltd",
+      "normalized": "probiotecmultipack"
+    },
+    {
+      "issue_date": "2025-07-07",
+      "licence_number": "MI-2023-LI-00846-1",
+      "manufacturer_id": "81875",
+      "address": "19 Orielton Road, Smeaton Grange, NSW, 2567",
+      "state": "NSW",
+      "manufacturer": "Exergy Pty Ltd",
+      "normalized": "exergy"
+    },
+    {
+      "issue_date": "2025-07-02",
+      "licence_number": "MI-2023-LI-09955-1",
+      "manufacturer_id": "82650",
+      "address": "104 Derby Street, Silverwater, NSW, 2128",
+      "state": "NSW",
+      "manufacturer": "McDonnell Douglas Holding Pty Ltd",
+      "normalized": "mcdonnelldouglasholding"
+    },
+    {
+      "issue_date": "2025-06-27",
+      "licence_number": "MI-2024-LI-07500-1",
+      "manufacturer_id": "",
+      "address": "2-14 Sky Rd, Melbourne Airport, VIC, 3045",
+      "state": "VIC",
+      "manufacturer": "Seqirus Pty Ltd",
+      "normalized": "seqirus"
+    },
+    {
+      "issue_date": "2025-05-14",
+      "licence_number": "MI-2024-LI-05658-1",
+      "manufacturer_id": "",
+      "address": "100 Momentum Way, Ravenhall, VIC, 3023",
+      "state": "VIC",
+      "manufacturer": "SW Translink Packaging Pty Ltd",
+      "normalized": "swtranslinkpackaging"
+    },
+    {
+      "issue_date": "2025-05-07",
+      "licence_number": "MI-2024-LI-04758-1",
+      "manufacturer_id": "84253",
+      "address": "Unit 2/24 Ascot Drive, Huntingfield, TAS, 7055",
+      "state": "TAS",
+      "manufacturer": "Tasmanian Pharmaceuticals Pty Ltd",
+      "normalized": "tasmanian"
+    },
+    {
+      "issue_date": "2025-04-29",
+      "licence_number": "MI-2023-LI-04284-1",
+      "manufacturer_id": "",
+      "address": "Unit 1 148 Tennyson Memorial Aveune, Tennyson, QLD, 4105",
+      "state": "QLD",
+      "manufacturer": "Pia Pharma Pty Ltd",
+      "normalized": "pia"
+    },
+    {
+      "issue_date": "2025-04-14",
+      "licence_number": "MI-2023-LI-07975-1",
+      "manufacturer_id": "",
+      "address": "9 Sugar Gum Court, Braeside, VIC, 3195",
+      "state": "VIC",
+      "manufacturer": "Magellan Laboratories Pty Ltd",
+      "normalized": "magellanlaboratories"
+    },
+    {
+      "issue_date": "2025-03-18",
+      "licence_number": "MI-2024-LI-04306-1",
+      "manufacturer_id": "82391",
+      "address": "Unit 1 8 Technology Drive, Arundel, QLD, 4214",
+      "state": "QLD",
+      "manufacturer": "Trisnbell Pty Ltd trading as TNB Pharmaceuticals",
+      "normalized": "trisnbelltradingastnb"
+    },
+    {
+      "issue_date": "2025-03-17",
+      "licence_number": "MI-2024-LI-09712-1",
+      "manufacturer_id": "18114",
+      "address": "12 Ferntree Place, Notting Hill, VIC, 3168",
+      "state": "VIC",
+      "manufacturer": "St Vincent's Institute of Medical Research T/A National Serology Reference Laboratory Australia",
+      "normalized": "stvincentsinstituteofmedicalresearchtanationalserologyreferencelaboratory"
+    },
+    {
+      "issue_date": "2025-03-04",
+      "licence_number": "MI-2023-LI-12540-1",
+      "manufacturer_id": "83130",
+      "address": "Unit 1 24 Kohl Street, Upper Coomera, QLD, 4209",
+      "state": "QLD",
+      "manufacturer": "Food and Pharma Australia Pty Ltd",
+      "normalized": "foodand"
+    },
+    {
+      "issue_date": "2025-02-14",
+      "licence_number": "MI-2024-LI-14217-1",
+      "manufacturer_id": "",
+      "address": "Level 10, 77 Castlereagh Street, Sydney, NSW, 2000",
+      "state": "NSW",
+      "manufacturer": "Johnson & Johnson Pacific Pty Ltd",
+      "normalized": "johnsonandjohnsonpacific"
+    },
+    {
+      "issue_date": "2025-01-28",
+      "licence_number": "MI-2024-LI-05736-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Hurstville, 252 Forest Road, HURSTVILLE, NSW, 2220",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2025-01-07",
+      "licence_number": "MI-2022-LI-07402-1",
+      "manufacturer_id": "",
+      "address": "385 Nevells Road, Clandulla, NSW, 2848",
+      "state": "NSW",
+      "manufacturer": "Ausphex Pty Ltd",
+      "normalized": "ausphex"
+    },
+    {
+      "issue_date": "2024-12-18",
+      "licence_number": "MI-2024-LI-03818-1",
+      "manufacturer_id": "84167",
+      "address": "820 Blackburn Road, Clayton, VIC, 3168",
+      "state": "VIC",
+      "manufacturer": "Moderna Manufacturing Australia Pty Ltd",
+      "normalized": "modernamanufacturing"
+    },
+    {
+      "issue_date": "2024-12-16",
+      "licence_number": "MI-2022-LI-15450-1",
+      "manufacturer_id": "",
+      "address": "44 Brandl Street, Eight Mile Plains, QLD, 4113",
+      "state": "QLD",
+      "manufacturer": "Symbio Laboratories PTY LTD",
+      "normalized": "symbiolaboratories"
+    },
+    {
+      "issue_date": "2024-11-11",
+      "licence_number": "MI-2022-LI-05296-1",
+      "manufacturer_id": "30545",
+      "address": "1 Botero Place, Truganina, VIC, 3029",
+      "state": "VIC",
+      "manufacturer": "DHL Supply Chain Australia Pty Limited",
+      "normalized": "dhlsupplychain"
+    },
+    {
+      "issue_date": "2024-11-07",
+      "licence_number": "MI-2024-LI-05733-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Camberwell, 293 Camberwell Road, Camberwell, VIC, 3124",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2024-10-30",
+      "licence_number": "MI-2022-LI-14403-1",
+      "manufacturer_id": "",
+      "address": "757 Taylors Road, Dandenong South, VIC, 3175",
+      "state": "VIC",
+      "manufacturer": "Mainfreight Distribution Pty Ltd",
+      "normalized": "mainfreightdistribution"
+    },
+    {
+      "issue_date": "2024-10-23",
+      "licence_number": "MI-2023-LI-14060-1",
+      "manufacturer_id": "",
+      "address": "20-24 Catalano Road, CANNING VALE, WA, 6155",
+      "state": "WA",
+      "manufacturer": "Baxter Healthcare Pty Ltd",
+      "normalized": "baxter"
+    },
+    {
+      "issue_date": "2024-09-23",
+      "licence_number": "MI-2022-LI-10517-1",
+      "manufacturer_id": "",
+      "address": "Unit 1-2 21 Wilson Street, Royal Park, SA, 5014",
+      "state": "SA",
+      "manufacturer": "IWG PHARMA (INT) Pty Ltd",
+      "normalized": "iwgint"
+    },
+    {
+      "issue_date": "2024-09-02",
+      "licence_number": "MI-2023-LI-06211-1",
+      "manufacturer_id": "284",
+      "address": "MQX4 1 Giffnock Avenue, Macquarie Park, NSW, 2113",
+      "state": "NSW",
+      "manufacturer": "Key Pharmaceuticals Pty Ltd",
+      "normalized": "key"
+    },
+    {
+      "issue_date": "2024-08-30",
+      "licence_number": "MI-2024-LI-03332-1",
+      "manufacturer_id": "59556",
+      "address": "32 Macedon Way, MELBOURNE AIRPORT, VIC, 3045",
+      "state": "VIC",
+      "manufacturer": "Toll Transport Pty Ltd",
+      "normalized": "tolltransport"
+    },
+    {
+      "issue_date": "2024-08-26",
+      "licence_number": "MI-2024-LI-03359-1",
+      "manufacturer_id": "50963",
+      "address": "2/7 Chifley Drive, Moorabbin Airport, VIC, 3194",
+      "state": "VIC",
+      "manufacturer": "Pharmaceutical Packaging Professionals Pty Ltd T/A PCI Pharma Services",
+      "normalized": "packagingprofessionalstapciservices"
+    },
+    {
+      "issue_date": "2024-07-30",
+      "licence_number": "MI-2022-LI-15970-1",
+      "manufacturer_id": "81891",
+      "address": "16 Radius Loop, Bayswater, WA, 6053",
+      "state": "WA",
+      "manufacturer": "Cyclowest Holdings Pty Ltd",
+      "normalized": "cyclowest"
+    },
+    {
+      "issue_date": "2024-07-30",
+      "licence_number": "MI-2023-LI-09891-1",
+      "manufacturer_id": "82825",
+      "address": "Unit 6 256E New Line Road, Dural, NSW, 2158",
+      "state": "NSW",
+      "manufacturer": "MaHPharma Pty Ltd",
+      "normalized": "mah"
+    },
+    {
+      "issue_date": "2024-07-30",
+      "licence_number": "MI-2023-LI-12749-1",
+      "manufacturer_id": "30545",
+      "address": "150 Talbot Road, Hazelmere, WA, 6055",
+      "state": "WA",
+      "manufacturer": "DHL Supply Chain Australia Pty Limited",
+      "normalized": "dhlsupplychain"
+    },
+    {
+      "issue_date": "2024-07-30",
+      "licence_number": "MI-2023-LI-12445-1",
+      "manufacturer_id": "65673",
+      "address": "Unit 6 10 Brumby Street, Seven Hills, NSW, 2147",
+      "state": "NSW",
+      "manufacturer": "Angron Pty Ltd",
+      "normalized": "angron"
+    },
+    {
+      "issue_date": "2024-07-09",
+      "licence_number": "MI-2021-LI-03524-1",
+      "manufacturer_id": "",
+      "address": "20 Marriott Road, Jandakot, WA, 6164",
+      "state": "WA",
+      "manufacturer": "Coregas Pty Ltd",
+      "normalized": "coregas"
+    },
+    {
+      "issue_date": "2024-07-05",
+      "licence_number": "MI-2023-LI-02165-1",
+      "manufacturer_id": "",
+      "address": "Level 2 / 17 Cotham Road, Kew, VIC, 3101",
+      "state": "VIC",
+      "manufacturer": "Specialised Therapeutics Australia Pty Ltd",
+      "normalized": "specialisedtherapeutics"
+    },
+    {
+      "issue_date": "2024-06-17",
+      "licence_number": "MI-2024-LI-02439-1",
+      "manufacturer_id": "",
+      "address": "Level 15, 100 Pacific Highway, North Sydney, NSW, 2060",
+      "state": "NSW",
+      "manufacturer": "Sandoz Pty Ltd",
+      "normalized": "sandoz"
+    },
+    {
+      "issue_date": "2024-05-31",
+      "licence_number": "MI-2024-LI-00389-1",
+      "manufacturer_id": "59556",
+      "address": "262 Orchard Road, RICHLANDS, QLD, 4077",
+      "state": "QLD",
+      "manufacturer": "Toll Transport Pty Ltd",
+      "normalized": "tolltransport"
+    },
+    {
+      "issue_date": "2024-05-15",
+      "licence_number": "MI-2024-LI-05022-1",
+      "manufacturer_id": "17612",
+      "address": "11 Duigan Drive, Moorabbin Airport, VIC, 3194",
+      "state": "VIC",
+      "manufacturer": "Finishing Services Pty Ltd",
+      "normalized": "finishingservices"
+    },
+    {
+      "issue_date": "2024-05-15",
+      "licence_number": "MI-2023-LI-11785-1",
+      "manufacturer_id": "79242",
+      "address": "2 Lakewood Boulevard, CARRUM DOWNS, VIC, 3201",
+      "state": "VIC",
+      "manufacturer": "JINQI WELLBEING PTY LTD",
+      "normalized": "jinqiwellbeing"
+    },
+    {
+      "issue_date": "2024-05-15",
+      "licence_number": "MI-2023-LI-07591-1",
+      "manufacturer_id": "1232",
+      "address": "Levels Basement Ground G.400 and G.403 2 3 4 6 9 14 655 Elizabeth Street, Melbourne, VIC, 3000",
+      "state": "VIC",
+      "manufacturer": "CSL Innovation Pty Ltd",
+      "normalized": "cslinnovation"
+    },
+    {
+      "issue_date": "2024-04-24",
+      "licence_number": "MI-2023-LI-08205-1",
+      "manufacturer_id": "81950",
+      "address": "5 William Street, Ferntree Gully, VIC, 3156",
+      "state": "VIC",
+      "manufacturer": "CBE Pure Solutions",
+      "normalized": "cbepuresolutions"
+    },
+    {
+      "issue_date": "2024-02-16",
+      "licence_number": "MI-2023-LI-07642-1",
+      "manufacturer_id": "69801",
+      "address": "Level 2-3 21 North Terrace, Adelaide, SA, 5000",
+      "state": "SA",
+      "manufacturer": "BiomeBank",
+      "normalized": "biomebank"
+    },
+    {
+      "issue_date": "2024-01-30",
+      "licence_number": "MI-2021-LI-05257-1",
+      "manufacturer_id": "",
+      "address": "Unit 1 & 5 213 Balcatta Road, Balcatta, WA, 6021",
+      "state": "WA",
+      "manufacturer": "WA Hospitals Central Pharmaceutical Manufacturing Facility T/A AUSPMAN",
+      "normalized": "wahospitalscentralmanufacturingfacilitytaauspman"
+    },
+    {
+      "issue_date": "2024-01-29",
+      "licence_number": "MI-2022-LI-10650-1",
+      "manufacturer_id": "81453",
+      "address": "19-23 Badu Court, Meadowbrook, QLD, 4131",
+      "state": "QLD",
+      "manufacturer": "BLS Wholesalers Pty Ltd",
+      "normalized": "blswholesalers"
+    },
+    {
+      "issue_date": "2024-01-19",
+      "licence_number": "MI-2023-LI-01622-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Townsville Tenancy I-20 Domain Central, 103 Duckworth Street, GARBUTT, QLD, 4814",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2023-12-20",
+      "licence_number": "MI-2022-LI-02884-1",
+      "manufacturer_id": "",
+      "address": "98 Long Street, Smithfield, NSW, 2164",
+      "state": "NSW",
+      "manufacturer": "Contract Manufacturing & Packaging Services Pty Ltd",
+      "normalized": "contractmanufacturingandpackagingservices"
+    },
+    {
+      "issue_date": "2023-12-15",
+      "licence_number": "MI-2023-LI-02284-1",
+      "manufacturer_id": "",
+      "address": "16 Howe Street, Osborne Park, WA, 6017",
+      "state": "WA",
+      "manufacturer": "Wild Child Laboratories Pty Ltd",
+      "normalized": "wildchildlaboratories"
+    },
+    {
+      "issue_date": "2023-12-13",
+      "licence_number": "MI-2023-LI-02220-1",
+      "manufacturer_id": "",
+      "address": "44/8 Distribution Court, Arundel, QLD, 4214",
+      "state": "QLD",
+      "manufacturer": "VDS Contract Manufacturing Pty Ltd",
+      "normalized": "vdscontractmanufacturing"
+    },
+    {
+      "issue_date": "2023-11-28",
+      "licence_number": "MI-2023-LI-04293-1",
+      "manufacturer_id": "81201",
+      "address": "102 Fox Drive, Dandenong South, VIC, 3175",
+      "state": "VIC",
+      "manufacturer": "PharmSky Research (Australia) Pty Ltd",
+      "normalized": "pharmskyresearch"
+    },
+    {
+      "issue_date": "2023-11-15",
+      "licence_number": "MI-2019-LI-03992-1",
+      "manufacturer_id": "69738",
+      "address": "96 Stradbroke Street, Heathwood, QLD, 4110",
+      "state": "QLD",
+      "manufacturer": "Medcan Australia Pty Ltd ATF Medcan Australia Trust",
+      "normalized": "medcanatfmedcantrust"
+    },
+    {
+      "issue_date": "2023-10-11",
+      "licence_number": "MI-2022-LI-14022-1",
+      "manufacturer_id": "56024",
+      "address": "Building 5/T1 Charles Sturt Industrial Estate, Cheltenham Parade, Woodville, SA, 5011",
+      "state": "SA",
+      "manufacturer": "Slade Health Pty Ltd",
+      "normalized": "sladehealth"
+    },
+    {
+      "issue_date": "2023-08-17",
+      "licence_number": "MI-2019-LI-10934-1",
+      "manufacturer_id": "54401",
+      "address": "Unit E4 3-29 Birnie Avenue, Lidcombe, NSW, 2141",
+      "state": "NSW",
+      "manufacturer": "Neptune Bio-Innovations Pty Ltd",
+      "normalized": "neptunebioinnovations"
+    },
+    {
+      "issue_date": "2023-08-08",
+      "licence_number": "MI-2022-LI-15831-1",
+      "manufacturer_id": "",
+      "address": "24-26 Watson Street, Shepparton, VIC, 3630",
+      "state": "VIC",
+      "manufacturer": "Cannatrek Medical Pty Ltd",
+      "normalized": "cannatrekmedical"
+    },
+    {
+      "issue_date": "2023-07-10",
+      "licence_number": "MI-2023-LI-00821-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Moore Park, Royal Hall of Industries Building 1 Driver Avenue, Moore Park, NSW, 2021",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2023-07-03",
+      "licence_number": "MI-2023-LI-02576-1",
+      "manufacturer_id": "48126",
+      "address": "64 Blanck St, Ormeau, QLD, 4208",
+      "state": "QLD",
+      "manufacturer": "Scientest Analytical Services Pty Ltd",
+      "normalized": "scientestanalyticalservices"
+    },
+    {
+      "issue_date": "2023-05-17",
+      "licence_number": "MI-2021-LI-13601-1",
+      "manufacturer_id": "",
+      "address": "36 Business Park Drive, RAVENHALL, VIC, 3023",
+      "state": "VIC",
+      "manufacturer": "Symbio Laboratories PTY LTD",
+      "normalized": "symbiolaboratories"
+    },
+    {
+      "issue_date": "2023-05-17",
+      "licence_number": "MI-2023-LI-08461-1",
+      "manufacturer_id": "",
+      "address": "36 Business Park Drive, RAVENHALL, VIC, 3023",
+      "state": "VIC",
+      "manufacturer": "Symbio Laboratories PTY LTD",
+      "normalized": "symbiolaboratories"
+    },
+    {
+      "issue_date": "2023-03-24",
+      "licence_number": "MI-2021-LI-13238-1",
+      "manufacturer_id": "30545",
+      "address": "2-28 Ironbark Close, Berrinba, QLD, 4117",
+      "state": "QLD",
+      "manufacturer": "DHL Supply Chain Australia Pty Limited",
+      "normalized": "dhlsupplychain"
+    },
+    {
+      "issue_date": "2023-03-07",
+      "licence_number": "MI-2022-LI-08268-1",
+      "manufacturer_id": "",
+      "address": "25-27 Pacific Drive, Keysborough, VIC, 3173",
+      "state": "VIC",
+      "manufacturer": "Australia Biotechnology Manufacturing Pty Ltd",
+      "normalized": "biotechnologymanufacturing"
+    },
+    {
+      "issue_date": "2023-02-27",
+      "licence_number": "MI-2021-LI-09708-1",
+      "manufacturer_id": "",
+      "address": "1/25 Wonderland Drive, Eastern Creek, NSW, 2766",
+      "state": "NSW",
+      "manufacturer": "Lavida Nutraceuticals Pty Ltd",
+      "normalized": "lavidanutraceuticals"
+    },
+    {
+      "issue_date": "2023-01-24",
+      "licence_number": "MI-2022-LI-08123-1",
+      "manufacturer_id": "",
+      "address": "Unit 3/81 Shettleston Street, Rocklea, QLD, 4106",
+      "state": "QLD",
+      "manufacturer": "Veganic SKN",
+      "normalized": "veganicskn"
+    },
+    {
+      "issue_date": "2022-09-30",
+      "licence_number": "MI-2021-LI-13035-1",
+      "manufacturer_id": "79681",
+      "address": "Level 1 67-73 Missenden Road, Camperdown, NSW, 2050",
+      "state": "NSW",
+      "manufacturer": "Ab Initio Pharma Pty Ltd",
+      "normalized": "abinitio"
+    },
+    {
+      "issue_date": "2022-09-20",
+      "licence_number": "MI-2021-LI-03204-1",
+      "manufacturer_id": "55061",
+      "address": "5A/5B Jubilee Avenue, Warriewood, NSW, 2102",
+      "state": "NSW",
+      "manufacturer": "Complementary Medicines Group Pty Ltd",
+      "normalized": "complementarymedicines"
+    },
+    {
+      "issue_date": "2022-09-14",
+      "licence_number": "MI-2022-LI-03004-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Marrickville T103 - 107 76a Edinburgh Road, Marrickville, NSW, 2204",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2022-09-14",
+      "licence_number": "MI-2022-LI-03002-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Brunswick G01 284-294 Albert Street, Brunswick, VIC, 3056",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2022-09-08",
+      "licence_number": "MI-2022-LI-03005-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre York St Level 1  1 York Street, Sydney, NSW, 2000",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2022-08-10",
+      "licence_number": "MI-2021-LI-07507-1",
+      "manufacturer_id": "58872",
+      "address": "Unit 3/8 Jubilee Avenue, Warriewood, NSW, 2102",
+      "state": "NSW",
+      "manufacturer": "NaturaTech Pty Ltd",
+      "normalized": "naturatech"
+    },
+    {
+      "issue_date": "2022-08-05",
+      "licence_number": "MI-2022-LI-02926-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Springwood Tenancy 1 139-143 Barbaralla Drive, Springwood, QLD, 4127",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2022-07-15",
+      "licence_number": "MI-2021-LI-10942-1",
+      "manufacturer_id": "79339",
+      "address": "558-562 Swan Street, Richmond, VIC, 3121",
+      "state": "VIC",
+      "manufacturer": "Syntro Pty Ltd trading as Syntro Health",
+      "normalized": "syntrotradingassyntrohealth"
+    },
+    {
+      "issue_date": "2022-06-29",
+      "licence_number": "MI-2019-LI-11516-1",
+      "manufacturer_id": "67907",
+      "address": "23 Greentek Court, KOORLONG, VIC, 3501",
+      "state": "VIC",
+      "manufacturer": "Cannoperations Pty Ltd",
+      "normalized": "cann"
+    },
+    {
+      "issue_date": "2022-06-14",
+      "licence_number": "MI-2019-LI-12438-1",
+      "manufacturer_id": "68181",
+      "address": "35 Norfolk Street, South Nowra, NSW, 2541",
+      "state": "NSW",
+      "manufacturer": "Essence Group Pty Ltd",
+      "normalized": "essence"
+    },
+    {
+      "issue_date": "2022-06-06",
+      "licence_number": "MI-2020-LI-11055-1",
+      "manufacturer_id": "75804",
+      "address": "74-86 Garden Road, Clayton, VIC, 3168",
+      "state": "VIC",
+      "manufacturer": "BioCarna Pty Ltd",
+      "normalized": "biocarna"
+    },
+    {
+      "issue_date": "2022-05-31",
+      "licence_number": "MI-2021-LI-00602-1",
+      "manufacturer_id": "76316",
+      "address": "5 Basalt Road, Greystanes, NSW, 2145",
+      "state": "NSW",
+      "manufacturer": "UPS SCS (Australia) Services Pty Ltd",
+      "normalized": "upsscsservices"
+    },
+    {
+      "issue_date": "2022-05-11",
+      "licence_number": "MI-2020-LI-13029-1",
+      "manufacturer_id": "77107",
+      "address": "CONO Business Park Unit 9 and 10 52 Bakers Road, Coburg North, VIC, 3058",
+      "state": "VIC",
+      "manufacturer": "Central Pharmacy Logistics Pty Ltd",
+      "normalized": "centralpharmacylogistics"
+    },
+    {
+      "issue_date": "2022-05-06",
+      "licence_number": "MI-2021-LI-08995-1",
+      "manufacturer_id": "",
+      "address": "179 Magowar Road, Girraween, NSW, 2145",
+      "state": "NSW",
+      "manufacturer": "Eurofins BioPharma Product Testing Australia Pty Ltd",
+      "normalized": "eurofinsbiopharmaproducttesting"
+    },
+    {
+      "issue_date": "2022-03-07",
+      "licence_number": "MI-2021-LI-05621-1",
+      "manufacturer_id": "77336",
+      "address": "Unit A 11-13 Short Street, Auburn, NSW, 2144",
+      "state": "NSW",
+      "manufacturer": "AUSTRALIA GMP BIO PHARMACEUTICALS PTY LTD",
+      "normalized": "gmpbio"
+    },
+    {
+      "issue_date": "2022-02-03",
+      "licence_number": "MI-2021-LI-01358-1",
+      "manufacturer_id": "68674",
+      "address": "20 Container Street, Tingalpa, QLD, 4173",
+      "state": "QLD",
+      "manufacturer": "ABC Can Pty Ltd",
+      "normalized": "abccan"
+    },
+    {
+      "issue_date": "2021-09-30",
+      "licence_number": "MI-2020-LI-11037-1",
+      "manufacturer_id": "",
+      "address": "Lot 2 Gate 1 48 Richmond Road, Casino, NSW, 2470",
+      "state": "NSW",
+      "manufacturer": "Australis Botanicals Pty Ltd T/A Blue Dog Agriculture",
+      "normalized": "australisbotanicalstabluedogagriculture"
+    },
+    {
+      "issue_date": "2021-07-26",
+      "licence_number": "MI-2020-LI-00260-1",
+      "manufacturer_id": "58669",
+      "address": "55 Yarrunga Street, Prestons, NSW, 2170",
+      "state": "NSW",
+      "manufacturer": "Mainfreight Distribution Pty Ltd",
+      "normalized": "mainfreightdistribution"
+    },
+    {
+      "issue_date": "2021-05-27",
+      "licence_number": "MI-2020-LI-08023-1",
+      "manufacturer_id": "75369",
+      "address": "Units 3-5 / 32 Enterprise Street, CLEVELAND, QLD, 4163",
+      "state": "QLD",
+      "manufacturer": "CGS INVESTMENTS PTY LTD trading as CGS Pharma",
+      "normalized": "cgsinvestmentstradingascgs"
+    },
+    {
+      "issue_date": "2021-05-26",
+      "licence_number": "MI-2019-LI-09573-1",
+      "manufacturer_id": "49984",
+      "address": "1 / 153 Bertie St, Port Melbourne, VIC, 3207",
+      "state": "VIC",
+      "manufacturer": "National Measurement Institute",
+      "normalized": "nationalmeasurementinstitute"
+    },
+    {
+      "issue_date": "2021-05-14",
+      "licence_number": "MI-2020-LI-06420-1",
+      "manufacturer_id": "",
+      "address": "7 Grex Avenue, Minchinbury, NSW, 2770",
+      "state": "NSW",
+      "manufacturer": "Contract Manufacturing Professionals Pty Ltd",
+      "normalized": "contractmanufacturingprofessionals"
+    },
+    {
+      "issue_date": "2020-12-24",
+      "licence_number": "MI-2020-LI-02101-1",
+      "manufacturer_id": "76547",
+      "address": "20 Fariola Street, Silverwater, NSW, 2128",
+      "state": "NSW",
+      "manufacturer": "SCP ALLIANCE SYDNEY PTY LTD",
+      "normalized": "scpalliancesydney"
+    },
+    {
+      "issue_date": "2020-12-21",
+      "licence_number": "MI-2020-LI-02289-1",
+      "manufacturer_id": "",
+      "address": "Units 2 & 3, 2 Aquatic Drive, Frenchs Forest, NSW, 2086",
+      "state": "NSW",
+      "manufacturer": "Pharmako Biotechnologies Pty Ltd",
+      "normalized": "pharmakobiotechnologies"
+    },
+    {
+      "issue_date": "2020-12-09",
+      "licence_number": "MI-2019-LI-13348-1",
+      "manufacturer_id": "71023",
+      "address": "2 Sirius Road, Lane Cove West, NSW, 2066",
+      "state": "NSW",
+      "manufacturer": "Symbio Laboratories PTY LTD",
+      "normalized": "symbiolaboratories"
+    },
+    {
+      "issue_date": "2020-11-10",
+      "licence_number": "MI-2019-LI-11790-1",
+      "manufacturer_id": "70358",
+      "address": "13-19 Keysborough Avenue, Keysborough, VIC, 3173",
+      "state": "VIC",
+      "manufacturer": "Kiron Pharma Pty Ltd ATF BBD Trust",
+      "normalized": "kironatfbbdtrust"
+    },
+    {
+      "issue_date": "2020-09-23",
+      "licence_number": "MI-2019-LI-13318-1",
+      "manufacturer_id": "71072",
+      "address": "899 River Road, Murrabit West, VIC, 3579",
+      "state": "VIC",
+      "manufacturer": "ECS Botanics MC Pty Ltd",
+      "normalized": "ecsbotanicsmc"
+    },
+    {
+      "issue_date": "2020-07-28",
+      "licence_number": "MI-2019-LI-10319-1",
+      "manufacturer_id": "43239",
+      "address": "6 Monterey Road, Dandenong South, VIC, 3175",
+      "state": "VIC",
+      "manufacturer": "Eurofins BioPharma Product Testing Australia Pty Ltd",
+      "normalized": "eurofinsbiopharmaproducttesting"
+    },
+    {
+      "issue_date": "2020-07-14",
+      "licence_number": "MI-2019-LI-11427-1",
+      "manufacturer_id": "",
+      "address": "29 Mangrove Lane, TAREN POINT, NSW, 2229",
+      "state": "NSW",
+      "manufacturer": "Astral Scientific Pty Ltd",
+      "normalized": "astralscientific"
+    },
+    {
+      "issue_date": "2020-07-09",
+      "licence_number": "MI-2019-LI-02406-1",
+      "manufacturer_id": "22898",
+      "address": "Unit 6 18-20 Accolade Avenue, Morisset, NSW, 2264",
+      "state": "NSW",
+      "manufacturer": "Logikal Health Products Pty Ltd",
+      "normalized": "logikalhealthproducts"
+    },
+    {
+      "issue_date": "2020-05-13",
+      "licence_number": "MI-2018-LI-13190-1",
+      "manufacturer_id": "69021",
+      "address": "28 Harries Road, Coorparoo, QLD, 4151",
+      "state": "QLD",
+      "manufacturer": "Surgical BioFix Ltd",
+      "normalized": "surgicalbiofix"
+    },
+    {
+      "issue_date": "2020-05-05",
+      "licence_number": "MI-2018-LI-10919-1",
+      "manufacturer_id": "68710",
+      "address": "2 Cyclone Street, Wonthaggi, VIC, 3995",
+      "state": "VIC",
+      "manufacturer": "ONELIFE LABS PTY LTD",
+      "normalized": "onelifelabs"
+    },
+    {
+      "issue_date": "2020-04-29",
+      "licence_number": "MI-2020-LI-03302-1",
+      "manufacturer_id": "12892",
+      "address": "21 Titan Drive, MICKLEHAM, VIC, 3064",
+      "state": "VIC",
+      "manufacturer": "Steritech Pty Ltd",
+      "normalized": "steritech"
+    },
+    {
+      "issue_date": "2020-04-15",
+      "licence_number": "MI-2019-LI-01002-1",
+      "manufacturer_id": "29989",
+      "address": "60 Huntingwood Drive, HUNTINGWOOD, NSW, 2148",
+      "state": "NSW",
+      "manufacturer": "GMP Pharmaceuticals Pty Limited",
+      "normalized": "gmp"
+    },
+    {
+      "issue_date": "2020-04-15",
+      "licence_number": "MI-2019-LI-02258-1",
+      "manufacturer_id": "83508",
+      "address": "15 Townsend Street, Malaga, WA, 6090",
+      "state": "WA",
+      "manufacturer": "Care Essentials PharmAust Pty Ltd",
+      "normalized": "careessentialspharmaust"
+    },
+    {
+      "issue_date": "2020-03-28",
+      "licence_number": "MI-2017-LI-11602-1",
+      "manufacturer_id": "",
+      "address": "9 Chivers Road, Somersby, NSW, 2250",
+      "state": "NSW",
+      "manufacturer": "Delta Laboratories Pty Ltd",
+      "normalized": "deltalaboratories"
+    },
+    {
+      "issue_date": "2020-02-07",
+      "licence_number": "MI-2019-LI-01711-1",
+      "manufacturer_id": "43026",
+      "address": "1821 Ipswich Road, Rocklea, QLD, 4106",
+      "state": "QLD",
+      "manufacturer": "Antaria Pty Ltd",
+      "normalized": "antaria"
+    },
+    {
+      "issue_date": "2020-01-17",
+      "licence_number": "MI-2019-LI-03626-1",
+      "manufacturer_id": "68648",
+      "address": "18 Olympic Circuit, Southport, QLD, 4215",
+      "state": "QLD",
+      "manufacturer": "Epsilon Pharma Pty Ltd",
+      "normalized": "epsilon"
+    },
+    {
+      "issue_date": "2020-01-16",
+      "licence_number": "MI-2019-LI-10153-1",
+      "manufacturer_id": "41979",
+      "address": "4-6 Southampton Crescent, ABBOTSFORD, VIC, 3067",
+      "state": "VIC",
+      "manufacturer": "Starpharma Pty Ltd",
+      "normalized": "star"
+    },
+    {
+      "issue_date": "2020-01-15",
+      "licence_number": "MI-2019-LI-09504-1",
+      "manufacturer_id": "70497",
+      "address": "4 Corporate Boulevard, Bayswater, VIC, 3153",
+      "state": "VIC",
+      "manufacturer": "Pharmalytics Pty Ltd",
+      "normalized": "pharmalytics"
+    },
+    {
+      "issue_date": "2020-01-07",
+      "licence_number": "MI-2019-LI-04507-1",
+      "manufacturer_id": "",
+      "address": "1/33 Doherty Street, BRENDALE, QLD, 4500",
+      "state": "QLD",
+      "manufacturer": "Redland Pharmaceuticals Pty Ltd",
+      "normalized": "redland"
+    },
+    {
+      "issue_date": "2019-12-13",
+      "licence_number": "MI-2019-LI-07241-1",
+      "manufacturer_id": "",
+      "address": "Adelaide Customer Service Delivery Centre, 18 Adam Street, HINDMARSH, SA, 5007",
+      "state": "SA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2019-10-21",
+      "licence_number": "MI-2019-LI-08369-1",
+      "manufacturer_id": "47602",
+      "address": "Western Sydney University Building J Westmead Campus 158-160 Hawkesbury Road, Westmead, NSW, 2145",
+      "state": "NSW",
+      "manufacturer": "National Institute of Complementary Medicine",
+      "normalized": "nationalinstituteofcomplementarymedicine"
+    },
+    {
+      "issue_date": "2019-09-17",
+      "licence_number": "MI-2019-LI-02603-1",
+      "manufacturer_id": "",
+      "address": "Unit 1 & 2 /81 Shettleston Street, Rocklea, QLD, 4106",
+      "state": "QLD",
+      "manufacturer": "Antaria Pty Ltd",
+      "normalized": "antaria"
+    },
+    {
+      "issue_date": "2019-07-04",
+      "licence_number": "MI-2018-LI-08327-1",
+      "manufacturer_id": "85328",
+      "address": "24-30 Blanck Street, Ormeau, QLD, 4208",
+      "state": "QLD",
+      "manufacturer": "Specialty Probiotics Australia Pty Ltd",
+      "normalized": "specialtyprobiotics"
+    },
+    {
+      "issue_date": "2019-06-14",
+      "licence_number": "MI-2018-LI-10917-1",
+      "manufacturer_id": "68674",
+      "address": "778 Castledoyle Road, Castle Doyle, NSW, 2350",
+      "state": "NSW",
+      "manufacturer": "ABC Can Pty Ltd",
+      "normalized": "abccan"
+    },
+    {
+      "issue_date": "2019-04-12",
+      "licence_number": "MI-2018-LI-07244-1",
+      "manufacturer_id": "10609",
+      "address": "254-294 Wellington Road, MULGRAVE, VIC, 3170",
+      "state": "VIC",
+      "manufacturer": "Nestle Australia Ltd",
+      "normalized": "nestle"
+    },
+    {
+      "issue_date": "2019-04-12",
+      "licence_number": "MI-2018-LI-07733-1",
+      "manufacturer_id": "10609",
+      "address": "1585 Sydney Road, Campbellfield, VIC, 3061",
+      "state": "VIC",
+      "manufacturer": "Nestle Australia Ltd",
+      "normalized": "nestle"
+    },
+    {
+      "issue_date": "2019-04-01",
+      "licence_number": "MI-2017-LI-00008-1",
+      "manufacturer_id": "65342",
+      "address": "12 Rifle Range Road, Pontville, TAS, 7030",
+      "state": "TAS",
+      "manufacturer": "Tasmanian Botanics Pty Ltd",
+      "normalized": "tasmanianbotanics"
+    },
+    {
+      "issue_date": "2019-02-13",
+      "licence_number": "MI-2018-LI-13575-1",
+      "manufacturer_id": "48840",
+      "address": "Central Science Laboratory Level 2 Chemistry building UoT Dobson Road, Sandy Bay, TAS, 7005",
+      "state": "TAS",
+      "manufacturer": "Royal Hobart Hospital / Pharmacy Department",
+      "normalized": "royalhobarthospitalpharmacydepartment"
+    },
+    {
+      "issue_date": "2019-02-08",
+      "licence_number": "MI-2018-LI-04510-1",
+      "manufacturer_id": "438",
+      "address": "Level 8 30-34 Hickson Road, Sydney, NSW, 2000",
+      "state": "NSW",
+      "manufacturer": "Roche Products Pty Ltd",
+      "normalized": "rocheproducts"
+    },
+    {
+      "issue_date": "2018-11-14",
+      "licence_number": "MI-2018-LI-02635-1",
+      "manufacturer_id": "67611",
+      "address": "Liquids MFG 01-KOM area Building 1, 9-15 Chilvers Road, Thornleigh, NSW, 2120",
+      "state": "NSW",
+      "manufacturer": "TCann Pty Ltd",
+      "normalized": "tcann"
+    },
+    {
+      "issue_date": "2018-10-05",
+      "licence_number": "MI-2018-LI-04720-1",
+      "manufacturer_id": "",
+      "address": "4/4 Brunker Road, Chullora, NSW, 2190",
+      "state": "NSW",
+      "manufacturer": "CareMed Packs Pty Ltd",
+      "normalized": "caremedpacks"
+    },
+    {
+      "issue_date": "2018-08-13",
+      "licence_number": "MI-2016-LI-09565-1",
+      "manufacturer_id": "12502",
+      "address": "Level 3 PP Block QEII Medical Centre, Hospital Avenue, Nedlands, WA, 6009",
+      "state": "WA",
+      "manufacturer": "Pharmaceutical Testing Facility PTF Department of Microbiology PathWest Laboratory Medicine WA",
+      "normalized": "testingfacilityptfdepartmentofmicrobiologypathwestlaboratorymedicinewa"
+    },
+    {
+      "issue_date": "2018-07-27",
+      "licence_number": "MI-2015-LI-10786-1",
+      "manufacturer_id": "62361",
+      "address": "Ground Floor (Room 00.1.037) Level 1 (01.2.016-018) Levels 3 and 9, 305 Grattan Street, Melbourne, VIC, 3000",
+      "state": "VIC",
+      "manufacturer": "Cell Therapies Pty Ltd",
+      "normalized": "celltherapies"
+    },
+    {
+      "issue_date": "2018-07-06",
+      "licence_number": "MI-2017-LI-11851-1",
+      "manufacturer_id": "66947",
+      "address": "7 Dolerite Way, Pemulwuy, NSW, 2145",
+      "state": "NSW",
+      "manufacturer": "Healthcare Supply Partners Pty Ltd T/A Healthcare Logistics",
+      "normalized": "supplypartnerstalogistics"
+    },
+    {
+      "issue_date": "2018-06-29",
+      "licence_number": "MI-2018-LI-00645-1",
+      "manufacturer_id": "",
+      "address": "Suite 18 / 12 Tryon Road, LINDFIELD, NSW, 2070",
+      "state": "NSW",
+      "manufacturer": "AFG Quality and Regulatory Consulting Pty Ltd",
+      "normalized": "afgqualityandregulatoryconsulting"
+    },
+    {
+      "issue_date": "2018-05-16",
+      "licence_number": "MI-2016-LI-10210-1",
+      "manufacturer_id": "",
+      "address": "Buildings 2 & 88 New Illawarra Road, LUCAS HEIGHTS, NSW, 2234",
+      "state": "NSW",
+      "manufacturer": "Australian Nuclear Science and Technology Organisation T/A ANSTO",
+      "normalized": "australiannuclearscienceandtechnologyorganisationtaansto"
+    },
+    {
+      "issue_date": "2018-05-15",
+      "licence_number": "MI-2017-LI-07809-1",
+      "manufacturer_id": "20549",
+      "address": "3 Sigma Drive, Croydon South, VIC, 3136",
+      "state": "VIC",
+      "manufacturer": "The Pharmaceutical Plant Company Pty Ltd",
+      "normalized": "theplant"
+    },
+    {
+      "issue_date": "2018-03-02",
+      "licence_number": "MI-2017-LI-08833-1",
+      "manufacturer_id": "45769",
+      "address": "Plasma Donor Centre Civic 4 Mort Street, Ground Floor and part of Level 1, CANBERRA, ACT, 2601",
+      "state": "ACT",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2018-02-20",
+      "licence_number": "MI-2016-LI-04143-1",
+      "manufacturer_id": "42142",
+      "address": "4 Caribbean Drive, Scoresby, VIC, 3179",
+      "state": "VIC",
+      "manufacturer": "Medical Developments International Limited",
+      "normalized": "medicaldevelopmentsinternational"
+    },
+    {
+      "issue_date": "2018-02-19",
+      "licence_number": "MI-2016-LI-09208-1",
+      "manufacturer_id": "",
+      "address": "South Australian Tissue Bank and SA Pathology, Levels 1G and 3H Royal Adelaide Hospital Port Road, Adelaide, SA, 5000",
+      "state": "SA",
+      "manufacturer": "Central Adelaide Local Health Network (operating as SA Pathology)",
+      "normalized": "centraladelaidelocalhealthnetworkoperatingassapathology"
+    },
+    {
+      "issue_date": "2018-02-05",
+      "licence_number": "MI-2017-LI-08281-1",
+      "manufacturer_id": "11290",
+      "address": "37 Enterprise Drive, Rowville, VIC, 3178",
+      "state": "VIC",
+      "manufacturer": "Orchard Manufacturing Co Pty Ltd",
+      "normalized": "orchardmanufacturingco"
+    },
+    {
+      "issue_date": "2018-01-31",
+      "licence_number": "MI-2015-LI-08410-1",
+      "manufacturer_id": "67485",
+      "address": "Level B2 Victorian Comprehensive Cancer Centre, 305 Grattan Street, Parkville, VIC, 3052",
+      "state": "VIC",
+      "manufacturer": "Cyclotek Melbourne Pty Ltd",
+      "normalized": "cyclotekmelbourne"
+    },
+    {
+      "issue_date": "2018-01-24",
+      "licence_number": "MI-2017-LI-01351-1",
+      "manufacturer_id": "",
+      "address": "151 Broderick Road, Corio, VIC, 3214",
+      "state": "VIC",
+      "manufacturer": "Boundary Bend Olives Pty trading as Modern Olives",
+      "normalized": "boundarybendolivestradingasmodernolives"
+    },
+    {
+      "issue_date": "2017-12-18",
+      "licence_number": "MI-2017-LI-02929-1",
+      "manufacturer_id": "12730",
+      "address": "1 Sarah Andrew Close, Erskine Park, NSW, 2759",
+      "state": "NSW",
+      "manufacturer": "Access Industries for the Disabled Ltd",
+      "normalized": "accessindustriesforthedisabled"
+    },
+    {
+      "issue_date": "2017-12-15",
+      "licence_number": "MI-2016-LI-06098-1",
+      "manufacturer_id": "20731",
+      "address": "Lot 707 Yelverton Drive, Midland, WA, 6056",
+      "state": "WA",
+      "manufacturer": "Perth Bone & Tissue Bank T/A PlusLife",
+      "normalized": "perthboneandtissuebanktapluslife"
+    },
+    {
+      "issue_date": "2017-12-05",
+      "licence_number": "MI-2017-LI-08940-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Modbury, Shop T12 Modbury Triangle Shopping Centre 954 North East Road, MODBURY, SA, 5092",
+      "state": "SA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2017-12-04",
+      "licence_number": "MI-2017-LI-12015-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Mackay 143 Sydney Street, Mackay, QLD, 4740",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2017-10-16",
+      "licence_number": "MI-2016-LI-06718-1",
+      "manufacturer_id": "44107",
+      "address": "Unit B 10-16 South Street, Rydalmere, NSW, 2116",
+      "state": "NSW",
+      "manufacturer": "Factors Group Australia Pty Ltd",
+      "normalized": "factors"
+    },
+    {
+      "issue_date": "2017-09-27",
+      "licence_number": "MI-2017-LI-04354-1",
+      "manufacturer_id": "59556",
+      "address": "2 Alspec Place, Eastern Creek, NSW, 2766",
+      "state": "NSW",
+      "manufacturer": "Toll Transport Pty Ltd",
+      "normalized": "tolltransport"
+    },
+    {
+      "issue_date": "2017-08-31",
+      "licence_number": "MI-2016-LI-12063-1",
+      "manufacturer_id": "29989",
+      "address": "14 Amax Avenue, Girraween, NSW, 2145",
+      "state": "NSW",
+      "manufacturer": "GMP Pharmaceuticals Pty Limited",
+      "normalized": "gmp"
+    },
+    {
+      "issue_date": "2017-08-31",
+      "licence_number": "MI-2017-LI-08681-1",
+      "manufacturer_id": "32647",
+      "address": "19 Fiveways Boulevard, Keysborough, VIC, 3173",
+      "state": "VIC",
+      "manufacturer": "Australian Pharmaceutical Manufacturers Pty Ltd",
+      "normalized": "australianmanufacturers"
+    },
+    {
+      "issue_date": "2017-08-30",
+      "licence_number": "MI-2017-LI-02305-1",
+      "manufacturer_id": "48534",
+      "address": "1 Alloy Street, Yatala, QLD, 4207",
+      "state": "QLD",
+      "manufacturer": "BJP Laboratories Pty Ltd",
+      "normalized": "bjplaboratories"
+    },
+    {
+      "issue_date": "2017-08-29",
+      "licence_number": "MI-2015-LI-11255-1",
+      "manufacturer_id": "31454",
+      "address": "4 Alspec Place, Eastern Creek, NSW, 2766",
+      "state": "NSW",
+      "manufacturer": "Vitex Pharmaceuticals Pty Ltd",
+      "normalized": "vitex"
+    },
+    {
+      "issue_date": "2017-07-24",
+      "licence_number": "MI-2016-LI-07393-1",
+      "manufacturer_id": "64584",
+      "address": "31-49 Nathan Road, Dandenong South, VIC, 3175",
+      "state": "VIC",
+      "manufacturer": "Cosmax NBT Australia Pty Ltd",
+      "normalized": "cosmaxnbt"
+    },
+    {
+      "issue_date": "2017-05-30",
+      "licence_number": "MI-2016-LI-11619-1",
+      "manufacturer_id": "65024",
+      "address": "9-11 Antill Street, Yennora, NSW, 2161",
+      "state": "NSW",
+      "manufacturer": "Labceuticals Pty Ltd",
+      "normalized": "labceuticals"
+    },
+    {
+      "issue_date": "2017-04-06",
+      "licence_number": "MI-2016-LI-13537-1",
+      "manufacturer_id": "53359",
+      "address": "18 Fisher Street, Silverwater, NSW, 2128",
+      "state": "NSW",
+      "manufacturer": "The Herb Booth Pty Ltd",
+      "normalized": "theherbbooth"
+    },
+    {
+      "issue_date": "2017-02-02",
+      "licence_number": "MI-2016-LI-07028-1",
+      "manufacturer_id": "",
+      "address": "Level 1 Building 1 9-15 Chilvers Road, THORNLEIGH, NSW, 2120",
+      "state": "NSW",
+      "manufacturer": "Raydel Australia Pty Ltd",
+      "normalized": "raydel"
+    },
+    {
+      "issue_date": "2016-11-11",
+      "licence_number": "MI-2016-LI-07249-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Cannington Unit 8 1296 Albany Highway, Cannington, WA, 6107",
+      "state": "WA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2016-09-19",
+      "licence_number": "MI-2016-LI-04306-1",
+      "manufacturer_id": "69538",
+      "address": "3 Ash Road, Prestons, NSW, 2170",
+      "state": "NSW",
+      "manufacturer": "PharmaCare Operations No 1 Pty Ltd",
+      "normalized": "pharmacareno1"
+    },
+    {
+      "issue_date": "2016-08-10",
+      "licence_number": "MI-2016-LI-04511-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre and Distribution Centre Hobart, Level 1 71 Bathurst Street, Hobart, TAS, 7000",
+      "state": "TAS",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2016-07-22",
+      "licence_number": "MI-2015-LI-10093-1",
+      "manufacturer_id": "16902",
+      "address": "2 Minna Close, BELROSE, NSW, 2085",
+      "state": "NSW",
+      "manufacturer": "Nature's Care Manufacture Pty Limited",
+      "normalized": "naturescaremanufacture"
+    },
+    {
+      "issue_date": "2016-07-19",
+      "licence_number": "MI-2016-LI-03555-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Bundoora, 1st Floor 21 Copernicus Crescent, Bundoora, VIC, 3083",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2016-07-07",
+      "licence_number": "MI-2015-LI-06597-1",
+      "manufacturer_id": "10577",
+      "address": "16-20 Baker Street, BANKSMEADOW, NSW, 2019",
+      "state": "NSW",
+      "manufacturer": "Bluegum Pharma Holdings Pty Ltd",
+      "normalized": "bluegum"
+    },
+    {
+      "issue_date": "2016-07-05",
+      "licence_number": "MI-2012-LI-10223-1",
+      "manufacturer_id": "61491",
+      "address": "37 Kent Street, WOOLLOONGABBA, QLD, 4102",
+      "state": "QLD",
+      "manufacturer": "Patheon Biologics Australia Pty Ltd",
+      "normalized": "patheonbiologics"
+    },
+    {
+      "issue_date": "2016-07-01",
+      "licence_number": "MI-2014-LI-09702-1",
+      "manufacturer_id": "45980",
+      "address": "Level 1 Pathology Building Fiona Stanley Hospital, 9 Robin Warren Drive, MURDOCH, WA, 6150",
+      "state": "WA",
+      "manufacturer": "Clinical Immunology Pathwest Laboratory Medicine Fiona Stanley Hospital",
+      "normalized": "clinicalimmunologypathwestlaboratorymedicinefionastanleyhospital"
+    },
+    {
+      "issue_date": "2016-06-10",
+      "licence_number": "MI-2015-LI-13690-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Chatswood Shop 62, Platform Level Chatswood Interchange 436 Victoria Avenue, Chatswood, NSW, 2067",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2016-05-26",
+      "licence_number": "MI-2015-LI-10055-1",
+      "manufacturer_id": "63220",
+      "address": "Building 39 / 199 Ipswich Road, Woolloongabba, QLD, 4102",
+      "state": "QLD",
+      "manufacturer": "Cyclotek Queensland Pty Ltd",
+      "normalized": "cyclotekqueensland"
+    },
+    {
+      "issue_date": "2016-05-20",
+      "licence_number": "MI-2015-LI-13005-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Melbourne CBD, Level 1 367 Collins Street, Melbourne, VIC, 3000",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2016-05-18",
+      "licence_number": "MI-2016-LI-00917-1",
+      "manufacturer_id": "63666",
+      "address": "Unit 21 19 Aero Road, Ingleburn, NSW, 2565",
+      "state": "NSW",
+      "manufacturer": "MedipaQ Pty Ltd",
+      "normalized": "medipaq"
+    },
+    {
+      "issue_date": "2016-02-02",
+      "licence_number": "MI-2015-LI-13129-1",
+      "manufacturer_id": "62982",
+      "address": "Unit 15 / 10-12 Montore Road, Minto, NSW, 2566",
+      "state": "NSW",
+      "manufacturer": "Chem-Chrom Laboratories and Services",
+      "normalized": "chemchromlaboratoriesandservices"
+    },
+    {
+      "issue_date": "2016-01-18",
+      "licence_number": "MI-2013-LI-10546-1",
+      "manufacturer_id": "52284",
+      "address": "27-49 Lenore Drive, ERSKINE PARK, NSW, 2759",
+      "state": "NSW",
+      "manufacturer": "Linfox Australia",
+      "normalized": "linfox"
+    },
+    {
+      "issue_date": "2016-01-13",
+      "licence_number": "MI-2015-LI-08537-1",
+      "manufacturer_id": "48534",
+      "address": "2 Alloy Street, Yatala, QLD, 4207",
+      "state": "QLD",
+      "manufacturer": "BJP Laboratories Pty Ltd",
+      "normalized": "bjplaboratories"
+    },
+    {
+      "issue_date": "2015-12-11",
+      "licence_number": "MI-2015-LI-10536-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Toowoomba Tenancy 1A 661 Ruthven Street, Toowoomba, QLD, 4350",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2015-11-13",
+      "licence_number": "MI-2015-LI-07458-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Maitland 39 St Andrews Street, Maitland, NSW, 2320",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2015-10-20",
+      "licence_number": "MI-2014-LI-01856-1",
+      "manufacturer_id": "51736",
+      "address": "171 - 177 Woodpark  Rd, SMITHFIELD, NSW, 2164",
+      "state": "NSW",
+      "manufacturer": "Costar Pharma Laboratory Pty Ltd",
+      "normalized": "costarlaboratory"
+    },
+    {
+      "issue_date": "2015-10-14",
+      "licence_number": "MI-2015-LI-07283-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Midland 233 Great Eastern Highway, MIDLAND, WA, 6056",
+      "state": "WA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2015-10-02",
+      "licence_number": "MI-2015-LI-03818-1",
+      "manufacturer_id": "62312",
+      "address": "12 Karungi Crescent, PORT MACQUARIE, NSW, 2444",
+      "state": "NSW",
+      "manufacturer": "DAA Packing Services Pty Ltd",
+      "normalized": "daapackingservices"
+    },
+    {
+      "issue_date": "2015-09-24",
+      "licence_number": "MI-2015-LI-06885-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Shepparton Unit 3 210-216 Corio Street, SHEPPARTON, VIC, 3630",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2015-08-28",
+      "licence_number": "MI-2015-LI-02580-1",
+      "manufacturer_id": "48534",
+      "address": "35 Computer Road, Yatala, QLD, 4207",
+      "state": "QLD",
+      "manufacturer": "BJP Laboratories Pty Ltd",
+      "normalized": "bjplaboratories"
+    },
+    {
+      "issue_date": "2015-08-19",
+      "licence_number": "MI-2015-LI-05721-1",
+      "manufacturer_id": "54433",
+      "address": "18 Reid Way, Melbourne Airport, VIC, 3045",
+      "state": "VIC",
+      "manufacturer": "World Courier Australia Pty Ltd",
+      "normalized": "worldcourier"
+    },
+    {
+      "issue_date": "2015-05-14",
+      "licence_number": "MI-2014-LI-11373-1",
+      "manufacturer_id": "50496",
+      "address": "15 Lum Street, EXPORT PARK, SA, 5950",
+      "state": "SA",
+      "manufacturer": "Zuellig Pharma SSG Australia Pty Ltd",
+      "normalized": "zuelligssg"
+    },
+    {
+      "issue_date": "2015-04-08",
+      "licence_number": "MI-2015-LI-00513-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Newcastle Suite 1 Ground Floor 165 Lambton Road, BROADMEADOW, NSW, 2292",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2015-04-02",
+      "licence_number": "MI-2013-LI-03166-1",
+      "manufacturer_id": "58825",
+      "address": "2/17 Artisan Road, SEVEN HILLS, NSW, 2147",
+      "state": "NSW",
+      "manufacturer": "Organic Care Pharmaceutical Pty Ltd",
+      "normalized": "organiccare"
+    },
+    {
+      "issue_date": "2015-04-01",
+      "licence_number": "MI-2014-LI-10609-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Perth CBD Part Level 1 140 William Street, PERTH, WA, 6000",
+      "state": "WA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2015-02-10",
+      "licence_number": "MI-2010-LI-08249-3",
+      "manufacturer_id": "55059",
+      "address": "1325 Sheffield Road, BARRINGTON, TAS, 7306",
+      "state": "TAS",
+      "manufacturer": "Marleen Herbs of Tasmania",
+      "normalized": "marleenherbsoftasmania"
+    },
+    {
+      "issue_date": "2015-01-16",
+      "licence_number": "MI-2014-LI-07664-1",
+      "manufacturer_id": "32881",
+      "address": "Building 5 Freeway Office Park 2728 Logan Road, EIGHT MILE PLAINS, QLD, 4113",
+      "state": "QLD",
+      "manufacturer": "Integria Healthcare Australia Pty Ltd",
+      "normalized": "integria"
+    },
+    {
+      "issue_date": "2015-01-09",
+      "licence_number": "MI-2013-LI-06998-1",
+      "manufacturer_id": "48840",
+      "address": "17 Liverpool Street, HOBART, TAS, 7000",
+      "state": "TAS",
+      "manufacturer": "Royal Hobart Hospital / Pharmacy Department",
+      "normalized": "royalhobarthospitalpharmacydepartment"
+    },
+    {
+      "issue_date": "2014-12-23",
+      "licence_number": "MI-2014-LI-04989-1",
+      "manufacturer_id": "",
+      "address": "Molecular Imaging & Therapy Research Unit Level 00, North Terrace, ADELAIDE, SA, 5000",
+      "state": "SA",
+      "manufacturer": "South Australian Health and Medical Research Institute Ltd",
+      "normalized": "southaustralianhealthandmedicalresearchinstitute"
+    },
+    {
+      "issue_date": "2014-09-26",
+      "licence_number": "MI-2013-LI-07109-1",
+      "manufacturer_id": "739",
+      "address": "200 Churchill Avenue, SUBIACO, WA, 6008",
+      "state": "WA",
+      "manufacturer": "Go Medical Industries Pty Ltd",
+      "normalized": "gomedicalindustries"
+    },
+    {
+      "issue_date": "2014-07-24",
+      "licence_number": "MI-2014-LI-02828-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Fremantle Shop 1 47 Douro Road, SOUTH FREMANTLE, WA, 6162",
+      "state": "WA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2014-07-01",
+      "licence_number": "MI-2014-LI-02805-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Strathpine., 349 Gympie Road, STRATHPINE, QLD, 4500",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2014-05-16",
+      "licence_number": "MI-2013-LI-05721-1",
+      "manufacturer_id": "58754",
+      "address": "Q Fever Manufacturing Facility, Building 8 189-209 Camp Road, BROADMEADOWS, VIC, 3047",
+      "state": "VIC",
+      "manufacturer": "Seqirus Pty Ltd",
+      "normalized": "seqirus"
+    },
+    {
+      "issue_date": "2014-05-08",
+      "licence_number": "MI-2013-LI-03948-1",
+      "manufacturer_id": "17251",
+      "address": "2/15 Neumann Road, CAPALABA, QLD, 4157",
+      "state": "QLD",
+      "manufacturer": "Tripak Pharmaceuticals Pty Ltd",
+      "normalized": "tripak"
+    },
+    {
+      "issue_date": "2014-05-05",
+      "licence_number": "MI-2013-LI-02004-1",
+      "manufacturer_id": "56024",
+      "address": "Level 1 2 Woodland Way, Mount Kuring-Gai, NSW, 2080",
+      "state": "NSW",
+      "manufacturer": "Slade Health Pty Ltd",
+      "normalized": "sladehealth"
+    },
+    {
+      "issue_date": "2014-05-02",
+      "licence_number": "MI-2013-LI-05688-1",
+      "manufacturer_id": "58754",
+      "address": "39-79 Poplar Road, PARKVILLE, VIC, 3052",
+      "state": "VIC",
+      "manufacturer": "Seqirus Pty Ltd",
+      "normalized": "seqirus"
+    },
+    {
+      "issue_date": "2014-03-21",
+      "licence_number": "MI-2013-LI-12060-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Wollongong Suite 1 Ground Floor 45-53 Kembla Street, WOLLONGONG, NSW, 2500",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2014-01-21",
+      "licence_number": "MI-2012-LI-10035-1",
+      "manufacturer_id": "58104",
+      "address": "Unit 7 Heritage Business Park 5-9 Ricketty Street, MASCOT, NSW, 2020",
+      "state": "NSW",
+      "manufacturer": "Medisca Australia Pty Ltd",
+      "normalized": "medisca"
+    },
+    {
+      "issue_date": "2014-01-17",
+      "licence_number": "MI-2012-LI-07749-1",
+      "manufacturer_id": "",
+      "address": "Building 89 Level 3 Department of Molecular Imaging Missenden Road, CAMPERDOWN, NSW, 2050",
+      "state": "NSW",
+      "manufacturer": "SLHD Royal Prince Alfred Hospital Department of Molecular Imaging",
+      "normalized": "slhdroyalprincealfredhospitaldepartmentofmolecularimaging"
+    },
+    {
+      "issue_date": "2013-12-10",
+      "licence_number": "MI-2012-LI-09136-1",
+      "manufacturer_id": "436",
+      "address": "Level 10 12 Help Street, CHATSWOOD, NSW, 2067",
+      "state": "NSW",
+      "manufacturer": "iNova Pharmaceuticals (Australia) Pty Ltd",
+      "normalized": "inova"
+    },
+    {
+      "issue_date": "2013-12-04",
+      "licence_number": "MI-2012-LI-11058-1",
+      "manufacturer_id": "58439",
+      "address": "18 Yarragon Road, LEONGATHA, VIC, 3953",
+      "state": "VIC",
+      "manufacturer": "Saputo Dairy Australia Pty Ltd",
+      "normalized": "saputodairy"
+    },
+    {
+      "issue_date": "2013-11-19",
+      "licence_number": "MI-2013-LI-07257-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Southport, Unit 1/59-61 Ferry Road, SOUTHPORT, QLD, 4215",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2013-09-03",
+      "licence_number": "MI-2012-LI-04100-3",
+      "manufacturer_id": "29994",
+      "address": "59 Kirby Street, RYDALMERE, NSW, 2116",
+      "state": "NSW",
+      "manufacturer": "Homart Pharmaceuticals Pty Ltd",
+      "normalized": "homart"
+    },
+    {
+      "issue_date": "2013-08-21",
+      "licence_number": "MI-2012-LI-10909-1",
+      "manufacturer_id": "21265",
+      "address": "4 Saggart Field Road, MINTO, NSW, 2566",
+      "state": "NSW",
+      "manufacturer": "Lyndelen Pty Ltd T/A The Herbal Extract Co of Australia",
+      "normalized": "lyndelentatheherbalextractcoof"
+    },
+    {
+      "issue_date": "2013-08-12",
+      "licence_number": "MI-2013-LI-00831-1",
+      "manufacturer_id": "16686",
+      "address": "8 Macquarie St, SYDNEY, NSW, 2000",
+      "state": "NSW",
+      "manufacturer": "South Eastern Sydney Local Health District",
+      "normalized": "southeasternsydneylocalhealthdistrict"
+    },
+    {
+      "issue_date": "2013-07-05",
+      "licence_number": "MI-2012-LI-05038-3",
+      "manufacturer_id": "57384",
+      "address": "110 Merrindale Drive, CROYDON SOUTH, VIC, 3136",
+      "state": "VIC",
+      "manufacturer": "iX Syrinx Pty Ltd",
+      "normalized": "ixsyrinx"
+    },
+    {
+      "issue_date": "2013-07-04",
+      "licence_number": "MI-2012-LI-09157-1",
+      "manufacturer_id": "32647",
+      "address": "789 Springvale Road, KEYSBOROUGH, VIC, 3173",
+      "state": "VIC",
+      "manufacturer": "Australian Pharmaceutical Manufacturers Pty Ltd",
+      "normalized": "australianmanufacturers"
+    },
+    {
+      "issue_date": "2013-07-01",
+      "licence_number": "MI-2012-LI-10911-1",
+      "manufacturer_id": "47943",
+      "address": "2302/ 30 Glen Street, MILSONS POINT, NSW, 2061",
+      "state": "NSW",
+      "manufacturer": "C Lim Consulting Pty Ltd",
+      "normalized": "climconsulting"
+    },
+    {
+      "issue_date": "2013-05-06",
+      "licence_number": "MI-2012-LI-08969-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Ringwood Unit 4, 32-38 Charter Street, RINGWOOD, VIC, 3134",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2013-04-04",
+      "licence_number": "MI-2012-LI-00060-3",
+      "manufacturer_id": "33655",
+      "address": "5 Exchange Road, MALAGA, WA, 6090",
+      "state": "WA",
+      "manufacturer": "Accord Trust & Rampart Trust T/A Optima Ovest",
+      "normalized": "accordtrustandramparttrusttaoptimaovest"
+    },
+    {
+      "issue_date": "2013-03-28",
+      "licence_number": "MI-2012-LI-08486-1",
+      "manufacturer_id": "26570",
+      "address": "60 National Avenue, PAKENHAM, VIC, 3810",
+      "state": "VIC",
+      "manufacturer": "Mega Lifesciences (Australia) Pty Ltd",
+      "normalized": "megalifesciences"
+    },
+    {
+      "issue_date": "2013-03-15",
+      "licence_number": "MI-2012-LI-08827-1",
+      "manufacturer_id": "51691",
+      "address": "6 Dividend Street, MANSFIELD, QLD, 4122",
+      "state": "QLD",
+      "manufacturer": "DoseAid Pty Ltd",
+      "normalized": "doseaid"
+    },
+    {
+      "issue_date": "2013-01-25",
+      "licence_number": "MI-2012-LI-02722-3",
+      "manufacturer_id": "10604",
+      "address": "100 Moody Street, KOO WEE RUP, VIC, 3981",
+      "state": "VIC",
+      "manufacturer": "Briemar Nominees Pty Ltd",
+      "normalized": "briemarnominees"
+    },
+    {
+      "issue_date": "2012-11-09",
+      "licence_number": "MI-2012-LI-07541-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Traralgon, 20 Seymour Street, TRARALGON, VIC, 3844",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2012-10-09",
+      "licence_number": "MI-2012-LI-06776-3",
+      "manufacturer_id": "48761",
+      "address": "22 Dalmore Drive, SCORESBY, VIC, 3179",
+      "state": "VIC",
+      "manufacturer": "Australian Laboratory Services Pty Ltd",
+      "normalized": "australianlaboratoryservices"
+    },
+    {
+      "issue_date": "2012-09-10",
+      "licence_number": "MI-2012-LI-07140-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Tamworth Shop 5 Lifestyle Centre 31-41 The Ringers Road, Hillvue, TAMWORTH, NSW, 2340",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2012-08-01",
+      "licence_number": "MI-2010-LI-07342-3",
+      "manufacturer_id": "29279",
+      "address": "46 Powers Road, SEVEN HILLS, NSW, 2147",
+      "state": "NSW",
+      "manufacturer": "RBK Nutraceuticals Pty Ltd",
+      "normalized": "rbknutraceuticals"
+    },
+    {
+      "issue_date": "2012-07-26",
+      "licence_number": "MI-2010-LI-05408-3",
+      "manufacturer_id": "54548",
+      "address": "12 Giffard St, SILVERWATER, NSW, 2128",
+      "state": "NSW",
+      "manufacturer": "Bio Health Pharmaceuticals Pty Ltd",
+      "normalized": "biohealth"
+    },
+    {
+      "issue_date": "2012-07-23",
+      "licence_number": "MI-2012-LI-05733-3",
+      "manufacturer_id": "48761",
+      "address": "Unit 10 2-8 South Street, RYDALMERE, NSW, 2116",
+      "state": "NSW",
+      "manufacturer": "Australian Laboratory Services Pty Ltd",
+      "normalized": "australianlaboratoryservices"
+    },
+    {
+      "issue_date": "2012-07-17",
+      "licence_number": "MI-2012-LI-00927-3",
+      "manufacturer_id": "49984",
+      "address": "Riverside Corporate Park, 105 Delhi Road, NORTH RYDE, NSW, 2113",
+      "state": "NSW",
+      "manufacturer": "National Measurement Institute",
+      "normalized": "nationalmeasurementinstitute"
+    },
+    {
+      "issue_date": "2012-06-26",
+      "licence_number": "MI-2012-LI-02970-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Regent Arcade Shop 41, The Regent Arcade 101-109 Rundle Mall, ADELAIDE, SA, 5000",
+      "state": "SA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2012-05-18",
+      "licence_number": "MI-2011-LI-05209-3",
+      "manufacturer_id": "31622",
+      "address": "20-24 Long Street, SMITHFIELD, NSW, 2164",
+      "state": "NSW",
+      "manufacturer": "Contract Manufacturing & Packaging Services Pty Ltd",
+      "normalized": "contractmanufacturingandpackagingservices"
+    },
+    {
+      "issue_date": "2012-05-03",
+      "licence_number": "MI-2011-LI-05295-3",
+      "manufacturer_id": "56024",
+      "address": "14 Palmer Court, MOUNT WAVERLEY, VIC, 3149",
+      "state": "VIC",
+      "manufacturer": "Slade Health Pty Ltd",
+      "normalized": "sladehealth"
+    },
+    {
+      "issue_date": "2012-03-09",
+      "licence_number": "MI-2011-LI-09045-3",
+      "manufacturer_id": "45769",
+      "address": "Melbourne Processing Centre, 100-154 Batman Street, WEST MELBOURNE, VIC, 3003",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2011-12-22",
+      "licence_number": "MI-2011-LI-06622-3",
+      "manufacturer_id": "46038",
+      "address": "43 - 65 Bellona Avenue, REGENTS PARK, NSW, 2143",
+      "state": "NSW",
+      "manufacturer": "Health Life Pharmaceuticals Australia Pty Ltd",
+      "normalized": "healthlife"
+    },
+    {
+      "issue_date": "2011-10-28",
+      "licence_number": "MI-2011-LI-05699-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Marion 1st Floor 1 Milham Street, OAKLANDS PARK, SA, 5046",
+      "state": "SA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2011-08-05",
+      "licence_number": "MI-2010-LI-03192-3",
+      "manufacturer_id": "54156",
+      "address": "Level 2 Sandford Jackson Building 30 Chasely Street, AUCHENFLOWER, QLD, 4066",
+      "state": "QLD",
+      "manufacturer": "Wesley Pharmacy Pty Ltd",
+      "normalized": "wesleypharmacy"
+    },
+    {
+      "issue_date": "2011-06-08",
+      "licence_number": "MI-2011-LI-01338-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Lismore 26 Bounty Street, LISMORE, NSW, 2480",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2011-04-21",
+      "licence_number": "MI-2010-LI-09159-3",
+      "manufacturer_id": "",
+      "address": "Sydney Processing Centre 17 O'Riordan Street, ALEXANDRIA, NSW, 2015",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2011-04-20",
+      "licence_number": "MI-2010-LI-03851-3",
+      "manufacturer_id": "",
+      "address": "Units 7 & 8 / 4 Fremantle Street, BURLEIGH HEADS, QLD, 4220",
+      "state": "QLD",
+      "manufacturer": "SAFE Analytical Laboratories Pty Ltd",
+      "normalized": "safeanalyticallaboratories"
+    },
+    {
+      "issue_date": "2011-04-15",
+      "licence_number": "MI-2010-LI-08975-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Gosford Riverside Park, 69 Central Coast Highway, WEST GOSFORD, NSW, 2250",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2011-03-24",
+      "licence_number": "MI-2010-LI-04360-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Cairns 381 Sheridan Street, CAIRNS NORTH, QLD, 4870",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2011-03-11",
+      "licence_number": "MI-2010-LI-06459-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Town Hall Ground Floor North, St Andews House 464 Kent Street, SYDNEY, NSW, 2000",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2011-02-17",
+      "licence_number": "MI-2010-LI-01265-3",
+      "manufacturer_id": "56024",
+      "address": "Unit 11 / 210 Robinson Road East, Geebung, QLD, 4034",
+      "state": "QLD",
+      "manufacturer": "Slade Health Pty Ltd",
+      "normalized": "sladehealth"
+    },
+    {
+      "issue_date": "2011-02-08",
+      "licence_number": "MI-2010-LI-01956-3",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Ipswich Level 1 Riverlink Medical Centre, Lowry Street, NORTH IPSWICH, QLD, 4305",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-12-07",
+      "licence_number": "MI-2010-LI-03381-3",
+      "manufacturer_id": "51382",
+      "address": "Basement Level 2 Macquarie University Hospital, 3 Technology Place, MACQUARIE UNIVERSITY, NSW, 2109",
+      "state": "NSW",
+      "manufacturer": "Cyclotek NSW Pty Ltd",
+      "normalized": "cycloteknsw"
+    },
+    {
+      "issue_date": "2010-11-19",
+      "licence_number": "MI-2010-LI-05161-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Coffs Harbour Tenancy No. 10T Park Beach, Homebase, COFFS HARBOUR, NSW, 2450",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-11-19",
+      "licence_number": "MI-2010-LI-03855-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Caulfield, 322 Hawthorn Road, CAULFIELD, VIC, 3162",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-11-19",
+      "licence_number": "MI-2010-LI-04494-3",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Edgewater Shop 94 Joondalup Gate Shopping Centre, Lot 13- 57 Joondalup Drive, EDGEWATER, WA, 6027",
+      "state": "WA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-10-01",
+      "licence_number": "MI-2010-LI-03713-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Wagga Wagga 67-69 Berry Street, WAGGA WAGGA, NSW, 2650",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-16",
+      "licence_number": "MI-2010-LI-01369-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Ballarat 601-603, Latrobe Street, BALLARAT, VIC, 3350",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-2008-LI-00629-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre The Shire 29 Kiora Road, MIRANDA, NSW, 2228",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-17082005-LI-000786-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Frankston Ground Floor, 20 Davey Street, FRANKSTON, VIC, 3199",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-25062007-LI-001916-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Rockhampton Rockhampton Base Hospital, Via Quarry Street, ROCKHAMPTON, QLD, 4700",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-09032007-LI-001769-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Port Macquarie, Shop 14/ 6 Clarence Street, PORT MACQUARIE, NSW, 2444",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-17082005-LI-000802-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Warrnambool 2 Fairy Street, WARRNAMBOOL, VIC, 3280",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-20082008-LI-002533-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Chermside 831 Gympie Road, CHERMSIDE, QLD, 4032",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-17082005-LI-000803-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Armidale Rusden Street, ARMIDALE, NSW, 2350",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-17082005-LI-000801-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Wangaratta 17-19 Norton Street, WANGARATTA, VIC, 3677",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-27062007-LI-001926-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Airport West, 93 Matthews Avenue, AIRPORT WEST, VIC, 3042",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-22032007-LI-001794-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Bendigo 6-8 High Street, BENDIGO, VIC, 3550",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-05032008-LI-002322-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Geelong Part Ground Floor 237 Ryrie Street, GEELONG, VIC, 3220",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-17082005-LI-000797-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Mildura, 168A Eighth Street, MILDURA, VIC, 3500",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-11062007-LI-001898-12",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Mount Waverley Ground Floor, 43-45 Centreway Pinewood Shopping Centre Blackburn Road, MOUNT WAVERLEY, VIC, 3149",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-07-02",
+      "licence_number": "MI-2010-LI-01613-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Parramatta, Level 1 22-30 Oak Street, ROSEHILL, NSW, 2142",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2010-06-22",
+      "licence_number": "MI-2010-LI-00309-3",
+      "manufacturer_id": "",
+      "address": "20 Rodborough Road, Frenchs Forest, NSW, 2086",
+      "state": "NSW",
+      "manufacturer": "Arna Pharma Pty Ltd",
+      "normalized": "arna"
+    },
+    {
+      "issue_date": "2010-04-12",
+      "licence_number": "MI-2009-LI-04618-3",
+      "manufacturer_id": "44230",
+      "address": "42 Corporate Drive, HEATHERTON, VIC, 3202",
+      "state": "VIC",
+      "manufacturer": "Cell Care Australia Pty Ltd",
+      "normalized": "cellcare"
+    },
+    {
+      "issue_date": "2009-12-18",
+      "licence_number": "MI-2009-LI-03349-3",
+      "manufacturer_id": "51382",
+      "address": "Building 79 ANSTO Business and Technology Park, Old Illawarra Road, LUCAS HEIGHTS, NSW, 2234",
+      "state": "NSW",
+      "manufacturer": "Cyclotek NSW Pty Ltd",
+      "normalized": "cycloteknsw"
+    },
+    {
+      "issue_date": "2009-12-18",
+      "licence_number": "MI-19052008-LI-002420-11",
+      "manufacturer_id": "51215",
+      "address": "Building 191 Murdoch University South Street, MURDOCH, WA, 6150",
+      "state": "WA",
+      "manufacturer": "Orthocell Ltd",
+      "normalized": "orthocell"
+    },
+    {
+      "issue_date": "2009-09-25",
+      "licence_number": "MI-18072008-LI-002488-11",
+      "manufacturer_id": "31994",
+      "address": "13a Ferndell Street, SOUTH GRANVILLE, NSW, 2142",
+      "state": "NSW",
+      "manufacturer": "Cryosite Ltd",
+      "normalized": "cryosite"
+    },
+    {
+      "issue_date": "2009-09-04",
+      "licence_number": "MI-08022008-LI-002308-11",
+      "manufacturer_id": "50709",
+      "address": "1129 Illawarra Road, CARRICK, TAS, 7291",
+      "state": "TAS",
+      "manufacturer": "Australian Therapeutic Proteins Pty Ltd",
+      "normalized": "australiantherapeuticproteins"
+    },
+    {
+      "issue_date": "2009-07-02",
+      "licence_number": "MI-15112006-LI-001604-11",
+      "manufacturer_id": "44459",
+      "address": "Tissue Typing Central Laboratory, Block 7 Level 4 Herston Hospitals Campus, ROYAL BRISBANE HOSPITAL, QLD, 4029",
+      "state": "QLD",
+      "manufacturer": "Health Support Queensland",
+      "normalized": "healthsupportqueensland"
+    },
+    {
+      "issue_date": "2009-03-31",
+      "licence_number": "MI-2008-LI-00759-3",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Maroochydore, Level 1 144 Horton Parade, MAROOCHYDORE, QLD, 4558",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2009-03-24",
+      "licence_number": "MI-31032008-LI-002365-11",
+      "manufacturer_id": "50786",
+      "address": "Block 7 Level 5 Herston Hospitals Campus, ROYAL BRISBANE HOSPITAL, QLD, 4029",
+      "state": "QLD",
+      "manufacturer": "Pathology Queensland Microbiology Division Central Laboratory",
+      "normalized": "pathologyqueenslandmicrobiologydivisioncentrallaboratory"
+    },
+    {
+      "issue_date": "2009-03-17",
+      "licence_number": "MI-16102008-LI-002634-11",
+      "manufacturer_id": "33224",
+      "address": "Ground Floor 8 Clunies Ross Road Brisbane Technology Park, EIGHT MILE PLAINS, QLD, 4113",
+      "state": "QLD",
+      "manufacturer": "MPS Hold Co Pty Ltd",
+      "normalized": "mpsholdco"
+    },
+    {
+      "issue_date": "2008-12-10",
+      "licence_number": "MI-21012008-LI-002262-11",
+      "manufacturer_id": "10576",
+      "address": "20 Jubilee Avenue, WARRIEWOOD, NSW, 2102",
+      "state": "NSW",
+      "manufacturer": "Blackmores Ltd",
+      "normalized": "blackmores"
+    },
+    {
+      "issue_date": "2008-09-19",
+      "licence_number": "MI-23102007-LI-002172-11",
+      "manufacturer_id": "50101",
+      "address": "Unit 5 110 Bourke Road, ALEXANDRIA, NSW, 2015",
+      "state": "NSW",
+      "manufacturer": "Proudex Pharmaceuticals Pty Ltd",
+      "normalized": "proudex"
+    },
+    {
+      "issue_date": "2008-05-21",
+      "licence_number": "MI-30012007-LI-001701-11",
+      "manufacturer_id": "48840",
+      "address": "Liverpool Street, HOBART, TAS, 7000",
+      "state": "TAS",
+      "manufacturer": "Royal Hobart Hospital / Pharmacy Department",
+      "normalized": "royalhobarthospitalpharmacydepartment"
+    },
+    {
+      "issue_date": "2008-02-22",
+      "licence_number": "MI-05072007-LI-001951-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Hervey Bay, Unit 4 43 Hunter Street, PIALBA, QLD, 4655",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2008-02-22",
+      "licence_number": "MI-22082005-LI-000828-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Nambour, Nambour General Hospital Mapleton Road, NAMBOUR, QLD, 4560",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2008-02-22",
+      "licence_number": "MI-23082005-LI-000839-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Bundaberg Bourbong Street, BUNDABERG, QLD, 4670",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2008-02-22",
+      "licence_number": "MI-22082005-LI-000827-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Gladstone Kent Street, GLADSTONE, QLD, 4680",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2008-02-22",
+      "licence_number": "MI-06112007-LI-002182-11",
+      "manufacturer_id": "",
+      "address": "Brisbane Processing Centre Kelvin Grove, 44 Musk Avenue, KELVIN GROVE, QLD, 4059",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2008-02-21",
+      "licence_number": "MI-2009-LI-02188-3",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Robina Robina Super Centre, Tenancy RC25a 86-104 Robina Town Centre Drive, ROBINA, QLD, 4226",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2008-02-08",
+      "licence_number": "MI-19092007-LI-002109-11",
+      "manufacturer_id": "50098",
+      "address": "5 Ferngrove Place, SOUTH GRANVILLE, NSW, 2142",
+      "state": "NSW",
+      "manufacturer": "Ferngrove Pharmaceuticals Australia Pty Ltd",
+      "normalized": "ferngrove"
+    },
+    {
+      "issue_date": "2007-12-20",
+      "licence_number": "MI-06022007-LI-001711-11",
+      "manufacturer_id": "13176",
+      "address": "Level 7 (West) E Block Building 75, Royal Prince Alfred Hospital, Institute of Haematology, Missenden Road, CAMPERDOWN, NSW, 2050",
+      "state": "NSW",
+      "manufacturer": "NSW Health Pathology Royal Prince Alfred Hospital",
+      "normalized": "nswhealthpathologyroyalprincealfredhospital"
+    },
+    {
+      "issue_date": "2007-10-23",
+      "licence_number": "MI-20062007-LI-001909-11",
+      "manufacturer_id": "",
+      "address": "Level 1/111 Stephen Road, Botany, NSW, 2019",
+      "state": "NSW",
+      "manufacturer": "Naturalab Pty Ltd",
+      "normalized": "naturalab"
+    },
+    {
+      "issue_date": "2007-06-07",
+      "licence_number": "MI-11012007-LI-001672-11",
+      "manufacturer_id": "48750",
+      "address": "28 Horizon Drive, BEENLEIGH, QLD, 4207",
+      "state": "QLD",
+      "manufacturer": "Inline Innovations Pty Ltd Trading as Inline Cosmetic Laboratories",
+      "normalized": "inlineinnovationstradingasinlinecosmeticlaboratories"
+    },
+    {
+      "issue_date": "2007-05-25",
+      "licence_number": "MI-12072006-LI-001375-11",
+      "manufacturer_id": "19567",
+      "address": "39 Kessels Road, COOPERS PLAINS, QLD, 4108",
+      "state": "QLD",
+      "manufacturer": "Metro South Hospital and Health Service T/A Queensland Tissue Bank",
+      "normalized": "metrosouthhospitalandhealthservicetaqueenslandtissuebank"
+    },
+    {
+      "issue_date": "2006-11-02",
+      "licence_number": "MI-08022006-LI-001124-11",
+      "manufacturer_id": "47302",
+      "address": "23 Commercial Drive, DANDENONG SOUTH, VIC, 3175",
+      "state": "VIC",
+      "manufacturer": "Supagas Pty Ltd",
+      "normalized": "supagas"
+    },
+    {
+      "issue_date": "2006-09-12",
+      "licence_number": "MI-22112005-LI-001016-11",
+      "manufacturer_id": "32100",
+      "address": "Unit 4 to 5 /25 Frenchs Forest Road, FRENCHS FOREST, NSW, 2086",
+      "state": "NSW",
+      "manufacturer": "Australian Biotechnologies Pty Limited",
+      "normalized": "australianbiotechnologies"
+    },
+    {
+      "issue_date": "2006-09-11",
+      "licence_number": "MI-18102005-LI-000969-2",
+      "manufacturer_id": "53067",
+      "address": "19A Garema Circuit, KINGSGROVE, NSW, 2208",
+      "state": "NSW",
+      "manufacturer": "Tismor Health & Wellness Pty Ltd",
+      "normalized": "tismorhealthandwellness"
+    },
+    {
+      "issue_date": "2006-09-07",
+      "licence_number": "MI-12092005-LI-000904-2",
+      "manufacturer_id": "",
+      "address": "38 - 40 Clements Avenue, BUNDOORA, VIC, 3083",
+      "state": "VIC",
+      "manufacturer": "Cyclotek (Aust) Pty Ltd",
+      "normalized": "cyclotekaust"
+    },
+    {
+      "issue_date": "2006-08-04",
+      "licence_number": "MI-25112005-LI-001027-11",
+      "manufacturer_id": "46553",
+      "address": "103-113 Stanley Street, WEST MELBOURNE, VIC, 3003",
+      "state": "VIC",
+      "manufacturer": "Acrux DDS Pty Ltd",
+      "normalized": "acruxdds"
+    },
+    {
+      "issue_date": "2006-06-07",
+      "licence_number": "MI-06022006-LI-001122-11",
+      "manufacturer_id": "47296",
+      "address": "185 Allambie Road, ALLAMBIE HEIGHTS, NSW, 2100",
+      "state": "NSW",
+      "manufacturer": "Sunnyfield",
+      "normalized": "sunnyfield"
+    },
+    {
+      "issue_date": "2006-05-22",
+      "licence_number": "MI-20022006-LI-001134-11",
+      "manufacturer_id": "23892",
+      "address": "Royal Newcastle Centre Level 3 , Interventional Suite , Lookout Road, NEW LAMBTON HEIGHTS, NSW, 2305",
+      "state": "NSW",
+      "manufacturer": "Hunter New England Bone Bank",
+      "normalized": "hunternewenglandbonebank"
+    },
+    {
+      "issue_date": "2006-05-05",
+      "licence_number": "MI-07122005-LI-001046-11",
+      "manufacturer_id": "46296",
+      "address": "15 Mareno Road, TULLAMARINE, VIC, 3043",
+      "state": "VIC",
+      "manufacturer": "Auspep Clinical Peptides Pty Ltd",
+      "normalized": "auspepclinicalpeptides"
+    },
+    {
+      "issue_date": "2006-01-25",
+      "licence_number": "MI-17082005-LI-000790-1",
+      "manufacturer_id": "20603",
+      "address": "1064 Pateena Road, LONGFORD, TAS, 7301",
+      "state": "TAS",
+      "manufacturer": "Selborne Biological Services (Australia) Pty Ltd",
+      "normalized": "selbornebiologicalservices"
+    },
+    {
+      "issue_date": "2005-10-19",
+      "licence_number": "MI-04102005-LI-000942-1",
+      "manufacturer_id": "10965",
+      "address": "741 Nudgee Road, NORTHGATE, QLD, 4013",
+      "state": "QLD",
+      "manufacturer": "Metagenics (Aust) Pty Ltd",
+      "normalized": "metagenicsaust"
+    },
+    {
+      "issue_date": "2005-10-16",
+      "licence_number": "MI-10082005-LI-000760-2",
+      "manufacturer_id": "",
+      "address": "Eye Bank of South Australia 5D203 Flinders Medical Centre, BEDFORD PARK, SA, 5042",
+      "state": "SA",
+      "manufacturer": "Southern Adelaide Local Health Network T/a Flinders Medical Centre",
+      "normalized": "southernadelaidelocalhealthnetworktaflindersmedicalcentre"
+    },
+    {
+      "issue_date": "2005-09-21",
+      "licence_number": "MI-25082005-LI-000862-1",
+      "manufacturer_id": "25766",
+      "address": "Raymond Terrace, SOUTH BRISBANE, QLD, 4101",
+      "state": "QLD",
+      "manufacturer": "Mater Misericordiae Health Services Brisbane T/A Mater Pathology",
+      "normalized": "matermisericordiaehealthservicesbrisbanetamaterpathology"
+    },
+    {
+      "issue_date": "2005-08-16",
+      "licence_number": "MI-04052005-LI-000529-1",
+      "manufacturer_id": "28204",
+      "address": "Microbiology Department, 41 Victoria Parade, FITZROY, VIC, 3065",
+      "state": "VIC",
+      "manufacturer": "St Vincents Hospital (Melbourne) Limited T/A St Vincent's Pathology",
+      "normalized": "stvincentshospitalmelbournetastvincentspathology"
+    },
+    {
+      "issue_date": "2005-08-01",
+      "licence_number": "MI-26072005-LI-000712-2",
+      "manufacturer_id": "",
+      "address": "Duncombe Building and Mater Hospital Brisbane Building, Raymond Terrace, South Brisbane, QLD, 4101",
+      "state": "QLD",
+      "manufacturer": "Mater Misericordiae Limited",
+      "normalized": "matermisericordiae"
+    },
+    {
+      "issue_date": "2005-04-28",
+      "licence_number": "MI-02082005-LI-000731-1",
+      "manufacturer_id": "",
+      "address": "3rd Floor South Building Royal Childrens Hospital, 50 Flemington Road, PARKVILLE, VIC, 3052",
+      "state": "VIC",
+      "manufacturer": "BMDI Cord Blood Bank",
+      "normalized": "bmdicordbloodbank"
+    },
+    {
+      "issue_date": "2005-04-01",
+      "licence_number": "MI-10032005-LI-000465-1",
+      "manufacturer_id": "31044",
+      "address": "Serology Laboratory / Prince of Wales Hospital, Barker Street, RANDWICK, NSW, 2031",
+      "state": "NSW",
+      "manufacturer": "NSW Health Pathology",
+      "normalized": "nswhealthpathology"
+    },
+    {
+      "issue_date": "2005-04-01",
+      "licence_number": "MI-04052005-LI-000530-1",
+      "manufacturer_id": "",
+      "address": "Level 3 Clinical Science Building High Street, RANDWICK, NSW, 2031",
+      "state": "NSW",
+      "manufacturer": "Sydney Cord Blood Bank",
+      "normalized": "sydneycordbloodbank"
+    },
+    {
+      "issue_date": "2005-03-23",
+      "licence_number": "MI-13122004-LI-000303-2",
+      "manufacturer_id": "16902",
+      "address": "5 Minna Close, BELROSE, NSW, 2085",
+      "state": "NSW",
+      "manufacturer": "Nature's Care Manufacture Pty Limited",
+      "normalized": "naturescaremanufacture"
+    },
+    {
+      "issue_date": "2004-11-01",
+      "licence_number": "MI-23112004-LI-000204-1",
+      "manufacturer_id": "30931",
+      "address": "Unit 2 69 Selhurst Street, COOPERS PLAINS, QLD, 4108",
+      "state": "QLD",
+      "manufacturer": "H C L Manufacturers Pty Ltd",
+      "normalized": "hclmanufacturers"
+    },
+    {
+      "issue_date": "2004-09-12",
+      "licence_number": "MI-11012008-LI-002248-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Bunbury Unit 5 51-55 Forrest Avenue, BUNBURY, WA, 6230",
+      "state": "WA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2004-05-27",
+      "licence_number": "MI-18112004-LI-000190-1",
+      "manufacturer_id": "41723",
+      "address": "Unit 1, 73 Beauchamp Road, MATRAVILLE, NSW, 2036",
+      "state": "NSW",
+      "manufacturer": "Professional Compounding Chemists of Australia Pty Limited",
+      "normalized": "professionalcompoundingchemistsof"
+    },
+    {
+      "issue_date": "2004-05-14",
+      "licence_number": "MI-07032005-LI-000461-1",
+      "manufacturer_id": "33224",
+      "address": "11 Spireton Place, PENDLE HILL, NSW, 2145",
+      "state": "NSW",
+      "manufacturer": "MPS Hold Co Pty Ltd",
+      "normalized": "mpsholdco"
+    },
+    {
+      "issue_date": "2004-04-21",
+      "licence_number": "MI-20102004-LI-000022-1",
+      "manufacturer_id": "31526",
+      "address": "Units 9 & 11 / 13 Berry Street, CLYDE, NSW, 2142",
+      "state": "NSW",
+      "manufacturer": "Aussie Tucker Technik Pty Ltd T/A IJ Contract Pharmaceuticals",
+      "normalized": "aussietuckertechniktaijcontract"
+    },
+    {
+      "issue_date": "2004-02-23",
+      "licence_number": "MI-01122004-LI-000264-1",
+      "manufacturer_id": "26183",
+      "address": "Level 3 T Block and N Block Military Road Southern Cross University, LISMORE, NSW, 2480",
+      "state": "NSW",
+      "manufacturer": "Southern Cross Analytical Research Laboratory",
+      "normalized": "southerncrossanalyticalresearchlaboratory"
+    },
+    {
+      "issue_date": "2004-02-12",
+      "licence_number": "MI-18112004-LI-000191-1",
+      "manufacturer_id": "78983",
+      "address": "8 Dalgleish Street, Thebarton, SA, 5031",
+      "state": "SA",
+      "manufacturer": "BioCina Pty Ltd",
+      "normalized": "biocina"
+    },
+    {
+      "issue_date": "2004-01-23",
+      "licence_number": "MI-13032006-LI-001162-11",
+      "manufacturer_id": "33386",
+      "address": "60 Waterloo Road, NORTH RYDE, NSW, 2113",
+      "state": "NSW",
+      "manufacturer": "Healius Pathology Pty Ltd T/A Laverty Pathology",
+      "normalized": "healiuspathologytalavertypathology"
+    },
+    {
+      "issue_date": "2003-10-20",
+      "licence_number": "MI-07032005-LI-000459-1",
+      "manufacturer_id": "33224",
+      "address": "MPS Melbourne 29 Connell Road, OAKLEIGH, VIC, 3166",
+      "state": "VIC",
+      "manufacturer": "MPS Hold Co Pty Ltd",
+      "normalized": "mpsholdco"
+    },
+    {
+      "issue_date": "2003-10-13",
+      "licence_number": "MI-25112004-LI-000214-1",
+      "manufacturer_id": "41175",
+      "address": "\"Rigby\" 6066 Cunningham Highway, KALBAR, QLD, 4309",
+      "state": "QLD",
+      "manufacturer": "Plasvacc Pty Ltd",
+      "normalized": "plasvacc"
+    },
+    {
+      "issue_date": "2003-07-29",
+      "licence_number": "MI-25112004-LI-000211-1",
+      "manufacturer_id": "25882",
+      "address": "1019 Mountain Highway, BORONIA, VIC, 3155",
+      "state": "VIC",
+      "manufacturer": "Baxter Laboratories Pty Ltd",
+      "normalized": "baxterlaboratories"
+    },
+    {
+      "issue_date": "2003-06-19",
+      "licence_number": "MI-11112004-LI-000153-1",
+      "manufacturer_id": "17881",
+      "address": "300 Herston Road, HERSTON, QLD, 4006",
+      "state": "QLD",
+      "manufacturer": "The Queensland Institute of Medical Research",
+      "normalized": "thequeenslandinstituteofmedicalresearch"
+    },
+    {
+      "issue_date": "2003-04-24",
+      "licence_number": "MI-26102004-LI-000068-1",
+      "manufacturer_id": "24423",
+      "address": "112A Albatross Road, NOWRA, NSW, 2541",
+      "state": "NSW",
+      "manufacturer": "Nowra Chemical Manufacturers Pty Ltd T/A Nowchem Pharma",
+      "normalized": "nowrachemicalmanufacturerstanowchem"
+    },
+    {
+      "issue_date": "2002-11-11",
+      "licence_number": "MI-01032006-LI-001139-11",
+      "manufacturer_id": "45338",
+      "address": "87 Yarraman Place, VIRGINIA, QLD, 4014",
+      "state": "QLD",
+      "manufacturer": "Sanofi-Aventis Healthcare Pty Ltd T/A Sanofi Consumer Healthcare",
+      "normalized": "sanofiaventistasanoficonsumer"
+    },
+    {
+      "issue_date": "2002-03-13",
+      "licence_number": "MI-04072005-LI-000664-2",
+      "manufacturer_id": "12818",
+      "address": "Unit C2 / 391 Park Road, Regents Park Estate, REGENTS PARK, NSW, 2143",
+      "state": "NSW",
+      "manufacturer": "Silliker Australia Pty Ltd",
+      "normalized": "silliker"
+    },
+    {
+      "issue_date": "2001-11-13",
+      "licence_number": "MI-25102004-LI-000050-1",
+      "manufacturer_id": "13267",
+      "address": "8 Warringah Close, SOMERSBY, NSW, 2250",
+      "state": "NSW",
+      "manufacturer": "Delta Laboratories Pty Ltd",
+      "normalized": "deltalaboratories"
+    },
+    {
+      "issue_date": "2001-10-27",
+      "licence_number": "MI-2009-LI-06212-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Noarlunga, Tenancy 2/12-18 David Witton Drive, NOARLUNGA CENTRE, SA, 5168",
+      "state": "SA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2001-10-27",
+      "licence_number": "MI-24082005-LI-000845-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre and Processing Darwin Part Shop 1, Cascome Centre 17 Scaturchio Street, CASUARINA, NT, 0810",
+      "state": "NT",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "2001-08-17",
+      "licence_number": "MI-04052005-LI-000531-1",
+      "manufacturer_id": "16421",
+      "address": "Level 7 QE2 Building Royal Prince Alfred Hospital, 59 Missenden Road, CAMPERDOWN, NSW, 2050",
+      "state": "NSW",
+      "manufacturer": "Sydney Local Health District T/A Rachel Forster Bone Bank",
+      "normalized": "sydneylocalhealthdistricttarachelforsterbonebank"
+    },
+    {
+      "issue_date": "2001-07-20",
+      "licence_number": "MI-02052005-LI-000523-2",
+      "manufacturer_id": "656",
+      "address": "57-61 Baile Road, CANNING VALE, WA, 6155",
+      "state": "WA",
+      "manufacturer": "BOC Limited",
+      "normalized": "boc"
+    },
+    {
+      "issue_date": "2001-07-20",
+      "licence_number": "MI-2010-LI-04993-3",
+      "manufacturer_id": "656",
+      "address": "52 Winnellie Road, WINNELLIE, NT, 0821",
+      "state": "NT",
+      "manufacturer": "BOC Limited",
+      "normalized": "boc"
+    },
+    {
+      "issue_date": "2001-05-10",
+      "licence_number": "MI-2010-LI-05036-3",
+      "manufacturer_id": "",
+      "address": "16 Picrite Close, GREYSTANES, NSW, 2145",
+      "state": "NSW",
+      "manufacturer": "DHL Supply Chain Australia Pty Limited",
+      "normalized": "dhlsupplychain"
+    },
+    {
+      "issue_date": "2001-02-20",
+      "licence_number": "MI-25112004-LI-000218-1",
+      "manufacturer_id": "31163",
+      "address": "Building 1 / 19-23 Paramount Road, WEST FOOTSCRAY, VIC, 3012",
+      "state": "VIC",
+      "manufacturer": "Intertek Testing Services Australia Pty Ltd",
+      "normalized": "intertektestingservices"
+    },
+    {
+      "issue_date": "2001-02-08",
+      "licence_number": "MI-10052005-LI-000542-1",
+      "manufacturer_id": "23299",
+      "address": "21 Reaghs Farm Road, MINTO, NSW, 2566",
+      "state": "NSW",
+      "manufacturer": "Lipa Pharmaceuticals Ltd",
+      "normalized": "lipa"
+    },
+    {
+      "issue_date": "2001-02-05",
+      "licence_number": "MI-29112004-LI-000245-1",
+      "manufacturer_id": "12760",
+      "address": "14 Kingston Drive, HELENSVALE, QLD, 4212",
+      "state": "QLD",
+      "manufacturer": "Cosmetic Manufacturers Aust Pty Ltd",
+      "normalized": "cosmeticmanufacturersaust"
+    },
+    {
+      "issue_date": "2001-01-13",
+      "licence_number": "MI-04112004-LI-000117-1",
+      "manufacturer_id": "504",
+      "address": "Level 2, Xavier Building 438 Victoria Street, DARLINGHURST, NSW, 2010",
+      "state": "NSW",
+      "manufacturer": "The Sydney Heart Valve Bank",
+      "normalized": "thesydneyheartvalvebank"
+    },
+    {
+      "issue_date": "2000-06-20",
+      "licence_number": "MI-19042005-LI-000512-1",
+      "manufacturer_id": "31044",
+      "address": "Department of Microbiology Clinical Services Building Level 3, St George Hospital Gray Street, KOGARAH, NSW, 2217",
+      "state": "NSW",
+      "manufacturer": "NSW Health Pathology",
+      "normalized": "nswhealthpathology"
+    },
+    {
+      "issue_date": "2000-01-18",
+      "licence_number": "MI-18052005-LI-000561-1",
+      "manufacturer_id": "18046",
+      "address": "57-83 Kavanagh Street, SOUTHBANK, VIC, 3006",
+      "state": "VIC",
+      "manufacturer": "Victorian Institute of Forensic Medicine T/A Donor Tissue Bank of Victoria",
+      "normalized": "victorianinstituteofforensicmedicinetadonortissuebankofvictoria"
+    },
+    {
+      "issue_date": "1999-11-15",
+      "licence_number": "MI-25112004-LI-000212-1",
+      "manufacturer_id": "15261",
+      "address": "Cell and Tissue Therapies WA, Royal Perth Hospital Wellington Street, PERTH, WA, 6000",
+      "state": "WA",
+      "manufacturer": "Royal Perth Hospital",
+      "normalized": "royalperthhospital"
+    },
+    {
+      "issue_date": "1999-10-20",
+      "licence_number": "MI-23032005-LI-000486-1",
+      "manufacturer_id": "30035",
+      "address": "376 Victoria St, DARLINGHURST, NSW, 2010",
+      "state": "NSW",
+      "manufacturer": "St Vincent's Hospital Sydney Ltd T/A Sydpath",
+      "normalized": "stvincentshospitalsydneytasydpath"
+    },
+    {
+      "issue_date": "1999-10-20",
+      "licence_number": "MI-31032005-LI-000496-1",
+      "manufacturer_id": "20730",
+      "address": "Level 7 Smorgon Family Wing Royal Victorian Eye and Ear, Hospital 32 Gisborne Street, EAST MELBOURNE, VIC, 3002",
+      "state": "VIC",
+      "manufacturer": "Lions Eye Donation Service",
+      "normalized": "lionseyedonationservice"
+    },
+    {
+      "issue_date": "1999-08-13",
+      "licence_number": "MI-06042006-LI-001220-11",
+      "manufacturer_id": "19635",
+      "address": "2 Verdun Street, Medical Centre, NEDLANDS, WA, 6009",
+      "state": "WA",
+      "manufacturer": "Lions Eye Bank of Western Australia",
+      "normalized": "lionseyebankofwestern"
+    },
+    {
+      "issue_date": "1999-07-15",
+      "licence_number": "MI-23022005-LI-000452-2",
+      "manufacturer_id": "18114",
+      "address": "4th Floor Healy Wing, 41 Victoria Parade, FITZROY, VIC, 3065",
+      "state": "VIC",
+      "manufacturer": "St Vincent's Institute of Medical Research T/A National Serology Reference Laboratory Australia",
+      "normalized": "stvincentsinstituteofmedicalresearchtanationalserologyreferencelaboratory"
+    },
+    {
+      "issue_date": "1999-05-10",
+      "licence_number": "MI-10012005-LI-000350-2",
+      "manufacturer_id": "17251",
+      "address": "22 Neumann Road, CAPALABA, QLD, 4157",
+      "state": "QLD",
+      "manufacturer": "Tripak Pharmaceuticals Pty Ltd",
+      "normalized": "tripak"
+    },
+    {
+      "issue_date": "1999-05-06",
+      "licence_number": "MI-21042005-LI-000516-1",
+      "manufacturer_id": "",
+      "address": "7-9 Amax Avenue, GIRRAWEEN, NSW, 2145",
+      "state": "NSW",
+      "manufacturer": "GMP Pharmaceuticals Pty Limited",
+      "normalized": "gmp"
+    },
+    {
+      "issue_date": "1998-10-16",
+      "licence_number": "MI-02022005-LI-000408-1",
+      "manufacturer_id": "",
+      "address": "Levels 2 & 3 Ned Hanlon Building Butterfield Street, Herston, QLD, 4029",
+      "state": "QLD",
+      "manufacturer": "Metro North Hospital and Health Service T/A Royal Brisbane & Womens Hospital",
+      "normalized": "metronorthhospitalandhealthservicetaroyalbrisbaneandwomenshospital"
+    },
+    {
+      "issue_date": "1998-10-09",
+      "licence_number": "MI-07062005-LI-000605-2",
+      "manufacturer_id": "65780",
+      "address": "25-31 Keysborough Avenue, Keysborough, VIC, 3173",
+      "state": "VIC",
+      "manufacturer": "Nutrition Care Pharmaceuticals Pty Ltd",
+      "normalized": "nutritioncare"
+    },
+    {
+      "issue_date": "1998-09-30",
+      "licence_number": "MI-25102004-LI-000061-1",
+      "manufacturer_id": "29038",
+      "address": "6 - 8 England Street, DANDENONG SOUTH, VIC, 3175",
+      "state": "VIC",
+      "manufacturer": "Micronisers Pty Ltd",
+      "normalized": "micronisers"
+    },
+    {
+      "issue_date": "1998-08-04",
+      "licence_number": "MI-20012005-LI-000384-1",
+      "manufacturer_id": "12731",
+      "address": "Unit D 6 Narabang Way, Austlink Park, BELROSE, NSW, 2085",
+      "state": "NSW",
+      "manufacturer": "ACE Packwell Pty Ltd",
+      "normalized": "acepackwell"
+    },
+    {
+      "issue_date": "1998-04-03",
+      "licence_number": "MI-29062005-LI-000653-1",
+      "manufacturer_id": "17451",
+      "address": "Bellerine Street, GEELONG, VIC, 3220",
+      "state": "VIC",
+      "manufacturer": "Barwon Health - Bone Bank",
+      "normalized": "barwonhealthbonebank"
+    },
+    {
+      "issue_date": "1998-02-25",
+      "licence_number": "MI-23122004-LI-000333-1",
+      "manufacturer_id": "805",
+      "address": "40 Bunnett Street, NORTH SUNSHINE, VIC, 3020",
+      "state": "VIC",
+      "manufacturer": "Air Liquide Australia Limited",
+      "normalized": "airliquide"
+    },
+    {
+      "issue_date": "1998-01-14",
+      "licence_number": "MI-2013-LI-01326-1",
+      "manufacturer_id": "",
+      "address": "SA Pathology Frome Road, ADELAIDE, SA, 5000",
+      "state": "SA",
+      "manufacturer": "Central Adelaide Local Health Network (operating as SA Pathology)",
+      "normalized": "centraladelaidelocalhealthnetworkoperatingassapathology"
+    },
+    {
+      "issue_date": "1998-01-14",
+      "licence_number": "MI-2013-LI-01399-1",
+      "manufacturer_id": "24095",
+      "address": "Food & Environmental Laboratory Frome Road, ADELAIDE, SA, 5000",
+      "state": "SA",
+      "manufacturer": "Central Adelaide Local Health Network (operating as SA Pathology)",
+      "normalized": "centraladelaidelocalhealthnetworkoperatingassapathology"
+    },
+    {
+      "issue_date": "1997-07-09",
+      "licence_number": "MI-26112004-LI-000236-1",
+      "manufacturer_id": "26732",
+      "address": "1 Hattersley Street, ARNCLIFFE, NSW, 2205",
+      "state": "NSW",
+      "manufacturer": "Global Medical Solutions Australia Pty Limited",
+      "normalized": "globalmedicalsolutions"
+    },
+    {
+      "issue_date": "1997-03-21",
+      "licence_number": "MI-2010-LI-04994-3",
+      "manufacturer_id": "22455",
+      "address": "Martindale 263 Mintaro Road, MINTARO, SA, 5415",
+      "state": "SA",
+      "manufacturer": "BTG Australasia Pty Ltd",
+      "normalized": "btgaustralasia"
+    },
+    {
+      "issue_date": "1997-03-21",
+      "licence_number": "MI-08072005-LI-000688-1",
+      "manufacturer_id": "22455",
+      "address": "129 Holland Road Turretfield Research Centre, ROSEDALE, SA, 5350",
+      "state": "SA",
+      "manufacturer": "BTG Australasia Pty Ltd",
+      "normalized": "btgaustralasia"
+    },
+    {
+      "issue_date": "1996-11-15",
+      "licence_number": "MI-22032005-LI-000481-1",
+      "manufacturer_id": "656",
+      "address": "Lot 1/300 Risdon Road, LUTANA, TAS, 7009",
+      "state": "TAS",
+      "manufacturer": "BOC Limited",
+      "normalized": "boc"
+    },
+    {
+      "issue_date": "1996-10-24",
+      "licence_number": "MI-07032007-LI-001764-11",
+      "manufacturer_id": "12103",
+      "address": "18 Jubilee Avenue, WARRIEWOOD, NSW, 2102",
+      "state": "NSW",
+      "manufacturer": "Pharmacare Laboratories Pty Ltd",
+      "normalized": "pharmacarelaboratories"
+    },
+    {
+      "issue_date": "1996-08-22",
+      "licence_number": "MI-09022005-LI-000428-1",
+      "manufacturer_id": "12818",
+      "address": "18-20 King Street, BLACKBURN, VIC, 3130",
+      "state": "VIC",
+      "manufacturer": "Silliker Australia Pty Ltd",
+      "normalized": "silliker"
+    },
+    {
+      "issue_date": "1996-06-28",
+      "licence_number": "MI-18042005-LI-000510-1",
+      "manufacturer_id": "19564",
+      "address": "6 Glasson Drive, BETHANIA, QLD, 4205",
+      "state": "QLD",
+      "manufacturer": "Primary Industries Management Services Pty Ltd T/A ConMac Laboratory Services",
+      "normalized": "primaryindustriesmanagementservicestaconmaclaboratoryservices"
+    },
+    {
+      "issue_date": "1996-04-12",
+      "licence_number": "MI-04102007-LI-002150-11",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Liverpool, Suites 5 and 6 50 Macquarie Street, LIVERPOOL, NSW, 2170",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1996-04-12",
+      "licence_number": "MI-20032007-LI-001793-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Albury 528 David Street, ALBURY, NSW, 2640",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1996-04-12",
+      "licence_number": "MI-2009-LI-01490-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Port Adelaide 95 St Vincent Street, PORT ADELAIDE, SA, 5015",
+      "state": "SA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1996-01-17",
+      "licence_number": "MI-2009-LI-03854-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Werribee Ground, Floor 7 Bridge Street, WERRIBEE, VIC, 3030",
+      "state": "VIC",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1995-12-15",
+      "licence_number": "MI-2010-LI-05005-3",
+      "manufacturer_id": "804",
+      "address": "Cnr Pradella Street & Ipswich Road, DARRA, QLD, 4076",
+      "state": "QLD",
+      "manufacturer": "Coregas Pty Ltd",
+      "normalized": "coregas"
+    },
+    {
+      "issue_date": "1995-12-15",
+      "licence_number": "MI-2010-LI-05004-3",
+      "manufacturer_id": "804",
+      "address": "228-230 Berkeley Road, UNANDERRA, NSW, 2526",
+      "state": "NSW",
+      "manufacturer": "Coregas Pty Ltd",
+      "normalized": "coregas"
+    },
+    {
+      "issue_date": "1995-12-15",
+      "licence_number": "MI-2010-LI-05023-3",
+      "manufacturer_id": "804",
+      "address": "6 Jonal Drive, CAVAN, SA, 5094",
+      "state": "SA",
+      "manufacturer": "Coregas Pty Ltd",
+      "normalized": "coregas"
+    },
+    {
+      "issue_date": "1995-12-15",
+      "licence_number": "MI-2010-LI-05022-3",
+      "manufacturer_id": "804",
+      "address": "3 Milne Street, THOMASTOWN, VIC, 3074",
+      "state": "VIC",
+      "manufacturer": "Coregas Pty Ltd",
+      "normalized": "coregas"
+    },
+    {
+      "issue_date": "1995-12-15",
+      "licence_number": "MI-17062005-LI-000632-2",
+      "manufacturer_id": "804",
+      "address": "66 Loftus Road, YENNORA, NSW, 2161",
+      "state": "NSW",
+      "manufacturer": "Coregas Pty Ltd",
+      "normalized": "coregas"
+    },
+    {
+      "issue_date": "1995-11-15",
+      "licence_number": "MI-14062005-LI-000625-2",
+      "manufacturer_id": "",
+      "address": "12-14 Leabons Lane, SEVEN HILLS, NSW, 2147",
+      "state": "NSW",
+      "manufacturer": "Endeavour Foundation",
+      "normalized": "endeavourfoundation"
+    },
+    {
+      "issue_date": "1995-09-12",
+      "licence_number": "MI-05092007-LI-002072-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Morley, 9 Collier Road, MORLEY, WA, 6062",
+      "state": "WA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1995-09-12",
+      "licence_number": "MI-26102006-LI-001569-11",
+      "manufacturer_id": "45769",
+      "address": "Perth Processing Centre, 290 Wellington Street, PERTH, WA, 6000",
+      "state": "WA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1995-09-12",
+      "licence_number": "MI-24082005-LI-000853-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Albany 30 Warden Avenue, ALBANY, WA, 6330",
+      "state": "WA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1995-09-12",
+      "licence_number": "MI-24082005-LI-000855-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Rockingham Lot 3, Unit 3A Central House Benjamin Way, ROCKINGHAM, WA, 6168",
+      "state": "WA",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1995-09-11",
+      "licence_number": "MI-22082005-LI-000826-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Brisbane, 288 Edward Street, BRISBANE, QLD, 4000",
+      "state": "QLD",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1995-07-07",
+      "licence_number": "MI-26102004-LI-000077-1",
+      "manufacturer_id": "14470",
+      "address": "Queen Elizabeth II Medical Centre Hospital Avenue, NEDLANDS, WA, 6909",
+      "state": "WA",
+      "manufacturer": "PathWest Laboratory Medicine WA T/A PathWest",
+      "normalized": "pathwestlaboratorymedicinewatapathwest"
+    },
+    {
+      "issue_date": "1995-06-15",
+      "licence_number": "MI-10092007-LI-002080-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Devonport 40 Oldaker Street, DEVONPORT, TAS, 7310",
+      "state": "TAS",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1995-06-15",
+      "licence_number": "MI-17032008-LI-002347-11",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Burnie 117 Wilson Street, BURNIE, TAS, 7320",
+      "state": "TAS",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1995-06-15",
+      "licence_number": "MI-25082005-LI-000861-1",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Launceston, 54 Paterson Street, LAUNCESTON, TAS, 7250",
+      "state": "TAS",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1995-05-05",
+      "licence_number": "MI-30112004-LI-000253-1",
+      "manufacturer_id": "15320",
+      "address": "9 Williamson Rd, INGLEBURN, NSW, 2565",
+      "state": "NSW",
+      "manufacturer": "Pax Australia Pty Limited",
+      "normalized": "pax"
+    },
+    {
+      "issue_date": "1995-03-28",
+      "licence_number": "MI-11102004-LI-000008-1",
+      "manufacturer_id": "14396",
+      "address": "2 Blackmore Road, SMEATON GRANGE, NSW, 2567",
+      "state": "NSW",
+      "manufacturer": "Teradoran Pty Ltd t/a Activ Pharmaceuticals",
+      "normalized": "teradorantaactiv"
+    },
+    {
+      "issue_date": "1995-01-12",
+      "licence_number": "MI-30032005-LI-000493-2",
+      "manufacturer_id": "656",
+      "address": "14 Ashwin Parade, TORRENSVILLE, SA, 5031",
+      "state": "SA",
+      "manufacturer": "BOC Limited",
+      "normalized": "boc"
+    },
+    {
+      "issue_date": "1995-01-05",
+      "licence_number": "MI-05052005-LI-000538-1",
+      "manufacturer_id": "12798",
+      "address": "45 King Road, HORNSBY, NSW, 2077",
+      "state": "NSW",
+      "manufacturer": "Jalco Cosmetics Pty Limited",
+      "normalized": "jalcocosmetics"
+    },
+    {
+      "issue_date": "1994-12-05",
+      "licence_number": "MI-24112004-LI-000209-1",
+      "manufacturer_id": "426",
+      "address": "53-57 Oatley Court, BELCONNEN, ACT, 2617",
+      "state": "ACT",
+      "manufacturer": "Global Medical Solutions Australia Pty Limited T/A Radpharm Scientific",
+      "normalized": "globalmedicalsolutionstaradpharmscientific"
+    },
+    {
+      "issue_date": "1994-10-07",
+      "licence_number": "MI-22032005-LI-000482-1",
+      "manufacturer_id": "",
+      "address": "78-84 Bell Street, PRESTON, VIC, 3072",
+      "state": "VIC",
+      "manufacturer": "BOC Limited",
+      "normalized": "boc"
+    },
+    {
+      "issue_date": "1994-10-06",
+      "licence_number": "MI-16022005-LI-000443-1",
+      "manufacturer_id": "12759",
+      "address": "6 Elliott Road, DANDENONG, VIC, 3175",
+      "state": "VIC",
+      "manufacturer": "Propharma Australia Pty Ltd",
+      "normalized": "pro"
+    },
+    {
+      "issue_date": "1994-09-15",
+      "licence_number": "MI-04082005-LI-000738-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Garran Red Cross House Dann Close, GARRAN, ACT, 2605",
+      "state": "ACT",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1994-08-08",
+      "licence_number": "MI-17122004-LI-000323-1",
+      "manufacturer_id": "16992",
+      "address": "6 Norman Street, PEAKHURST, NSW, 2210",
+      "state": "NSW",
+      "manufacturer": "Phytex Australia Pty Ltd",
+      "normalized": "phytex"
+    },
+    {
+      "issue_date": "1994-08-04",
+      "licence_number": "MI-11102004-LI-000004-1",
+      "manufacturer_id": "15586",
+      "address": "39 Melverton Drive, HALLAM, VIC, 3803",
+      "state": "VIC",
+      "manufacturer": "Australian Botanical Products Pty Ltd",
+      "normalized": "australianbotanicalproducts"
+    },
+    {
+      "issue_date": "1994-06-24",
+      "licence_number": "MI-23122004-LI-000329-1",
+      "manufacturer_id": "805",
+      "address": "43-47 Pine Road, FAIRFIELD, NSW, 2165",
+      "state": "NSW",
+      "manufacturer": "Air Liquide Australia Limited",
+      "normalized": "airliquide"
+    },
+    {
+      "issue_date": "1994-05-03",
+      "licence_number": "MI-2009-LI-06656-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Orange 84 Kite Street, ORANGE, NSW, 2800",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1994-05-03",
+      "licence_number": "MI-17082005-LI-000819-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Taree 1/6 Macquarie Street, TAREE, NSW, 2430",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1994-05-03",
+      "licence_number": "MI-17082005-LI-000811-1",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Dubbo Unit 1, 150 Darling Street, DUBBO, NSW, 2830",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1994-05-03",
+      "licence_number": "MI-12032007-LI-001774-11",
+      "manufacturer_id": "",
+      "address": "Blood Donor Centre Goulburn 183-187 Auburn Street, GOULBURN, NSW, 2580",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1994-05-03",
+      "licence_number": "MI-2009-LI-04235-3",
+      "manufacturer_id": "45769",
+      "address": "Blood Donor Centre Nepean Unit 9 69 York Road, JAMISONTOWN, NSW, 2750",
+      "state": "NSW",
+      "manufacturer": "Australian Red Cross Lifeblood - An Operating Division of The Australian Red Cross Society",
+      "normalized": "australianredcrosslifebloodanoperatingdivisionoftheaustralianredcrosssociety"
+    },
+    {
+      "issue_date": "1994-02-11",
+      "licence_number": "MI-2010-LI-04988-3",
+      "manufacturer_id": "12730",
+      "address": "131 Station Road, SEVEN HILLS, NSW, 2147",
+      "state": "NSW",
+      "manufacturer": "Access Industries for the Disabled Ltd",
+      "normalized": "accessindustriesforthedisabled"
+    },
+    {
+      "issue_date": "1994-01-31",
+      "licence_number": "MI-23122004-LI-000332-1",
+      "manufacturer_id": "",
+      "address": "164 Philip Highway, ELIZABETH EAST, SA, 5112",
+      "state": "SA",
+      "manufacturer": "Air Liquide Australia Limited",
+      "normalized": "airliquide"
+    },
+    {
+      "issue_date": "1993-09-20",
+      "licence_number": "MI-25052005-LI-000572-1",
+      "manufacturer_id": "",
+      "address": "124 McEvoy Street, WARWICK, QLD, 4370",
+      "state": "QLD",
+      "manufacturer": "Integria Healthcare Australia Pty Ltd",
+      "normalized": "integria"
+    },
+    {
+      "issue_date": "1993-09-14",
+      "licence_number": "MI-02022005-LI-000417-1",
+      "manufacturer_id": "10848",
+      "address": "61-81 Clarinda Road, OAKLEIGH SOUTH, VIC, 3167",
+      "state": "VIC",
+      "manufacturer": "Felton Grimwade & Bosisto's Pty Ltd",
+      "normalized": "feltongrimwadeandbosistos"
+    },
+    {
+      "issue_date": "1993-09-08",
+      "licence_number": "MI-23122004-LI-000331-1",
+      "manufacturer_id": "805",
+      "address": "759 Progress Road, WACOL, QLD, 4076",
+      "state": "QLD",
+      "manufacturer": "Air Liquide Australia Limited",
+      "normalized": "airliquide"
+    },
+    {
+      "issue_date": "1993-08-30",
+      "licence_number": "MI-01122004-LI-000256-1",
+      "manufacturer_id": "42142",
+      "address": "Buildings 8 & 10 56 Smith Road, SPRINGVALE, VIC, 3171",
+      "state": "VIC",
+      "manufacturer": "Medical Developments International Limited",
+      "normalized": "medicaldevelopmentsinternational"
+    },
+    {
+      "issue_date": "1993-08-30",
+      "licence_number": "MI-17062005-LI-000631-2",
+      "manufacturer_id": "805",
+      "address": "3 Channel Close, Henderson, WA, 6166",
+      "state": "WA",
+      "manufacturer": "Air Liquide Australia Limited",
+      "normalized": "airliquide"
+    },
+    {
+      "issue_date": "1993-08-27",
+      "licence_number": "MI-25112004-LI-000210-1",
+      "manufacturer_id": "18466",
+      "address": "18 Coora Road, OAKLEIGH SOUTH, VIC, 3167",
+      "state": "VIC",
+      "manufacturer": "Nutri Health Food Centre Pty Ltd",
+      "normalized": "nutrihealthfoodcentre"
+    },
+    {
+      "issue_date": "1993-08-13",
+      "licence_number": "MI-2010-LI-04992-3",
+      "manufacturer_id": "656",
+      "address": "384 Ingham Road, GARBUTT, QLD, 4814",
+      "state": "QLD",
+      "manufacturer": "BOC Limited",
+      "normalized": "boc"
+    },
+    {
+      "issue_date": "1993-08-13",
+      "licence_number": "MI-02052005-LI-000524-2",
+      "manufacturer_id": "656",
+      "address": "1688 Ipswich Road, ROCKLEA, QLD, 4106",
+      "state": "QLD",
+      "manufacturer": "BOC Limited",
+      "normalized": "boc"
+    },
+    {
+      "issue_date": "1993-07-21",
+      "licence_number": "MI-15112004-LI-000166-1",
+      "manufacturer_id": "",
+      "address": "71-75 Taunton Drive, CHELTENHAM, VIC, 3192",
+      "state": "VIC",
+      "manufacturer": "BASF Australia Ltd",
+      "normalized": "basf"
+    },
+    {
+      "issue_date": "1993-05-31",
+      "licence_number": "MI-2010-LI-05045-3",
+      "manufacturer_id": "256",
+      "address": "68 Wadhurst Drive, BORONIA, VIC, 3155",
+      "state": "VIC",
+      "manufacturer": "IDT Australia Ltd",
+      "normalized": "idt"
+    },
+    {
+      "issue_date": "1993-05-31",
+      "licence_number": "MI-28102004-LI-000089-1",
+      "manufacturer_id": "256",
+      "address": "39-57 Wadhurst Drive, BORONIA, VIC, 3155",
+      "state": "VIC",
+      "manufacturer": "IDT Australia Ltd",
+      "normalized": "idt"
+    },
+    {
+      "issue_date": "1993-05-31",
+      "licence_number": "MI-01112004-LI-000098-1",
+      "manufacturer_id": "16163",
+      "address": "286 Fison Avenue East, EAGLE FARM, QLD, 4009",
+      "state": "QLD",
+      "manufacturer": "TSI Pharmaceuticals Pty Ltd",
+      "normalized": "tsi"
+    },
+    {
+      "issue_date": "1993-04-19",
+      "licence_number": "MI-19012005-LI-000376-2",
+      "manufacturer_id": "12513",
+      "address": "Units 2 3 4 5 6 7 8 9 10 11 & 13 / 20 - 30 Malcolm Road, BRAESIDE, VIC, 3195",
+      "state": "VIC",
+      "manufacturer": "Orthomolecular Medisearch Laboratories Pty Ltd Trading As Biological Therapies",
+      "normalized": "orthomolecularmedisearchlaboratoriestradingasbiologicaltherapies"
+    },
+    {
+      "issue_date": "1993-02-10",
+      "licence_number": "MI-03122004-LI-000275-1",
+      "manufacturer_id": "14612",
+      "address": "Building 23D New Illawarra Road, LUCAS HEIGHTS, NSW, 2234",
+      "state": "NSW",
+      "manufacturer": "Australian Nuclear Science and Technology Organisation",
+      "normalized": "australiannuclearscienceandtechnologyorganisation"
+    },
+    {
+      "issue_date": "1992-11-24",
+      "licence_number": "MI-07072005-LI-000683-1",
+      "manufacturer_id": "21291",
+      "address": "77 Chetwynd Street, LOGANHOLME, QLD, 4129",
+      "state": "QLD",
+      "manufacturer": "Aloe Vera Industries Pty Ltd",
+      "normalized": "aloeveraindustries"
+    },
+    {
+      "issue_date": "1992-11-23",
+      "licence_number": "MI-31072006-LI-001421-11",
+      "manufacturer_id": "841",
+      "address": "12-16 Janine Street, SCORESBY, VIC, 3179",
+      "state": "VIC",
+      "manufacturer": "Mentholatum Australasia Pty Ltd",
+      "normalized": "mentholatumaustralasia"
+    },
+    {
+      "issue_date": "1992-07-30",
+      "licence_number": "MI-11082005-LI-000764-2",
+      "manufacturer_id": "12832",
+      "address": "25-29 Delawney Street, BALCATTA, WA, 6021",
+      "state": "WA",
+      "manufacturer": "Orion Laboratories Pty Ltd T/A Evaris Pharma",
+      "normalized": "orionlaboratoriestaevaris"
+    },
+    {
+      "issue_date": "1992-07-29",
+      "licence_number": "MI-11102004-LI-000007-1",
+      "manufacturer_id": "12517",
+      "address": "14-22 Carrick Drive, TULLAMARINE, VIC, 3043",
+      "state": "VIC",
+      "manufacturer": "Ross Laboratories Aust Pty Ltd",
+      "normalized": "rosslaboratoriesaust"
+    },
+    {
+      "issue_date": "1992-06-17",
+      "licence_number": "MI-24032006-LI-001174-11",
+      "manufacturer_id": "46283",
+      "address": "27 Healey Road, DANDENONG, VIC, 3175",
+      "state": "VIC",
+      "manufacturer": "Sypharma Pty Ltd",
+      "normalized": "sy"
+    },
+    {
+      "issue_date": "1992-06-17",
+      "licence_number": "MI-09112004-LI-000138-1",
+      "manufacturer_id": "12550",
+      "address": "217-221 Governor Road, BRAESIDE, VIC, 3195",
+      "state": "VIC",
+      "manufacturer": "Catalent Australia Pty Ltd",
+      "normalized": "catalent"
+    },
+    {
+      "issue_date": "1992-06-05",
+      "licence_number": "MI-2010-LI-04970-3",
+      "manufacturer_id": "56",
+      "address": "9-29 Syme Street, BRUNSWICK LOWER, VIC, 3056",
+      "state": "VIC",
+      "manufacturer": "Baxter Healthcare Pty Ltd",
+      "normalized": "baxter"
+    },
+    {
+      "issue_date": "1992-06-05",
+      "licence_number": "MI-01022005-LI-000405-1",
+      "manufacturer_id": "56",
+      "address": "1 Baxter Drive, OLD TOONGABBIE, NSW, 2146",
+      "state": "NSW",
+      "manufacturer": "Baxter Healthcare Pty Ltd",
+      "normalized": "baxter"
+    },
+    {
+      "issue_date": "1992-06-05",
+      "licence_number": "MI-2010-LI-04916-3",
+      "manufacturer_id": "56",
+      "address": "1115 Stanley Street, COORPAROO, QLD, 4151",
+      "state": "QLD",
+      "manufacturer": "Baxter Healthcare Pty Ltd",
+      "normalized": "baxter"
+    },
+    {
+      "issue_date": "1992-06-05",
+      "licence_number": "MI-05112004-LI-000124-1",
+      "manufacturer_id": "28",
+      "address": "Building 23 New Illawarra Road, LUCAS HEIGHTS, NSW, 2234",
+      "state": "NSW",
+      "manufacturer": "Australian Nuclear Science and Technology Organisation T/A ANSTO",
+      "normalized": "australiannuclearscienceandtechnologyorganisationtaansto"
+    },
+    {
+      "issue_date": "1992-06-05",
+      "licence_number": "MI-2012-LI-01300-3",
+      "manufacturer_id": "56",
+      "address": "Unit 17 / 520 South Road, KURRALTA PARK, SA, 5037",
+      "state": "SA",
+      "manufacturer": "Baxter Healthcare Pty Ltd",
+      "normalized": "baxter"
+    },
+    {
+      "issue_date": "1992-06-05",
+      "licence_number": "MI-2010-LI-04971-3",
+      "manufacturer_id": "56",
+      "address": "Toongabbie Pharmacy 1 Baxter Drive, OLD TOONGABBIE, NSW, 2146",
+      "state": "NSW",
+      "manufacturer": "Baxter Healthcare Pty Ltd",
+      "normalized": "baxter"
+    },
+    {
+      "issue_date": "1992-06-02",
+      "licence_number": "MI-2010-LI-05073-3",
+      "manufacturer_id": "482",
+      "address": "286-302 Frankston-Dandenong Road, DANDENONG SOUTH, VIC, 3175",
+      "state": "VIC",
+      "manufacturer": "Aspen Pharma Pty Ltd",
+      "normalized": "aspen"
+    },
+    {
+      "issue_date": "1992-04-27",
+      "licence_number": "MI-15122004-LI-000311-1",
+      "manufacturer_id": "12796",
+      "address": "160 Birralee Road, WESTBURY, TAS, 7303",
+      "state": "TAS",
+      "manufacturer": "Tasmanian Alkaloids Pty Ltd",
+      "normalized": "tasmanianalkaloids"
+    },
+    {
+      "issue_date": "1992-04-27",
+      "licence_number": "MI-09112004-LI-000139-1",
+      "manufacturer_id": "",
+      "address": "195 Princes Highway, PORT FAIRY, VIC, 3284",
+      "state": "VIC",
+      "manufacturer": "Sun Pharmaceutical Industries Australia Pty Ltd",
+      "normalized": "sunindustries"
+    },
+    {
+      "issue_date": "1992-02-11",
+      "licence_number": "MI-04112004-LI-000116-1",
+      "manufacturer_id": "11117",
+      "address": "15 Durbell 50 Dulacca & 50A Dulacca Streets, ACACIA RIDGE, QLD, 4110",
+      "state": "QLD",
+      "manufacturer": "Lucas Papaw Remedies",
+      "normalized": "lucaspapawremedies"
+    },
+    {
+      "issue_date": "1992-02-10",
+      "licence_number": "MI-12052005-LI-000553-1",
+      "manufacturer_id": "39",
+      "address": "10-14 Khartoum Road, NORTH RYDE, NSW, 2113",
+      "state": "NSW",
+      "manufacturer": "AstraZeneca Pty Ltd",
+      "normalized": "astrazeneca"
+    },
+    {
+      "issue_date": "1992-02-07",
+      "licence_number": "MI-20102004-LI-000029-1",
+      "manufacturer_id": "10602",
+      "address": "1 Para Road, TANUNDA, SA, 5352",
+      "state": "SA",
+      "manufacturer": "Brauer Natural Medicine Pty Ltd",
+      "normalized": "brauernaturalmedicine"
+    },
+    {
+      "issue_date": "1992-01-15",
+      "licence_number": "MI-23122004-LI-000328-1",
+      "manufacturer_id": "472",
+      "address": "54 Waterloo Road, NORTH RYDE, NSW, 2113",
+      "state": "NSW",
+      "manufacturer": "Novartis Pharmaceuticals Australia Pty Ltd",
+      "normalized": "novartis"
+    },
+    {
+      "issue_date": "1991-12-16",
+      "licence_number": "MI-22102004-LI-000039-1",
+      "manufacturer_id": "40029",
+      "address": "1-5 7-23 and 25-39 Lexia Place, MULGRAVE, VIC, 3170",
+      "state": "VIC",
+      "manufacturer": "Hospira Australia Pty Ltd",
+      "normalized": "hospira"
+    },
+    {
+      "issue_date": "1991-11-25",
+      "licence_number": "MI-04032005-LI-000458-2",
+      "manufacturer_id": "10817",
+      "address": "13-31 Malcolm Road, BRAESIDE, VIC, 3195",
+      "state": "VIC",
+      "manufacturer": "Ego Pharmaceuticals Pty Ltd",
+      "normalized": "ego"
+    },
+    {
+      "issue_date": "1991-11-05",
+      "licence_number": "MI-2010-LI-05025-3",
+      "manufacturer_id": "58754",
+      "address": "Woodend Field Station Cobb & Co Road, WOODEND, VIC, 3442",
+      "state": "VIC",
+      "manufacturer": "Seqirus Pty Ltd",
+      "normalized": "seqirus"
+    },
+    {
+      "issue_date": "1991-11-05",
+      "licence_number": "MI-2010-LI-05028-3",
+      "manufacturer_id": "59556",
+      "address": "11 Coongie Avenue, Edwardstown, SA, 5039",
+      "state": "SA",
+      "manufacturer": "Toll Transport Pty Ltd",
+      "normalized": "tolltransport"
+    },
+    {
+      "issue_date": "1991-11-04",
+      "licence_number": "MI-14012005-LI-000361-2",
+      "manufacturer_id": "10870",
+      "address": "1538 Main North Road, SALISBURY SOUTH, SA, 5106",
+      "state": "SA",
+      "manufacturer": "Mayne Pharma International Pty Ltd",
+      "normalized": "mayneinternational"
+    },
+    {
+      "issue_date": "1991-10-31",
+      "licence_number": "MI-25112004-LI-000229-1",
+      "manufacturer_id": "",
+      "address": "83-85 Cherry Lane, LAVERTON NORTH, VIC, 3026",
+      "state": "VIC",
+      "manufacturer": "Probiotec Pharma Pty Limited",
+      "normalized": "probiotec"
+    },
+    {
+      "issue_date": "1991-10-31",
+      "licence_number": "MI-18112004-LI-000187-1",
+      "manufacturer_id": "10813",
+      "address": "490 - 500 Wellington Road, MULGRAVE, VIC, 3170",
+      "state": "VIC",
+      "manufacturer": "Ensign Laboratories Pty Ltd",
+      "normalized": "ensignlaboratories"
+    },
+    {
+      "issue_date": "1991-10-30",
+      "licence_number": "MI-11032005-LI-000470-1",
+      "manufacturer_id": "",
+      "address": "Oilseeds Road, Memerambi, QLD, 4610",
+      "state": "QLD",
+      "manufacturer": "Australian Alkaloids Pty Ltd",
+      "normalized": "australianalkaloids"
+    },
+    {
+      "issue_date": "1991-10-23",
+      "licence_number": "MI-2010-LI-05076-3",
+      "manufacturer_id": "",
+      "address": "5-7 Widemere Road, WETHERILL PARK, NSW, 2164",
+      "state": "NSW",
+      "manufacturer": "Steritech Pty Ltd",
+      "normalized": "steritech"
+    },
+    {
+      "issue_date": "1991-10-23",
+      "licence_number": "MI-27012005-LI-000402-1",
+      "manufacturer_id": "12892",
+      "address": "160 South Gippsland Highway, DANDENONG SOUTH, VIC, 3175",
+      "state": "VIC",
+      "manufacturer": "Steritech Pty Ltd",
+      "normalized": "steritech"
+    },
+    {
+      "issue_date": "1991-10-23",
+      "licence_number": "MI-2010-LI-05075-3",
+      "manufacturer_id": "12892",
+      "address": "180-186 Potassium Street, NARANGBA, QLD, 4504",
+      "state": "QLD",
+      "manufacturer": "Steritech Pty Ltd",
+      "normalized": "steritech"
+    },
+    {
+      "issue_date": "1991-10-21",
+      "licence_number": "MI-26112004-LI-000238-1",
+      "manufacturer_id": "18",
+      "address": "100 & 102 Antimony & 11 & 15-25 Garnet Street, CAROLE PARK, QLD, 4300",
+      "state": "QLD",
+      "manufacturer": "Alphapharm Pty Ltd",
+      "normalized": "alphapharm"
+    }
+  ]
+}

@@ -4,6 +4,7 @@
     "last_updated": "2026-04-19"
   },
   "omega-3-acid ethyl esters":  {"en": ["cardiovascular"],          "kr": ["심혈관"]},
+  "omega-3-acid":               {"en": ["cardiovascular"],          "kr": ["심혈관"]},
   "gadobutrol":                 {"en": ["imaging"],                  "kr": ["조영제"]},
   "fluticasone":                {"en": ["respiratory"],              "kr": ["호흡기"]},
   "salmeterol":                 {"en": ["respiratory"],              "kr": ["호흡기"]},

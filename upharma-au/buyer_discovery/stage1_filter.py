@@ -20,6 +20,16 @@ from typing import Any
 
 from .sources.db_sponsors import fetch_artg_matrix_for_buyer
 
+# INN 정규화 — hydroxyurea ↔ hydroxycarbamide 같은 동의어·염 꼬리 제거.
+# crawler/utils/inn_normalize.py 의 _INN_ALIASES 테이블을 통해
+# TGA(WHO INN) ↔ au_products.json(USAN) 간 표기 차이를 흡수한다.
+import sys as _sys
+from pathlib import Path as _Path
+_CRAWLER_ROOT = _Path(__file__).resolve().parent.parent
+if str(_CRAWLER_ROOT) not in _sys.path:
+    _sys.path.insert(0, str(_CRAWLER_ROOT))
+from crawler.utils.inn_normalize import extract_inn_set, strip_inn_salt  # noqa: E402
+
 _SEEDS = Path(__file__).resolve().parent / "seeds"
 
 
@@ -192,31 +202,54 @@ def classify_ingredient_coverage(
       (case_code, label)
         case_code ∈ {"A_competitor", "B_ideal_buyer", "C_partial", "D_none"}
         label: UI 표시용 한국어 문구
+
+    2026-04-19 수정:
+      · 성분 비교 시 양쪽 모두 `strip_inn_salt`·`extract_inn_set` 로 정규화.
+        예) target "hydroxyurea" ↔ TGA "hydroxycarbamide" 는 _INN_ALIASES
+        를 통해 canonical "hydroxycarbamide" 로 통일 → set-equality 성립.
+      · FDC 복합제 sponsor (ARTG 한 행 안에 모든 inn_components 를 포함) 는
+        경쟁자(A_competitor) 가 아니라 **B_ideal_buyer** 로 재분류. 동일
+        복합제 취급 경험 있는 회사가 한국유나이티드 품목의 현실적 바이어
+        1순위이므로.
     """
     if not target_inns:
         return ("D_none", "미보유")
 
-    matrix = fetch_artg_matrix_for_buyer(buyer_name)  # {artg_id: {inn_str_lower}}
-    target_set = {(i or "").lower().strip() for i in target_inns if i}
-    target_set.discard("")
+    # target_set: INN 을 canonical (염·수화물 제거 + USAN→WHO INN 매핑) 으로 정규화
+    target_set: set[str] = set()
+    for t in target_inns:
+        base = strip_inn_salt(t or "")
+        if base:
+            target_set.add(base)
+    if not target_set:
+        return ("D_none", "미보유")
 
-    def _contains_target(artg_ings: set[str], inn: str) -> bool:
-        """ARTG 의 active_ingredients 문자열들 안에 INN 이 substring 으로 있는지."""
-        return any(inn in a for a in artg_ings)
+    raw_matrix = fetch_artg_matrix_for_buyer(buyer_name)  # {artg_id: {원본문자열}}
 
-    # Case A: 같은 ARTG 하나에 target_inns 전부 포함 → 복합제 자체 보유
-    for artg_id, artg_ings in matrix.items():
-        if target_set and all(_contains_target(artg_ings, inn) for inn in target_set):
-            return ("A_competitor", f"복합제 보유 (경쟁) — ARTG {artg_id}")
+    # 각 ARTG 의 active_ingredients 문자열들을 canonical INN set 으로 변환
+    matrix: dict[str, frozenset[str]] = {
+        artg_id: extract_inn_set(*ings)
+        for artg_id, ings in raw_matrix.items()
+    }
 
-    # 전체 합집합
+    # Case A/B 공통 — 같은 ARTG 하나에 target_inns 전부 포함
+    # (사용자 지시 2026-04-19): FDC 복합제 sponsor 는 경쟁이 아니라
+    # 이상적 바이어로 분류. 동일 복합제 취급 경험 = 최우선 바이어.
+    for artg_id, artg_inns in matrix.items():
+        if target_set.issubset(artg_inns):
+            return (
+                "B_ideal_buyer",
+                f"복합제 보유 (FDC 취급 경험) — ARTG {artg_id}",
+            )
+
+    # 전체 합집합 (여러 ARTG 에 걸쳐 각 성분 별개 보유 여부 판정용)
     all_covered: set[str] = set()
-    for ings in matrix.values():
-        all_covered |= ings
+    for inns in matrix.values():
+        all_covered |= set(inns)
 
-    matched = {inn for inn in target_set if _contains_target(all_covered, inn)}
+    matched = target_set & all_covered
 
-    # Case B: 모든 성분이 별개 ARTG 로 커버
+    # Case B: 모든 성분이 별개 ARTG 로 커버 (각 성분 개별 보유 = 이상적 바이어)
     if matched == target_set:
         return ("B_ideal_buyer", f"별개 보유 ({', '.join(sorted(matched))})")
 

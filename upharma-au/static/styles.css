@@ -1049,6 +1049,9 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 #p2-ai-result-section {
   display: grid;
   gap: 14px;
+  overflow: visible;
+  min-height: min-content;
+  align-content: start;
 }
 #p2-ai-result-section .result-card,
 #p2-ai-result-section .report-card {
@@ -1657,6 +1660,10 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   margin-bottom: 14px;
   overflow: hidden;
 }
+/* 02 수출가격 전략: 3열 카드·옵션 행이 길어질 때 상위 overflow:hidden 에 하단(버튼)이 잘리는 것 방지 */
+.process-section:has(#pb-p2) {
+  overflow: visible;
+}
 .process-header {
   display: flex;
   align-items: center;
@@ -1731,6 +1738,9 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
   margin-top: 14px;
+  align-items: start;
+  overflow: visible;
+  min-height: min-content;
 }
 .p2-col {
   background: var(--card);
@@ -1738,6 +1748,8 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   padding: 12px 14px;
   box-shadow: var(--sh2);
   border-top: 3px solid transparent;
+  min-height: 0;
+  overflow: visible;
 }
 .p2-col--agg  { border-top-color: var(--orange); }
 .p2-col--avg  { border-top-color: var(--navy); }
@@ -1804,6 +1816,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid rgba(23,63,120,.07);
+  overflow: visible;
 }
 .p2-col-input-row {
   display: flex;
@@ -1945,6 +1958,8 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   flex-direction: column;
   gap: 6px;
   margin-bottom: 8px;
+  overflow: visible;
+  min-height: min-content;
 }
 .p2c-opt-row {
   display: flex;
@@ -2081,6 +2096,11 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   margin-top: 2px;
 }
 .p2c-add-btn:hover { background: rgba(23,63,120,.14); }
+.p2c-add-btn:focus { outline: none; }
+.p2c-add-btn:focus-visible {
+  outline: 2px solid rgba(23, 63, 120, 0.35);
+  outline-offset: 2px;
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    31. 반응형 추가

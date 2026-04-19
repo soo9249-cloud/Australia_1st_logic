@@ -1,0 +1,427 @@
+{
+  "_meta": {
+    "generated_at": "2026-04-19T19:09:48.881308+00:00",
+    "total_survivors": 65,
+    "matched": 15,
+    "unmatched": 50
+  },
+  "matches": {
+    "arrotex_pharmaceuticals": {
+      "canonical_name": "Arrotex Pharmaceuticals Pty Ltd",
+      "has_factory": false
+    },
+    "viatris": {
+      "canonical_name": "Alphapharm Pty Ltd",
+      "match_type": "exact",
+      "match_key": "alphapharm",
+      "tga_manufacturer": "Alphapharm Pty Ltd",
+      "address": "100 & 102 Antimony & 11 & 15-25 Garnet Street, CAROLE PARK, QLD, 4300",
+      "state": "QLD",
+      "licence_number": "MI-26112004-LI-000238-1",
+      "issue_date": "1991-10-21",
+      "has_factory": true
+    },
+    "pfizer": {
+      "canonical_name": "Pfizer (Perth) Pty Ltd",
+      "has_factory": false
+    },
+    "gsk": {
+      "canonical_name": "GlaxoSmithKline Australia Pty Ltd",
+      "has_factory": false
+    },
+    "sandoz": {
+      "canonical_name": "Sandoz Pty Ltd",
+      "match_type": "exact",
+      "match_key": "sandoz",
+      "tga_manufacturer": "Sandoz Pty Ltd",
+      "address": "Level 15, 100 Pacific Highway, North Sydney, NSW, 2060",
+      "state": "NSW",
+      "licence_number": "MI-2024-LI-02439-1",
+      "issue_date": "2024-06-17",
+      "has_factory": true
+    },
+    "bayer": {
+      "canonical_name": "Bayer Australia Ltd",
+      "has_factory": false
+    },
+    "cipla_australia": {
+      "canonical_name": "Cipla Australia Pty Ltd",
+      "has_factory": false
+    },
+    "orion_pharma_pty": {
+      "canonical_name": "Orion Pharma (AUS) Pty Limited",
+      "has_factory": false
+    },
+    "medreich_australia": {
+      "canonical_name": "Medreich Australia Pty Ltd",
+      "has_factory": false
+    },
+    "pharmacor": {
+      "canonical_name": "Pharmacor Pty Ltd",
+      "has_factory": false
+    },
+    "gm_pharma_international": {
+      "canonical_name": "GM Pharma International Pty Ltd",
+      "has_factory": false
+    },
+    "sun_pharma_anz": {
+      "canonical_name": "Sun Pharma ANZ Pty Ltd",
+      "has_factory": false
+    },
+    "medsurge": {
+      "canonical_name": "Medsurge Pharma Pty Ltd",
+      "match_type": "exact",
+      "match_key": "medsurge",
+      "tga_manufacturer": "Medsurge Healthcare Pty Ltd",
+      "address": "Unit 1&2 / 6-7 Gilda Court, MULGRAVE, VIC, 3170",
+      "state": "VIC",
+      "licence_number": "MI-2022-LI-12676-1",
+      "issue_date": "2025-12-10",
+      "has_factory": true
+    },
+    "boucher_&_muir": {
+      "canonical_name": "Boucher & Muir Pty Ltd",
+      "has_factory": false
+    },
+    "helix_pharmaceuticals": {
+      "canonical_name": "Helix Pharmaceuticals Pty Ltd",
+      "has_factory": false
+    },
+    "micro_labs": {
+      "canonical_name": "Micro Labs Pty Ltd",
+      "has_factory": false
+    },
+    "avallon_pharmaceuticals": {
+      "canonical_name": "Avallon Pharmaceuticals Pty Ltd",
+      "has_factory": false
+    },
+    "generic_health": {
+      "canonical_name": "Generic Health Pty Ltd",
+      "has_factory": false
+    },
+    "sanofi-aventis_australia": {
+      "canonical_name": "Sanofi-Aventis Australia Pty Ltd",
+      "match_type": "substring",
+      "match_key": "sanofiaventistasanoficonsumer",
+      "tga_manufacturer": "Sanofi-Aventis Healthcare Pty Ltd T/A Sanofi Consumer Healthcare",
+      "address": "87 Yarraman Place, VIRGINIA, QLD, 4014",
+      "state": "QLD",
+      "licence_number": "MI-01032006-LI-001139-11",
+      "issue_date": "2002-11-11",
+      "has_factory": true
+    },
+    "southern_cross_pharma": {
+      "canonical_name": "Southern Cross Pharma Pty Ltd",
+      "match_type": "substring",
+      "match_key": "southerncrossanalyticalresearchlaboratory",
+      "tga_manufacturer": "Southern Cross Analytical Research Laboratory",
+      "address": "Level 3 T Block and N Block Military Road Southern Cross University, LISMORE, NSW, 2480",
+      "state": "NSW",
+      "licence_number": "MI-01122004-LI-000264-1",
+      "issue_date": "2004-02-23",
+      "has_factory": true
+    },
+    "strides_pharma_science": {
+      "canonical_name": "Strides Pharma Science Pty Ltd",
+      "has_factory": false
+    },
+    "baxter_healthcare": {
+      "canonical_name": "Baxter Healthcare Pty Ltd",
+      "match_type": "exact",
+      "match_key": "baxter",
+      "tga_manufacturer": "Baxter Healthcare Pty Ltd",
+      "address": "20-24 Catalano Road, CANNING VALE, WA, 6155",
+      "state": "WA",
+      "licence_number": "MI-2023-LI-14060-1",
+      "issue_date": "2024-10-23",
+      "has_factory": true
+    },
+    "demogen_australia_pty_ltd_trading_as_demogen_pharmaceuticals": {
+      "canonical_name": "Demogen Australia Pty Ltd trading as DEMOGEN Pharmaceuticals",
+      "has_factory": false
+    },
+    "ipca_pharma": {
+      "canonical_name": "Ipca Pharma (Australia) Pty Ltd",
+      "has_factory": false
+    },
+    "johnson_&_johnson_pacific": {
+      "canonical_name": "Johnson & Johnson Pacific Pty Ltd",
+      "match_type": "exact",
+      "match_key": "johnsonandjohnsonpacific",
+      "tga_manufacturer": "Johnson & Johnson Pacific Pty Ltd",
+      "address": "Level 10, 77 Castlereagh Street, Sydney, NSW, 2000",
+      "state": "NSW",
+      "licence_number": "MI-2024-LI-14217-1",
+      "issue_date": "2025-02-14",
+      "has_factory": true
+    },
+    "lumacina_australia": {
+      "canonical_name": "LumaCina Australia Pty Ltd",
+      "match_type": "alias",
+      "match_key": "bridgewestperth",
+      "tga_manufacturer": "Bridgewest Perth Pharma Pty Ltd",
+      "address": "15 Brodie Hall Drive Technology Park, BENTLEY, WA, 6102",
+      "state": "WA",
+      "licence_number": "MI-18102004-LI-000013-1",
+      "issue_date": "2026-01-06",
+      "has_factory": true
+    },
+    "organon": {
+      "canonical_name": "Organon",
+      "has_factory": false
+    },
+    "sanofi": {
+      "canonical_name": "Sanofi",
+      "has_factory": false
+    },
+    "astellas": {
+      "canonical_name": "Astellas",
+      "has_factory": false
+    },
+    "chiesi_australia": {
+      "canonical_name": "Chiesi Australia Pty Ltd",
+      "has_factory": false
+    },
+    "novartis": {
+      "canonical_name": "Novartis",
+      "match_type": "exact",
+      "match_key": "novartis",
+      "tga_manufacturer": "Novartis Pharmaceuticals Australia Pty Ltd",
+      "address": "54 Waterloo Road, NORTH RYDE, NSW, 2113",
+      "state": "NSW",
+      "licence_number": "MI-23122004-LI-000328-1",
+      "issue_date": "1992-01-15",
+      "has_factory": true
+    },
+    "abbvie": {
+      "canonical_name": "abbvie",
+      "has_factory": false
+    },
+    "amgen": {
+      "canonical_name": "Amgen",
+      "has_factory": false
+    },
+    "boehringer_ingelheim": {
+      "canonical_name": "Boehringer Ingelheim",
+      "has_factory": false
+    },
+    "kyowa_kirin": {
+      "canonical_name": "Kyowa Kirin",
+      "has_factory": false
+    },
+    "lilly": {
+      "canonical_name": "Lilly",
+      "has_factory": false
+    },
+    "menarini": {
+      "canonical_name": "Menarini",
+      "has_factory": false
+    },
+    "merck": {
+      "canonical_name": "Merck",
+      "has_factory": false
+    },
+    "roche": {
+      "canonical_name": "Roche",
+      "match_type": "alias",
+      "match_key": "rocheproducts",
+      "tga_manufacturer": "Roche Products Pty Ltd",
+      "address": "Level 8 30-34 Hickson Road, Sydney, NSW, 2000",
+      "state": "NSW",
+      "licence_number": "MI-2018-LI-04510-1",
+      "issue_date": "2019-02-08",
+      "has_factory": true
+    },
+    "takeda": {
+      "canonical_name": "Takeda",
+      "has_factory": false
+    },
+    "besins_healthcare": {
+      "canonical_name": "Besins Healthcare",
+      "has_factory": false
+    },
+    "norgine": {
+      "canonical_name": "Norgine",
+      "has_factory": false
+    },
+    "argenx_australia": {
+      "canonical_name": "Argenx Australia Pty Ltd",
+      "has_factory": false
+    },
+    "daiichi-sankyo": {
+      "canonical_name": "Daiichi-Sankyo",
+      "has_factory": false
+    },
+    "ptc_therapeutics": {
+      "canonical_name": "PTC therapeutics",
+      "has_factory": false
+    },
+    "healthcare_logistics": {
+      "canonical_name": "Healthcare Logistics",
+      "match_type": "substring",
+      "match_key": "supplypartnerstalogistics",
+      "tga_manufacturer": "Healthcare Supply Partners Pty Ltd T/A Healthcare Logistics",
+      "address": "7 Dolerite Way, Pemulwuy, NSW, 2145",
+      "state": "NSW",
+      "licence_number": "MI-2017-LI-11851-1",
+      "issue_date": "2018-07-06",
+      "has_factory": true
+    },
+    "iqvia": {
+      "canonical_name": "IQVIA",
+      "has_factory": false
+    },
+    "prospection": {
+      "canonical_name": "Prospection",
+      "has_factory": false
+    },
+    "accord_australia": {
+      "canonical_name": "Accord Australia",
+      "has_factory": false
+    },
+    "fresenius_kabi_australia": {
+      "canonical_name": "Fresenius Kabi Australia Pty Ltd",
+      "has_factory": false
+    },
+    "teva_pharmaceuticals_australia": {
+      "canonical_name": "Teva Pharmaceuticals Australia Pty Ltd",
+      "has_factory": false
+    },
+    "sinapse": {
+      "canonical_name": "Sinapse Pty Ltd",
+      "has_factory": false
+    },
+    "aspen": {
+      "canonical_name": "Aspen Pharmacare Australia",
+      "match_type": "alias",
+      "match_key": "aspen",
+      "tga_manufacturer": "Aspen Pharma Pty Ltd",
+      "address": "286-302 Frankston-Dandenong Road, DANDENONG SOUTH, VIC, 3175",
+      "state": "VIC",
+      "licence_number": "MI-2010-LI-05073-3",
+      "issue_date": "1992-06-02",
+      "has_factory": true
+    },
+    "inmunotek_australia": {
+      "canonical_name": "Inmunotek Australia Pty Ltd",
+      "has_factory": false
+    },
+    "inova_pharmaceuticals": {
+      "canonical_name": "iNova Pharmaceuticals",
+      "match_type": "exact",
+      "match_key": "inova",
+      "tga_manufacturer": "iNova Pharmaceuticals (Australia) Pty Ltd",
+      "address": "Level 10 12 Help Street, CHATSWOOD, NSW, 2067",
+      "state": "NSW",
+      "licence_number": "MI-2012-LI-09136-1",
+      "issue_date": "2013-12-10",
+      "has_factory": true
+    },
+    "msd_australia": {
+      "canonical_name": "Merck Sharp & Dohme",
+      "has_factory": false
+    },
+    "novo_nordisk": {
+      "canonical_name": "Novo Nordisk",
+      "has_factory": false
+    },
+    "actor_pharmaceuticals": {
+      "canonical_name": "Actor Pharmaceuticals",
+      "has_factory": false
+    },
+    "aft_pharmaceuticals": {
+      "canonical_name": "AFT Pharmaceuticals",
+      "has_factory": false
+    },
+    "ego_pharmaceuticals": {
+      "canonical_name": "Ego Pharmaceuticals",
+      "match_type": "exact",
+      "match_key": "ego",
+      "tga_manufacturer": "Ego Pharmaceuticals Pty Ltd",
+      "address": "13-31 Malcolm Road, BRAESIDE, VIC, 3195",
+      "state": "VIC",
+      "licence_number": "MI-04032005-LI-000458-2",
+      "issue_date": "1991-11-25",
+      "has_factory": true
+    },
+    "eli_lilly_australia": {
+      "canonical_name": "Eli Lilly Australia Pty Ltd",
+      "has_factory": false
+    },
+    "lundbeck_australia": {
+      "canonical_name": "Lundbeck Australia Pty Ltd",
+      "has_factory": false
+    },
+    "mayne_pharma": {
+      "canonical_name": "Mayne Pharma",
+      "match_type": "substring",
+      "match_key": "mayneinternational",
+      "tga_manufacturer": "Mayne Pharma International Pty Ltd",
+      "address": "1538 Main North Road, SALISBURY SOUTH, SA, 5106",
+      "state": "SA",
+      "licence_number": "MI-14012005-LI-000361-2",
+      "issue_date": "1991-11-04",
+      "has_factory": true
+    },
+    "stallergenes_australia": {
+      "canonical_name": "Stallergenes Australia Pty Ltd",
+      "has_factory": false
+    },
+    "theramex": {
+      "canonical_name": "Theramex",
+      "has_factory": false
+    }
+  },
+  "unmatched_keys": [
+    "arrotex_pharmaceuticals",
+    "pfizer",
+    "gsk",
+    "bayer",
+    "cipla_australia",
+    "orion_pharma_pty",
+    "medreich_australia",
+    "pharmacor",
+    "gm_pharma_international",
+    "sun_pharma_anz",
+    "boucher_&_muir",
+    "helix_pharmaceuticals",
+    "micro_labs",
+    "avallon_pharmaceuticals",
+    "generic_health",
+    "strides_pharma_science",
+    "demogen_australia_pty_ltd_trading_as_demogen_pharmaceuticals",
+    "ipca_pharma",
+    "organon",
+    "sanofi",
+    "astellas",
+    "chiesi_australia",
+    "abbvie",
+    "amgen",
+    "boehringer_ingelheim",
+    "kyowa_kirin",
+    "lilly",
+    "menarini",
+    "merck",
+    "takeda",
+    "besins_healthcare",
+    "norgine",
+    "argenx_australia",
+    "daiichi-sankyo",
+    "ptc_therapeutics",
+    "iqvia",
+    "prospection",
+    "accord_australia",
+    "fresenius_kabi_australia",
+    "teva_pharmaceuticals_australia",
+    "sinapse",
+    "inmunotek_australia",
+    "msd_australia",
+    "novo_nordisk",
+    "actor_pharmaceuticals",
+    "aft_pharmaceuticals",
+    "eli_lilly_australia",
+    "lundbeck_australia",
+    "stallergenes_australia",
+    "theramex"
+  ]
+}

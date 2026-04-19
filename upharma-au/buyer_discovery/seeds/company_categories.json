@@ -1,0 +1,1251 @@
+{
+  "_meta": {
+    "description": "바이어 발굴 Stage 2 치료영역 태깅 결과. 3단계 폴백 (INN 매핑 / Haiku description / Perplexity). 주 1회 수동 재실행 권장 — tag_therapeutic_areas.py.",
+    "last_updated": "2026-04-19T19:36:39.372823+00:00",
+    "total": 65,
+    "method_breakdown": {
+      "inn_mapping": 27,
+      "perplexity": 25,
+      "haiku_description": 13
+    }
+  },
+  "categories": {
+    "arrotex_pharmaceuticals": {
+      "canonical_name": "Arrotex Pharmaceuticals Pty Ltd",
+      "areas_en": [
+        "Cardiovascular",
+        "Gastrointestinal"
+      ],
+      "areas_kr": [
+        "심혈관",
+        "소화기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "atorvastatin",
+        "clopidogrel",
+        "domperidone",
+        "metoclopramide",
+        "omega-3-acid",
+        "rosuvastatin"
+      ],
+      "reasoning": "au_tga_artg ARTG 31건의 성분 ['atorvastatin', 'clopidogrel', 'domperidone', 'metoclopramide', 'omega-3-acid', 'rosuvastatin']"
+    },
+    "viatris": {
+      "canonical_name": "Alphapharm Pty Ltd",
+      "areas_en": [
+        "Gastrointestinal",
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "소화기",
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "clopidogrel",
+        "metoclopramide"
+      ],
+      "reasoning": "au_tga_artg ARTG 3건의 성분 ['clopidogrel', 'metoclopramide']"
+    },
+    "pfizer": {
+      "canonical_name": "Pfizer (Perth) Pty Ltd",
+      "areas_en": [
+        "Gastrointestinal"
+      ],
+      "areas_kr": [
+        "소화기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "metoclopramide"
+      ],
+      "reasoning": "au_tga_artg ARTG 1건의 성분 ['metoclopramide']"
+    },
+    "gsk": {
+      "canonical_name": "GlaxoSmithKline Australia Pty Ltd",
+      "areas_en": [
+        "Respiratory"
+      ],
+      "areas_kr": [
+        "호흡기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "fluticasone",
+        "salmeterol"
+      ],
+      "reasoning": "au_tga_artg ARTG 12건의 성분 ['fluticasone', 'salmeterol']"
+    },
+    "sandoz": {
+      "canonical_name": "Sandoz Pty Ltd",
+      "areas_en": [
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "atorvastatin",
+        "clopidogrel",
+        "rosuvastatin"
+      ],
+      "reasoning": "au_tga_artg ARTG 11건의 성분 ['atorvastatin', 'clopidogrel', 'rosuvastatin']"
+    },
+    "bayer": {
+      "canonical_name": "Bayer Australia Ltd",
+      "areas_en": [
+        "Imaging_Contrast"
+      ],
+      "areas_kr": [
+        "조영·영상진단"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "gadobutrol"
+      ],
+      "reasoning": "au_tga_artg ARTG 6건의 성분 ['gadobutrol']"
+    },
+    "cipla_australia": {
+      "canonical_name": "Cipla Australia Pty Ltd",
+      "areas_en": [
+        "Respiratory"
+      ],
+      "areas_kr": [
+        "호흡기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "fluticasone",
+        "salmeterol"
+      ],
+      "reasoning": "au_tga_artg ARTG 13건의 성분 ['fluticasone', 'salmeterol']"
+    },
+    "orion_pharma_pty": {
+      "canonical_name": "Orion Pharma (AUS) Pty Limited",
+      "areas_en": [
+        "Respiratory"
+      ],
+      "areas_kr": [
+        "호흡기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "fluticasone",
+        "salmeterol"
+      ],
+      "reasoning": "au_tga_artg ARTG 2건의 성분 ['fluticasone', 'salmeterol']"
+    },
+    "medreich_australia": {
+      "canonical_name": "Medreich Australia Pty Ltd",
+      "areas_en": [
+        "Gastrointestinal",
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "소화기",
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "domperidone",
+        "rosuvastatin"
+      ],
+      "reasoning": "au_tga_artg ARTG 9건의 성분 ['domperidone', 'rosuvastatin']"
+    },
+    "pharmacor": {
+      "canonical_name": "Pharmacor Pty Ltd",
+      "areas_en": [
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "rosuvastatin"
+      ],
+      "reasoning": "au_tga_artg ARTG 6건의 성분 ['rosuvastatin']"
+    },
+    "gm_pharma_international": {
+      "canonical_name": "GM Pharma International Pty Ltd",
+      "areas_en": [
+        "Gastrointestinal",
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "소화기",
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "atorvastatin",
+        "metoclopramide"
+      ],
+      "reasoning": "au_tga_artg ARTG 11건의 성분 ['atorvastatin', 'metoclopramide']"
+    },
+    "sun_pharma_anz": {
+      "canonical_name": "Sun Pharma ANZ Pty Ltd",
+      "areas_en": [
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "atorvastatin",
+        "clopidogrel"
+      ],
+      "reasoning": "au_tga_artg ARTG 3건의 성분 ['atorvastatin', 'clopidogrel']"
+    },
+    "medsurge": {
+      "canonical_name": "Medsurge Pharma Pty Ltd",
+      "areas_en": [
+        "Oncology",
+        "Hematology",
+        "Gastrointestinal"
+      ],
+      "areas_kr": [
+        "항암",
+        "혈액",
+        "소화기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "hydroxycarbamide",
+        "metoclopramide"
+      ],
+      "reasoning": "au_tga_artg ARTG 3건의 성분 ['hydroxycarbamide', 'metoclopramide']"
+    },
+    "boucher_&_muir": {
+      "canonical_name": "Boucher & Muir Pty Ltd",
+      "areas_en": [
+        "Respiratory"
+      ],
+      "areas_kr": [
+        "호흡기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "fluticasone"
+      ],
+      "reasoning": "au_tga_artg ARTG 2건의 성분 ['fluticasone']"
+    },
+    "helix_pharmaceuticals": {
+      "canonical_name": "Helix Pharmaceuticals Pty Ltd",
+      "areas_en": [
+        "Respiratory"
+      ],
+      "areas_kr": [
+        "호흡기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "fluticasone"
+      ],
+      "reasoning": "au_tga_artg ARTG 5건의 성분 ['fluticasone']"
+    },
+    "micro_labs": {
+      "canonical_name": "Micro Labs Pty Ltd",
+      "areas_en": [
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "atorvastatin"
+      ],
+      "reasoning": "au_tga_artg ARTG 4건의 성분 ['atorvastatin']"
+    },
+    "avallon_pharmaceuticals": {
+      "canonical_name": "Avallon Pharmaceuticals Pty Ltd",
+      "areas_en": [
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "clopidogrel"
+      ],
+      "reasoning": "au_tga_artg ARTG 1건의 성분 ['clopidogrel']"
+    },
+    "generic_health": {
+      "canonical_name": "Generic Health Pty Ltd",
+      "areas_en": [
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "clopidogrel"
+      ],
+      "reasoning": "au_tga_artg ARTG 1건의 성분 ['clopidogrel']"
+    },
+    "sanofi-aventis_australia": {
+      "canonical_name": "Sanofi-Aventis Australia Pty Ltd",
+      "areas_en": [
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "clopidogrel"
+      ],
+      "reasoning": "au_tga_artg ARTG 1건의 성분 ['clopidogrel']"
+    },
+    "southern_cross_pharma": {
+      "canonical_name": "Southern Cross Pharma Pty Ltd",
+      "areas_en": [
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "clopidogrel"
+      ],
+      "reasoning": "au_tga_artg ARTG 1건의 성분 ['clopidogrel']"
+    },
+    "strides_pharma_science": {
+      "canonical_name": "Strides Pharma Science Pty Ltd",
+      "areas_en": [
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "clopidogrel"
+      ],
+      "reasoning": "au_tga_artg ARTG 1건의 성분 ['clopidogrel']"
+    },
+    "baxter_healthcare": {
+      "canonical_name": "Baxter Healthcare Pty Ltd",
+      "areas_en": [
+        "Gastrointestinal"
+      ],
+      "areas_kr": [
+        "소화기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "metoclopramide"
+      ],
+      "reasoning": "au_tga_artg ARTG 1건의 성분 ['metoclopramide']"
+    },
+    "demogen_australia_pty_ltd_trading_as_demogen_pharmaceuticals": {
+      "canonical_name": "Demogen Australia Pty Ltd trading as DEMOGEN Pharmaceuticals",
+      "areas_en": [
+        "Gastrointestinal"
+      ],
+      "areas_kr": [
+        "소화기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "metoclopramide"
+      ],
+      "reasoning": "au_tga_artg ARTG 1건의 성분 ['metoclopramide']"
+    },
+    "ipca_pharma": {
+      "canonical_name": "Ipca Pharma (Australia) Pty Ltd",
+      "areas_en": [
+        "Gastrointestinal"
+      ],
+      "areas_kr": [
+        "소화기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "metoclopramide"
+      ],
+      "reasoning": "au_tga_artg ARTG 12건의 성분 ['metoclopramide']"
+    },
+    "johnson_&_johnson_pacific": {
+      "canonical_name": "Johnson & Johnson Pacific Pty Ltd",
+      "areas_en": [
+        "Gastrointestinal"
+      ],
+      "areas_kr": [
+        "소화기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "domperidone"
+      ],
+      "reasoning": "au_tga_artg ARTG 1건의 성분 ['domperidone']"
+    },
+    "lumacina_australia": {
+      "canonical_name": "LumaCina Australia Pty Ltd",
+      "areas_en": [
+        "Gastrointestinal"
+      ],
+      "areas_kr": [
+        "소화기"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "metoclopramide"
+      ],
+      "reasoning": "au_tga_artg ARTG 1건의 성분 ['metoclopramide']"
+    },
+    "organon": {
+      "canonical_name": "Organon",
+      "areas_en": [
+        "Womens_Health",
+        "Dermatology",
+        "Cardiovascular",
+        "Respiratory",
+        "CNS_Neurology"
+      ],
+      "areas_kr": [
+        "여성건강",
+        "피부",
+        "심혈관",
+        "호흡기",
+        "중추신경"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Organon's Australian portfolio emphasizes **Women's Health** (contraception, infertility, menopause) as the core focus, with established medicines covering **Dermatology**, **Cardiovascular**, **Respiratory**, **CNS/Neurology** (including migraine), and other areas like non-opioid pain and immunolog",
+      "evidence_urls": [
+        "https://www.organon.com/australia/home/",
+        "https://www.organon.com/our-focus/",
+        "https://www.organon.com/australia/our-products/",
+        "https://www.organon.com/australia/news/organon-anz-launches-new-support-platform-for-australians-beginning-their-path-to-parenthood/",
+        "https://www.organon.com/australia/"
+      ]
+    },
+    "sanofi": {
+      "canonical_name": "Sanofi",
+      "areas_en": [
+        "Cardiovascular"
+      ],
+      "areas_kr": [
+        "심혈관"
+      ],
+      "method": "inn_mapping",
+      "confidence": 0.95,
+      "source_inns": [
+        "clopidogrel"
+      ],
+      "reasoning": "au_tga_artg ARTG 1건의 성분 ['clopidogrel']"
+    },
+    "astellas": {
+      "canonical_name": "Astellas",
+      "areas_en": [
+        "Womens_Health",
+        "Urology"
+      ],
+      "areas_kr": [
+        "여성건강",
+        "비뇨기"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.85,
+      "reasoning": "Veoza (fezolinetant) is indicated for vasomotor symptoms in menopause (womens_health), and Betmiga (mirabegron) is indicated for overactive bladder (urology)."
+    },
+    "chiesi_australia": {
+      "canonical_name": "Chiesi Australia Pty Ltd",
+      "areas_en": [
+        "Respiratory"
+      ],
+      "areas_kr": [
+        "호흡기"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.95,
+      "reasoning": "Company explicitly focuses on manufacturing and providing asthma and COPD treatments, which are respiratory therapeutic areas."
+    },
+    "novartis": {
+      "canonical_name": "Novartis",
+      "areas_en": [
+        "Cardiovascular",
+        "Respiratory",
+        "CNS_Neurology"
+      ],
+      "areas_kr": [
+        "심혈관",
+        "호흡기",
+        "중추신경"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.85,
+      "reasoning": "ASCVD indicates cardiovascular focus, Asthma indicates respiratory, and ADHD indicates CNS/neurology specialty areas."
+    },
+    "abbvie": {
+      "canonical_name": "abbvie",
+      "areas_en": [
+        "Oncology",
+        "Immunology",
+        "CNS_Neurology",
+        "Infectious_Disease"
+      ],
+      "areas_kr": [
+        "항암",
+        "면역",
+        "중추신경",
+        "감염"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "AbbVie's primary therapeutic focus encompasses oncology (hemato-oncology including CLL and AML), immunology (rheumatology and dermatology), neuroscience (neurological and psychiatric disorders), virology (HIV and hepatitis C), and gastroenterology (gastrointestinal diseases). These areas represent t",
+      "evidence_urls": [
+        "https://www.abbvie.com/science/areas-of-focus/other-specialties.html",
+        "https://www.abbvie.com/science/areas-of-focus/neuroscience.html",
+        "https://training-preview.abbviepro.com/en/therapy-areas.html",
+        "https://www.abbvie.com/science/areas-of-focus/immunology.html",
+        "https://www.aph.gov.au/DocumentStore.ashx?id=2f1ab0f1-9b41-4552-a85e-4a70a830fc95&subId=747670"
+      ]
+    },
+    "amgen": {
+      "canonical_name": "Amgen",
+      "areas_en": [
+        "Oncology",
+        "Cardiovascular",
+        "Rare_Disease"
+      ],
+      "areas_kr": [
+        "항암",
+        "심혈관",
+        "희귀질환"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Amgen's primary therapeutic focus spans five key areas: oncology, cardiovascular disease, bone health (osteoporosis), inflammation (autoimmune and chronic inflammatory diseases), and rare diseases. The company strategically targets areas of high unmet medical need where their innovative medicines pr",
+      "evidence_urls": [
+        "https://modernslaveryregister.gov.au/statements/UU7B044ELKqgECh/pdf/",
+        "https://www.amgen.com.au/about-amgen/our-medicines",
+        "https://www.amgen.com.au",
+        "https://www.amgen.com/about/therapy-areas",
+        "https://www.amgen.com/about/therapy-areas/inflammation"
+      ]
+    },
+    "boehringer_ingelheim": {
+      "canonical_name": "Boehringer Ingelheim",
+      "areas_en": [
+        "Cardiovascular",
+        "Oncology",
+        "Respiratory"
+      ],
+      "areas_kr": [
+        "심혈관",
+        "항암",
+        "호흡기"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Boehringer Ingelheim concentrates research efforts and investment in CardioMetabolic diseases, Central Nervous System diseases, Immunology and Respiratory diseases, with specific focus on lung and gastrointestinal cancers. The company has a 100-year heritage in respiratory disease and maintains dedi",
+      "evidence_urls": [
+        "https://pro.boehringer-ingelheim.com/us/therapy-areas",
+        "https://www.boehringer-ingelheim.com/au/human-health",
+        "https://www.boehringer-ingelheim.com/au/about-us/who-we-are",
+        "https://www.boehringer-ingelheim.com/au/search",
+        "https://www.boehringer-ingelheim.com/au/search?keys=Boehringer+Ingelheim&page=3"
+      ]
+    },
+    "kyowa_kirin": {
+      "canonical_name": "Kyowa Kirin",
+      "areas_en": [
+        "Rare_Disease",
+        "Hematology",
+        "Oncology",
+        "Immunology"
+      ],
+      "areas_kr": [
+        "희귀질환",
+        "혈액",
+        "항암",
+        "면역"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Kyowa Kirin Australia's portfolio emphasizes rare diseases, bone & mineral conditions, intractable hematological/hemato-oncology diseases, alongside core global areas like oncology, nephrology, immunology & allergy, and CNS as stated on their official Australian site. These align with standard thera",
+      "evidence_urls": [
+        "https://www.kyowakirin.com/australia/index.html",
+        "https://www.kyowakirin.com/australia/our_medicines/index.html",
+        "https://treasury.gov.au/sites/default/files/2021-05/171663_kyowa_kirin_australia.docx",
+        "https://www.kyowakirin.com/antibody/about_antibody/disease.html",
+        "https://www.kyowakirin.com/media_center/news_releases/2019/pdf/e20190318_01.pdf"
+      ]
+    },
+    "lilly": {
+      "canonical_name": "Lilly",
+      "areas_en": [
+        "Diabetes_Endocrine",
+        "Oncology",
+        "Immunology",
+        "CNS_Neurology"
+      ],
+      "areas_kr": [
+        "당뇨·내분비",
+        "항암",
+        "면역",
+        "중추신경"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Eli Lilly's core therapeutic areas include diabetes, oncology, immunology, and neurodegeneration (encompassing CNS/Neurology with recent Australian approval of Kisunla for Alzheimer's), as confirmed by their global research focus and Australian portfolio highlights. These align with their emphasis o",
+      "evidence_urls": [
+        "https://www.prnewswire.com/news-releases/lillys-kisunla-donanemab-receives-marketing-authorization-in-australia-for-the-treatment-of-early-symptomatic-alzheimers-disease-302462448.html",
+        "https://www.lilly.com/au/",
+        "https://www.lilly.com/nz/disease-areas/immunology",
+        "https://aucap.lilly.com/docs/au-dona-rmp-hcp-guide-tga-approved.pdf",
+        "https://www.lilly.com/conditions"
+      ]
+    },
+    "menarini": {
+      "canonical_name": "Menarini",
+      "areas_en": [
+        "Oncology",
+        "Cardiovascular",
+        "Respiratory",
+        "OTC_Consumer_Health",
+        "Dermatology"
+      ],
+      "areas_kr": [
+        "항암",
+        "심혈관",
+        "호흡기",
+        "일반의약품",
+        "피부"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Menarini Australia's portfolio emphasizes oncology alongside Cardiovascular, COPD (Respiratory), Gout, and Dermatology as key areas, while globally the company focuses on oncology, pharmaceuticals including cardiology and infectious diseases, and Consumer Health. This selection prioritizes Australia",
+      "evidence_urls": [
+        "https://www.menarini.com.au/products/",
+        "https://synapse.patsnap.com/article/what-are-the-top-selling-drugs-of-menarini",
+        "https://www.menarini.com/en-us/partnering/our-therapeutic-focus-areas.html",
+        "https://www.cnsa.org.au/discover/our-partners/menarini.html",
+        "https://www.menarini.com/en-us/innovation-research/oncology.html"
+      ]
+    },
+    "merck": {
+      "canonical_name": "Merck",
+      "areas_en": [
+        "Oncology",
+        "Vaccine",
+        "Infectious_Disease",
+        "Cardiovascular",
+        "Immunology"
+      ],
+      "areas_kr": [
+        "항암",
+        "백신",
+        "감염",
+        "심혈관",
+        "면역"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Merck's global portfolio emphasizes Oncology, Vaccines, Infectious Disease, Cardiovascular (as part of cardio-metabolic), and Immunology as core therapeutic areas per official research focus pages. While Merck Group highlights Neurology & Immunology and Endocrinology, and Australian-specific data me",
+      "evidence_urls": [
+        "https://www.merckgroup.com/en/expertise/healthcare.html",
+        "https://hcp.merckgroup.com/ae-en/home/therapy-areas.html",
+        "https://www.merck.com/research/areas-of-innovation/our-therapeutic-modalities/",
+        "https://www.merck.com/research/areas-of-focus/",
+        "https://www.merck.com/what-we-do/"
+      ]
+    },
+    "roche": {
+      "canonical_name": "Roche",
+      "areas_en": [
+        "Oncology",
+        "CNS_Neurology",
+        "Ophthalmology",
+        "Hematology",
+        "Rare_Disease"
+      ],
+      "areas_kr": [
+        "항암",
+        "중추신경",
+        "안과",
+        "혈액",
+        "희귀질환"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Roche Australia's focus areas explicitly include Haematology, Neuroscience, and Ophthalmology solutions, while their innovation portfolio emphasizes oncology, rare diseases, immunology, inflammation, and cardiovascular among others. Oncology and rare diseases are prominently highlighted across histo",
+      "evidence_urls": [
+        "https://www.roche-australia.com/solutions/focus-areas",
+        "https://www.roche-australia.com/innovation",
+        "https://diagnostics.roche.com/au/en/article-listing/roche_in_australia.html",
+        "https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2020/11/131021_OIT_Roche_response_FINAL_.pdf",
+        "https://forpatients.roche.com/en/disease-area-overview.html"
+      ]
+    },
+    "takeda": {
+      "canonical_name": "Takeda",
+      "areas_en": [
+        "Gastrointestinal",
+        "Oncology",
+        "CNS_Neurology",
+        "Rare_Disease"
+      ],
+      "areas_kr": [
+        "소화기",
+        "항암",
+        "중추신경",
+        "희귀질환"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Takeda's primary therapeutic areas globally and in Australia are consistently identified as Gastrointestinal (and Inflammation), Oncology, Neuroscience, and Rare Diseases across official sources, with Plasma-Derived Therapies as a key additional focus for rare and chronic conditions. Australian-spec",
+      "evidence_urls": [
+        "https://www.takeda.com/science/areas-of-focus/",
+        "https://www.takeda.com/science/areas-of-focus/rare-diseases/",
+        "https://www.takeda.com/science/areas-of-focus/oncology/",
+        "https://www.takeda.com/science/pipeline/",
+        "https://www.takeda.com/science/research-and-development/"
+      ]
+    },
+    "besins_healthcare": {
+      "canonical_name": "Besins Healthcare",
+      "areas_en": [
+        "Womens_Health",
+        "Diabetes_Endocrine"
+      ],
+      "areas_kr": [
+        "여성건강",
+        "당뇨·내분비"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Besins Healthcare specializes in hormone therapies for gynaecology, fertility, obstetrics, androgen deficiency, and reproductive endocrinology, aligning primarily with Women's Health and Diabetes/Endocrine categories.[1][2][3] Their Australian portfolio includes products like Utrogestan (progesteron",
+      "evidence_urls": [
+        "https://www.besins-healthcare.com",
+        "https://www.besins-healthcare.com/products",
+        "https://www.besins-healthcare.com/careers",
+        "https://www.tga.gov.au/resources/sponsor/besins-healthcare-australia-pty-ltd",
+        "https://synapse.patsnap.com/organization/570d96b7583bc017d80f9271b76004f8"
+      ]
+    },
+    "norgine": {
+      "canonical_name": "Norgine",
+      "areas_en": [
+        "Oncology"
+      ],
+      "areas_kr": [
+        "항암"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Norgine Australia's primary therapeutic areas are explicitly stated as Gastroenterology, Hepatology, and Cancer and Supportive Care on their official website, with products like MOVICOL for constipation, XIFAXAN for hepatic encephalopathy, and IFINWIL for high-risk neuroblastoma aligning with these ",
+      "evidence_urls": [
+        "https://www.norgine.com/wp-content/uploads/2016/12/Xifaxan-PBAC-Recommendation_-FINAL-_-24-MAY-2013_1.pdf",
+        "https://norgine.com.au/page_content/specialist-therapy-areas-new/",
+        "https://www.prnewswire.com/apac/news-releases/norgine-welcomes-pbs-listing-in-australia-of-ifinwil-eflornithine-for-patients-with-high-risk-neuroblastoma-hrnb-302518900.html",
+        "https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2020/11/20200430-RFW-3PS-R8-Norgine.pdf",
+        "https://firstwordpharma.com/story/5765257"
+      ]
+    },
+    "argenx_australia": {
+      "canonical_name": "Argenx Australia Pty Ltd",
+      "areas_en": [
+        "Immunology",
+        "Rare_Disease",
+        "CNS_Neurology"
+      ],
+      "areas_kr": [
+        "면역",
+        "희귀질환",
+        "중추신경"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Argenx Australia Pty Ltd, as the Australian affiliate of argenx SE, focuses on immunology, particularly severe autoimmune diseases and rare disorders, with Vyvgart approved for generalized Myasthenia Gravis (a neurological autoimmune condition) via the TGA. The company's global pipeline emphasizes i",
+      "evidence_urls": [
+        "https://synapse.patsnap.com/blog/overview-of-argenxs-drug-pipeline-therapeutic-areas-randd-status",
+        "https://www.labonline.com.au/content/life-scientist/news/argenx-and-monash-university-partner-against-autoimmune-diseases-245460765",
+        "https://www.us.argenx.com/pipeline",
+        "https://www.us.argenx.com",
+        "https://www.monash.edu/monash-innovation/news/argenx-partners-with-monash-university-to-expand-innovation-collaborations-in-australia"
+      ]
+    },
+    "daiichi-sankyo": {
+      "canonical_name": "Daiichi-Sankyo",
+      "areas_en": [
+        "Oncology",
+        "Cardiovascular",
+        "CNS_Neurology",
+        "Immunology",
+        "Infectious_Disease"
+      ],
+      "areas_kr": [
+        "항암",
+        "심혈관",
+        "중추신경",
+        "면역",
+        "감염"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Daiichi Sankyo's primary therapeutic areas, as highlighted across global and Australian-focused sources, center on Oncology with a strong emphasis on cancers like breast, lung, and gastric via ADC technology, alongside Cardiovascular disease, Infectious Disease, Autoimmune conditions (Immunology), a",
+      "evidence_urls": [
+        "https://oncologynews.com.au/daiichi-sankyo-australia/",
+        "https://www.daiichisankyo.com/au/",
+        "https://cttc.co/events/20250714/daiichi-sankyo-therapeutic-areas-interest",
+        "https://www.daiichisankyo-oncology.com/about-daiichi-sankyo-oncologyoncology/treatment-areas",
+        "https://www.daiichisankyo.com/files/investors/library/annual_report/index/pdf/VR2025/VR2025_EN_2_1.pdf"
+      ]
+    },
+    "ptc_therapeutics": {
+      "canonical_name": "PTC therapeutics",
+      "areas_en": [
+        "Rare_Disease",
+        "CNS_Neurology"
+      ],
+      "areas_kr": [
+        "희귀질환",
+        "중추신경"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "PTC Therapeutics focuses its commercial and development efforts on neurology and metabolic conditions within rare diseases, as stated across their official websites and confirmed for their Australian subsidiary. Specific indications include Duchenne muscular dystrophy, Huntington's disease, phenylke",
+      "evidence_urls": [
+        "https://www.ptcbio.ie/therapeutic-areas/",
+        "https://www.ptcbio.com/therapeutic-areas/",
+        "https://www.ptcbio.com/our-products/",
+        "https://www.ptcbio.com/contact-us/",
+        "https://www.ptcbio.com"
+      ]
+    },
+    "healthcare_logistics": {
+      "canonical_name": "Healthcare Logistics",
+      "areas_en": [
+        "Vaccine",
+        "Womens_Health"
+      ],
+      "areas_kr": [
+        "백신",
+        "여성건강"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Healthcare Logistics Australia specializes in temperature-controlled warehousing for pharmaceuticals, medical consumables, and advanced therapies, aligning with market segments like biopharmaceuticals (67.98% revenue share), biotechnology, vaccines (fastest-growing), and women's health in the Austra",
+      "evidence_urls": [
+        "https://www.researchandmarkets.com/reports/6214360/australia-healthcare-logistics-market",
+        "https://www.grandviewresearch.com/horizon/outlook/healthcare-third-party-logistics-market/australia",
+        "https://www.databridgemarketresearch.com/nucleus/australia-healthcare-logistics-market",
+        "https://www.packsend.com.au/blog/healthcare-logistics/",
+        "https://hcl.com.au/supply-chain/our-capabilities/"
+      ]
+    },
+    "iqvia": {
+      "canonical_name": "IQVIA",
+      "areas_en": [
+        "Oncology",
+        "Cardiovascular",
+        "Respiratory",
+        "Diabetes_Endocrine"
+      ],
+      "areas_kr": [
+        "항암",
+        "심혈관",
+        "호흡기",
+        "당뇨·내분비"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "IQVIA's global therapeutic expertise prominently features Oncology, Cardiovascular, CNS, Respiratory (Allergy & Respiratory), and Diabetes as key Centers of Excellence, with Oncology and Hematology highlighted in Australian orphan drug access reports. Australian market analyses further emphasize the",
+      "evidence_urls": [
+        "https://www.iqvia.com/solutions/therapeutics",
+        "https://www.iqvia.com/library/fact-sheets/iqvia-therapeutic-breakthroughs",
+        "https://www.iqvia.com/-/media/iqvia/pdfs/australia-and-new-zealand/white-papers/access-to-orphan-drugs-in-australia.pdf",
+        "https://www.iqvia.com/locations/australia-and-new-zealand",
+        "https://www.iqvia.com/-/media/iqvia/pdfs/australia-and-new-zealand/white-papers/iqvia-anz-evolving-beyond-the-pbs-whitepaper.pdf"
+      ]
+    },
+    "prospection": {
+      "canonical_name": "Prospection",
+      "areas_en": [
+        "Oncology",
+        "Immunology",
+        "CNS_Neurology",
+        "Rare_Disease"
+      ],
+      "areas_kr": [
+        "항암",
+        "면역",
+        "중추신경",
+        "희귀질환"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Prospection is a healthcare consulting and patient-centric intelligence platform company that works across 20+ therapeutic areas and 100+ indications, with specific emphasis on Oncology, Immunology, and Neuroscience based on their platform capabilities and case studies. The company does not manufact",
+      "evidence_urls": [
+        "https://market-research-companies.com.au/company/prospection/5106/",
+        "https://www.businesswire.com/news/home/20231120636812/en/Prospection-AI-Launches-as-the-Single-source-Patient-centric-Intelligence-Platform-to-Strengthen-Drug-Commercialization",
+        "https://www.prospection.com/resources/unlocking-us-market-potential/",
+        "https://www.ipsen.com/aus/therapeutic-areas/",
+        "https://www.prospection.com/resources/tag/patient-centric-intelligence/"
+      ]
+    },
+    "accord_australia": {
+      "canonical_name": "Accord Australia",
+      "areas_en": [
+        "Oncology",
+        "Hematology",
+        "Immunology",
+        "CNS_Neurology"
+      ],
+      "areas_kr": [
+        "항암",
+        "혈액",
+        "면역",
+        "중추신경"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Accord Healthcare Australia's portfolio emphasizes oncology, critical care, and anti-infectives, aligning with the global Accord focus on Oncology & Hematology, Autoimmune, CNS, and Critical Care as primary expansion areas. These therapeutic domains are consistently highlighted across official produ",
+      "evidence_urls": [
+        "https://www.pharmaceutical-technology.com/featured-company/2023-accord-healthcare/",
+        "https://accord-healthcare.asia/products",
+        "https://accord.asn.au/about/what-we-do/",
+        "https://www.accord-healthcare.com.au/products",
+        "https://www.accordbiopharma.com/our-therapeutic-areas/"
+      ]
+    },
+    "fresenius_kabi_australia": {
+      "canonical_name": "Fresenius Kabi Australia Pty Ltd",
+      "areas_en": [
+        "Oncology",
+        "Infectious_Disease",
+        "Pain_Anesthesia"
+      ],
+      "areas_kr": [
+        "항암",
+        "감염",
+        "진통·마취"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Fresenius Kabi Australia's portfolio centers on IV drugs and infusion therapies, with explicit mentions of oncology, anti-infectives (Infectious Disease), anesthetics (Pain/Anesthesia), and critical care across their Australian and global sites. Additional focus includes clinical nutrition and trans",
+      "evidence_urls": [
+        "https://australien.ahk.de/en/membership/members-directory/fresenius-kabi-australia",
+        "https://www.fresenius-kabi.com/portfolio",
+        "https://www.fresenius-kabi.com/au/products/iv-drugs",
+        "https://www.fresenius-kabi.com/au/portfolio",
+        "https://www.tga.gov.au/resources/sponsor/fresenius-kabi-australia-pty-ltd"
+      ]
+    },
+    "teva_pharmaceuticals_australia": {
+      "canonical_name": "Teva Pharmaceuticals Australia Pty Ltd",
+      "areas_en": [
+        "CNS_Neurology",
+        "Immunology",
+        "Respiratory",
+        "Oncology",
+        "Mens_Health"
+      ],
+      "areas_kr": [
+        "중추신경",
+        "면역",
+        "호흡기",
+        "항암",
+        "남성건강"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Teva Pharmaceuticals Australia maintains a world-leading position in central nervous system disorders including neurological and neurodegenerative diseases, with significant portfolios in immunology (including immuno-oncology), respiratory disease (asthma, COPD), and pain management. The company's s",
+      "evidence_urls": [
+        "https://www.tevapharm.com/science/innovative-therapeutic-areas/",
+        "https://www.tevapharm.com/news-and-media/feature-stories/what-are-biologics-teva-discovery-sydney/",
+        "https://www.tevapharma.com.au/ourimpact/research-development/",
+        "https://en.wikipedia.org/wiki/Teva_Pharmaceuticals",
+        "https://www.tevapharm.com/news-and-media/feature-stories/teva-pivot-to-growth-strategy-growth-engines/"
+      ]
+    },
+    "sinapse": {
+      "canonical_name": "Sinapse Pty Ltd",
+      "areas_en": [
+        "Oncology",
+        "Rare_Disease"
+      ],
+      "areas_kr": [
+        "항암",
+        "희귀질환"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Sinapse Pty Ltd appears to be a misspelling or variant reference to Specialised Therapeutics Australia Pty Ltd., an Australian pharma company with a portfolio focused on oncology drugs like lurbinectedin for Small Cell Lung Cancer, ripretinib and trabectedin for Gastrointestinal Stromal Tumors and L",
+      "evidence_urls": [
+        "https://synapse.patsnap.com/organization/f63d283047df8d570ff89bc6540643a1",
+        "https://sinapse.com.au/about-us/",
+        "https://www.synapsepsychology.com.au",
+        "https://sinapse.com.au/sinapse-health/",
+        "https://synapse.org.au"
+      ]
+    },
+    "aspen": {
+      "canonical_name": "Aspen Pharmacare Australia",
+      "areas_en": [
+        "CNS_Neurology",
+        "Diabetes_Endocrine",
+        "Pain_Anesthesia",
+        "Hematology",
+        "OTC_Consumer_Health"
+      ],
+      "areas_kr": [
+        "중추신경",
+        "당뇨·내분비",
+        "진통·마취",
+        "혈액",
+        "일반의약품"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Aspen Pharmacare Australia's portfolio spans multiple areas with emphasis on Nervous System Diseases (e.g., Circadin sleeping aid), Endocrinology (Eltroxin thyroid hormone), Pain (Mybulen analgesic), Hematology/Thrombosis (anticoagulants), and OTC/Consumer Health (iron supplements, analgesics). Glob",
+      "evidence_urls": [
+        "https://www.aspenpharma.com/about-aspen/regional-brands/",
+        "https://www.aspenpharma.com.au/about-aspen/",
+        "https://synapse.patsnap.com/organization/6cfeb796c5958641f347628c0984dab0",
+        "https://www.aspenpharma.com/wp-content/uploads/2018/11/Aspen-2018-Corporate-Brochure.pdf",
+        "https://www.aspenpharma.com.au"
+      ]
+    },
+    "inmunotek_australia": {
+      "canonical_name": "Inmunotek Australia Pty Ltd",
+      "areas_en": [
+        "Allergy",
+        "Immunology"
+      ],
+      "areas_kr": [
+        "알레르기",
+        "면역"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.95,
+      "reasoning": "Company explicitly states dedication to allergy and immunology medicines, with NIOX® being a respiratory/allergy diagnostic device."
+    },
+    "inova_pharmaceuticals": {
+      "canonical_name": "iNova Pharmaceuticals",
+      "areas_en": [
+        "OTC_Consumer_Health",
+        "Pain_Anesthesia",
+        "Dermatology"
+      ],
+      "areas_kr": [
+        "일반의약품",
+        "진통·마취",
+        "피부"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.85,
+      "reasoning": "iNova's portfolio explicitly mentions consumer health brands, pain management (Norgesic), and skin/sun care products across throat, cough, cold, flu, and wound care categories."
+    },
+    "msd_australia": {
+      "canonical_name": "Merck Sharp & Dohme",
+      "areas_en": [
+        "Oncology",
+        "Vaccine",
+        "Infectious_Disease",
+        "Cardiovascular",
+        "Immunology"
+      ],
+      "areas_kr": [
+        "항암",
+        "백신",
+        "감염",
+        "심혈관",
+        "면역"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Merck Sharp & Dohme (MSD), known as Merck & Co outside the US/Canada, consistently highlights Oncology, Vaccines, Infectious Disease, Cardio-metabolic disorders, and Immunology as core therapeutic areas across global and regional sites, including those relevant to Australia like MSD New Zealand and ",
+      "evidence_urls": [
+        "https://hcp.merckgroup.com/ae-en/home/therapy-areas.html",
+        "https://www.msd-newzealand.com/company-overview/",
+        "https://www.merck.com/research/areas-of-focus/",
+        "https://www.msd.com/research/areas-of-focus/",
+        "https://www.zoominfo.com/c/merck-sharp--dohme-australia-pty-ltd/559284163"
+      ]
+    },
+    "novo_nordisk": {
+      "canonical_name": "Novo Nordisk",
+      "areas_en": [
+        "Diabetes_Endocrine",
+        "Hematology",
+        "Rare_Disease"
+      ],
+      "areas_kr": [
+        "당뇨·내분비",
+        "혈액",
+        "희귀질환"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.95,
+      "reasoning": "Company explicitly states focus on diabetes, obesity, rare blood diseases, and rare endocrine diseases as core therapeutic areas."
+    },
+    "actor_pharmaceuticals": {
+      "canonical_name": "Actor Pharmaceuticals",
+      "areas_en": [
+        "Dermatology"
+      ],
+      "areas_kr": [
+        "피부"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.95,
+      "reasoning": "Company explicitly states launch of Dermatology division with products for psoriasis, hyperhidrosis, and actinic keratosis treatment."
+    },
+    "aft_pharmaceuticals": {
+      "canonical_name": "AFT Pharmaceuticals",
+      "areas_en": [
+        "Pain_Anesthesia",
+        "Ophthalmology",
+        "Gastrointestinal",
+        "Dermatology",
+        "Nutrition"
+      ],
+      "areas_kr": [
+        "진통·마취",
+        "안과",
+        "소화기",
+        "피부",
+        "영양제"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.92,
+      "reasoning": "Company explicitly states focus on pain relief (Maxigesic), eye care (Ocuzo), digestive health (DiaRelieve), dermatology (Crystaderm, Coco-Scalp), and nutrition (Ferro-Care Pregnancy Multivitamin)."
+    },
+    "ego_pharmaceuticals": {
+      "canonical_name": "Ego Pharmaceuticals",
+      "areas_en": [
+        "Dermatology"
+      ],
+      "areas_kr": [
+        "피부"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.95,
+      "reasoning": "Ego Pharmaceuticals specializes exclusively in dermatological skincare products with a 65-year heritage in skin health, as evidenced by their brand portfolio (QV, Resolve, Dermaid, etc.) and explicit positioning as 'specialist in skincare.'"
+    },
+    "eli_lilly_australia": {
+      "canonical_name": "Eli Lilly Australia Pty Ltd",
+      "areas_en": [
+        "Diabetes_Endocrine",
+        "Oncology",
+        "Immunology",
+        "CNS_Neurology",
+        "Pain_Anesthesia"
+      ],
+      "areas_kr": [
+        "당뇨·내분비",
+        "항암",
+        "면역",
+        "중추신경",
+        "진통·마취"
+      ],
+      "method": "perplexity",
+      "confidence": 0.7,
+      "reasoning": "Eli Lilly Australia's primary therapeutic areas, as highlighted on their official Australian and ANZ websites, include Diabetes, Cancer (Oncology), Immunology, Pain, and Alzheimer's Disease (CNS/Neurology), aligning with their global focus and active clinical trials in neurodegeneration, cardiometab",
+      "evidence_urls": [
+        "https://www.lilly.com/nz/discovery/clinical-trials",
+        "https://www.lilly.com/au/",
+        "https://onlinelibrary.wiley.com/doi/full/10.1111/ajd.70045",
+        "https://trials.lilly.com/en-AU",
+        "https://www.lilly.com/conditions"
+      ]
+    },
+    "lundbeck_australia": {
+      "canonical_name": "Lundbeck Australia Pty Ltd",
+      "areas_en": [
+        "CNS_Neurology",
+        "Psychiatry",
+        "Rare_Disease"
+      ],
+      "areas_kr": [
+        "중추신경",
+        "정신과",
+        "희귀질환"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.95,
+      "reasoning": "Lundbeck explicitly focuses on brain health with expertise in neurological and psychiatric diseases, including neuro-specialty and neuro-rare conditions."
+    },
+    "mayne_pharma": {
+      "canonical_name": "Mayne Pharma",
+      "areas_en": [
+        "Womens_Health",
+        "Mens_Health",
+        "Dermatology",
+        "Infectious_Disease"
+      ],
+      "areas_kr": [
+        "여성건강",
+        "남성건강",
+        "피부",
+        "감염"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.95,
+      "reasoning": "Company explicitly states focus on women's and men's health, dermatology, and infectious disease, supported by brand portfolio including Nextstellis (contraceptive), Urorec (men's health), Solaraze and Actikerall (dermatology), and Monurol (infectious disease)."
+    },
+    "stallergenes_australia": {
+      "canonical_name": "Stallergenes Australia Pty Ltd",
+      "areas_en": [
+        "Allergy",
+        "Immunology"
+      ],
+      "areas_kr": [
+        "알레르기",
+        "면역"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.95,
+      "reasoning": "Stallergenes specializes in allergen immunotherapy (AIT) products for respiratory allergies, which directly targets allergy treatment and immune system tolerance mechanisms."
+    },
+    "theramex": {
+      "canonical_name": "Theramex",
+      "areas_en": [
+        "Womens_Health"
+      ],
+      "areas_kr": [
+        "여성건강"
+      ],
+      "method": "haiku_description",
+      "confidence": 0.95,
+      "reasoning": "Theramex Australia explicitly focuses on women's health across contraception, osteoporosis, overactive bladder, fertility, and menopause management."
+    }
+  }
+}

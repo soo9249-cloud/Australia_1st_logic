@@ -35,7 +35,37 @@
       "Bash(curl -s http://127.0.0.1:8001/)",
       "Bash(powershell -Command 'Get-NetTCPConnection -LocalPort 8001 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Start-Sleep -Milliseconds 300; Write-Output '\\\\''killed 8001'\\\\''')",
       "Bash(curl -s -o /dev/null -w \"health HTTP %{http_code}\\\\n\" --max-time 3 http://127.0.0.1:8001/health)",
-      "Bash(curl -s -w '\\\\n=== HTTP %{http_code} ===\\\\n' -X POST http://127.0.0.1:8001/api/report/generate -H 'Content-Type: application/json' -d '{\"product_id\":\"au-hydrine-004\"}' --max-time 60)"
+      "Bash(curl -s -w '\\\\n=== HTTP %{http_code} ===\\\\n' -X POST http://127.0.0.1:8001/api/report/generate -H 'Content-Type: application/json' -d '{\"product_id\":\"au-hydrine-004\"}' --max-time 60)",
+
+      "Bash(python *)",
+      "Bash(python -c *)",
+      "Bash(python -m *)",
+      "Bash(python -u *)",
+      "Bash(pip install *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(echo *)",
+      "Bash(mkdir *)",
+      "Bash(cd *)",
+      "Bash(grep *)",
+      "Bash(grep -E *)",
+      "Bash(powershell *)",
+      "Bash(powershell -Command *)",
+      "Bash(cd * && *)",
+      "Bash(cd * && python *)",
+      "Bash(cd * && python -u *)",
+      "Bash(cd * && python -m *)",
+      "Bash(cd * && python -c *)",
+      "Bash(cd * && ls *)",
+      "Bash(cd * && grep *)",
+      "Bash(cd * && *)",
+      "Glob(*)",
+      "Grep(*)",
+      "Read(*)",
+      "Edit(*)",
+      "Write(*)"
     ]
   }
 }

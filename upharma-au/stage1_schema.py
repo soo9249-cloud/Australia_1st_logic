@@ -5,8 +5,10 @@
 
 from __future__ import annotations
 
+import json
 import re
 import warnings
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -267,6 +269,28 @@ def _format_hs_code(row_hs: Any) -> str:
     return s
 
 
+def resolve_hs_code_for_report(row: dict[str, Any]) -> str:
+    """DB에 hs_code_6가 없어도 품목 선택 시 표시용 HS를 채움 — 정적 시드 → 완제의약품 기본값."""
+    fmt = _format_hs_code(row.get("hs_code_6"))
+    digits = re.sub(r"\D", "", fmt)
+    if len(digits) >= 4:
+        return fmt
+    pid = str(row.get("product_code") or row.get("product_id") or "").strip()
+    try:
+        p = Path(__file__).resolve().parent / "crawler" / "au_products.json"
+        if p.is_file():
+            raw = json.loads(p.read_text(encoding="utf-8"))
+            for prod in raw.get("products") or []:
+                if str(prod.get("product_id") or "") == pid:
+                    h6 = prod.get("hs_code_6")
+                    if h6 is not None and str(h6).strip():
+                        return _format_hs_code(h6)
+    except Exception:
+        pass
+    # 제30류 조제의약품 일반(수출·관세 참고용; 최종 신고는 세관 확인)
+    return "3004.90"
+
+
 def _sanitize_legacy_jargon(text: str) -> str:
     """Haiku/레거시에 섞인 v2 금지 표현 제거 (검증 통과용)."""
     if not text:
@@ -407,7 +431,7 @@ def build_report_r1_payload_from_pipeline(
             ),
             "inn": _sanitize_legacy_jargon(str(row.get("inn_normalized") or "—")),
             "strength_form": _sanitize_legacy_jargon(strength_form),
-            "hs_code": _format_hs_code(row.get("hs_code_6")),
+            "hs_code": resolve_hs_code_for_report(row),
             "report_date": datetime.now().strftime("%Y-%m-%d"),
             "verdict": verdict_cat,
             "verdict_summary": verdict_summary,
@@ -482,7 +506,7 @@ def build_report_r1_payload_from_pipeline(
         ),
         "inn": _sanitize_legacy_jargon(str(row.get("inn_normalized") or "—")),
         "strength_form": _sanitize_legacy_jargon(strength_form),
-        "hs_code": _format_hs_code(row.get("hs_code_6")),
+        "hs_code": resolve_hs_code_for_report(row),
         "report_date": datetime.now().strftime("%Y-%m-%d"),
         "verdict": verdict,
         "verdict_summary": verdict_summary,
@@ -524,9 +548,8 @@ def coerce_dict_to_report_r1(raw: dict[str, Any]) -> ReportR1Payload:
         st = str(d.get("strength") or "").strip()
         form = str(d.get("dosage_form") or "").strip()
         d["strength_form"] = " ".join(x for x in (st, form) if x).strip() or ""
-    if "hs_code" not in d and d.get("hs_code_6") is not None:
-        s = str(d.get("hs_code_6") or "").strip()
-        d["hs_code"] = f"{s[:4]}.{s[4:6]}" if len(s) >= 6 else s
+    if not str(d.get("hs_code") or "").strip():
+        d["hs_code"] = resolve_hs_code_for_report(d)
     if "report_date" not in d:
         from datetime import datetime
 

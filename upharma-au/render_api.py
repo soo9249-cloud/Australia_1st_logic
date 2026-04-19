@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -922,6 +923,34 @@ def _normalize_news_item(raw: dict[str, Any], link_fallback: str = "") -> dict[s
     }
 
 
+def _parse_perplexity_news_json_array(content: str) -> list[Any] | None:
+    """모델이 마크다운 펜스·전후 설명을 붙여도 JSON 배열만 추출."""
+    import json as _json
+
+    s = (content or "").strip()
+    if not s:
+        return None
+    # ```json ... ``` 또는 ``` ... ```
+    fence = re.search(r"```(?:json)?\s*([\s\S]*?)```", s, re.IGNORECASE)
+    if fence:
+        s = fence.group(1).strip()
+    try:
+        parsed = _json.loads(s)
+        if isinstance(parsed, list):
+            return parsed
+    except Exception:
+        pass
+    try:
+        start = s.index("[")
+        end = s.rindex("]") + 1
+        parsed = _json.loads(s[start:end])
+        if isinstance(parsed, list):
+            return parsed
+    except Exception:
+        pass
+    return None
+
+
 _MOCK_NEWS: list[dict[str, Any]] = [
     {
         "title": "TGA approves fast-track for PIC/S generics",
@@ -986,7 +1015,7 @@ def get_news() -> JSONResponse:
                 "Content-Type": "application/json",
             },
             json={
-                "model": "sonar",
+                "model": (os.environ.get("PERPLEXITY_NEWS_MODEL") or "sonar-pro").strip(),
                 "messages": [
                     {
                         "role": "system",
@@ -1035,7 +1064,6 @@ def get_news() -> JSONResponse:
         logger.warning("[api/news] mock: 요청 예외 %s: %s", type(exc).__name__, exc)
         return _news_api_response(mock_items, source="mock")
 
-    import json as _json
     content = ""
     try:
         content = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
@@ -1047,18 +1075,14 @@ def get_news() -> JSONResponse:
         logger.warning("[api/news] mock: message content 비어 있음")
         return _news_api_response(mock_items, source="mock")
 
-    citations = data.get("citations") or []
+    citations = data.get("citations") or data.get("search_results") or []
     link_list = [c if isinstance(c, str) else (c.get("url") if isinstance(c, dict) else "") for c in citations]
 
-    try:
-        start = content.index("[")
-        end = content.rindex("]") + 1
-        items = _json.loads(content[start:end])
-    except Exception as exc:
+    items = _parse_perplexity_news_json_array(content)
+    if items is None:
         logger.warning(
-            "[api/news] mock: JSON 배열 파싱 실패 (%s) content_prefix=%s",
-            exc,
-            (content or "")[:400],
+            "[api/news] mock: JSON 배열 파싱 실패 content_prefix=%s",
+            (content or "")[:500],
         )
         return _news_api_response(mock_items, source="mock")
 
@@ -1182,8 +1206,11 @@ _CLAUDE_SYSTEM_PROMPT = (
     "【계층 필드】\n"
     "- verdict.category: 가능 | 조건부 | 불가 중 하나.\n"
     "- verdict.narrative: 판정 근거 3~4문장.\n"
-    "- market_overview.paragraph: 시장 개요 문단.\n"
-    "- market_overview.disease_block: 질환 설명 배열 {name_ko, short_en, plain_desc}.\n"
+    "- market_overview.paragraph: 시장 개요 문단 — **크롤 JSON의 TGA·PBS·가격·경쟁 수치·등재 여부**를 우선 서술. "
+    "교과서식 질환 역학·병태 장문 설명은 금지(2~3문장 이내로 압축).\n"
+    "- market_overview.disease_block: {name_ko, short_en, plain_desc} 배열 — "
+    "크롤 row에 질환·적응증 필드가 없거나 비어 있으면 **빈 배열 []** 로 두거나 항목 1개만 짧게. "
+    "일반의학 교과서 수준의 긴 질환 설명·유전학 장문 금지(HTML 샘플은 데이터·규제 중심).\n"
     "- competitor_brands: {role, detail} 배열 — role 예: 오리지널|제네릭 대표|자사 브랜드 상태.\n"
     "- market_structure: {paragraph, tag} — tag 예: 제네릭 경쟁 구도|오리지널 독점|블루오션.\n"
     "- price_snapshot: aemp_aud, aemp_usd, dpmq_aud, dpmq_usd, market_class, pbs_code 는 **문자열**로, "
@@ -1662,81 +1689,9 @@ _HYBRID_CATEGORIES: list[dict[str, Any]] = [
 ]
 
 
-def _semantic_scholar_top1(query: str, fields_of_study: str) -> dict[str, Any] | None:
-    """Semantic Scholar /paper/search — 학술 논문 타입만 + 2015년 이후 + 인용수 정렬 후 Top 1."""
-    api_key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY", "").strip()
-    headers = {"x-api-key": api_key} if api_key else {}
+def _pubmed_article_dict(pmid: str) -> dict[str, Any] | None:
+    """PubMed PMID 1건 → 제목·초록 등 dict (실패 시 None)."""
     try:
-        r = httpx.get(
-            f"{_SS_BASE}/paper/search",
-            headers=headers,
-            params={
-                "query": query,
-                "publicationTypes": "JournalArticle,Review,MetaAnalysis,ClinicalTrial",
-                "fieldsOfStudy": fields_of_study,
-                "year": "2015-",
-                "limit": 5,
-                "fields": "title,abstract,tldr,year,authors,venue,citationCount,openAccessPdf,url,externalIds",
-            },
-            timeout=25.0,
-        )
-        if r.status_code != 200:
-            return None
-        data = (r.json() or {}).get("data") or []
-    except Exception:
-        return None
-    if not data:
-        return None
-
-    # 인용수 내림차순 정렬 후 Top 1
-    data.sort(key=lambda p: (p.get("citationCount") or 0), reverse=True)
-    top = data[0]
-    tldr_text = None
-    tldr = top.get("tldr")
-    if isinstance(tldr, dict):
-        tldr_text = tldr.get("text")
-
-    oa = top.get("openAccessPdf") or {}
-    url = (oa.get("url") if isinstance(oa, dict) else None) or top.get("url") or ""
-
-    return {
-        "url": url,
-        "title": top.get("title"),
-        "abstract": (top.get("abstract") or "")[:500] or None,
-        "tldr": tldr_text,
-        "venue": top.get("venue"),
-        "year": top.get("year"),
-        "citation_count": top.get("citationCount"),
-        "authors": [a.get("name") for a in (top.get("authors") or []) if a.get("name")][:3],
-        "source": "semantic_scholar",
-    }
-
-
-def _pubmed_top1(query: str) -> dict[str, Any] | None:
-    """PubMed E-utilities: esearch 로 PMID 획득 → efetch 로 제목·초록 파싱."""
-    try:
-        # 1) 검색 → PMID 리스트 (JSON)
-        r_search = httpx.get(
-            f"{_PUBMED_BASE}/esearch.fcgi",
-            params={
-                "db": "pubmed",
-                "term": query,
-                "retmax": 3,
-                "retmode": "json",
-                "datetype": "pdat",
-                "mindate": "2015",
-                "sort": "relevance",
-            },
-            timeout=20.0,
-        )
-        if r_search.status_code != 200:
-            return None
-        pmid_list = (r_search.json().get("esearchresult") or {}).get("idlist") or []
-        if not pmid_list:
-            return None
-        pmid = pmid_list[0]
-
-        # 2) 초록 + 메타 가져오기 (XML)
         r_fetch = httpx.get(
             f"{_PUBMED_BASE}/efetch.fcgi",
             params={
@@ -1750,8 +1705,8 @@ def _pubmed_top1(query: str) -> dict[str, Any] | None:
         if r_fetch.status_code != 200:
             return None
         import xml.etree.ElementTree as ET
-        root = ET.fromstring(r_fetch.text)
 
+        root = ET.fromstring(r_fetch.text)
         article = root.find(".//PubmedArticle/MedlineCitation/Article")
         if article is None:
             return None
@@ -1759,7 +1714,6 @@ def _pubmed_top1(query: str) -> dict[str, Any] | None:
         title_el = article.find("./ArticleTitle")
         title = (title_el.text or "").strip() if title_el is not None else None
 
-        # 초록: AbstractText 여러 개 붙이기
         abstract_parts = []
         for at in article.findall("./Abstract/AbstractText"):
             label = at.get("Label")
@@ -1797,37 +1751,250 @@ def _pubmed_top1(query: str) -> dict[str, Any] | None:
         return None
 
 
+def _pubmed_search_pmids(query: str, retmax: int = 15) -> list[str]:
+    try:
+        r_search = httpx.get(
+            f"{_PUBMED_BASE}/esearch.fcgi",
+            params={
+                "db": "pubmed",
+                "term": query,
+                "retmax": retmax,
+                "retmode": "json",
+                "datetype": "pdat",
+                "mindate": "2015",
+                "sort": "relevance",
+            },
+            timeout=20.0,
+        )
+        if r_search.status_code != 200:
+            return []
+        return (r_search.json().get("esearchresult") or {}).get("idlist") or []
+    except Exception:
+        return []
+
+
+def _pubmed_top1(query: str) -> dict[str, Any] | None:
+    """PubMed: 상위 PMID 여러 건 중 첫 파싱 성공분 반환 (하위 호환)."""
+    for pmid in _pubmed_search_pmids(query, retmax=5):
+        art = _pubmed_article_dict(pmid)
+        if art:
+            return art
+    return None
+
+
+def _inn_synonyms_for_refs(inn_raw: str) -> list[str]:
+    """INN 동의어(예: hydroxycarbamide ↔ hydroxyurea) — PubMed·관련성 필터용."""
+    inn = (inn_raw or "").strip().lower()
+    out: list[str] = []
+    if inn:
+        out.append(inn)
+    syn_map: dict[str, tuple[str, ...]] = {
+        "hydroxycarbamide": ("hydroxyurea", "hydroxycarbamide"),
+        "hydroxyurea": ("hydroxyurea", "hydroxycarbamide"),
+    }
+    for k, vals in syn_map.items():
+        if inn == k or k in inn:
+            out.extend(vals)
+    seen: set[str] = set()
+    res: list[str] = []
+    for x in out:
+        x = x.strip().lower()
+        if len(x) >= 4 and x not in seen:
+            seen.add(x)
+            res.append(x)
+    return res or ["pharmaceutical"]
+
+
+def _ref_blob(r: dict[str, Any]) -> str:
+    t = str(r.get("title") or "")
+    a = str(r.get("abstract") or "")
+    tl = r.get("tldr")
+    if isinstance(tl, dict):
+        tl = tl.get("text")
+    return f"{t} {a} {tl or ''}".lower()
+
+
+_BAD_REF_SUBSTR = (
+    "nanopore",
+    "replication stress",
+    "single-cell sequencing",
+    "cryo-em",
+    "artificial intelligence assay",
+    "crispr screen",
+)
+
+
+def _ref_blacklisted(blob: str) -> bool:
+    b = blob.lower()
+    return any(x in b for x in _BAD_REF_SUBSTR)
+
+
+def _ref_relevant_for_cat(cat_id: str, blob: str, inn_syns: list[str]) -> bool:
+    """호주 시장보고서용: 카테고리·성분·호주 맥락이 맞는 참고만."""
+    if _ref_blacklisted(blob):
+        return False
+    b = blob.lower()
+    au = "australia" in b or "australian" in b
+    has_inn = any(s in b for s in inn_syns if len(s) >= 4)
+    pol = any(
+        x in b
+        for x in (
+            "pbs",
+            "tga",
+            "pbac",
+            "artg",
+            "pharmaceutical benefits",
+            "medicare",
+            "therapeutic goods",
+        )
+    )
+    if cat_id == "macro":
+        return au and (has_inn or pol or "pharma" in b or "medicine" in b or "health" in b)
+    if cat_id == "regulatory":
+        return au and (pol or has_inn or "gmp" in b or "registration" in b)
+    if cat_id == "pricing":
+        return au and (
+            "pbs" in b
+            or "pbac" in b
+            or "dpmq" in b
+            or "pharmaceutical benefits" in b
+            or has_inn
+        )
+    return has_inn
+
+
+def _semantic_scholar_best(
+    query: str, fields_of_study: str, cat_id: str, inn_syns: list[str]
+) -> dict[str, Any] | None:
+    """SS 상위 후보 중 관련성 통과 1건만."""
+    api_key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY", "").strip()
+    headers = {"x-api-key": api_key} if api_key else {}
+    try:
+        r = httpx.get(
+            f"{_SS_BASE}/paper/search",
+            headers=headers,
+            params={
+                "query": query,
+                "publicationTypes": "JournalArticle,Review,MetaAnalysis,ClinicalTrial",
+                "fieldsOfStudy": fields_of_study,
+                "year": "2015-",
+                "limit": 12,
+                "fields": "title,abstract,tldr,year,authors,venue,citationCount,openAccessPdf,url,externalIds",
+            },
+            timeout=25.0,
+        )
+        if r.status_code != 200:
+            return None
+        data = (r.json() or {}).get("data") or []
+    except Exception:
+        return None
+    data.sort(key=lambda p: (p.get("citationCount") or 0), reverse=True)
+    for top in data:
+        tldr_text = None
+        tldr = top.get("tldr")
+        if isinstance(tldr, dict):
+            tldr_text = tldr.get("text")
+        oa = top.get("openAccessPdf") or {}
+        url = (oa.get("url") if isinstance(oa, dict) else None) or top.get("url") or ""
+        rec: dict[str, Any] = {
+            "url": url,
+            "title": top.get("title"),
+            "abstract": (top.get("abstract") or "")[:500] or None,
+            "tldr": tldr_text,
+            "venue": top.get("venue"),
+            "year": top.get("year"),
+            "citation_count": top.get("citationCount"),
+            "authors": [a.get("name") for a in (top.get("authors") or []) if a.get("name")][:3],
+            "source": "semantic_scholar",
+        }
+        if _ref_relevant_for_cat(cat_id, _ref_blob(rec), inn_syns):
+            return rec
+    return None
+
+
+def _pubmed_best_for_category(
+    cat: dict[str, Any], inn_syns: list[str], cat_id: str
+) -> dict[str, Any] | None:
+    """PubMed: 동의어·Australia 조합 쿼리로 PMID 순회, 관련성 통과분만."""
+    base = cat["pubmed_query"]
+    or_inn = " OR ".join(f"{s}[All Fields]" for s in inn_syns[:4])
+    queries = [
+        f"({base}) AND ({or_inn})",
+        f"({base}) AND ({or_inn}) AND Australia[All Fields]",
+        f"{base} AND Australia[All Fields] AND ({or_inn})",
+    ]
+    for q in queries:
+        for pmid in _pubmed_search_pmids(q, retmax=12):
+            art = _pubmed_article_dict(pmid)
+            if art and _ref_relevant_for_cat(cat_id, _ref_blob(art), inn_syns):
+                return art
+    return None
+
+
+def _perplexity_best_for_category(
+    cat: dict[str, Any], inn_syns: list[str], perplexity_key: str
+) -> dict[str, Any] | None:
+    """Perplexity: 호주 PBS/TGA 공식·학술 URL 우선, 기초과학 무관 논문 지양."""
+    if not perplexity_key:
+        return None
+    inn0 = inn_syns[0] if inn_syns else "medicine"
+    q1 = (
+        f"Return exactly ONE HTTPS citation URL from: Australian government "
+        f"(pbs.gov.au, tga.gov.au, health.gov.au, dfat.gov.au), PubMed, or major medical journal, "
+        f"about {inn0} or hydroxyurea in Australia in context of: {cat['label']}. "
+        f"Must relate to PBS, TGA, ARTG, pharmaceutical reimbursement, or Australian clinical use. "
+        f"Do NOT cite unrelated molecular biology, nanopore, or AI assay papers."
+    )
+    p = _perplexity_top1(q1, perplexity_key)
+    if p and p.get("url"):
+        p.setdefault("source", "perplexity")
+        bl = _ref_blob(
+            {
+                "title": p.get("title") or "",
+                "abstract": p.get("snippet") or "",
+                "tldr": p.get("snippet"),
+            }
+        )
+        if not _ref_blacklisted(bl):
+            return p
+    q2 = (
+        f"Official PBS Schedule OR TGA ARTG search result URL for hydroxyurea OR {inn0} in Australia."
+    )
+    p2 = _perplexity_top1(q2, perplexity_key)
+    if p2 and p2.get("url"):
+        p2.setdefault("source", "perplexity")
+        return p2
+    return None
+
+
 def _fetch_refs_hybrid(row: dict[str, Any], perplexity_key: str) -> list[dict[str, Any]]:
-    """3카테고리 × [Semantic Scholar → PubMed → Perplexity] 순 폴백."""
+    """3카테고리 × [Semantic Scholar → PubMed → Perplexity], 관련성·호주 맥락 필터."""
     inn = row.get("inn_normalized") or row.get("product_name_ko") or "pharmaceutical"
+    inn_syns = _inn_synonyms_for_refs(str(inn))
     refs: list[dict[str, Any]] = []
 
     for cat in _HYBRID_CATEGORIES:
         cat_label = cat["label"]
         cat_id = cat["id"]
 
-        # 1차: Semantic Scholar
-        top = _semantic_scholar_top1(f"{cat['ss_query']} {inn}", cat["ss_fos"])
+        top = _semantic_scholar_best(
+            f"{cat['ss_query']} ({inn_syns[0]}) Australia pharmaceutical",
+            cat["ss_fos"],
+            cat_id,
+            inn_syns,
+        )
 
-        # 2차: PubMed
         if not top:
-            pm_query = f"{cat['pubmed_query']} AND {inn}[All Fields]"
-            top = _pubmed_top1(pm_query)
+            top = _pubmed_best_for_category(cat, inn_syns, cat_id)
 
-        # 3차: Perplexity 폴백
         if not top and perplexity_key:
-            pplx_query = (
-                f"Find peer-reviewed academic papers and journal articles "
-                f"(PubMed, Google Scholar, academic journals only — NO news, YouTube, retail) "
-                f"about {cat['ss_query']} for {inn}"
-            )
-            pplx = _perplexity_top1(pplx_query, perplexity_key)
+            pplx = _perplexity_best_for_category(cat, inn_syns, perplexity_key)
             if pplx:
                 top = {
                     "url": pplx.get("url"),
                     "title": pplx.get("title"),
                     "abstract": None,
-                    "tldr": pplx.get("snippet"),  # Perplexity의 answer 본문 발췌
+                    "tldr": pplx.get("snippet"),
                     "venue": None,
                     "year": None,
                     "citation_count": None,

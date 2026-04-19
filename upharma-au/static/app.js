@@ -2269,11 +2269,27 @@ async function loadNews() {
   try {
     const res  = await fetch('/api/news');
     const newsBackend = (res.headers.get('X-News-Source') || '').trim();
-    const raw  = await res.json();
+    let raw;
+    try {
+      raw = await res.json();
+    } catch (parseErr) {
+      listEl.className = 'news-list--busy';
+      listEl.innerHTML = '<div class="irow" style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0;">뉴스 응답 형식 오류</div>';
+      console.warn('뉴스 JSON 파싱 실패:', parseErr);
+      return;
+    }
     /* 레거시: 배열만 오던 응답 호환 */
     const data = Array.isArray(raw) ? { ok: true, items: raw, error: null } : raw;
-
-    if (!data.ok || !data.items?.length) {
+    /* HTTP 오류 시 FastAPI는 { detail: "..." } 만 줄 수 있음 — ok/items 없음 */
+    if (!res.ok) {
+      const detail = (data && (data.detail || data.message)) || res.statusText || 'HTTP 오류';
+      listEl.className = 'news-list--busy';
+      listEl.innerHTML = `<div class="irow" style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0;">${_escHtml(String(detail))}</div>`;
+      return;
+    }
+    const items = data.items || [];
+    const serverOk = data.ok !== false;
+    if (!serverOk || !items.length) {
       listEl.className = 'news-list--busy';
       listEl.innerHTML = `<div class="irow" style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0;">${_escHtml(data.error || '뉴스를 불러올 수 없습니다.')}</div>`;
       return;
@@ -2291,7 +2307,7 @@ async function loadNews() {
     }
 
     /* 메인 카드는 항상 5건 레이아웃(백엔드와 동일) */
-    const newsItems = (data.items || []).slice(0, 5);
+    const newsItems = items.slice(0, 5);
 
     listEl.className = 'news-list--ready';
     listEl.innerHTML = newsItems.map(item => {

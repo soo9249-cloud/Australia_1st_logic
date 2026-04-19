@@ -2126,13 +2126,6 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   0%, 100% { box-shadow: 0 0 0 0 rgba(58,74,94,0.0); }
   50%      { box-shadow: 0 0 0 8px rgba(58,74,94,0.25); }
 }
-.p2-upload-hint {
-  padding: 6px 10px;
-  background: #fafaf3;
-  border-left: 3px solid #d4a054;
-  margin: 8px 0 0 0;
-}
-
 /* showToast() — 신약 needs_price_upload 안내 */
 .app-toast {
   position: fixed;

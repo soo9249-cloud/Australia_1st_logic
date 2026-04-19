@@ -36,6 +36,7 @@ SQL_FILE = ROOT / "upharma-au" / "crawler" / "db" / "australia_table.sql"
 _EXTRA_MIGRATION_FILES: tuple[str, ...] = (
     "20260419_new_drug_support.sql",
     "20260420_report_content_v2.sql",
+    "20260420_au_buyers_stage2.sql",
 )
 _MGMT_API = "https://api.supabase.com/v1/projects/{ref}/database/query"
 
@@ -422,6 +423,9 @@ def _verify_au_buyers(ref: str, pat: str) -> bool:
         "website",
         "email",
         "phone",
+        # Stage 2 (2026-04-20) — scripts/migrations/20260420_au_buyers_stage2.sql
+        "therapeutic_categories",
+        "last_researched_at",
     }
     return _verify_table_columns(ref, pat, "au_buyers", expected)
 

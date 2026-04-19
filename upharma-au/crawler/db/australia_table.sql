@@ -519,6 +519,34 @@ COMMENT ON COLUMN au_buyers.has_au_factory      IS '하드코딩 Y/N/unknown';
 COMMENT ON COLUMN au_buyers.ingredient_case     IS '4-case 성분 보유 분류 (A_competitor/B_ideal_buyer/C_partial/D_none)';
 COMMENT ON COLUMN au_buyers.company_key         IS 'buyer_discovery.stage1_filter.normalize_name() 결과 (canonical key)';
 
+-- ════════════════════════════════════════════════════════════════════════
+-- 바이어발굴 Stage 2 (2026-04-20) — au_buyers ALTER ADD COLUMN only.
+-- scripts/migrations/20260420_au_buyers_stage2.sql 과 동일 (신규 배포·문서 동기화용)
+-- ════════════════════════════════════════════════════════════════════════
+ALTER TABLE au_buyers
+  ADD COLUMN IF NOT EXISTS therapeutic_categories JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE au_buyers
+  ADD COLUMN IF NOT EXISTS last_researched_at TIMESTAMPTZ;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public' AND tablename = 'au_buyers' AND indexname = 'idx_au_buyers_product_rank'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_schema = 'public' AND table_name = 'au_buyers'
+      AND constraint_type = 'UNIQUE'
+      AND constraint_name = 'au_buyers_product_rank_unique'
+  ) THEN
+    ALTER TABLE au_buyers
+      ADD CONSTRAINT au_buyers_product_rank_unique UNIQUE (product_id, rank);
+  END IF;
+END$$;
+
+COMMENT ON COLUMN au_buyers.therapeutic_categories IS '치료영역 분류 JSON 배열 (company_categories 등)';
+COMMENT ON COLUMN au_buyers.last_researched_at IS '바이어 조사 마지막 실행 시각 (주기 갱신 추적)';
+
 
 -- ════════════════════════════════════════════════════════════════════════
 -- 8) au_report_refs — 하이브리드 참고자료 (Perplexity / PubMed / Semantic Scholar)

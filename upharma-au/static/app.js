@@ -1628,9 +1628,18 @@ async function runPipeline() {
     });
     if (!r2.ok) {
       const d2 = await r2.json().catch(() => ({}));
+      const detailStr =
+        typeof d2.detail === 'string'
+          ? d2.detail
+          : (d2.detail != null ? JSON.stringify(d2.detail) : '');
       console.error('AI 분석/PDF 실패:', d2.detail || r2.status);
       setProgress('analyze', 'error');
       _showReportError();
+      const msg = (detailStr || `HTTP ${r2.status}`).slice(0, 800);
+      _showP1Note(`⚠️ 보고서 생성 실패 — ${msg}`, true);
+      if (typeof showToast === 'function') {
+        showToast(`보고서 API ${r2.status}: ${msg.slice(0, 200)}`, 'warn');
+      }
       _resetBtn();
       return;
     }
@@ -1923,9 +1932,21 @@ async function _handleCustomCrawlResult(job) {
 function _auToRenderResult(auRow, blocks, meta) {
   if (!auRow) return { error: '호주 백엔드에서 품목 row 를 조회하지 못했습니다.' };
 
-  // 호주 export_viable(영어) → 한국어 판정 (싱가포르 renderResult 가 '적합'/'부적합' 매칭)
-  const evMap = { 'viable': '적합', 'conditional': '조건부', 'not_viable': '부적합' };
-  const verdict = evMap[auRow.export_viable] || auRow.export_viable || null;
+  // 판정: ① Claude v8 verdict.category(가능/조건부/불가) → ② meta.export_viable(보고서 응답) → ③ 크롤 row.export_viable
+  // (크롤만 보면 Haiku 판정과 어긋나 '미분석'·오표시가 날 수 있음)
+  const evMap = { viable: '적합', conditional: '조건부', not_viable: '부적합' };
+  const fromV8Ko = { 가능: '적합', 조건부: '조건부', 불가: '부적합' };
+  const v8Cat = blocks && blocks.verdict && blocks.verdict.category;
+  const metaEv = meta && meta.export_viable;
+  const rowEv = auRow.export_viable;
+  const verdict =
+    (v8Cat && fromV8Ko[v8Cat]) ||
+    (metaEv && evMap[metaEv]) ||
+    (metaEv && fromV8Ko[metaEv]) ||
+    evMap[rowEv] ||
+    (rowEv && fromV8Ko[rowEv]) ||
+    rowEv ||
+    null;
 
   // PBS 한 줄 요약 (basis-pbs-line)
   let pbsLine;

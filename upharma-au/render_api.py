@@ -2351,6 +2351,13 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
         "confidence":      conf_meta["confidence"],
         "confidence_breakdown": conf_meta,
     }
+    # Haiku v8 판정은 크롤러 export_viable 과 별도 — 응답 meta 는 생성 직후 Haiku 카테고리와 맞춤
+    if is_v8_market_blocks(blocks):
+        _vcat = (blocks.get("verdict") or {}).get("category")
+        _ko_to_en = {"가능": "viable", "조건부": "conditional", "불가": "not_viable"}
+        if isinstance(_vcat, str) and _vcat in _ko_to_en:
+            meta["export_viable"] = _ko_to_en[_vcat]
+            meta["haiku_verdict_category"] = _vcat
 
     # Phase 4.3-v3 — au_pbs_raw 에서 market_form/market_strength 를 row 에 주입.
     # au_products 에는 이 두 컬럼이 없고 au_pbs_raw 에만 존재 → PDF 제품정보 섹션용.

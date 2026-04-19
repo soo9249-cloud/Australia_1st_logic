@@ -999,7 +999,7 @@ _FX_FALLBACK: dict[str, Any] = {"aud_krw": 893.0, "aud_usd": 0.6412, "updated": 
 
 @app.get("/api/news")
 def get_news() -> JSONResponse:
-    """Perplexity sonar: 호주 제약 뉴스 검색 + 한국어 제목·요약 + 기사 직링크. 키 없거나 실패 시 mock."""
+    """Perplexity sonar: 호주·제약 관련 뉴스(호주 현지 또는 한국 등 해외 매체의 호주/교역 연관 기사) + 한국어 제목·요약. 키 없거나 실패 시 mock."""
     api_key = (os.environ.get("PERPLEXITY_API_KEY") or "").strip() or (os.environ.get("PERPLEXITY_KEY") or "").strip()
     mock_items = [_normalize_news_item(x) for x in _MOCK_NEWS]
 
@@ -1020,10 +1020,10 @@ def get_news() -> JSONResponse:
                     {
                         "role": "system",
                         "content": (
-                            "You are a news aggregator for a Korean pharmaceutical export dashboard. "
+                            "You are a news aggregator for a Korean pharmaceutical export dashboard focused on Australia. "
                             f"Return EXACTLY {_NEWS_LIST_SIZE} recent news items as a JSON array ONLY (no markdown, no prose). "
                             "Each item MUST have these keys: "
-                            "\"title\" (English headline as published), "
+                            "\"title\" (headline as published — may be English or Korean if the original article is Korean), "
                             "\"title_ko\" (Korean, concise headline for UI), "
                             "\"summary_ko\" (Korean, 1–2 sentences: what the article is about for a business reader), "
                             "\"source\" (outlet or site name), "
@@ -1040,9 +1040,13 @@ def get_news() -> JSONResponse:
                             f"Find exactly {_NEWS_LIST_SIZE} online TEXT articles (not video pages) published within the LAST 24 HOURS. "
                             f"If {_NEWS_LIST_SIZE} are not available in 24h, you may include the most recent from YESTERDAY only — "
                             "do NOT use anything older than the previous calendar day. "
-                            "Topics: Australia pharmaceutical industry, TGA, PBS, healthcare policy, public health, hospital/pharmacy. "
-                            "Prefer: Australian outlets and .gov.au media releases, major newspapers' article URLs, "
-                            "global pharma news sites (e.g. industry trade press). "
+                            "Topic relevance (each article must clearly touch pharma/biotech/healthcare policy AND Australia in a substantive way): "
+                            "e.g. TGA, PBS, ARTG, hospital/pharmacy, Australian public health policy; OR Korea–Australia pharma trade, "
+                            "exports/imports, partnerships, clinical/regulatory stories involving Australia; OR Korean-language press "
+                            "covering Australian pharma market or Korean companies' Australia-related moves. "
+                            "Sources: You MAY use major Korean news sites and trade press when the story meets the criteria above — "
+                            "articles do NOT need to be hosted in Australia. Also include Australian outlets, .gov.au releases, "
+                            "and global industry sites when relevant. Aim for a sensible mix rather than Australia-only domains. "
                             "For each item give title, title_ko, summary_ko, source, date (publication date), and the DIRECT article URL. "
                             "If you cannot find a direct article URL, skip and substitute another article."
                         ),

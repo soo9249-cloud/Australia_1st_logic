@@ -133,17 +133,18 @@
           <div class="p1-result-note" id="p1-result-note" style="display:none;"></div>
         </div>
 
-        <!-- ② 신약 직접 분석 (한 박스) -->
+        <!-- ② 신약 직접 입력 (한 박스) -->
         <div class="selector-card p1-section p1-section--custom p1-custom-drug-card">
-          <div class="selector-label">신약 직접 분석</div>
+          <div class="selector-label">신약 직접 입력</div>
           <div class="p1-custom-drug-row">
             <input type="text" id="custom-trade-name" class="p1-custom-input" placeholder="약품명 (예: Nexavar)" autocomplete="off" maxlength="200"/>
-            <input type="text" id="custom-inn" class="p1-custom-input" placeholder="성분명 (단일/복합 성분 콤마 구분, 예: sorafenib 또는 drugA, drugB)" autocomplete="off" maxlength="200"/>
+            <input type="text" id="custom-inn" class="p1-custom-input" placeholder="성분명 (예: sorafenib)" autocomplete="off" maxlength="200" aria-describedby="p1-custom-inn-hint"/>
             <input type="text" id="custom-dosage" class="p1-custom-input" placeholder="제형 (예: 200mg tablet)" autocomplete="off" maxlength="200"/>
             <button type="button" class="btn-analyze" id="btn-custom-drug" onclick="runCustomPipeline()">
               <span>▶</span> 신약 분석
             </button>
           </div>
+          <p class="p1-custom-inn-hint" id="p1-custom-inn-hint">단일 성분은 하나만 입력하세요. 복합 성분은 서로 다른 성분을 콤마(,)로 구분해 입력할 수 있습니다. (예: fluticasone, salmeterol)</p>
           <p class="p1-custom-msg" id="p1-custom-msg" style="display:none;" role="status"></p>
         </div>
 

@@ -2915,22 +2915,35 @@ def p2_report(payload: dict[str, Any]) -> JSONResponse:
 # ═══════════════════════════════════════════════════════════════
 
 
+def _latest_report_pdf() -> Path | None:
+    """1공정·2공정 PDF 파일명 패턴을 모두 고려해 reports/ 최신 파일을 고름."""
+    candidates: list[Path] = []
+    for pattern in ("au_report_*.pdf", "au_p2_report_*.pdf"):
+        candidates.extend(_REPORTS_DIR.glob(pattern))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
 @app.get("/api/report/download")
 def download_report(name: str | None = None, inline: int = 0) -> FileResponse:
     """reports/ 디렉토리의 PDF 를 반환.
     - inline=1: Content-Disposition: inline → 브라우저 iframe 에서 PDF 뷰어로 표시
     - inline=0(기본): attachment → 파일 다운로드
-    name 미지정 시 가장 최신 파일 반환.
+    name 미지정 시 au_report_*·au_p2_report_* 중 수정 시각 최신 파일 반환.
     """
     if name:
         target = _REPORTS_DIR / Path(name).name
         if not target.is_file():
             raise HTTPException(status_code=404, detail=f"not found: {name}")
     else:
-        pdfs = sorted(_REPORTS_DIR.glob("au_report_*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
-        if not pdfs:
-            raise HTTPException(status_code=404, detail="생성된 PDF 가 없습니다. POST /api/report/generate 먼저 실행")
-        target = pdfs[0]
+        latest = _latest_report_pdf()
+        if latest is None:
+            raise HTTPException(
+                status_code=404,
+                detail="생성된 PDF 가 없습니다. 시장 분석 또는 수출 전략 파이프라인 실행 후 다시 시도하세요.",
+            )
+        target = latest
 
     disp = "inline" if inline else "attachment"
     return FileResponse(

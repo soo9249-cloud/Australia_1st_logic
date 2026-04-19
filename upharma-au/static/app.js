@@ -421,6 +421,13 @@ function renderReportTab() {
             style="padding:7px 14px;font-size:12px;flex-shrink:0;">📄 PDF</a>`
       : '';
     const delBtn = `<button class="btn-report-del" onclick="deleteReportEntry(${r.id})" title="보고서 삭제">×</button>`;
+    /* 판정 없음(—)은 뱃지로 두면 대시가 버튼처럼 보여 혼동되므로 표시하지 않음 */
+    const verdictBlock =
+      r.verdict && r.verdict !== '—'
+        ? `<div class="rep-item-verdict">
+          <span class="bdg ${vc}">${_escHtml(r.verdict)}</span>
+        </div>`
+        : '';
 
     return `
       <div class="rep-item">
@@ -428,9 +435,7 @@ function renderReportTab() {
           <div class="rep-item-product">${_escHtml(r.report_title || r.product)}${innSpan}</div>
           <div class="rep-item-meta">${_escHtml(r.timestamp)}</div>
         </div>
-        <div class="rep-item-verdict">
-          <span class="bdg ${vc}">${_escHtml(r.verdict)}</span>
-        </div>
+        ${verdictBlock}
         ${dlBtn}
         ${delBtn}
       </div>`;
@@ -1591,7 +1596,7 @@ function _showCustomDrugMsg(msg, isErr) {
   el.className = 'p1-custom-msg' + (isErr ? ' err' : '');
 }
 
-/** Task 10 (2026-04-19) — 신약 직접 분석: /api/crawl/new-drug 백엔드 연동 */
+/** Task 10 (2026-04-19) — 신약 직접 입력: /api/crawl/new-drug 백엔드 연동 */
 async function runCustomPipeline() {
   const trade = (document.getElementById('custom-trade-name')?.value || '').trim();
   const inn = (document.getElementById('custom-inn')?.value || '').trim();

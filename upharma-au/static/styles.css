@@ -588,6 +588,16 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   color: var(--red);
 }
 
+/* 성분명 입력 — placeholder 대신 짧은 보조 문구(줄바꿈·잘림 방지) */
+.p1-custom-inn-hint {
+  margin: 8px 0 0;
+  padding: 0 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+  font-weight: 500;
+}
+
 /* 1공정 — 팀원 UX: 품목·신약·PDF 각각 독립 카드(박스) */
 .p1-section {
   margin-bottom: 14px;

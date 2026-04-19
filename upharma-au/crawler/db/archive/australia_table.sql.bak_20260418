@@ -8,11 +8,11 @@
 --   - 확장 컬럼은 ALTER TABLE ... ADD COLUMN IF NOT EXISTS 로 idempotent 하게 추가한다.
 --
 -- 테이블 구성
---   1) australia           — 1공정(크롤링) + 2공정(FOB) 통합 행
+--   1) australia           — 시장조사(크롤링) + 수출전략(FOB) 통합 행
 --   2) australia_history   — 매 크롤링마다 전체 스냅샷 누적
---   3) australia_buyers    — 3공정 바이어 후보 (AHP PSI 5축 점수)
---   4) reports             — 1/2/3공정 산출 보고서 파일 메타
---   5) australia_p2_results — 2공정 AI 파이프라인 결과 저장 (품목×세그먼트 1행)
+--   3) australia_buyers    — 바이어 후보 (AHP PSI 5축 점수)
+--   4) reports             — 산출 보고서 파일 메타
+--   5) australia_p2_results — 수출전략 AI 파이프라인 결과 저장 (품목×세그먼트 1행)
 --   6) au_regulatory       — 호주 규제 체크포인트 시드 데이터
 
 
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS australia (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id        TEXT NOT NULL UNIQUE,
   market_segment    TEXT DEFAULT 'public',
-  fob_estimated_usd DECIMAL,          -- 1공정 항상 NULL, 2공정에서 최종 추정가로 채운다
+  fob_estimated_usd DECIMAL,          -- 시장조사 단계 항상 NULL, 수출전략에서 최종 추정가로 채운다
   confidence        DECIMAL,
   crawled_at        TIMESTAMPTZ DEFAULT now(),
 
@@ -96,12 +96,12 @@ CREATE TABLE IF NOT EXISTS australia (
   evidence_text    TEXT,
   evidence_text_ko TEXT,
 
-  -- 2공정 — FOB 역산 5개                     NEW
-  fob_local_ref_aud    DECIMAL,            -- 2공정에 쓴 현지 기준가 (PBS DPMQ 또는 소매가)
+  -- 수출전략 — FOB 역산 5개                     NEW
+  fob_local_ref_aud    DECIMAL,            -- 수출전략에 쓴 현지 기준가 (PBS DPMQ 또는 소매가)
   fob_conservative_usd DECIMAL,            -- 보수 시나리오
   fob_base_usd         DECIMAL,            -- 기준 시나리오 (fob_estimated_usd 와 함께 사용)
   fob_aggressive_usd   DECIMAL,            -- 공격 시나리오
-  fob_confidence       DECIMAL,            -- 2공정 신뢰도 (0~1)
+  fob_confidence       DECIMAL,            -- 수출전략 신뢰도 (0~1)
 
   -- 메타
   sites              JSONB,
@@ -202,7 +202,7 @@ CREATE INDEX IF NOT EXISTS idx_australia_history_crawled_at ON australia_history
 
 
 -- ════════════════════════════════════════════════════════════
--- 3) australia_buyers — 3공정 바이어 후보 (AHP PSI 5축)
+-- 3) australia_buyers — 바이어 후보 (AHP PSI 5축)
 -- ════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS australia_buyers (
@@ -240,7 +240,7 @@ CREATE INDEX IF NOT EXISTS idx_australia_buyers_psi_total  ON australia_buyers(p
 
 
 -- ════════════════════════════════════════════════════════════
--- 4) reports — 1/2/3공정 산출 보고서 메타
+-- 4) reports — 산출 보고서 메타
 -- ════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS reports (
@@ -259,7 +259,7 @@ CREATE INDEX IF NOT EXISTS idx_reports_created_at ON reports(created_at DESC);
 
 
 -- ════════════════════════════════════════════════════════════
--- 5) australia_p2_results — 2공정 수출 전략 제안 결과
+-- 5) australia_p2_results — 수출 전략 제안 결과
 -- ════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS australia_p2_results (

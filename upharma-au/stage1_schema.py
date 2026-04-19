@@ -1,4 +1,4 @@
-"""1공정 시장분석 보고서 PDF v3 — 공통 Pydantic 스키마 (8품목 + 신약 공용).
+"""시장분석 보고서 PDF v3 — 공통 Pydantic 스키마 (8품목 + 신약 공용).
 
 프로덕션: 크롤러/Haiku JSON → ReportR1Payload 검증 → report_generator.render_pdf(payload, path)
 """
@@ -148,7 +148,7 @@ def _verdict_from_export_viable(ev_raw: Any) -> Literal["가능", "조건부", "
 
 
 def default_stage1_db_references() -> list[DbReference]:
-    """1공정 PDF 4-2 기본 행 (크롤·검색 소스 설명)."""
+    """시장조사 PDF 4-2 기본 행 (크롤·검색 소스 설명)."""
     return [
         DbReference(
             name="TGA ARTG",

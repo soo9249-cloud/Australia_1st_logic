@@ -90,9 +90,9 @@
 
     </div>
 
-    <!-- 환율·관세 카드: 메인 프리뷰에서 제거 (FOB 역산은 백엔드·2공정 로직에서만 사용). loadExchange()는 app.js에서 window._exchangeRates 채우기용으로 유지. -->
+    <!-- 환율·관세 카드: 메인 프리뷰에서 제거 (FOB 역산은 백엔드 수출전략 로직에서만 사용). loadExchange()는 app.js에서 window._exchangeRates 채우기용으로 유지. -->
 
-    <!-- ════════════ 1공정 아코디언 ════════════ -->
+    <!-- ════════════ 시장조사 아코디언 ════════════ -->
     <div class="process-section">
       <div class="process-header" onclick="toggleProcess('p1')">
         <div class="process-header-l">
@@ -188,7 +188,7 @@
       </div>
     </div>
 
-    <!-- ════════════ 2공정 아코디언 ════════════ -->
+    <!-- ════════════ 수출가격 전략 아코디언 ════════════ -->
     <div class="process-section">
       <div class="process-header" onclick="toggleProcess('p2')">
         <div class="process-header-l">
@@ -203,7 +203,7 @@
       <div class="process-body" id="pb-p2">
         <div id="p2-wrap">
 
-          <!-- ═══════ 2공정 메인 (AI 파이프라인) — 직접 입력 탭은 유지하되 기본 비표시 ═══════ -->
+          <!-- ═══════ 수출가격 전략 메인 (AI 파이프라인) — 직접 입력 탭은 유지하되 기본 비표시 ═══════ -->
           <div id="p2-ai-tab" class="p2-tab-content">
 
             <div class="selector-card">
@@ -221,7 +221,7 @@
                        onchange="handleP2FileSelect(this)">
                 <label for="p2-pdf-file" class="p2-upload-label">
                   <span class="p2-upload-icon">📄</span>
-                  <span id="p2-upload-text">가격 자료 PDF 선택 (1공정 시장분석 보고서 PDF 또는 신약 가격 자료 PDF)</span>
+                  <span id="p2-upload-text">가격 자료 PDF 선택 (시장분석 보고서 PDF 또는 신약 가격 자료 PDF)</span>
                 </label>
               </div>
               <div id="p2-upload-status" class="p2-note" style="display:none;"></div>
@@ -369,7 +369,7 @@
           <div id="p2-manual-tab" class="p2-tab-content" style="display:none;">
 
             <div class="selector-card">
-              <div class="selector-label">1공정 보고서 선택</div>
+              <div class="selector-label">시장조사 보고서 선택</div>
               <div class="selector-row">
                 <select id="p2-report-select" style="flex:1;">
                   <option value="">보고서를 선택하세요</option>
@@ -383,7 +383,7 @@
                        onchange="handleP2ManualFileSelect(this)">
                 <label for="p2-manual-pdf-file" class="p2-upload-label">
                   <span class="p2-upload-icon">📄</span>
-                  <span id="p2-manual-upload-text">가격 자료 PDF 선택 (1공정 시장분석 보고서 PDF 또는 신약 가격 자료 PDF)</span>
+                  <span id="p2-manual-upload-text">가격 자료 PDF 선택 (시장분석 보고서 PDF 또는 신약 가격 자료 PDF)</span>
                 </label>
               </div>
               <div id="p2-manual-upload-status" class="p2-note" style="display:none;"></div>
@@ -423,7 +423,7 @@
       </div>
     </div>
 
-    <!-- ════════════ 3공정 아코디언 ════════════ -->
+    <!-- ════════════ 바이어 발굴 아코디언 ════════════ -->
     <div class="process-section">
       <div class="process-header" onclick="toggleProcess('p3')">
         <div class="process-header-l">
@@ -461,12 +461,12 @@
       <div class="sec">
         <div>
           <h3>생성된 보고서</h3>
-          <p>1공정 분석 완료 시 자동 등록 · PDF 다운로드 가능</p>
+          <p>시장조사 분석 완료 시 자동 등록 · PDF 다운로드 가능</p>
         </div>
         <button class="btn-refresh" onclick="clearAllReports()" style="margin-top:0;">모두 지우기</button>
       </div>
       <div id="report-tab-list">
-        <div class="rep-empty">아직 생성된 보고서가 없습니다.<br>1공정 분석을 실행하면 여기에 자동으로 등록됩니다.</div>
+        <div class="rep-empty">아직 생성된 보고서가 없습니다.<br>시장조사 분석을 실행하면 여기에 자동으로 등록됩니다.</div>
       </div>
     </article>
   </div>

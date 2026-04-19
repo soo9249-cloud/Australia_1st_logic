@@ -178,7 +178,7 @@ def test_input_validation() -> None:
 # --------------------------------------------------------------------------
 def main() -> int:
     print("=" * 70)
-    print("UPharma 호주 2공정 FOB 계산기 단위 테스트")
+    print("UPharma 호주 FOB 계산기 단위 테스트")
     print("=" * 70)
 
     test_hydrine_reverse()

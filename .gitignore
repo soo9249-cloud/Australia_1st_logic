@@ -13,5 +13,5 @@ __pycache__/
 .claude/worktrees/
 .claude/settings.local.json
 
-# 1·2공정 생성 PDF (로컬/Render 디스크·DB 기준 — Git 추적 제외)
+# 시장조사·수출전략 생성 PDF (로컬/Render 디스크·DB 기준 — Git 추적 제외)
 upharma-au/reports/**/*.pdf

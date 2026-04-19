@@ -5,7 +5,7 @@
 #
 # Phase 4.3-v3 (2026-04-18) — 4필드 폐기:
 #   schedule / route_of_administration / first_registered_date / sponsor_abn 전부 삭제.
-#   1/2공정 보고서에 불필요 판정. Supabase au_tga_artg 컬럼도 DROP 완료.
+#   시장 보고서에 불필요 판정. Supabase au_tga_artg 컬럼도 DROP 완료.
 #   au_products.tga_schedule 컬럼도 DROP. schedule_code 는 PBS S85/S100 의미로 유지.
 #
 # 반환 DTO 는 두 용도 모두 커버:

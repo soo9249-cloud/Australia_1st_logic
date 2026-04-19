@@ -17,15 +17,15 @@
  *  10.  API 키 배지
  *  11.  환율 새로고침 버튼
  *  12.  To-Do 리스트
- *  13.  1공정 — 셀렉터 카드
- *  14.  1공정 — 진행 단계
- *  15.  1공정 — 분석 결과 카드
- *  16.  1공정 — 신호등
- *  17.  1공정 — 판정 근거 / 전략 그리드
- *  18.  1공정 — 논문 / 보고서 카드
- *  19.  1공정 — 신약 분석 폼
+ *  13.  시장조사 — 셀렉터 카드
+ *  14.  시장조사 — 진행 단계
+ *  15.  시장조사 — 분석 결과 카드
+ *  16.  시장조사 — 신호등
+ *  17.  시장조사 — 판정 근거 / 전략 그리드
+ *  18.  시장조사 — 논문 / 보고서 카드
+ *  19.  시장조사 — 신약 분석 폼
  *  20.  보고서 탭
- *  21.  빈 페이지 (2·3공정)
+ *  21.  빈 페이지 (2·바이어)
  *  22.  보고서 로딩 스피너
  *  23.  반응형
  *  24.  스크롤바
@@ -50,7 +50,7 @@
   --sh2:     0 2px 8px  rgba(23,63,120,.06);
   --sh3:     0 1px 4px  rgba(23,63,120,.04);
 
-  /* 1공정 호환 변수 */
+  /* 시장조사 호환 변수 */
   --ok:      #2d9870;
   --ok-bg:   rgba(45,152,112,.10);
   --err:     #c8564d;
@@ -414,7 +414,7 @@ a.news-item:hover .tit { color: var(--navy2); }
 }
 .btn-todo-add:hover { background: var(--navy2); }
 
-/* ── 13. 1공정 — 셀렉터 카드 ────────────────────────────────────────────── */
+/* ── 13. 시장조사 — 셀렉터 카드 ────────────────────────────────────────────── */
 .selector-card {
   background: var(--card);
   border-radius: 16px;
@@ -432,7 +432,7 @@ a.news-item:hover .tit { color: var(--navy2); }
 }
 .selector-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 
-/* 1공정 품목/신약 필드 — 팀원 UI: 진한 실선 테두리 */
+/* 시장조사 품목/신약 필드 — 팀원 UI: 진한 실선 테두리 */
 /* select 는 이미 전역 `select { appearance:none }` 로 네이티브 스킨 제거됨. */
 #main .selector-card select#product-select {
   min-height: 44px;
@@ -512,14 +512,14 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 .btn-analyze:hover:not(:disabled) { background: var(--navy2); }
 .btn-analyze:disabled { opacity: .45; cursor: not-allowed; }
 
-/* 1공정 — 신약 직접 분석 (품목 행과 동일 · flex + wrap) */
+/* 시장조사 — 신약 직접 분석 (품목 행과 동일 · flex + wrap) */
 .p1-custom-drug-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
 }
-/* 메인 1공정(#pb-p1)만: 팀원 UI — 한 줄에서 셀렉트·입력이 넓게, 분석 버튼은 오른쪽 고정 폭 */
+/* 메인 시장조사(#pb-p1)만: 팀원 UI — 한 줄에서 셀렉트·입력이 넓게, 분석 버튼은 오른쪽 고정 폭 */
 #main #pb-p1 .selector-row {
   display: flex;
   flex-wrap: wrap;
@@ -598,7 +598,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   font-weight: 500;
 }
 
-/* 1공정 — 팀원 UX: 품목·신약·PDF 각각 독립 카드(박스) */
+/* 시장조사 — 팀원 UX: 품목·신약·PDF 각각 독립 카드(박스) */
 .p1-section {
   margin-bottom: 14px;
 }
@@ -634,7 +634,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   font-weight: 700;
 }
 
-/* ── 14. 1공정 — 진행 단계 ───────────────────────────────────────────────── */
+/* ── 14. 시장조사 — 진행 단계 ───────────────────────────────────────────────── */
 .progress-row         { display: none; gap: 0; margin-top: 18px; }
 .progress-row.visible { display: flex; min-width: 0; }
 
@@ -696,7 +696,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 
 @keyframes pulse-dot { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
 
-/* ── 15. 1공정 — 분석 결과 카드 ──────────────────────────────────────────── */
+/* ── 15. 시장조사 — 분석 결과 카드 ──────────────────────────────────────────── */
 .result-card, .papers-card {
   background: var(--card);
   border-radius: 16px;
@@ -736,7 +736,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   background: var(--navy);
 }
 
-/* ── 16. 1공정 — 신호등 ──────────────────────────────────────────────────── */
+/* ── 16. 시장조사 — 신호등 ──────────────────────────────────────────────────── */
 .rs-block { padding: 18px 0 8px; }
 .rs-block:first-of-type { padding-top: 0; }
 
@@ -799,7 +799,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 .verdict-name { font-size: 17px; font-weight: 700; color: var(--navy); }
 .verdict-inn  { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
-/* ── 17. 1공정 — 판정 근거 / 전략 그리드 ─────────────────────────────────── */
+/* ── 17. 시장조사 — 판정 근거 / 전략 그리드 ─────────────────────────────────── */
 .basis-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .basis-item {
   background: var(--inner);
@@ -928,7 +928,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 }
 .btn-reanalyze:hover { background: rgba(23,63,120,.13); }
 
-/* ── 19. 1공정 — 신약 분석 폼 ───────────────────────────────────────────── */
+/* ── 19. 시장조사 — 신약 분석 폼 ───────────────────────────────────────────── */
 .custom-form {
   display: flex;
   flex-wrap: wrap;
@@ -993,7 +993,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   line-height: 1.8;
 }
 
-/* ── 21. 2공정 수출전략 ─────────────────────────────────────────────────── */
+/* ── 21. 수출전략 수출전략 ─────────────────────────────────────────────────── */
 .p2-card { max-width: 1040px; margin: 0 auto 14px; }
 .p2-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
 .p2-mode-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -1333,7 +1333,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px;
 }
 
-/* ── 22. 빈 페이지 (3공정) ─────────────────────────────────────────────── */
+/* ── 22. 빈 페이지 (바이어) ─────────────────────────────────────────────── */
 .empty-page {
   display: flex;
   flex-direction: column;
@@ -1635,7 +1635,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   28. 공정 토글 섹션
+   28. 단계 토글 섹션
 ══════════════════════════════════════════════════════════════════════════ */
 .process-section {
   background: var(--card);
@@ -1694,7 +1694,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 }
 .process-body.hidden { display: none; }
 
-/* 1공정 완료 노트 */
+/* 시장조사 완료 노트 */
 .p1-result-note {
   margin-top: 12px;
   padding: 12px 16px;
@@ -2126,7 +2126,7 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   margin-top: 4px;
 }
 
-/* Task (2026-04-19) — 2공정 업로드 영역 강조 (신약 fallback 유도) */
+/* Task (2026-04-19) — 수출전략 업로드 영역 강조 (신약 fallback 유도) */
 .p2-upload-highlight {
   animation: p2-upload-pulse 0.6s ease-in-out 3;
   border: 2px solid var(--primary) !important;

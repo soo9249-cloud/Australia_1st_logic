@@ -10,7 +10,7 @@
 
 - `POST /api/crawl` 은 **항상 외부 소스를 다시 조회**해 DB를 갱신합니다. “이미 있으면 스킵” 캐시는 두지 않습니다.
 - Anthropic 호출은 **`claude-haiku-4-5-20251001` 고정** (Sonnet/Opus 사용 금지).
-- 크롤·스키마·API 세부 필드·2공정 수식은 **코드와 `CLAUDE.md`** 를 기준으로 합니다.
+- 크롤·스키마·API 세부 필드·FOB 역산 수식은 **코드와 `CLAUDE.md`** 를 기준으로 합니다.
 
 ---
 
@@ -28,7 +28,7 @@ Australia_1st_logic/
     ├── render_api.py       # FastAPI 앱
     ├── templates/index.html
     ├── static/             # app.js, styles.css, 정적 자산
-    ├── crawler/            # 1공정 크롤러
+    ├── crawler/            # 시장조사 크롤러
     ├── stage2/             # FOB 역산
     └── reports/            # 생성 PDF 등 (git 제외)
 ```

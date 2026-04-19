@@ -233,7 +233,7 @@ def _empty_dto(pbs_source_url: str | None = None) -> dict[str, Any]:
         "source_url": pbs_source_url or _pbs_public_url(None),
         "source_name": "pbs_api_v3",
         "crawled_at": None,
-        # 검색 결과 다수 매칭 시 자사 브랜드 외 경쟁자 (2공정 포지셔닝용, 하위호환)
+        # 검색 결과 다수 매칭 시 자사 브랜드 외 경쟁자 (수출전략 포지셔닝용, 하위호환)
         "pbs_brands": None,
         "competitor_brands": None,
         "pbs_total_brands": None,
@@ -463,7 +463,7 @@ def _filter_results(dtos: list[dict[str, Any]]) -> list[dict[str, Any]]:
         pool = generics if generics else dtos
         chosen = dict(min(pool, key=_dto_price_sort_key))
 
-    # 2공정 포지셔닝용 — 경쟁 브랜드 정보 (하위호환 키 이름 유지)
+    # 수출전략 포지셔닝용 — 경쟁 브랜드 정보 (하위호환 키 이름 유지)
     total = len({d.get("brand_name") for d in dtos if d.get("brand_name")})
     chosen["pbs_total_brands"] = total
     pbs_brands = [
@@ -1245,7 +1245,7 @@ def fetch_pbs_same_ingredient(reference_inn: str) -> dict[str, Any]:
 def fetch_pbs_hospital_skip() -> dict[str, Any]:
     """Case 6 ESTIMATE_hospital — 병원 조달 품목 (Gadvoa). PBS 조회 skip.
 
-    반환: 빈 DTO + 메타 태그. FOB 는 2공정 fob_calculator 가 메모리 확정값 사용
+    반환: 빈 DTO + 메타 태그. FOB 는 fob_calculator 가 메모리 확정값 사용
     (Bayer 오리지널 $16.49/병 + 제네릭 3시나리오).
     """
     dto = _empty_dto()

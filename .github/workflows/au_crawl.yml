@@ -1,5 +1,5 @@
 # workflow_dispatch 로 단일 품목만 크롤링해 Supabase 에 적재한다. (Render 와 독립적인 백업 실행 경로)
-name: 호주 1공정 크롤러 실행
+name: 호주 시장조사 크롤러 실행
 
 on:
   workflow_dispatch:

@@ -645,7 +645,7 @@ def list_products() -> JSONResponse:
     return JSONResponse(content={"items": rows, "count": len(rows)})
 
 
-# ── au_reports_history 테이블 어댑터 (1/2/3공정 산출 보고서 메타, v2) ─────
+# ── au_reports_history 테이블 어댑터 (산출 보고서 메타, v2) ─────
 # v2 스키마: title/file_url/crawled_data 는 JSONB snapshot 안으로 흡수.
 _REPORTS_TABLE = "au_reports_history"
 
@@ -1244,7 +1244,7 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]
     ReportBlocks = _claude_blocks_schema()
     client_anthropic = anthropic.Anthropic(api_key=api_key)
 
-    # Decimal 등 비JSON 타입 직렬화 (2공정 Haiku 경로와 동일)
+    # Decimal 등 비JSON 타입 직렬화 (수출전략 Haiku 경로와 동일)
     user_content = (
         "다음 품목의 크롤링 데이터를 해석하여 10개 블록을 보고서체(~함/~임)로 작성하라.\n"
         "실제 숫자/문자열 값(ARTG 번호, DPMQ, PBS item code, 스폰서명 등)을 본문에 반드시 인용.\n\n"
@@ -1278,9 +1278,9 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]
 
 
 # ═══════════════════════════════════════════════════════════════
-# 2공정(수출 전략 제안서) — Haiku 어댑터
+# 수출 전략 제안서 — Haiku 어댑터
 # ───────────────────────────────────────────────────────────────
-# 입력: 1공정 row(Supabase) + Stage 2 seed + fob_calculator dispatch_result + segment
+# 입력: 크롤링 row(Supabase) + Stage 2 seed + fob_calculator dispatch_result + segment
 # 출력: 8개 한국어 보고서체 블록
 #   - block_extract        : 추출정보 요약 (품목·참고가·TGA/PBS 판정)
 #   - block_fob_intro      : 3시나리오 FOB 메타 해설 (왜 이 가격대가 나오는지)
@@ -1294,7 +1294,7 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, str]
 
 _CLAUDE_P2_SYSTEM_PROMPT = (
     "당신은 한국유나이티드제약(주)의 호주 수출 전략 시니어 애널리스트임. "
-    "주어진 품목의 (1) 1공정 크롤링 row, (2) Stage 2 시드(규제·참고가), "
+    "주어진 품목의 (1) 크롤링 row, (2) Stage 2 시드(규제·참고가), "
     "(3) fob_calculator 가 이미 계산한 3시나리오 FOB 결과를 종합해 "
     "'수출 전략 제안서'에 들어갈 한국어 보고서체 블록 8개를 작성함.\n\n"
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -1340,7 +1340,7 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
 
 
 def _claude_p2_blocks_schema():
-    """2공정용 Pydantic 스키마를 지연 로드."""
+    """수출전략용 Pydantic 스키마를 지연 로드."""
     from pydantic import BaseModel, Field
 
     class P2Blocks(BaseModel):
@@ -1357,7 +1357,7 @@ def _claude_p2_blocks_schema():
 
 
 def _row_summary_for_p2(row: dict[str, Any]) -> dict[str, Any]:
-    """2공정 Haiku 프롬프트에 넣을 핵심 컬럼 subset. (1공정 전체 row 대비 슬림)"""
+    """수출전략 Haiku 프롬프트에 넣을 핵심 컬럼 subset. (전체 row 대비 슬림)"""
     keys = [
         "product_name_ko", "inn_normalized", "dosage_form", "strength",
         "artg_status", "artg_number", "tga_schedule", "tga_sponsor",
@@ -1375,10 +1375,10 @@ def _haiku_p2_blocks(
     segment: str,
     api_key: str,
 ) -> dict[str, str]:
-    """Claude Haiku 4.5 를 호출해 2공정(수출 전략 제안서) 용 8개 블록을 생성.
+    """Claude Haiku 4.5 를 호출해 수출 전략 제안서 용 8개 블록을 생성.
 
     Args:
-        row               : Supabase `au_products` 행 (1공정 크롤링 결과)
+        row               : Supabase `au_products` 행 (크롤링 결과)
         seed              : fob_reference_seeds.json 단일 엔트리 (규제·참고가 수기시드)
         dispatch_result   : fob_calculator.dispatch_by_pricing_case() 반환 dict
                              (logic / scenarios / inputs / warnings / disclaimer / blocked_reason)
@@ -1405,7 +1405,7 @@ def _haiku_p2_blocks(
     client_anthropic = anthropic.Anthropic(api_key=api_key)
 
     user_content = (
-        "다음 품목의 (1) 1공정 row, (2) Stage 2 seed, (3) fob_calculator dispatch 결과를 종합해 "
+        "다음 품목의 (1) 크롤링 row, (2) Stage 2 seed, (3) fob_calculator dispatch 결과를 종합해 "
         "수출 전략 제안서용 8개 블록을 보고서체(~함/~임) 로 작성하라.\n"
         "scenario_* 3개는 dispatch.scenarios 안의 fob_aud 값을 반드시 소수점 2자리로 인용.\n"
         f"segment={segment!r} 기준으로 공공/민간 채널 프레이밍 구분.\n\n"
@@ -1443,7 +1443,7 @@ def _haiku_p2_blocks(
         user_content=user_content,
         schema_cls=P2Blocks,
         tool_name="emit_p2_blocks",
-        tool_description="2공정 수출 전략 제안서용 8개 블록을 구조화해서 반환",
+        tool_description="수출 전략 제안서용 8개 블록을 구조화해서 반환",
         usage_log_fn=_log_usage_p2,
     )
 
@@ -2067,7 +2067,7 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
 
 
 # ============================================================================
-# §P2. 2공정 FOB 역산 API (Stage2)
+# §P2. FOB 역산 API (Stage2)
 #   - stage2/fob_calculator.py (logic A/B + dispatch) 로 계산
 #   - stage2/fob_reference_seeds.json 이 8품목 시드 제공
 #   - crawler 모듈과는 완전 분리 (역산 공식은 stage2 내 자체 보관)
@@ -2395,18 +2395,18 @@ def stage2_calculate(payload: dict[str, Any]) -> JSONResponse:
 
 
 # ═══════════════════════════════════════════════════════════════
-#  2공정 AI 파이프라인 스텁 엔드포인트
+#  수출전략 AI 파이프라인 스텁 엔드포인트
 #  (AI 엔진(Haiku) 연동은 다음 단계에서 구현. 현재는 업로드만 동작.)
 # ═══════════════════════════════════════════════════════════════
 
-# 2공정 업로드 PDF 저장 디렉토리
+# 수출전략 업로드 PDF 저장 디렉토리
 _P2_UPLOADS_DIR = _BASE_DIR / "reports" / "_p2_uploads"
 _P2_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @app.post("/api/p2/upload")
 async def p2_upload_pdf(payload: dict[str, Any]) -> JSONResponse:
-    """2공정 AI/직접입력 탭에서 사용자가 직접 올린 PDF를 저장.
+    """수출전략 AI/직접입력 탭에서 사용자가 직접 올린 PDF를 저장.
 
     요청: {filename: str, content_b64: str (base64)}
     응답: {ok: true, filename: str, size_bytes: int}
@@ -2452,7 +2452,7 @@ async def p2_upload_pdf(payload: dict[str, Any]) -> JSONResponse:
     })
 
 
-# ── 2공정 AI 파이프라인 상태 관리 ──────────────────────────────
+# ── 수출전략 AI 파이프라인 상태 관리 ──────────────────────────────
 # 단일 사용자 도구이므로 모듈 레벨 dict 로 상태 추적 (동시 실행 X).
 import threading as _threading
 import re as _re
@@ -2818,7 +2818,7 @@ async def p2_pipeline_status() -> JSONResponse:
 
 @app.post("/api/p2/pipeline")
 def p2_pipeline(payload: dict[str, Any]) -> JSONResponse:
-    """2공정 AI 파이프라인 실행.
+    """수출전략 AI 파이프라인 실행.
 
     요청: {report_filename: str, market: "public"|"private"}
     - report_filename 에서 product_id 추출 → Supabase row 조회 → seed → FOB → Haiku → 결과 조립
@@ -2900,7 +2900,7 @@ def p2_pipeline_result() -> JSONResponse:
 
 @app.post("/api/p2/report")
 def p2_report(payload: dict[str, Any]) -> JSONResponse:
-    """2공정 PDF 보고서 재생성 (파이프라인 완료 후 별도 PDF 생성 요청).
+    """수출전략 PDF 보고서 재생성 (파이프라인 완료 후 별도 PDF 생성 요청).
     body: {product_id: str, segment?: str}
     기존 파이프라인 결과가 없으면 전체 파이프라인을 다시 실행해야 합니다.
     """
@@ -2916,7 +2916,7 @@ def p2_report(payload: dict[str, Any]) -> JSONResponse:
 
 
 def _latest_report_pdf() -> Path | None:
-    """1공정·2공정 PDF 파일명 패턴을 모두 고려해 reports/ 최신 파일을 고름."""
+    """시장조사·수출전략 PDF 파일명 패턴을 모두 고려해 reports/ 최신 파일을 고름."""
     candidates: list[Path] = []
     for pattern in ("au_report_*.pdf", "au_p2_report_*.pdf"):
         candidates.extend(_REPORTS_DIR.glob(pattern))

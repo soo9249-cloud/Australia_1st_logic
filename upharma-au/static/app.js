@@ -87,7 +87,7 @@ function goTab(id, el) {
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   §2-b. 공정 섹션 토글
+   §2-b. 단계 섹션 토글
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 const _processOpen = { p1: true, p2: true, p3: true };
@@ -146,10 +146,10 @@ async function loadExchange() {
     const usdKrw = audUsd > 0 ? audKrw / audUsd : 0;
     const usdAud = audUsd > 0 ? 1 / audUsd : 0;
 
-    // 전역 저장 (2공정 P2 에서 USD 환산·FOB 역산 재사용) + 호주 원본 키 보존
+    // 전역 저장 (수출가격 전략 P2 에서 USD 환산·FOB 역산 재사용) + 호주 원본 키 보존
     window._exchangeRates = {
       ...data,
-      usd_krw: usdKrw,   // 파생 (USD→KRW 메인 표시·2공정 최종가 환산)
+      usd_krw: usdKrw,   // 파생 (USD→KRW 메인 표시·수출전략 최종가 환산)
       usd_aud: usdAud,   // 파생 (USD→AUD, 역환산용)
     };
     if (typeof _p2FillExchangeRate === 'function') {
@@ -346,7 +346,7 @@ function _loadReports() {
 }
 
 /**
- * 1공정 완료 후 renderResult()가 호출 → 보고서 탭에 항목 추가.
+ * 시장조사 완료 후 renderResult()가 호출 → 보고서 탭에 항목 추가.
  * @param {object|null} result  분석 결과
  * @param {string|null} pdfName PDF 파일명
  */
@@ -356,8 +356,8 @@ function _addReportEntry(result, pdfName) {
   const entry   = {
     id:        Date.now(),
     product:   productName,
-    stage_label: '1공정',
-    report_title: `1공정 보고서 - ${productName}`,
+    stage_label: '시장조사',
+    report_title: `시장조사 보고서 - ${productName}`,
     inn:       result ? (INN_MAP[result.product_id] || result.inn || '') : '',
     verdict:   result ? (result.verdict || '—') : '—',
     price_hint: result ? String(result.price_positioning_pbs || '').trim() : '',
@@ -401,7 +401,7 @@ function renderReportTab() {
     container.innerHTML = `
       <div class="rep-empty">
         아직 생성된 보고서가 없습니다.<br>
-        1공정 분석을 실행하면 여기에 자동으로 등록됩니다.
+        시장조사 분석을 실행하면 여기에 자동으로 등록됩니다.
       </div>`;
     return;
   }
@@ -444,7 +444,7 @@ function renderReportTab() {
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   §6. 2공정 수출전략 (P2)
+   §6. 수출가격 전략 (P2)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 let _p2Ready = false;
@@ -619,7 +619,7 @@ async function handleP2FileSelect(inputEl) {
   }
 }
 
-/* 2공정 진행 단계 — PDF 추출 → 가격 추출 → AI 분석 → 보고서 생성 */
+/* 수출가격 전략 진행 단계 — PDF 추출 → 가격 추출 → AI 분석 → 보고서 생성 */
 const P2_STEP_ORDER = ['extract', 'ai_extract', 'ai_analysis', 'report'];
 
 /** 서버 step 값으로 스테퍼 동기화 (이전 단계 완료·현재 단계 진행 중) */
@@ -994,7 +994,7 @@ function _renderP2AiResult(data) {
       dlState.innerHTML = `
         <a class="btn-download"
            href="/api/report/download?name=${encodeURIComponent(data.pdf)}"
-           target="_blank">📄 2공정 보고서 다운로드</a>`;
+           target="_blank">📄 수출전략 보고서 다운로드</a>`;
     } else {
       dlState.innerHTML = `<span style="font-size:13px;color:var(--red);">PDF 생성에 실패했습니다.</span>`;
     }
@@ -1117,7 +1117,7 @@ function _getP2SelectedReport() {
 }
 
 function _extractPriceHint(text) {
-  // 호주 1공정 보고서 텍스트에서 가격 힌트 추출.
+  // 호주 시장조사 보고서 텍스트에서 가격 힌트 추출.
   // 우선순위: AUD(호주 원본) > USD > $ 표기.
   // 반환값은 입력 단위 그대로의 숫자 — 직접입력 탭은 USD 기준이라 AUD 검출 시 호출자가 환산해야 함.
   const src = String(text || '');
@@ -1466,7 +1466,7 @@ function resetProgress() {
  * U6: 재분석 버튼도 이 함수를 호출.
  */
 /**
- * 호주 1공정 파이프라인 — 2 단 동기 플로우
+ * 호주 시장조사 파이프라인 — 2 단 동기 플로우
  *
  * 싱가포르는 POST /api/pipeline/{key} 가 비동기로 모든 단계를 서버에서 처리하고
  * GET /status 폴링 + GET /result 로 결과를 받았음.
@@ -1669,7 +1669,7 @@ async function _pollCustomPipeline(jobId) {
   _showCustomDrugMsg('신약 분석 시간 초과 — 백엔드 로그를 확인하세요.', true);
 }
 
-/** 신약 가격 유도 등 짧은 알림 (2공정 업로드 안내용) */
+/** 신약 가격 유도 등 짧은 알림 (수출전략 업로드 안내용) */
 function showToast(message, level) {
   const wrap = document.createElement('div');
   wrap.className = 'app-toast app-toast--' + (level || 'info');
@@ -1684,11 +1684,11 @@ function showToast(message, level) {
   }, ms);
 }
 
-/** Task 10 — 크롤 결과 분기: AEMP 있음 → 보고서 / 없음 → 2공정 가격 PDF 업로드 유도 */
+/** Task 10 — 크롤 결과 분기: AEMP 있음 → 보고서 / 없음 → 수출전략 가격 PDF 업로드 유도 */
 function _handleCustomCrawlResult(job) {
   if (job.needs_price_upload) {
     showToast(
-      '호주 공개 DB에서 가격을 찾지 못했습니다. 2공정 "가격 자료 PDF 업로드"에 PDF를 올려주세요.',
+      '호주 공개 DB에서 가격을 찾지 못했습니다. 수출가격 전략의 "가격 자료 PDF 업로드"에 PDF를 올려주세요.',
       'warn',
     );
     const p2body = document.getElementById('pb-p2');
@@ -2030,7 +2030,7 @@ function _pbsLineFromApi(result) {
   return '참고 가격 정보 없음';
 }
 
-/** 1공정 완료/오류 노트 표시 */
+/** 시장조사 완료/오류 노트 표시 */
 function _showP1Note(msg, isErr) {
   const el = document.getElementById('p1-result-note');
   if (!el) return;
@@ -2130,9 +2130,9 @@ async function loadNews() {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 loadKeyStatus();        // API 키 배지
-// 메인에 환율 UI 없음 — 2공정 FOB·직접입력이 window._exchangeRates 를 쓰므로 초기 1회만 조회
+// 메인에 환율 UI 없음 — 수출전략 FOB·직접입력이 window._exchangeRates 를 쓰므로 초기 1회만 조회
 loadExchange();
 loadMacro();            // 거시 지표 로드
 renderReportTab();      // 보고서 탭 초기 렌더
-initP2Strategy();       // 2공정 수출전략 초기화
+initP2Strategy();       // 수출가격 전략 초기화
 loadNews();             // 시장 뉴스 즉시 로드

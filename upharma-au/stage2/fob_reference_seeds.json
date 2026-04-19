@@ -1,7 +1,7 @@
 {
   "_schema_version": "1.0",
   "_schema_notes": {
-    "purpose": "2공정(FOB 역산) 전용 입력 시드. 수기 조사값 + 규제 플래그 + 참고가격. 크롤러 실시간 데이터와 별개로 dispatch_by_pricing_case()가 참조.",
+    "purpose": "FOB 역산(수출 전략) 전용 입력 시드. 수기 조사값 + 규제 플래그 + 참고가격. 크롤러 실시간 데이터와 별개로 dispatch_by_pricing_case()가 참조.",
     "join_key": "product_id (crawler/au_products.json과 조인)",
     "pricing_case": "DIRECT | COMPONENT_SUM | ESTIMATE_private | ESTIMATE_withdrawal | ESTIMATE_substitute | ESTIMATE_hospital",
     "pbs_section": "85(General Schedule) | 100_HS(Highly Specialised) | 85_withdrawn(과거 등재 후 철수) | N/A(미등재)",

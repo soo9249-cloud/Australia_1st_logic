@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """호주 수출 시장조사 보고서 PDF 생성기 (reportlab 기반).
 
-1공정 PDF v3 (권장)
+시장조사 PDF v3 (권장)
     render_pdf(ReportR1Payload | dict, output_path)
     · stage1_schema.ReportR1Payload — HS CODE, [1]~[4] 4블록, 별첨 용어집
     · dict 는 Pydantic 검증 후 실패 시 v2 크롤러 필드로 보정(coerce_dict_to_report_r1)
 
-1공정 PDF v2 레거시 (render_api.py 등 기존 호출)
+시장조사 PDF v2 레거시 (render_api.py 등 기존 호출)
     render_pdf(row, blocks, refs, meta, output_path)
     · 제품정보 박스, Case·신뢰도 표기 — CC가 v3 페이로드로 전환 시 제거 예정
 
-2공정
+수출 전략 (FOB)
     render_p2_pdf(...) — 본 모듈 하단 유지
 """
 
@@ -335,7 +335,7 @@ def _build_product_info_flowables(
 
 
 def render_pdf(*args: Any, **kwargs: Any) -> None:
-    """1공정 PDF 생성.
+    """시장조사 PDF 생성.
 
     v3 (권장):
         render_pdf(payload: ReportR1Payload | dict, output_path: str | Path) -> None
@@ -627,7 +627,7 @@ def _render_pdf_legacy_v2(
 
 
 def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
-    """1공정 시장분석 보고서 PDF v3 — HS CODE·4블록·참고자료 표·별첨 용어집."""
+    """시장분석 보고서 PDF v3 — HS CODE·4블록·참고자료 표·별첨 용어집."""
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.enums import TA_CENTER
@@ -1057,7 +1057,7 @@ def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════
-# 2공정 — 수출 전략 제안 보고서 PDF
+# 수출 전략 제안 보고서 PDF
 # ═══════════════════════════════════════════════════════════════
 
 _SCENARIO_LABELS = [
@@ -1075,7 +1075,7 @@ def render_p2_pdf(
     fx_rates: dict[str, Any],
     out_path: Path,
 ) -> None:
-    """2공정 수출 전략 제안 보고서 PDF 를 생성하여 out_path 에 저장.
+    """수출 전략 제안 보고서 PDF 를 생성하여 out_path 에 저장.
 
     Args:
         row       : Supabase australia row (품목 메타·TGA·PBS 등)
@@ -1108,7 +1108,7 @@ def render_p2_pdf(
     if base_font == "HYSMyeongJo-Medium":
         bold_font = base_font
 
-    # 색상 팔레트 (1공정과 동일)
+    # 색상 팔레트 (시장조사 PDF와 동일)
     C_NAVY   = colors.HexColor("#1B2A4A")
     C_BODY   = colors.HexColor("#1A1A1A")
     C_BORDER = colors.HexColor("#D0D7E3")
@@ -1208,7 +1208,7 @@ def render_p2_pdf(
     story.append(Paragraph(_rx(generated_date), s_date))
     story.append(Spacer(1, 6))
 
-    # ── 제품 바 (1공정과 동일 디자인) ──
+    # ── 제품 바 (시장조사 PDF와 동일 디자인) ──
     str_form = " ".join(x for x in [strength, dosage] if x).strip()
     bar_txt = f"{product_name} — {inn}"
     if str_form:

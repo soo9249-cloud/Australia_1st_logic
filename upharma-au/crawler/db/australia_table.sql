@@ -553,7 +553,7 @@ CREATE INDEX IF NOT EXISTS idx_au_reports_history_product_id  ON au_reports_hist
 CREATE INDEX IF NOT EXISTS idx_au_reports_history_gong        ON au_reports_history(gong);
 CREATE INDEX IF NOT EXISTS idx_au_reports_history_generated   ON au_reports_history(generated_at DESC);
 
-COMMENT ON COLUMN au_reports_history.gong IS '공정 번호 (1=시장분석, 2=수출전략, 3=바이어)';
+COMMENT ON COLUMN au_reports_history.gong IS '단계 구분 (1=시장분석, 2=수출전략, 3=바이어)';
 
 
 -- ════════════════════════════════════════════════════════════════════════

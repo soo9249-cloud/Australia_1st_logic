@@ -556,7 +556,7 @@ def build_product_summary(
         "data_source_count": data_source_count,
         "confidence": completeness_score(assembled_for_score),
 
-        # LLM 메타 (1공정에선 None)
+        # LLM 메타 (시장조사 단계에선 None)
         "block2_market": None,
         "block2_regulatory": None,
         "block2_trade": None,

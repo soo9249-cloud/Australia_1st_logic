@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-# fob_estimated_usd는 1공정에서 항상 null → 감점 제외
+# fob_estimated_usd는 시장조사 단계에서 항상 null → 감점 제외
 AU_REQUIRED_FIELDS: list[str] = [
     "artg_number",
     "pbs_item_code",

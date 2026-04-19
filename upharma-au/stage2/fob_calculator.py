@@ -1,4 +1,4 @@
-"""호주 수출 FOB 역산 계산 모듈 (2공정).
+"""호주 수출 FOB 역산 계산 모듈 (수출 전략).
 
 **설계 원칙**
 - 크롤러와 완전히 분리: `crawler/` 아래 어떤 파일에도 의존하지 않음.
@@ -530,7 +530,7 @@ if __name__ == "__main__":
         data = json.load(f)
 
     print("=" * 70)
-    print("UPharma 호주 수출 2공정 FOB 역산 — 전 품목 3 시나리오")
+    print("UPharma 호주 수출 FOB 역산 — 전 품목 3 시나리오")
     print("=" * 70)
     for seed in data["seeds"]:
         res = dispatch_by_pricing_case(seed)

@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "description": "성분(INN) → 치료영역 한/영 매핑. au_products.json 8품목의 inn_components + similar_inns 커버. 누락 성분은 추가만 하면 됨.",
+    "last_updated": "2026-04-19"
+  },
+  "omega-3-acid ethyl esters":  {"en": ["cardiovascular"],          "kr": ["심혈관"]},
+  "gadobutrol":                 {"en": ["imaging"],                  "kr": ["조영제"]},
+  "fluticasone":                {"en": ["respiratory"],              "kr": ["호흡기"]},
+  "salmeterol":                 {"en": ["respiratory"],              "kr": ["호흡기"]},
+  "hydroxyurea":                {"en": ["oncology", "hematology"],   "kr": ["항암", "혈액"]},
+  "hydroxycarbamide":           {"en": ["oncology", "hematology"],   "kr": ["항암", "혈액"]},
+  "rosuvastatin":               {"en": ["cardiovascular"],           "kr": ["심혈관"]},
+  "atorvastatin":               {"en": ["cardiovascular"],           "kr": ["심혈관"]},
+  "cilostazol":                 {"en": ["cardiovascular"],           "kr": ["심혈관"]},
+  "mosapride":                  {"en": ["gastrointestinal"],         "kr": ["소화기"]},
+  "clopidogrel":                {"en": ["cardiovascular"],           "kr": ["심혈관"]},
+  "domperidone":                {"en": ["gastrointestinal"],         "kr": ["소화기"]},
+  "metoclopramide":             {"en": ["gastrointestinal"],         "kr": ["소화기"]}
+}

@@ -476,6 +476,49 @@ COMMENT ON COLUMN au_buyers.psi_import_exp      IS '수입 경험 (15 점)';
 COMMENT ON COLUMN au_buyers.psi_pharmacy_chain  IS '약국 체인 (10 점)';
 COMMENT ON COLUMN au_buyers.source_flags        IS '{tga:true, pbs:true, nsw:false} 점수 근거 소스';
 
+-- ════════════════════════════════════════════════════════════════════════
+-- 바이어발굴 (Phase 1, 2026-04-19) — au_buyers ALTER ADD COLUMN only.
+-- 기존 컬럼 수정/DROP 금지. psi_* 점수 컬럼은 그대로 재사용 (30/25/20/15/10).
+-- ════════════════════════════════════════════════════════════════════════
+ALTER TABLE au_buyers
+  -- 카드 닫힘 시 6컬럼 표시용
+  ADD COLUMN IF NOT EXISTS annual_revenue_rank  TEXT,                    -- 하드코딩 자유텍스트 ("TOP 5 (제네릭 1위)")
+  ADD COLUMN IF NOT EXISTS primary_products_kr  JSONB DEFAULT '[]'::jsonb,  -- Haiku 한국어 3개 이내
+  ADD COLUMN IF NOT EXISTS has_au_factory       TEXT,                    -- "Y" / "N" / "unknown"
+  ADD COLUMN IF NOT EXISTS factory_locations    JSONB DEFAULT '[]'::jsonb, -- 하드코딩 도시 배열
+  ADD COLUMN IF NOT EXISTS ingredient_case      TEXT,                    -- "A_competitor"/"B_ideal_buyer"/"C_partial"/"D_none"
+  ADD COLUMN IF NOT EXISTS ingredient_label     TEXT,                    -- 카드 표시용 ("별개 보유 (rosuvastatin)")
+  -- 카드 펼침 시 표시
+  ADD COLUMN IF NOT EXISTS business_model       TEXT,                    -- originator/generic/hybrid/unknown
+  ADD COLUMN IF NOT EXISTS represented_brands   JSONB DEFAULT '[]'::jsonb, -- GPCE 크롤 원본
+  ADD COLUMN IF NOT EXISTS tga_artg_count       INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS pbs_listed_count     INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS is_ma_member         BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS is_gbma_member       BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS is_gpce_exhibitor    BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS reasoning            TEXT,                    -- Haiku 추천 근거 3문장
+  ADD COLUMN IF NOT EXISTS notes                TEXT,                    -- 하드코딩 자유 메모
+  ADD COLUMN IF NOT EXISTS company_key          TEXT,                    -- canonical_key (정규화 키)
+  ADD COLUMN IF NOT EXISTS website              TEXT,
+  ADD COLUMN IF NOT EXISTS email                TEXT,
+  ADD COLUMN IF NOT EXISTS phone                TEXT;
+
+-- 신규 인덱스 (기존 idx_au_buyers_product_rank · _psi_total · _abn 유지)
+CREATE INDEX IF NOT EXISTS idx_au_buyers_company_key      ON au_buyers(company_key);
+CREATE INDEX IF NOT EXISTS idx_au_buyers_ingredient_case  ON au_buyers(ingredient_case);
+
+-- 점수 매핑 주석 (재사용):
+--   score_total    → psi_total           (기존)
+--   score_revenue  → psi_sales_scale     (기존, 30 만점)
+--   score_pipeline → psi_pipeline        (기존, 25 만점)
+--   score_mfg      → psi_manufacturing   (기존, 20 만점)
+--   score_import   → psi_import_exp      (기존, 15 만점)
+--   score_pharmacy → psi_pharmacy_chain  (기존, 10 만점)
+COMMENT ON COLUMN au_buyers.annual_revenue_rank IS '하드코딩 매출 티어 자유텍스트';
+COMMENT ON COLUMN au_buyers.has_au_factory      IS '하드코딩 Y/N/unknown';
+COMMENT ON COLUMN au_buyers.ingredient_case     IS '4-case 성분 보유 분류 (A_competitor/B_ideal_buyer/C_partial/D_none)';
+COMMENT ON COLUMN au_buyers.company_key         IS 'buyer_discovery.stage1_filter.normalize_name() 결과 (canonical key)';
+
 
 -- ════════════════════════════════════════════════════════════════════════
 -- 8) au_report_refs — 하이브리드 참고자료 (Perplexity / PubMed / Semantic Scholar)

@@ -1,0 +1,31 @@
+{
+  "_meta": {
+    "description": "회사명 정규화 매핑. key = 소문자·공백 trim 한 원문, value = canonical_key.",
+    "last_updated": "2026-04-19"
+  },
+  "merck sharp & dohme":              "msd_australia",
+  "msd":                              "msd_australia",
+  "merck sharp and dohme":            "msd_australia",
+  "glaxosmithkline":                  "gsk",
+  "glaxo smith kline":                "gsk",
+  "gsk australia":                    "gsk",
+  "mylan":                            "viatris",
+  "alphapharm":                       "viatris",
+  "astellas pharma australia":        "astellas",
+  "astellas pharma":                  "astellas",
+  "novartis pharmaceuticals australia":"novartis",
+  "sandoz pty ltd":                   "sandoz",
+  "aspen pharmacare":                 "aspen",
+  "aspen pharmacare australia":       "aspen",
+  "medsurge pharma":                  "medsurge",
+  "medsurge pharma pty ltd":          "medsurge",
+  "bayer australia":                  "bayer",
+  "pfizer australia":                 "pfizer",
+  "astrazeneca pty ltd":              "astrazeneca",
+  "sanofi-aventis":                   "sanofi",
+  "sanofi aventis":                   "sanofi",
+  "boehringer ingelheim pty":         "boehringer_ingelheim",
+  "abbvie pty ltd":                   "abbvie",
+  "janssen-cilag pty ltd":            "janssen",
+  "janssen cilag":                    "janssen"
+}

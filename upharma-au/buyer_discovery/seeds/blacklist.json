@@ -1,0 +1,17 @@
+{
+  "_meta": {
+    "description": "바이어발굴 hard-kill 블랙리스트. company_name(lower) 에 pattern 부분일치 시 제외.",
+    "last_updated": "2026-04-19"
+  },
+  "hard_kill": [
+    {"pattern": "cannatrek",        "reason": "대마 (Schedule 8)"},
+    {"pattern": "medical cannabis", "reason": "대마 (Schedule 8)"},
+    {"pattern": "medicann",         "reason": "대마 (Schedule 8)"},
+    {"pattern": "medigrowth",       "reason": "대마 (Schedule 8)"},
+    {"pattern": "medisca",          "reason": "조제 원료 B2B, 완제 수입사 아님"},
+    {"pattern": "burst health pharmacy", "reason": "조제약국, 바이어 아님"},
+    {"pattern": "surgical specialties",  "reason": "의료기기 전문, 완제 의약품 아님"},
+    {"pattern": "neilmed",          "reason": "비강세척 OTC 전용, ETC(전문의약품) 아님"},
+    {"pattern": "centre for digestive diseases", "reason": "병원 (바이어 아님, 프로모션 채널 별도)"}
+  ]
+}

@@ -383,7 +383,9 @@ def _verify_au_reports_r3(ref: str, pat: str) -> bool:
 
 
 def _verify_au_buyers(ref: str, pat: str) -> bool:
+    # 기존 컬럼 + 바이어발굴 Phase 1 (2026-04-19) ALTER ADD 로 추가된 19 컬럼
     expected = {
+        # 기존 16 컬럼
         "id",
         "product_id",
         "rank",
@@ -400,6 +402,26 @@ def _verify_au_buyers(ref: str, pat: str) -> bool:
         "evidence_urls",
         "created_at",
         "updated_at",
+        # 바이어발굴 신규 (ALTER ADD COLUMN IF NOT EXISTS)
+        "annual_revenue_rank",
+        "primary_products_kr",
+        "has_au_factory",
+        "factory_locations",
+        "ingredient_case",
+        "ingredient_label",
+        "business_model",
+        "represented_brands",
+        "tga_artg_count",
+        "pbs_listed_count",
+        "is_ma_member",
+        "is_gbma_member",
+        "is_gpce_exhibitor",
+        "reasoning",
+        "notes",
+        "company_key",
+        "website",
+        "email",
+        "phone",
     }
     return _verify_table_columns(ref, pat, "au_buyers", expected)
 

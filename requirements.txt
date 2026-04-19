@@ -13,3 +13,5 @@ anthropic
 pydantic
 reportlab>=4.0
 yfinance>=0.2.36
+beautifulsoup4
+lxml

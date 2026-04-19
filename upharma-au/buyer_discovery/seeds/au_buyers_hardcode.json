@@ -1,0 +1,26 @@
+{
+  "_meta": {
+    "description": "Phase 3.5 dry-run 후 사용자(Jisoo)가 Gemini 딥리서치로 채울 시트. 각 바이어 canonical_key 별로 annual_revenue_rank + factory.has / locations / notes 만 채움.",
+    "updated_at": "PENDING",
+    "source": "jisoo gemini deep research"
+  },
+  "buyers": {
+    "_template": {
+      "canonical_name": "Viatris Australia",
+      "annual_revenue_rank": "TOP 5 (제네릭 1위)",
+      "factory": {
+        "has": "Y",
+        "count": 1,
+        "locations": ["Sydney"]
+      },
+      "notes": "구 Mylan, 2020 Pfizer Upjohn 합병"
+    }
+  },
+  "tier_score_mapping": {
+    "TOP 5":  30,
+    "TOP 10": 25,
+    "TOP 20": 20,
+    "TOP 50": 15,
+    "unknown": 10
+  }
+}

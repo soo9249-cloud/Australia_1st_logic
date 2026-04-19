@@ -610,13 +610,6 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 #report-card.visible {
   display: block;
 }
-.p1-pdf-section-label::before {
-  content: '● ';
-  color: var(--navy);
-  font-size: 10px;
-  margin-right: 2px;
-  vertical-align: middle;
-}
 
 /* 시장조사 — 팀원 UX: 품목·신약·PDF 각각 독립 카드(박스) */
 .p1-section {

@@ -1596,7 +1596,7 @@ async function runPipeline() {
   const analyzeBtn = document.getElementById('btn-analyze');
   if (analyzeBtn) analyzeBtn.disabled = true;
   const iconEl = document.getElementById('btn-icon');
-  if (iconEl) iconEl.textContent = '⌛';
+  if (iconEl) iconEl.textContent = '⏳';
 
   const reBtn = document.getElementById('btn-reanalyze');
   if (reBtn) reBtn.style.display = 'none';

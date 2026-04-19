@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """호주 수출 시장조사 보고서 PDF 생성기 (reportlab 기반).
 
-input 구조:
-    row    : supabase australia 테이블 row (품목 메타·TGA·PBS·NSW·Chemist 컬럼)
-    blocks : Claude Haiku가 생성한 block2_* / block3_* / block4_regulatory 10개 필드
-    refs   : 하이브리드 학술 검색 결과(Semantic Scholar · PubMed · Perplexity)
-    meta   : export_viable / confidence / confidence_breakdown 등 판정 메타
+1공정 PDF v3 (권장)
+    render_pdf(ReportR1Payload | dict, output_path)
+    · stage1_schema.ReportR1Payload — HS CODE, [1]~[4] 4블록, 별첨 용어집
+    · dict 는 Pydantic 검증 후 실패 시 v2 크롤러 필드로 보정(coerce_dict_to_report_r1)
 
-output:
-    upharma-au/reports/au_report_{product_key}_{YYYYMMDD_HHMMSS}.pdf
+1공정 PDF v2 레거시 (render_api.py 등 기존 호출)
+    render_pdf(row, blocks, refs, meta, output_path)
+    · 제품정보 박스, Case·신뢰도 표기 — CC가 v3 페이로드로 전환 시 제거 예정
 
-PDF 구조 (품목 1건당 2페이지):
-    p1: 타이틀 + 제품바 + 1.판정 + 2.판정근거(5축) + 3.시장진출전략(4축)
-    p2: 4. 근거 및 출처 — 4-1 PERPLEXITY 추천 논문 / 4-2 사용된 DB·기관
+2공정
+    render_p2_pdf(...) — 본 모듈 하단 유지
 """
 
 from __future__ import annotations
@@ -20,6 +19,8 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from stage1_schema import ReportR1Payload, coerce_dict_to_report_r1
 
 ROOT = Path(__file__).resolve().parent
 
@@ -333,14 +334,51 @@ def _build_product_info_flowables(
     ]
 
 
-def render_pdf(
+def render_pdf(*args: Any, **kwargs: Any) -> None:
+    """1공정 PDF 생성.
+
+    v3 (권장):
+        render_pdf(payload: ReportR1Payload | dict, output_path: str | Path) -> None
+
+    v2 레거시 (render_api.py 등 기존 호출 — CC가 v3 페이로드로 전환할 때까지 유지):
+        render_pdf(row, blocks, refs, meta, out_path) -> None
+    """
+    if kwargs:
+        raise TypeError("render_pdf() does not accept keyword arguments")
+    if len(args) == 5:
+        row, blocks, refs, meta, out_path = args
+        return _render_pdf_legacy_v2(
+            row, blocks, refs, meta, Path(out_path),
+        )
+    if len(args) == 2:
+        payload, out_path = args
+        pl: ReportR1Payload
+        if isinstance(payload, ReportR1Payload):
+            pl = payload
+        elif isinstance(payload, dict):
+            try:
+                pl = ReportR1Payload.model_validate(payload)
+            except Exception:
+                pl = coerce_dict_to_report_r1(payload)
+        else:
+            raise TypeError(
+                "v3 render_pdf(payload, path): payload must be ReportR1Payload or dict",
+            )
+        return _render_pdf_stage1_v3(pl, Path(out_path))
+    raise TypeError(
+        "render_pdf() expects (payload, output_path) for v3 or "
+        "(row, blocks, refs, meta, output_path) for legacy v2",
+    )
+
+
+def _render_pdf_legacy_v2(
     row: dict[str, Any],
     blocks: dict[str, str],
     refs: list[dict[str, Any]],
     meta: dict[str, Any],
     out_path: Path,
 ) -> None:
-    """보고서 PDF를 생성하여 out_path 에 저장."""
+    """v2 레거시 레이아웃 — 제품정보 박스·Case·신뢰도 표기 포함."""
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.enums import TA_CENTER
@@ -584,6 +622,432 @@ def render_pdf(
     dt = Table(db_tbl, colWidths=[w_name, w_desc, w_link])
     dt.setStyle(TableStyle(_base_style(extras_d)))
     story.append(dt)
+
+    doc.build(story)
+
+
+def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
+    """1공정 시장분석 보고서 PDF v3 — HS CODE·4블록·참고자료 표·별첨 용어집."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (
+        PageBreak,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+
+    W, H = A4
+    MARGIN_X = 24 * mm
+    MARGIN_Y = 20 * mm
+    CONTENT_W = W - 2 * MARGIN_X
+
+    base_font = _register_korean_font()
+    bold_font = f"{base_font}-Bold"
+    if base_font == "HYSMyeongJo-Medium":
+        bold_font = base_font
+
+    C_TITLE = colors.HexColor("#3a4a5e")
+    C_BAR = colors.HexColor("#3a4a5e")
+    C_BODY = colors.HexColor("#1A1A1A")
+    C_MUTED = colors.HexColor("#888888")
+    C_BORDER = colors.HexColor("#d0d0d0")
+    C_HDR_BG = colors.HexColor("#f0f3f7")
+    C_APPENDIX_BG = colors.HexColor("#fafaf7")
+    C_APPENDIX_BR = colors.HexColor("#e5e5dd")
+
+    COL_L = CONTENT_W * 0.28
+    COL_R = CONTENT_W * 0.72
+
+    def ps(name: str, **kw: Any) -> ParagraphStyle:
+        return ParagraphStyle(name, **kw)
+
+    s_title = ps(
+        "R1V3Title",
+        fontName=bold_font,
+        fontSize=30,
+        leading=36,
+        alignment=TA_CENTER,
+        textColor=C_TITLE,
+        spaceAfter=6,
+    )
+    s_date = ps(
+        "R1V3Date",
+        fontName=base_font,
+        fontSize=10,
+        leading=13,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor("#6B7280"),
+        spaceAfter=10,
+    )
+    s_sec = ps(
+        "R1V3Sec",
+        fontName=bold_font,
+        fontSize=14,
+        leading=18,
+        textColor=C_TITLE,
+        spaceBefore=10,
+        spaceAfter=4,
+    )
+    s_cell_h = ps(
+        "R1V3H",
+        fontName=bold_font,
+        fontSize=9,
+        textColor=C_TITLE,
+        leading=13,
+        wordWrap="CJK",
+    )
+    s_cell = ps(
+        "R1V3Cell",
+        fontName=base_font,
+        fontSize=9,
+        textColor=C_BODY,
+        leading=14,
+        wordWrap="CJK",
+    )
+    s_bar = ps(
+        "R1V3Bar",
+        fontName=bold_font,
+        fontSize=10,
+        textColor=colors.white,
+        leading=14,
+        wordWrap="CJK",
+    )
+    s_hdr = ps(
+        "R1V3TblHdr",
+        fontName=bold_font,
+        fontSize=9,
+        textColor=C_TITLE,
+        leading=13,
+        wordWrap="CJK",
+    )
+    s_small = ps(
+        "R1V3Small",
+        fontName=base_font,
+        fontSize=8,
+        textColor=colors.HexColor("#555555"),
+        leading=11,
+        wordWrap="CJK",
+    )
+    s_apx = ps(
+        "R1V3Apx",
+        fontName=base_font,
+        fontSize=9,
+        textColor=C_BODY,
+        leading=13,
+        wordWrap="CJK",
+    )
+
+    def _rx(text: str) -> str:
+        return (
+            (text or "")
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+
+    def _trunc(text: str, limit: int = 2000) -> str:
+        s = (text or "").strip()
+        return s if len(s) <= limit else s[:limit] + "…"
+
+    def _cell_body(raw: str) -> Paragraph:
+        t = (raw or "").strip()
+        if not t or t == "해당없음":
+            return Paragraph(
+                '<i><font color="#888888">' + _rx("해당없음 — 사유 기재 필요") + "</font></i>",
+                s_cell,
+            )
+        return Paragraph(_rx(_trunc(t)), s_cell)
+
+    def _base_tbl_style(extras: list | None = None) -> list:
+        cmds: list = [
+            ("GRID", (0, 0), (-1, -1), 1, C_BORDER),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("BACKGROUND", (0, 0), (0, -1), C_HDR_BG),
+        ]
+        if extras:
+            cmds.extend(extras)
+        return cmds
+
+    def _kv(rows: list[tuple[str, str]]) -> Table:
+        data = [[Paragraph(_rx(k), s_cell_h), _cell_body(v)] for k, v in rows]
+        t = Table(data, colWidths=[COL_L, COL_R])
+        t.setStyle(TableStyle(_base_tbl_style()))
+        return t
+
+    def _section_line(title: str) -> list:
+        line_tbl = Table(
+            [[""]],
+            colWidths=[CONTENT_W],
+            rowHeights=[2],
+        )
+        line_tbl.setStyle(
+            TableStyle(
+                [
+                    ("LINEBELOW", (0, 0), (-1, -1), 2, C_TITLE),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ]
+            )
+        )
+        return [Paragraph(_rx(title), s_sec), line_tbl, Spacer(1, 6)]
+
+    doc = SimpleDocTemplate(
+        str(out_path),
+        pagesize=A4,
+        leftMargin=MARGIN_X,
+        rightMargin=MARGIN_X,
+        topMargin=MARGIN_Y,
+        bottomMargin=MARGIN_Y,
+        title=f"호주 시장 분석 보고서 — {payload.product_name}",
+    )
+    story: list = []
+
+    story.append(Paragraph(_rx("호주 시장 분석 보고서"), s_title))
+    story.append(Paragraph(_rx(payload.report_date or datetime.now().strftime("%Y-%m-%d")), s_date))
+
+    bar_line = (
+        f"{payload.product_name} — {payload.inn} · {payload.strength_form}"
+        f"  |  HS CODE: {payload.hs_code or '—'}"
+    )
+    bar_tbl = Table([[Paragraph(_rx(bar_line), s_bar)]], colWidths=[CONTENT_W])
+    bar_tbl.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), C_BAR),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
+    )
+    story.append(bar_tbl)
+    story.append(Spacer(1, 12))
+
+    story.extend(_section_line("[1] 진출 적합 판정"))
+    story.append(
+        _kv(
+            [
+                ("판정", payload.verdict),
+                ("요약", payload.verdict_summary),
+            ]
+        )
+    )
+    story.append(Spacer(1, 8))
+
+    story.extend(_section_line("[2] 판정 근거"))
+    story.append(
+        _kv(
+            [
+                ("시장 / 의료", payload.basis_market_medical),
+                ("경쟁 브랜드 현황", payload.basis_competitor_brands),
+                ("규제", payload.basis_regulatory),
+                ("무역", payload.basis_trade),
+                ("참고 가격", payload.basis_reference_price),
+            ]
+        )
+    )
+    story.append(Spacer(1, 8))
+
+    story.extend(_section_line("[3] 시장 진출 전략"))
+    story.append(
+        _kv(
+            [
+                ("진입 채널 권고", payload.strat_entry_channel),
+                ("파트너 방향성", payload.strat_partner_direction),
+                ("가격 포지셔닝", payload.strat_price_positioning),
+                ("리스크 + 조건", payload.strat_risk_conditions),
+            ]
+        )
+    )
+
+    story.append(PageBreak())
+
+    story.extend(_section_line("[4] 근거 및 출처"))
+    story.append(Paragraph(_rx("4-1. Perplexity 추천 논문"), s_hdr))
+    story.append(Spacer(1, 4))
+
+    papers = payload.refs_perplexity or []
+    if papers:
+        w_no = CONTENT_W * 0.06
+        w_ti = CONTENT_W * 0.44
+        w_su = CONTENT_W * 0.50
+        ph: list[list] = [
+            [
+                Paragraph("No.", s_hdr),
+                Paragraph("논문 제목 / 출처", s_hdr),
+                Paragraph("한국어 요약", s_hdr),
+            ]
+        ]
+        ex_p: list[tuple] = [
+            ("BACKGROUND", (0, 0), (-1, 0), C_HDR_BG),
+            ("GRID", (0, 0), (-1, -1), 1, C_BORDER),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]
+        for i, p in enumerate(papers, 1):
+            title_block = _rx(_trunc(p.title, 300))
+            src = _rx(p.source or "")
+            url = (p.url or "").strip()
+            if src:
+                title_block += f"<br/>[{src}]"
+            if url:
+                u = url[:80] + ("…" if len(url) > 80 else "")
+                title_block += f"<br/>{_rx(u)}"
+            ph.append(
+                [
+                    Paragraph(str(i), s_cell),
+                    Paragraph(title_block, s_cell),
+                    Paragraph(_rx(_trunc(p.summary_ko, 600)), s_cell),
+                ]
+            )
+            if i % 2 == 0:
+                ex_p.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor("#f7f9fc")))
+        pt = Table(ph, colWidths=[w_no, w_ti, w_su])
+        pt.setStyle(TableStyle(ex_p))
+        story.append(pt)
+    else:
+        story.append(_kv([("Perplexity 논문", "해당없음")]))
+
+    story.append(Spacer(1, 10))
+    story.append(Paragraph(_rx("4-2. 사용된 DB / 기관"), s_hdr))
+    story.append(Spacer(1, 4))
+
+    dbs = payload.refs_databases or []
+    if dbs:
+        w_n = CONTENT_W * 0.22
+        w_d = CONTENT_W * 0.48
+        w_u = CONTENT_W * 0.30
+        db_rows: list[list] = [
+            [
+                Paragraph("DB/기관명", s_hdr),
+                Paragraph("설명", s_hdr),
+                Paragraph("링크", s_hdr),
+            ]
+        ]
+        ex_d: list[tuple] = [
+            ("BACKGROUND", (0, 0), (-1, 0), C_HDR_BG),
+            ("GRID", (0, 0), (-1, -1), 1, C_BORDER),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]
+        for i, r in enumerate(dbs, 1):
+            link = (r.url or "").strip() or "—"
+            if len(link) > 70:
+                link = link[:70] + "…"
+            db_rows.append(
+                [
+                    Paragraph(_rx(r.name), s_cell),
+                    Paragraph(_rx(_trunc(r.desc_ko, 400)), s_cell),
+                    Paragraph(_rx(link), s_small),
+                ]
+            )
+            if i % 2 == 0:
+                ex_d.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor("#f7f9fc")))
+        dt = Table(db_rows, colWidths=[w_n, w_d, w_u])
+        dt.setStyle(TableStyle(ex_d))
+        story.append(dt)
+    else:
+        story.append(_kv([("DB/기관", "해당없음")]))
+
+    story.append(Spacer(1, 14))
+
+    s_apx_title = ps(
+        "R1ApxTitle",
+        fontName=bold_font,
+        fontSize=12,
+        textColor=C_TITLE,
+        leading=16,
+    )
+
+    glossary_box = Table(
+        [
+            [Paragraph(_rx("[별첨] 규제 기관 용어집"), s_apx_title)],
+            [
+                Paragraph(
+                    _rx(
+                        "<b>TGA</b> (Therapeutic Goods Administration): "
+                        "호주 의약품·의료기기 허가·감독 기관. 수입·유통을 위해 "
+                        "<b>ARTG(호주 의약품 등록)</b> 등록이 선행됩니다."
+                    ),
+                    s_apx,
+                )
+            ],
+            [
+                Paragraph(
+                    _rx(
+                        "<b>PBS</b> (Pharmaceutical Benefits Scheme, "
+                        "호주 의약품급여제도): 공적 급여로 등재 품목은 "
+                        "<b>AEMP(정부 승인 출고가)</b>·<b>DPMQ(최대처방량 총약가)</b> "
+                        "체계 내에서 공급됩니다."
+                    ),
+                    s_apx,
+                )
+            ],
+            [
+                Paragraph(
+                    _rx(
+                        "<b>PBAC</b> (Pharmaceutical Benefits Advisory Committee, "
+                        "약값 심사 위원회): PBS 등재·가격 재조정 안건을 심의·권고합니다."
+                    ),
+                    s_apx,
+                )
+            ],
+            [
+                Paragraph(
+                    _rx(
+                        "<b>ABF</b> (Australian Border Force): "
+                        "의약품 수입 통관·국경·세관 관련 절차를 관할합니다."
+                    ),
+                    s_apx,
+                )
+            ],
+        ],
+        colWidths=[CONTENT_W],
+    )
+    glossary_box.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), C_APPENDIX_BG),
+                ("BOX", (0, 0), (-1, -1), 1, C_APPENDIX_BR),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+            ]
+        )
+    )
+    story.append(glossary_box)
+
+    story.append(Spacer(1, 16))
+    disc = ps(
+        "R1Disc",
+        fontName=base_font,
+        fontSize=9,
+        textColor=C_MUTED,
+        alignment=TA_CENTER,
+        leading=12,
+    )
+    story.append(
+        Paragraph(
+            _rx(
+                "본 보고서는 공개된 데이터 기반 자동 생성본이며, "
+                "실제 계약·가격 협상 시 현지 파트너와의 별도 확인이 필요합니다."
+            ),
+            disc,
+        )
+    )
 
     doc.build(story)
 

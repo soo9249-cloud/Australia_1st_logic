@@ -2716,6 +2716,149 @@ def _build_p2_ref_price_text_v5(dispatch_result: dict[str, Any]) -> tuple[str | 
     return None, None
 
 
+def _infer_p2_recommended_key(block_strategy: str) -> str:
+    """block_strategy 문구에서 권장 시나리오 키 추정 (penetration / reference / premium)."""
+    s = block_strategy or ""
+    if "프리미엄" in s or "Premium" in s:
+        return "premium"
+    if "저가" in s or "침투" in s or "Penetration" in s:
+        return "penetration"
+    return "reference"
+
+
+def _p2_formula_summary_for_scenario(logic: str | None, sc: dict[str, Any]) -> str:
+    """시나리오별 역산 요약 한 줄 (Logic A/B/hardcoded)."""
+    if logic == "A":
+        adj = sc.get("adjusted_aemp_aud")
+        m = sc.get("importer_margin_pct")
+        if adj is not None and m is not None:
+            return f"기준 AEMP AUD {float(adj):.2f} ÷ (1 + {float(m):.0f}%)"
+        listed = sc.get("aemp_aud")
+        if listed is not None and m is not None:
+            return (
+                f"공시 AEMP AUD {float(listed):.2f} × (1+α) ÷ (1 + {float(m):.0f}%)"
+            )
+    if logic == "B":
+        r = sc.get("retail_aud")
+        m = sc.get("importer_margin_pct")
+        if r is not None:
+            mm = f"{float(m):.0f}" if m is not None else "—"
+            return (
+                f"소매가 AUD {float(r):.2f} 기준 GST·약국·도매·수입상 역산 (수입상 {mm}%)"
+            )
+    if logic == "hardcoded":
+        return "병원 tender 수기 FOB (α 미적용)"
+    return ""
+
+
+def _merge_p2_export_strategy_v5(
+    p2_blocks: dict[str, str],
+    dispatch_result: dict[str, Any],
+    fx_rates: dict[str, Any],
+    seed: dict[str, Any],
+) -> dict[str, Any]:
+    """Haiku 8블록 서술 + dispatch·환율 숫자 → 위임 MD v5 형태 단일 JSON.
+
+    Tool 스키마에는 대형 중첩 구조를 넣지 않고, 서버 병합으로만 `summary_scenarios`·
+    `baseline_price`·`scenario_table` 등을 채운다 (schema_ver 2).
+    """
+    aud_usd = float(fx_rates.get("aud_usd") or 0.64)
+    aud_krw = float(fx_rates.get("aud_krw") or 893.0)
+    logic = dispatch_result.get("logic")
+    scenarios = dispatch_result.get("scenarios") or {}
+    alpha_pct = int(round(float(ALPHA_MARKET_UPLIFT_PCT)))
+
+    v5_text, _v5_ref = _build_p2_ref_price_text_v5(dispatch_result)
+    avg_sc = scenarios.get("average") or {}
+
+    baseline_price: dict[str, Any] = {
+        "logic": logic,
+        "pricing_case": seed.get("pricing_case"),
+        "route_narrative": (v5_text or "").strip(),
+        "alpha_pct": alpha_pct if logic == "A" else None,
+    }
+    if avg_sc.get("aemp_aud") is not None:
+        baseline_price["listed_aemp_aud"] = round(float(avg_sc["aemp_aud"]), 4)
+    if avg_sc.get("adjusted_aemp_aud") is not None:
+        baseline_price["adjusted_aemp_aud"] = round(float(avg_sc["adjusted_aemp_aud"]), 4)
+    if avg_sc.get("retail_aud") is not None:
+        baseline_price["retail_aud"] = round(float(avg_sc["retail_aud"]), 4)
+    if avg_sc.get("pre_gst_aud") is not None:
+        baseline_price["pre_gst_aud"] = round(float(avg_sc["pre_gst_aud"]), 4)
+
+    ref_for_fx = (
+        avg_sc.get("adjusted_aemp_aud")
+        or avg_sc.get("aemp_aud")
+        or avg_sc.get("pre_wholesale_aud")
+        or avg_sc.get("retail_aud")
+    )
+    if ref_for_fx is not None:
+        ra = float(ref_for_fx)
+        baseline_price["reference_fx_usd"] = round(ra * aud_usd, 4)
+        baseline_price["reference_fx_krw"] = round(ra * aud_krw, 2)
+
+    summary_scenarios: dict[str, Any] = {}
+    scenario_table: list[dict[str, Any]] = []
+    triple = [
+        ("aggressive", "penetration", "scenario_penetration"),
+        ("average", "reference", "scenario_reference"),
+        ("conservative", "premium", "scenario_premium"),
+    ]
+    labels_ko = {
+        "aggressive": "저가 진입 (Penetration Pricing)",
+        "average": "기준가 기반 (Reference Pricing)",
+        "conservative": "프리미엄 (Premium Pricing)",
+    }
+    for disp_key, md_key, block_key in triple:
+        sc = scenarios.get(disp_key) or {}
+        fob_aud = float(sc.get("fob_aud") or 0)
+        fob_krw = float(sc.get("fob_krw") or (fob_aud * aud_krw))
+        fob_usd = fob_aud * aud_usd
+        narrative = (p2_blocks.get(block_key) or "").strip()
+        margin = sc.get("importer_margin_pct")
+        summary_scenarios[md_key] = {
+            "fob_aud": round(fob_aud, 4),
+            "fob_usd": round(fob_usd, 4),
+            "fob_krw": round(fob_krw, 2),
+            "importer_margin_pct": margin,
+            "strategy_narrative": narrative,
+        }
+        scenario_table.append(
+            {
+                "dispatch_key": disp_key,
+                "summary_key": md_key,
+                "label_ko": labels_ko.get(disp_key, disp_key),
+                "importer_margin_pct": margin,
+                "fob_aud": round(fob_aud, 4),
+                "fob_usd": round(fob_usd, 4),
+                "fob_krw": round(fob_krw, 2),
+                "formula_summary": _p2_formula_summary_for_scenario(
+                    str(logic) if logic is not None else None, sc
+                ),
+                "strategy_narrative": narrative,
+            }
+        )
+
+    recommended = _infer_p2_recommended_key(p2_blocks.get("block_strategy", ""))
+
+    return {
+        "recommended_key": recommended,
+        "summary_scenarios": summary_scenarios,
+        "baseline_price": baseline_price,
+        "scenario_table": scenario_table,
+        "restricted_benefit": {
+            "applies": False,
+            "narrative": "",
+            "disease_items": [],
+        },
+        "export_conditions": {
+            "upharma_role": "",
+            "sponsor_role": "",
+            "documents_note": "",
+        },
+    }
+
+
 def _p2_pipeline_worker(product_id: str, segment: str) -> None:
     """백그라운드 스레드: Supabase row 조회 → seed 매칭 → FOB 계산 → Haiku 블록 생성 → 결과 조립."""
     try:
@@ -2814,6 +2957,9 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
         if not anthropic_key:
             raise ValueError("ANTHROPIC_API_KEY 환경변수 미설정")
         p2_blocks = _haiku_p2_blocks(row, seed, dispatch_result, segment, anthropic_key)
+        export_strategy_v5 = _merge_p2_export_strategy_v5(
+            p2_blocks, dispatch_result, fx_rates, seed
+        )
 
         # ── Step 5: 결과 조립 (프론트 기대 스키마) ──
         with _p2_lock:
@@ -2909,6 +3055,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
                 ],
             },
             "exchange_rates": fx_rates,
+            "export_strategy_v5": export_strategy_v5,
             "pdf": None,  # 아래에서 render_p2_pdf 시도 후 갱신
         }
 
@@ -2949,12 +3096,13 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
                 "generated_at": _dt_now_utc(),
                 "report_content_v2": jsonable_encoder(
                     {
-                        "schema_ver": 1,
+                        "schema_ver": 2,
                         "report_kind": "export_strategy",
                         "product_code": product_id,
                         "segment": segment,
                         "pricing_case": seed.get("pricing_case"),
                         "p2_blocks": p2_blocks,
+                        "export_strategy_v5": export_strategy_v5,
                         "fx_rates": fx_rates,
                         "dispatch_logic": logic,
                         "ref_price_text": ref_text,

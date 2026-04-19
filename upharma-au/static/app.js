@@ -1596,15 +1596,14 @@ async function runPipeline() {
   const analyzeBtn = document.getElementById('btn-analyze');
   if (analyzeBtn) analyzeBtn.disabled = true;
   const iconEl = document.getElementById('btn-icon');
-  if (iconEl) iconEl.textContent = '⏳';
+  if (iconEl) iconEl.textContent = '⌛';
 
   const reBtn = document.getElementById('btn-reanalyze');
   if (reBtn) reBtn.style.display = 'none';
 
   try {
-    // ① 크롤링 실행 (동기 · 블로킹)
+    // ① 크롤링 실행 (동기 · 블로킹) — PDF 카드는 완료·오류 시에만 표시
     setProgress('db_load', 'running');
-    _showReportLoading();
     const r1 = await fetch('/api/crawl', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2103,29 +2102,20 @@ function renderResult(result, refs, pdfName) {
   }
 }
 
-/** U4: PDF 영역 초기(안내 문구) — 파이프라인 재실행 직전에 호출 */
+/** U4: PDF 영역 초기 — 파이프라인 재실행 직전·첫 진입: 카드 숨김(목업: 완료 후에만 PDF 영역 표시) */
 function _showReportIdle() {
   const idle = document.getElementById('report-state-idle');
   const loading = document.getElementById('report-state-loading');
   const ok = document.getElementById('report-state-ok');
   const err = document.getElementById('report-state-error');
+  const card = document.getElementById('report-card');
   if (idle) idle.style.display = '';
   if (loading) loading.style.display = 'none';
   if (ok) ok.style.display = 'none';
   if (err) err.style.display = 'none';
+  if (card) card.classList.remove('visible');
   const preview = document.getElementById('pdf-preview-frame');
   if (preview) preview.setAttribute('src', 'about:blank');
-}
-
-/** U4: PDF 생성 중 */
-function _showReportLoading() {
-  const preview = document.getElementById('pdf-preview-frame');
-  if (preview) preview.setAttribute('src', 'about:blank');
-  document.getElementById('report-state-loading').style.display = 'flex';
-  document.getElementById('report-state-ok').style.display      = 'none';
-  document.getElementById('report-state-error').style.display   = 'none';
-  document.getElementById('report-state-idle').style.display    = 'none';
-  document.getElementById('report-card').classList.add('visible');
 }
 
 /** U4: PDF 생성 완료 */
@@ -2345,3 +2335,5 @@ loadMacro();            // 거시 지표 로드
 renderReportTab();      // 보고서 탭 초기 렌더
 initP2Strategy();       // 수출가격 전략 초기화
 loadNews();             // 시장 뉴스 즉시 로드
+_showReportIdle();      // 01 시장조사: PDF 카드·진행 스테퍼 초기 상태(첫 진입 = 품목/신약만)
+resetProgress();

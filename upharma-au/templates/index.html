@@ -125,7 +125,7 @@
             </button>
           </div>
           <div class="progress-row" id="progress-row">
-            <div class="prog-step" id="prog-db_load"><div class="prog-dot">1</div><div class="prog-label">실시간 크롤링</div></div>
+            <div class="prog-step" id="prog-db_load"><div class="prog-dot">1</div><div class="prog-label">DB 조회</div></div>
             <div class="prog-step" id="prog-analyze"><div class="prog-dot">2</div><div class="prog-label">Claude 분석</div></div>
             <div class="prog-step" id="prog-refs"><div class="prog-dot">3</div><div class="prog-label">논문 검색</div></div>
             <div class="prog-step" id="prog-report"><div class="prog-dot">4</div><div class="prog-label">PDF 생성</div></div>
@@ -135,7 +135,7 @@
 
         <!-- ② 신약 직접 입력 (한 박스) -->
         <div class="selector-card p1-section p1-section--custom p1-custom-drug-card">
-          <div class="selector-label">신약 직접 입력</div>
+          <div class="selector-label">신약 직접 분석</div>
           <div class="p1-custom-drug-row">
             <input type="text" id="custom-trade-name" class="p1-custom-input" placeholder="약품명 (예: Nexavar)" autocomplete="off" maxlength="200"/>
             <input type="text" id="custom-inn" class="p1-custom-input" placeholder="성분명 (예: sorafenib)" autocomplete="off" maxlength="200" aria-describedby="p1-custom-inn-hint"/>
@@ -150,7 +150,7 @@
 
         <!-- ③ PDF 보고서 — 생성 전 안내 / 로딩 / 다운로드 / 오류 (한 박스) -->
         <div class="selector-card p1-section p1-section--pdf p1-pdf-card" id="report-card">
-          <div class="selector-label">PDF 보고서</div>
+          <div class="selector-label p1-pdf-section-label">PDF 보고서</div>
           <div id="report-state-idle" class="p1-pdf-body">
             <p class="p1-pdf-idle-msg">위에서 <strong>분석 실행</strong>을 완료하면 이곳에 PDF 다운로드가 표시됩니다.</p>
           </div>

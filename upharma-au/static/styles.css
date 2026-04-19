@@ -511,6 +511,11 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 }
 .btn-analyze:hover:not(:disabled) { background: var(--navy2); }
 .btn-analyze:disabled { opacity: .45; cursor: not-allowed; }
+/* 분석 실행 중: 목업처럼 남색 계열로 살짝 눌린 버튼 */
+#main #pb-p1 .selector-row .btn-analyze:disabled {
+  opacity: 1;
+  background: rgba(23, 63, 120, 0.55);
+}
 
 /* 시장조사 — 신약 직접 분석 (품목 행과 동일 · flex + wrap) */
 .p1-custom-drug-row {
@@ -596,6 +601,21 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   line-height: 1.45;
   color: var(--muted);
   font-weight: 500;
+}
+
+/* 01 시장조사 — PDF 카드는 분석 완료(또는 오류) 시에만 표시 */
+#report-card {
+  display: none;
+}
+#report-card.visible {
+  display: block;
+}
+.p1-pdf-section-label::before {
+  content: '● ';
+  color: var(--navy);
+  font-size: 10px;
+  margin-right: 2px;
+  vertical-align: middle;
 }
 
 /* 시장조사 — 팀원 UX: 품목·신약·PDF 각각 독립 카드(박스) */

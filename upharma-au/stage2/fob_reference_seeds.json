@@ -28,8 +28,8 @@
       "restricted_benefit": false,
       "reference_aemp_aud": null,
       "reference_dpmq_aud": null,
-      "reference_retail_aud": 48.95,
-      "reference_retail_source": "OMACOR 1000mg 28캡슐 (Healthylife)",
+      "reference_retail_aud": null,
+      "reference_retail_source": "OMACOR 1000mg 28캡슐 (Healthylife, 시드 백업용 — 역산은 DB retail_price_aud 우선)",
       "competitor_brands_on_pbs": [],
       "confidence_score": 0.6,
       "notes": "함량·제형 불일치(EE90 2g pouch vs OMACOR 1000mg capsule). Logic B(Private) 경로, 소매가에서 유통마진 역산."
@@ -143,7 +143,7 @@
     },
     {
       "product_id": "au-ciloduo-007",
-      "pricing_case": "ESTIMATE_withdrawal",
+      "pricing_case": "ESTIMATE_substitute",
       "pbs_section": "85_withdrawn",
       "pbs_status": "unlisted",
       "pbs_code": null,
@@ -154,12 +154,14 @@
       "commercial_withdrawal_year": 2021,
       "hospital_channel_only": false,
       "restricted_benefit": false,
-      "reference_aemp_aud": null,
+      "reference_aemp_aud": 11.87,
       "reference_dpmq_aud": null,
       "reference_retail_aud": null,
-      "competitor_brands_on_pbs": [],
+      "substitute_ingredient": "cilostazol",
+      "substitute_drug": "Pletal 100mg (PBS 동성분 참고)",
+      "competitor_brands_on_pbs": ["Pletal"],
       "confidence_score": 0.4,
-      "notes": "Cilostazol 2021년 TGA Commercial Withdrawal. 복합제 자체 등재 이력 없음. 재진입시 철수사유 소명 + PBAC 이중 장벽."
+      "notes": "Cilostazol 2021년 TGA Commercial Withdrawal. 동성분 단일제(Pletal) PBS AEMP를 참고가로 차용. 재진입 시 철수 소명 + PBAC 이중 장벽. FOB는 대체계열 참고 추정치."
     },
     {
       "product_id": "au-gastiin-008",

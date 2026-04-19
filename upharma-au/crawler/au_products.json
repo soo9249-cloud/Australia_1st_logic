@@ -103,7 +103,7 @@
       "strength": "복합",
       "dosage_form": "tablet",
       "hs_code_6": "300490",
-      "pricing_case": "ESTIMATE_withdrawal",
+      "pricing_case": "ESTIMATE_substitute",
       "pbs_search_terms": ["cilostazol", "rosuvastatin"],
       "tga_search_terms": ["cilostazol", "rosuvastatin", "Ciloduo"],
       "withdrawn_component": "cilostazol",

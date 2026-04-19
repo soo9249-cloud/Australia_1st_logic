@@ -19,6 +19,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from stage2.fob_calculator import (  # noqa: E402
+    ALPHA_MARKET_UPLIFT_PCT,
     calculate_aemp_from_dpmq,
     calculate_fob_logic_a,
     calculate_fob_logic_b,
@@ -98,13 +99,14 @@ def test_real_cost_samples() -> None:
 
 
 # --------------------------------------------------------------------------
-# TEST 4: Logic A Hydrine 10% 프리셋 — $31.92 / 1.10 = $29.02
+# TEST 4: Logic A Hydrine 10% 프리셋 — (31.92×(1+α)) / 1.10
 # --------------------------------------------------------------------------
 def test_logic_a_hydrine_10pct() -> None:
-    print("\n[T4] Logic A Hydrine 10% importer margin")
+    print("\n[T4] Logic A Hydrine 10% importer margin (α 시장 보정 포함)")
     r = calculate_fob_logic_a(31.92, 10.0, fx_aud_to_krw=900.0)
-    _assert_close(r["fob_aud"], 31.92 / 1.10, tol=0.001, label="Hydrine FOB AUD (10%)")
-    _assert_close(r["fob_krw"], (31.92 / 1.10) * 900.0, tol=0.5, label="Hydrine FOB KRW (10%)")
+    expected = 31.92 * (1.0 + ALPHA_MARKET_UPLIFT_PCT / 100.0) / 1.10
+    _assert_close(r["fob_aud"], expected, tol=0.001, label="Hydrine FOB AUD (10%)")
+    _assert_close(r["fob_krw"], expected * 900.0, tol=0.5, label="Hydrine FOB KRW (10%)")
 
 
 # --------------------------------------------------------------------------
@@ -124,10 +126,10 @@ def test_logic_b_omethyl() -> None:
 
 
 # --------------------------------------------------------------------------
-# TEST 6: dispatch_by_pricing_case — Ciloduo는 blocked 판정
+# TEST 6: dispatch_by_pricing_case — ESTIMATE_withdrawal 는 blocked
 # --------------------------------------------------------------------------
 def test_dispatch_withdrawal_blocked() -> None:
-    print("\n[T6] Ciloduo commercial_withdrawal → blocked 반환")
+    print("\n[T6] ESTIMATE_withdrawal → blocked 반환")
     ciloduo = {
         "product_id": "au-ciloduo-007",
         "pricing_case": "ESTIMATE_withdrawal",
@@ -142,6 +144,25 @@ def test_dispatch_withdrawal_blocked() -> None:
 
 
 # --------------------------------------------------------------------------
+# TEST 6b: ESTIMATE_substitute + withdrawal 플래그 — 차단 아님, 경고만
+# --------------------------------------------------------------------------
+def test_dispatch_substitute_withdrawal_warning() -> None:
+    print("\n[T6b] Ciloduo형 substitute + withdrawal → logic A, 경고 포함")
+    sub_seed = {
+        "product_id": "au-ciloduo-007",
+        "pricing_case": "ESTIMATE_substitute",
+        "reference_aemp_aud": 11.87,
+        "substitute_ingredient": "cilostazol",
+        "commercial_withdrawal_flag": True,
+        "commercial_withdrawal_year": 2021,
+    }
+    r = dispatch_by_pricing_case(sub_seed)
+    _assert_true(r["logic"] == "A", "logic == A (substitute)")
+    _assert_true(r.get("blocked_reason") is None, "not blocked")
+    _assert_true(any("Withdrawal" in w for w in r["warnings"]), "withdrawal warning present")
+
+
+# --------------------------------------------------------------------------
 # TEST 7: 3 시나리오 순서 — 수입 스폰서 마진이 클수록 FOB는 작아져야 함
 # --------------------------------------------------------------------------
 def test_scenario_monotonicity() -> None:
@@ -151,6 +172,30 @@ def test_scenario_monotonicity() -> None:
         sc["aggressive"]["fob_aud"] < sc["average"]["fob_aud"] < sc["conservative"]["fob_aud"],
         "aggressive(30%) < average(20%) < conservative(10%) [FOB]",
     )
+
+
+# --------------------------------------------------------------------------
+# TEST 7b: Logic A 평균 시나리오(20% 마진) — α와 마진이 상쇄되어 FOB_AUD ≈ 공시 AEMP
+# --------------------------------------------------------------------------
+def test_logic_a_average_fob_usd_band() -> None:
+    print("\n[T7b] Logic A average(20%): FOB_AUD ≈ 공시 AEMP, USD 밴드 검증")
+    r = calculate_fob_logic_a(31.92, 20.0, fx_aud_to_krw=900.0)
+    _assert_close(r["fob_aud"], 31.92, tol=0.01, label="FOB AUD equals listed AEMP at 20% margin + α=20%")
+    aud_usd = 0.716  # 검증용 고정 환율 (보고서 시나리오)
+    usd = r["fob_aud"] * aud_usd
+    _assert_close(usd, 22.88, tol=0.10, label="FOB USD ≈ 22.88 ±0.10 (Hydrine average)")
+
+
+# --------------------------------------------------------------------------
+# TEST 7c: Logic B PBS 등재 처방 — GST 면제 분기
+# --------------------------------------------------------------------------
+def test_logic_b_pbs_listed_gst_free() -> None:
+    print("\n[T7c] Logic B is_pbs_listed_rx=True → pre_gst = retail (GST 0)")
+    retail = 48.95
+    r_gst = calculate_fob_logic_b(retail, 20.0, is_pbs_listed_rx=False)
+    r_free = calculate_fob_logic_b(retail, 20.0, is_pbs_listed_rx=True)
+    _assert_close(r_gst["pre_gst_aud"], retail / 1.10, tol=0.01, label="OTC/비등재: GST 10%")
+    _assert_close(r_free["pre_gst_aud"], retail, tol=0.01, label="PBS 등재 RX: GST 면제")
 
 
 # --------------------------------------------------------------------------
@@ -187,7 +232,10 @@ def main() -> int:
     test_logic_a_hydrine_10pct()
     test_logic_b_omethyl()
     test_dispatch_withdrawal_blocked()
+    test_dispatch_substitute_withdrawal_warning()
     test_scenario_monotonicity()
+    test_logic_a_average_fob_usd_band()
+    test_logic_b_pbs_listed_gst_free()
     test_input_validation()
 
     print("\n" + "=" * 70)

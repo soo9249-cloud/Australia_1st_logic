@@ -224,11 +224,14 @@ def _new_drug_worker(job_id: str, payload: dict[str, Any]) -> None:
     product_code = (result or {}).get("product_id") or ""
     aemp_aud = None
     retail_price_aud = None
+    row_snapshot: dict[str, Any] = {}
     try:
         client = get_supabase_client()
         resp = (
             client.table(TABLE_NAME)
-            .select("aemp_aud,retail_price_aud")
+            .select(
+                "aemp_aud,retail_price_aud,warnings,similar_drug_used,case_code,pbs_found"
+            )
             .eq("product_code", product_code)
             .order("last_crawled_at", desc=True)
             .limit(1)
@@ -236,8 +239,9 @@ def _new_drug_worker(job_id: str, payload: dict[str, Any]) -> None:
         )
         rows = getattr(resp, "data", None) or []
         if rows:
-            aemp_aud = rows[0].get("aemp_aud")
-            retail_price_aud = rows[0].get("retail_price_aud")
+            row_snapshot = dict(rows[0])
+            aemp_aud = row_snapshot.get("aemp_aud")
+            retail_price_aud = row_snapshot.get("retail_price_aud")
     except Exception as exc:
         print(f"[new_drug AEMP 조회 실패] {exc}", flush=True)
 
@@ -252,6 +256,10 @@ def _new_drug_worker(job_id: str, payload: dict[str, Any]) -> None:
             "retail_price_aud": retail_price_aud,
             "needs_price_upload": bool(needs_upload),
             "message_ko": _MSG_NO_AEMP_KO if needs_upload else None,
+            "warnings": row_snapshot.get("warnings"),
+            "similar_drug_used": row_snapshot.get("similar_drug_used"),
+            "case_code": row_snapshot.get("case_code"),
+            "pbs_found": row_snapshot.get("pbs_found"),
         }
 
 
@@ -2180,6 +2188,75 @@ def _seed_by_id(product_id: str) -> dict[str, Any] | None:
     return None
 
 
+def _fetch_au_row_fob_hints(product_code: str) -> dict[str, Any] | None:
+    """신약 FOB 경고 병합용 — Supabase `au_products` 경량 컬럼만 조회."""
+    if not product_code:
+        return None
+    try:
+        client = get_supabase_client()
+        resp = (
+            client.table(TABLE_NAME)
+            .select("warnings,similar_drug_used,case_code,aemp_aud,retail_price_aud,pbs_found")
+            .eq("product_code", product_code)
+            .limit(1)
+            .execute()
+        )
+        rows = getattr(resp, "data", None) or []
+        if rows and isinstance(rows[0], dict):
+            return dict(rows[0])
+    except Exception as exc:
+        print(f"[FOB hints 조회 실패] product_code={product_code!r} {exc}", flush=True)
+    return None
+
+
+def _merge_new_drug_stage2_warnings(
+    product_id: str | None, base_warnings: list[str]
+) -> list[str]:
+    """`au-newdrug-*` 에서 크롤러가 남긴 대체계열·프록시 태그를 stage2 응답에 병합."""
+    out = [w for w in base_warnings if w]
+    pid = (product_id or "").strip()
+    if not pid.startswith("au-newdrug-"):
+        return out
+    row = _fetch_au_row_fob_hints(pid)
+    if not row:
+        return out
+    dbw = row.get("warnings")
+    if isinstance(dbw, list):
+        for x in dbw:
+            s = str(x).strip()
+            if not s or s in out:
+                continue
+            low = s.lower()
+            if any(
+                k in low
+                for k in (
+                    "similar_proxy",
+                    "substitute_ingredient",
+                    "similar_drug_used",
+                    "similar_drug",
+                    "pricing_case",
+                    "estimate_substitute",
+                    "no_proxy",
+                    "pbs_skipped",
+                )
+            ):
+                out.append(s)
+    sd = row.get("similar_drug_used")
+    if isinstance(sd, list) and sd:
+        tag = "similar_drug_used_json:" + ",".join(str(x) for x in sd[:10])
+        if tag not in out:
+            out.append(tag)
+    cc = str(row.get("case_code") or "")
+    if "SUBSTITUTE" in cc.upper():
+        note = (
+            "fo_alpha_substitute_path: 유사계열 PBS AEMP에도 Logic A α=20% 동일 적용 "
+            "(ESTIMATE_substitute 와 동일 역산 경로)"
+        )
+        if note not in out:
+            out.append(note)
+    return out
+
+
 def _scenarios_dict_to_list(scenarios: dict[str, dict[str, float]]) -> list[dict[str, Any]]:
     """dispatch_by_pricing_case() 가 돌려준 {name: {...}} 를 프론트용 리스트로 변환."""
     order = ["aggressive", "average", "conservative"]
@@ -2200,10 +2277,14 @@ def _scenarios_dict_to_list(scenarios: dict[str, dict[str, float]]) -> list[dict
             "fob_aud": sc.get("fob_aud"),
             "fob_krw": sc.get("fob_krw"),
             "aemp_aud": sc.get("aemp_aud"),
+            "adjusted_aemp_aud": sc.get("adjusted_aemp_aud"),
+            "alpha_market_uplift_pct": sc.get("alpha_market_uplift_pct"),
             "retail_aud": sc.get("retail_aud"),
             "pre_gst_aud": sc.get("pre_gst_aud"),
             "pre_pharmacy_aud": sc.get("pre_pharmacy_aud"),
             "pre_wholesale_aud": sc.get("pre_wholesale_aud"),
+            "is_pbs_listed_rx": sc.get("is_pbs_listed_rx"),
+            "gst_pct": sc.get("gst_pct"),
         })
     return out
 
@@ -2233,6 +2314,8 @@ def stage2_calculate(payload: dict[str, Any]) -> JSONResponse:
       - product_id 가 withdrawal seed → blocked 응답 (scenarios=[])
       - 그 외엔 seed 플래그를 참고해 경고만 모으고, 계산은 overrides 를 최우선으로 사용
         (seed 기준으로만 돌리려면 빈 overrides 를 보내면 dispatch_by_pricing_case 결과가 그대로 쓰임)
+      - `au-newdrug-*` (시드 없음): Logic A 는 overrides.base_aemp (>0) 필수. Logic B 는
+        기본 PBS 미등재로 GST 10% 안내 경고 + Supabase `warnings` 에서 대체계열 태그 병합.
     """
     if not _STAGE2_OK:
         raise HTTPException(status_code=503, detail=f"stage2 module load failed: {_STAGE2_ERR}")
@@ -2316,6 +2399,7 @@ def stage2_calculate(payload: dict[str, Any]) -> JSONResponse:
             scenarios = calculate_three_scenarios(
                 logic="A", aemp_aud=aemp, fx_aud_to_krw=fx, presets_pct=presets
             )
+            merged_warn = _merge_new_drug_stage2_warnings(product_id, warnings)
             return JSONResponse(content={
                 "ok": True,
                 "logic": "A",
@@ -2327,7 +2411,7 @@ def stage2_calculate(payload: dict[str, Any]) -> JSONResponse:
                     "fx_aud_to_krw": fx,
                     "presets_pct": presets,
                 },
-                "warnings": warnings,
+                "warnings": merged_warn,
                 "disclaimer": get_disclaimer_text("A"),
                 "blocked_reason": None,
             })
@@ -2349,10 +2433,28 @@ def stage2_calculate(payload: dict[str, Any]) -> JSONResponse:
         if retail <= 0:
             raise HTTPException(status_code=400, detail="Logic B: base_retail (>0) 필요")
 
+        if (
+            product_id
+            and str(product_id).startswith("au-newdrug-")
+            and overrides.get("is_pbs_listed_rx") is None
+        ):
+            warnings.append(
+                "신약 기본: 초기 PBS 미등재로 간주 → GST 10% 역산 "
+                "(PBS 등재 처방으로 바꾸려면 overrides.is_pbs_listed_rx=true)"
+            )
+
         gst_pct = float(overrides.get("gst") or 10.0)
         pharmacy_pct = float(overrides.get("pharmacy_margin") or 30.0)
         wholesale_pct = float(overrides.get("wholesale_margin") or 10.0)
         margin_default = float(overrides.get("importer_margin") or 20.0)
+        is_pbs_rx = overrides.get("is_pbs_listed_rx")
+        b_kw: dict[str, Any] = {
+            "gst_pct": gst_pct,
+            "pharmacy_margin_pct": pharmacy_pct,
+            "wholesale_margin_pct": wholesale_pct,
+        }
+        if is_pbs_rx is True:
+            b_kw["is_pbs_listed_rx"] = True
         presets = {
             "aggressive":   min(40.0, margin_default + 10.0),
             "average":      margin_default,
@@ -2363,12 +2465,10 @@ def stage2_calculate(payload: dict[str, Any]) -> JSONResponse:
             retail_aud=retail,
             fx_aud_to_krw=fx,
             presets_pct=presets,
-            logic_b_kwargs={
-                "gst_pct": gst_pct,
-                "pharmacy_margin_pct": pharmacy_pct,
-                "wholesale_margin_pct": wholesale_pct,
-            },
+            logic_b_kwargs=b_kw,
         )
+        eff_gst = scenarios.get("average", {}).get("gst_pct", gst_pct)
+        merged_b_warn = _merge_new_drug_stage2_warnings(product_id, warnings)
         return JSONResponse(content={
             "ok": True,
             "logic": "B",
@@ -2376,14 +2476,15 @@ def stage2_calculate(payload: dict[str, Any]) -> JSONResponse:
             "inputs": {
                 "product_id": product_id,
                 "retail_aud": retail,
-                "gst_pct": gst_pct,
+                "gst_pct": eff_gst,
                 "pharmacy_margin_pct": pharmacy_pct,
                 "wholesale_margin_pct": wholesale_pct,
                 "importer_margin_pct_center": margin_default,
+                "is_pbs_listed_rx": bool(is_pbs_rx is True),
                 "fx_aud_to_krw": fx,
                 "presets_pct": presets,
             },
-            "warnings": warnings,
+            "warnings": merged_b_warn,
             "disclaimer": get_disclaimer_text("B"),
             "blocked_reason": None,
         })
@@ -2619,8 +2720,28 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
         avg = scenarios_raw.get("average", {})
         cons = scenarios_raw.get("conservative", {})
 
-        # 참고가 텍스트 조립 — 우선순위: seed AEMP → seed retail → crawler retail → 미확보
-        if seed.get("reference_aemp_aud") is not None:
+        # 참고가 텍스트 조립 — dispatch 실제 사용값과 동일 출처가 보이도록
+        #   Logic B+크롤 소매 / Logic A+크롤 AEMP 를 먼저, 그 다음 시드
+        _inp = dispatch_result.get("inputs") or {}
+        _logic = dispatch_result.get("logic")
+        if _logic == "B" and _inp.get("retail_source") == "crawler" and _inp.get("retail_aud") is not None:
+            ref_aud = float(_inp["retail_aud"])
+            cr_method = row.get("retail_estimation_method")
+            if cr_method == "pbs_dpmq":
+                ref_text = f"PBS DPMQ(최대처방량 총약가) AUD {ref_aud}"
+            elif cr_method == "chemist_markup":
+                ref_text = (
+                    f"시장 추정가 AUD {ref_aud} "
+                    f"(Chemist Warehouse × 1.20, CHOICE 조사 기준)"
+                )
+            elif cr_method in ("healthylife_actual", "healthylife_same_ingredient_diff_form"):
+                ref_text = f"소매 참고가 AUD {ref_aud} (Healthylife·크롤 동기화)"
+            else:
+                ref_text = f"소매 참고가 AUD {ref_aud} (크롤러·DB 동기화)"
+        elif _logic == "A" and _inp.get("aemp_source") == "crawler" and _inp.get("aemp_aud") is not None:
+            ref_aud = float(_inp["aemp_aud"])
+            ref_text = f"AEMP AUD {ref_aud} (au_products·크롤 동기화)"
+        elif seed.get("reference_aemp_aud") is not None:
             ref_val = seed["reference_aemp_aud"]
             if isinstance(ref_val, list):
                 ref_text = "AEMP " + " / ".join(f"AUD {v}" for v in ref_val)
@@ -2632,19 +2753,6 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
             ref_aud = float(seed["reference_retail_aud"])
             src = seed.get("reference_retail_source") or "소매가"
             ref_text = f"{src} AUD {ref_aud}"
-        elif dispatch_result.get("inputs", {}).get("retail_source") == "crawler":
-            # Logic B 에서 seed.reference_retail_aud 미확보 → crawler_row 참고가 사용
-            ref_aud = float(dispatch_result["inputs"]["retail_aud"])
-            cr_method = row.get("retail_estimation_method")
-            if cr_method == "pbs_dpmq":
-                ref_text = f"PBS DPMQ(최대처방량 총약가) AUD {ref_aud}"
-            elif cr_method == "chemist_markup":
-                ref_text = (
-                    f"시장 추정가 AUD {ref_aud} "
-                    f"(Chemist Warehouse × 1.20, CHOICE 조사 기준)"
-                )
-            else:
-                ref_text = f"시장 추정가 AUD {ref_aud} (크롤러 실시간)"
         else:
             ref_text = "참고가 미확보"
             ref_aud = None

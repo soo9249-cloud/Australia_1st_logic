@@ -529,10 +529,13 @@ function _makeP2Defaults() {
  * @returns {number}          GST 세율 (0 또는 10)
  */
 function _p2ClassifyGst(productId) {
+  const id = String(productId || '');
+  // 신약 임시 ID — 시드 없음·초기 PBS 미등재가 기본 → 민간 소매 GST 10% (Logic B 기본과 정합)
+  if (id.startsWith('au-newdrug-')) return 10;
   const OTC_PRODUCT_IDS = new Set([
     'au-omethyl-001',   // Omega-3 EE 2g — 건강기능식품 카테고리
   ]);
-  return OTC_PRODUCT_IDS.has(String(productId || '')) ? 10 : 0;
+  return OTC_PRODUCT_IDS.has(id) ? 10 : 0;
 }
 
 /**
@@ -826,9 +829,10 @@ function toggleP2ColDetail(col) {
   const detail = document.getElementById('p2cd-' + col);
   const btn    = detail?.previousElementSibling?.querySelector('.p2-col-expand-btn');
   if (!detail) return;
-  const open = detail.style.display === 'none';
-  detail.style.display = open ? '' : 'none';
-  if (btn) btn.textContent = (open ? '▾' : '▸') + ' 단계별 역산 보기';
+  const willOpen = detail.style.display === 'none';
+  /* 기준가·수수료·운임·추가 옵션은 모두 접었다 펼쳐도 유지(값만 사용자가 자유롭게 조정) */
+  detail.style.display = willOpen ? '' : 'none';
+  if (btn) btn.textContent = (willOpen ? '▾ ' : '▸ ') + '역산 · 옵션 편집';
 }
 
 /* P2 3열 카드: 기준가/수수료/운임/커스텀옵션 변경 시 가격 재계산 */
@@ -864,7 +868,10 @@ function renderP2ColOptions(col, showAddForm) {
 
   const typeLabel = { pct_add: '% 가산', pct_deduct: '% 차감', abs_add: 'USD 가산' };
 
-  let html = opts.map(opt => `
+  /* 표시만 역순: 나중에 추가한 옵션이 운임 입력에 가깝게(목록 위쪽) 쌓임. 적용 순서(recalc)는 배열 순서 유지 */
+  const displayOpts = opts.slice().reverse();
+
+  let html = displayOpts.map(opt => `
     <div class="p2c-opt-row">
       <span class="p2c-opt-name">${_escHtml(opt.name)}</span>
       <span class="p2c-opt-type-label">${typeLabel[opt.type] || opt.type}</span>
@@ -1687,7 +1694,7 @@ async function _pollCustomPipeline(jobId) {
       if (res.ok) {
         const job = await res.json();
         if (job.status === 'done') {
-          _handleCustomCrawlResult(job);
+          void _handleCustomCrawlResult(job);
           return;
         }
         if (job.status === 'failed') {
@@ -1723,8 +1730,8 @@ function showToast(message, level) {
   }, ms);
 }
 
-/** Task 10 — 크롤 결과 분기: AEMP 있음 → 보고서 / 없음 → 수출전략 가격 PDF 업로드 유도 */
-function _handleCustomCrawlResult(job) {
+/** Task 10 — 크롤 결과 분기: 가격 있음 → /api/stage2/calculate 로 FOB 연쇄 / 없음 → PDF 업로드 유도 */
+async function _handleCustomCrawlResult(job) {
   if (job.needs_price_upload) {
     showToast(
       '호주 공개 DB에서 가격을 찾지 못했습니다. 수출가격 전략의 "가격 자료 PDF 업로드"에 PDF를 올려주세요.',
@@ -1741,10 +1748,103 @@ function _handleCustomCrawlResult(job) {
     }
     return;
   }
-  _showCustomDrugMsg(
-    `신약 분석 완료 — product_code=${job.product_code}, AEMP=${job.aemp_aud || 'N/A'}.`,
-    false,
-  );
+
+  const code = job.product_code || '';
+  const parsePos = (v) => {
+    if (v == null || v === '') return 0;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const aempAud = parsePos(job.aemp_aud);
+  const retailAud = parsePos(job.retail_price_aud);
+
+  window._newDrugProductCode = code;
+  window._newDrugLastJob = job;
+
+  if (aempAud <= 0 && retailAud <= 0) {
+    showToast('가격 필드(AEMP·소매)가 비어 있습니다. 가격 자료 PDF 업로드가 필요합니다.', 'warn');
+    const p2body = document.getElementById('pb-p2');
+    if (p2body && p2body.classList.contains('hidden') && typeof toggleProcess === 'function') {
+      toggleProcess('p2');
+    }
+    if (typeof switchP2Tab === 'function') switchP2Tab('ai');
+    return;
+  }
+
+  let payload = { product_id: code, overrides: {} };
+  if (aempAud > 0) {
+    payload.logic = 'A';
+    payload.overrides = { base_aemp: aempAud, importer_margin: 20 };
+  } else {
+    payload.logic = 'B';
+    payload.overrides = {
+      base_retail: retailAud,
+      importer_margin: 20,
+      gst: 10,
+      pharmacy_margin: 30,
+      wholesale_margin: 10,
+      is_pbs_listed_rx: false,
+    };
+  }
+
+  try {
+    const res = await fetch('/api/stage2/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast(`FOB 계산 실패 (${res.status}): ${err.detail || res.statusText}`, 'warn');
+      _showCustomDrugMsg('FOB 역산 실패 — 수출가격 전략 탭에서 값을 확인하세요.', true);
+      return;
+    }
+    const fob = await res.json();
+    window._newDrugFobResult = fob;
+
+    const rates = window._exchangeRates || {};
+    const audUsd = Number(rates.aud_usd) > 0 ? Number(rates.aud_usd) : 0.64;
+    const scenarios = fob.scenarios || [];
+    const avgSc = scenarios.find((s) => s.name === 'average') || scenarios[1] || scenarios[0];
+    const fobAud = avgSc && avgSc.fob_aud != null ? Number(avgSc.fob_aud) : NaN;
+    const fobUsd = Number.isFinite(fobAud) ? (fobAud * audUsd).toFixed(2) : '?';
+
+    const synReport = { product_id: code };
+    if (typeof _p2ApplyGstForReport === 'function') _p2ApplyGstForReport(synReport);
+
+    if (typeof _p2Manual !== 'undefined') {
+      if (fob.logic === 'A' && Number.isFinite(fobAud)) {
+        const pub = _p2Manual.public.find((x) => x.key === 'base_price');
+        if (pub) pub.value = fobAud * audUsd;
+      } else if (fob.logic === 'B' && retailAud > 0) {
+        const pri = _p2Manual.private.find((x) => x.key === 'base_het');
+        if (pri) pri.value = retailAud * audUsd;
+      }
+      if (typeof switchP2Tab === 'function') switchP2Tab('manual');
+      const p2body = document.getElementById('pb-p2');
+      if (p2body && p2body.classList.contains('hidden') && typeof toggleProcess === 'function') {
+        toggleProcess('p2');
+      }
+      if (typeof _renderP2Manual === 'function') _renderP2Manual();
+    }
+
+    const w = (fob.warnings || []).filter(Boolean).join(' · ');
+    showToast(
+      `FOB 역산 완료 (Logic ${fob.logic}, α·GST 반영): 평균 시나리오 약 USD ${fobUsd}${w ? ' — ' + w.slice(0, 120) : ''}`,
+      'info',
+    );
+    _showCustomDrugMsg(
+      `신약 분석 완료 — ${code}. FOB 평균 USD ${fobUsd} (수출가격 전략·직접입력 탭에 반영).`,
+      false,
+    );
+  } catch (exc) {
+    console.warn('FOB 연쇄 계산 오류:', exc);
+    showToast(`FOB 요청 오류: ${exc.message || exc}`, 'warn');
+    _showCustomDrugMsg(
+      `신약 크롤 완료(${code}) — FOB 자동 호출 실패. AEMP=${aempAud || 'N/A'} AUD.`,
+      true,
+    );
+  }
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

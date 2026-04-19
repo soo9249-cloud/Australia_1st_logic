@@ -1210,6 +1210,9 @@ def fetch_pbs_substitute(
     chosen_row["confidence_override"] = 0.3
     existing_warn = list(chosen_row.get("warnings") or [])
     existing_warn.append(f"similar_proxy_used:{proxy_used}")
+    # FOB/보고서 검색용 표준 태그 (stage2 Logic A α=20% 와 동일 경로임을 추적)
+    existing_warn.append(f"substitute_ingredient:{proxy_used}")
+    existing_warn.append(f"similar_drug_used:{proxy_used}")
     chosen_row["warnings"] = existing_warn
     return chosen_row
 

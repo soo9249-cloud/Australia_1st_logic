@@ -717,6 +717,72 @@ def create_report(payload: dict[str, Any]) -> JSONResponse:
     return JSONResponse(content={"ok": True, "row": data[0] if data else None})
 
 
+def _append_au_reports_history_market_analysis(
+    product_id: str,
+    *,
+    row: dict[str, Any],
+    blocks: dict[str, Any],
+    refs: list[dict[str, Any]],
+    meta: dict[str, Any],
+    llm_generated_at: str,
+    pdf_name: str | None,
+) -> None:
+    """시장분석(gong=1) append-only 이력 + report_content_v2.
+
+    품목 공통 봉투(schema_ver, product_code, pricing_case, blocks…).
+    이후 수출전략 단계에서 동일 키로 조회·프롬프트 주입 가능.
+    """
+    try:
+        title_ko = str(row.get("product_name_ko") or product_id).strip()
+        snapshot_inner: dict[str, Any] = {
+            "title": f"한국유나이티드제약 호주 시장분석 — {title_ko}",
+            "pdf_filename": pdf_name,
+        }
+        if pdf_name:
+            snapshot_inner["file_url"] = f"/api/report/download?name={pdf_name}"
+
+        meta_sl = {
+            k: meta[k]
+            for k in (
+                "confidence",
+                "confidence_breakdown",
+                "export_viable",
+                "reason_code",
+                "pricing_case",
+                "product_name_ko",
+                "inn_normalized",
+            )
+            if k in meta
+        }
+        report_content_v2: dict[str, Any] = {
+            "schema_ver": 1,
+            "report_kind": "market_analysis",
+            "product_code": product_id,
+            "pricing_case": row.get("pricing_case"),
+            "inn_normalized": row.get("inn_normalized"),
+            "blocks": blocks,
+            "refs": refs,
+            "meta": meta_sl,
+            "llm_generated_at": llm_generated_at,
+        }
+        insert_row = {
+            "product_id": product_id,
+            "gong": 1,
+            "snapshot": jsonable_encoder(snapshot_inner),
+            "report_content_v2": jsonable_encoder(report_content_v2),
+            "llm_model": _CLAUDE_MODEL,
+            "generated_at": llm_generated_at,
+        }
+        client = get_supabase_client()
+        client.table(_REPORTS_TABLE).insert(insert_row).execute()
+        print(
+            f"[au_reports_history] report_content_v2 append OK product_id={product_id}",
+            flush=True,
+        )
+    except Exception as exc:
+        print(f"[au_reports_history] append 경고 (비치명적): {exc}", flush=True)
+
+
 # ── 외부 데이터 어댑터 (Supabase 저장 없음) ─────────────────────────
 
 def _news_api_response(
@@ -2058,6 +2124,16 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
         print(f"[render_pdf error] {exc}", flush=True)
         pdf_name = None
 
+    _append_au_reports_history_market_analysis(
+        product_id,
+        row=row,
+        blocks=blocks,
+        refs=refs,
+        meta=meta,
+        llm_generated_at=generated_at,
+        pdf_name=pdf_name,
+    )
+
     # Decimal/datetime 등이 섞여 있으면 JSONResponse 직렬화에서 TypeError 가능 — jsonable_encoder 사용
     return JSONResponse(
         content=jsonable_encoder(
@@ -2730,6 +2806,16 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
                     "warnings": [w for w in (dispatch_result.get("warnings") or []) if w],
                     "disclaimer": dispatch_result.get("disclaimer"),
                     "llm_model": _CLAUDE_MODEL,
+                    "report_content_v2": jsonable_encoder(
+                        {
+                            "schema_ver": 1,
+                            "report_kind": "export_strategy",
+                            "product_code": product_id,
+                            "blocked": True,
+                            "pricing_case": seed.get("pricing_case"),
+                            "dispatch_result": dispatch_result,
+                        }
+                    ),
                 }
                 sb_client_blocked.table("au_reports_r2").upsert(
                     blocked_upsert,
@@ -2903,6 +2989,20 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
                 "disclaimer": dispatch_result.get("disclaimer"),
                 "llm_model": _CLAUDE_MODEL,
                 "generated_at": _dt_now_utc(),
+                "report_content_v2": jsonable_encoder(
+                    {
+                        "schema_ver": 1,
+                        "report_kind": "export_strategy",
+                        "product_code": product_id,
+                        "segment": segment,
+                        "pricing_case": seed.get("pricing_case"),
+                        "p2_blocks": p2_blocks,
+                        "fx_rates": fx_rates,
+                        "dispatch_logic": logic,
+                        "ref_price_text": ref_text,
+                        "formula_str": formula_str,
+                    }
+                ),
             }
             sb_client.table("au_reports_r2").upsert(
                 upsert_data,

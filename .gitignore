@@ -9,6 +9,10 @@ venv/
 __pycache__/
 *.pyc
 
+# pytest 캐시 (로컬·하위 폴더 공통, 재실행 시 자동 생성)
+.pytest_cache/
+pytest-cache-files-*/
+
 # Claude Code 로컬 작업 파일 (공유 설정인 .claude/settings.json 은 제외하고 ignore)
 .claude/worktrees/
 .claude/settings.local.json

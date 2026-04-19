@@ -382,6 +382,7 @@ CREATE TABLE IF NOT EXISTS au_reports_r2 (
 
   -- AI 생성 메타
   full_json_raw                   JSONB NOT NULL DEFAULT '{}'::jsonb,
+  report_content_v2               JSONB,
   haiku_model_version             TEXT DEFAULT 'claude-haiku-4-5-20251001',
   haiku_generated_at              TIMESTAMPTZ,
   validation_passed               BOOLEAN DEFAULT false,
@@ -544,6 +545,7 @@ CREATE TABLE IF NOT EXISTS au_reports_history (
   product_id     TEXT NOT NULL,
   gong           SMALLINT NOT NULL,
   snapshot       JSONB NOT NULL DEFAULT '{}'::jsonb,
+  report_content_v2 JSONB,
   llm_model      TEXT DEFAULT 'claude-haiku-4-5-20251001',
   generated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now()

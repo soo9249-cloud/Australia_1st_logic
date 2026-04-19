@@ -33,7 +33,10 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parent.parent
 SQL_FILE = ROOT / "upharma-au" / "crawler" / "db" / "australia_table.sql"
 # 신약 분석·AEMP 출처 추적 등 순차 DDL (파일이 있으면 australia_table.sql 직후 실행)
-EXTRA_MIGRATION_SQL = ROOT / "scripts" / "migrations" / "20260419_new_drug_support.sql"
+_EXTRA_MIGRATION_FILES: tuple[str, ...] = (
+    "20260419_new_drug_support.sql",
+    "20260420_report_content_v2.sql",
+)
 _MGMT_API = "https://api.supabase.com/v1/projects/{ref}/database/query"
 
 # crawler/db/supabase_insert.py 에서 _ALLOWED_COLUMNS 를 직접 import 하기 위한 경로.
@@ -102,9 +105,14 @@ def main() -> int:
         return 1
 
     # 1b) 타임스탬프 마이그레이션 (선택): 파일이 있으면 같은 Management API 로 순차 실행
-    if EXTRA_MIGRATION_SQL.is_file():
-        extra = EXTRA_MIGRATION_SQL.read_text(encoding="utf-8")
-        print(f"[INFO] 추가 마이그레이션   = {EXTRA_MIGRATION_SQL.relative_to(ROOT)} ({len(extra):,} chars)")
+    migrations_dir = ROOT / "scripts" / "migrations"
+    for mig_name in _EXTRA_MIGRATION_FILES:
+        mig_path = migrations_dir / mig_name
+        if not mig_path.is_file():
+            print(f"[INFO] 추가 마이그레이션 스킵 (없음): {mig_path.relative_to(ROOT)}")
+            continue
+        extra = mig_path.read_text(encoding="utf-8")
+        print(f"[INFO] 추가 마이그레이션   = {mig_path.relative_to(ROOT)} ({len(extra):,} chars)")
         try:
             status_m, body_m = _run_query(ref, pat, extra, timeout=180.0)
         except Exception as exc:
@@ -348,6 +356,7 @@ def _verify_au_reports_r2(ref: str, pat: str) -> bool:
         "marketing_angle_text_ko",
         # AI 생성 메타
         "full_json_raw",
+        "report_content_v2",
         "haiku_model_version",
         "haiku_generated_at",
         "validation_passed",
@@ -439,6 +448,7 @@ def _verify_au_reports_history(ref: str, pat: str) -> bool:
         "product_id",
         "gong",
         "snapshot",
+        "report_content_v2",
         "llm_model",
         "generated_at",
         "created_at",

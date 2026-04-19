@@ -32,7 +32,11 @@ _FONT_CACHE: str | None = None
 
 
 def _register_korean_font() -> str:
-    """한글 폰트 등록. 시스템 TTF → CID 폴백 → Helvetica."""
+    """한글 폰트 등록.
+
+    우선순위: 레포 번들 나눔고딕(Regular/Bold) → macOS/Windows 시스템 TTF → CID 명조.
+    Helvetica 폴백은 한글 깨짐을 유발하므로 사용하지 않음(Render/Linux 포함).
+    """
     global _FONT_CACHE
     if _FONT_CACHE is not None:
         return _FONT_CACHE
@@ -41,29 +45,54 @@ def _register_korean_font() -> str:
     from reportlab.pdfbase.cidfonts import UnicodeCIDFont
     from reportlab.pdfbase.ttfonts import TTFont
 
-    candidates = [
-        ("NanumGothic",  str(ROOT / "fonts" / "NanumGothic.ttf")),
-        ("AppleGothic",  "/System/Library/Fonts/Supplemental/AppleGothic.ttf"),
-        ("NanumGothic",  "/Library/Fonts/NanumGothic.ttf"),
-        ("MalgunGothic", "C:/Windows/Fonts/malgun.ttf"),
+    # (등록명, 일반 TTF 경로, 볼드 TTF 경로; 볼드 없으면 일반과 동일 파일)
+    bundled_reg = ROOT / "fonts" / "NanumGothic.ttf"
+    bundled_bold = ROOT / "fonts" / "NanumGothic-Bold.ttf"
+    tt_candidates: list[tuple[str, Path, Path]] = [
+        (
+            "NanumGothic",
+            bundled_reg,
+            bundled_bold if bundled_bold.is_file() else bundled_reg,
+        ),
+        (
+            "AppleGothic",
+            Path("/System/Library/Fonts/Supplemental/AppleGothic.ttf"),
+            Path("/System/Library/Fonts/Supplemental/AppleGothic.ttf"),
+        ),
+        (
+            "NanumGothic",
+            Path("/Library/Fonts/NanumGothic.ttf"),
+            Path("/Library/Fonts/NanumGothic.ttf"),
+        ),
+        (
+            "MalgunGothic",
+            Path("C:/Windows/Fonts/malgun.ttf"),
+            Path("C:/Windows/Fonts/malgunbd.ttf"),
+        ),
     ]
-    for name, path in candidates:
-        if Path(path).is_file():
-            try:
-                pdfmetrics.registerFont(TTFont(name, path))
-                pdfmetrics.registerFont(TTFont(f"{name}-Bold", path))
-                _FONT_CACHE = name
-                return name
-            except Exception:
-                continue
-    try:
-        pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
-        _FONT_CACHE = "HYSMyeongJo-Medium"
-        return "HYSMyeongJo-Medium"
-    except Exception:
-        pass
-    _FONT_CACHE = "Helvetica"
-    return "Helvetica"
+    for family_name, reg_path, bld_path in tt_candidates:
+        if not reg_path.is_file():
+            continue
+        bold_path = bld_path if bld_path.is_file() else reg_path
+        try:
+            pdfmetrics.registerFont(TTFont(family_name, str(reg_path)))
+            pdfmetrics.registerFont(TTFont(f"{family_name}-Bold", str(bold_path)))
+            _FONT_CACHE = family_name
+            return family_name
+        except Exception:
+            continue
+
+    # TTF 실패 시 한글 CID (Helvetica 는 한글 미지원이라 사용하지 않음)
+    for cid_name in ("HYSMyeongJo-Medium", "HYGothic-Medium"):
+        try:
+            pdfmetrics.registerFont(UnicodeCIDFont(cid_name))
+            _FONT_CACHE = cid_name
+            return cid_name
+        except Exception:
+            continue
+    raise RuntimeError(
+        "한글 PDF 폰트 등록 실패. upharma-au/fonts/NanumGothic.ttf·NanumGothic-Bold.ttf 를 확인하세요."
+    )
 
 
 def _verdict_label(export_viable: str | None) -> str:
@@ -403,7 +432,7 @@ def _render_pdf_legacy_v2(
 
     base_font = _register_korean_font()
     bold_font = f"{base_font}-Bold"
-    if base_font == "HYSMyeongJo-Medium":
+    if base_font in ("HYSMyeongJo-Medium", "HYGothic-Medium"):
         bold_font = base_font
 
     # 색상 팔레트
@@ -638,6 +667,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import mm
     from reportlab.platypus import (
+        KeepTogether,
         PageBreak,
         Paragraph,
         SimpleDocTemplate,
@@ -656,7 +686,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
 
     base_font = _register_korean_font()
     bold_font = f"{base_font}-Bold"
-    if base_font == "HYSMyeongJo-Medium":
+    if base_font in ("HYSMyeongJo-Medium", "HYGothic-Medium"):
         bold_font = base_font
 
     C_TITLE = colors.HexColor("#3a4a5e")
@@ -701,23 +731,23 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         fontName=bold_font,
         fontSize=18,
         textColor=C_TITLE,
-        spaceBefore=14,
-        spaceAfter=6,
+        spaceBefore=18,
+        spaceAfter=8,
     )
     s_sub = ps(
         "V8Sub",
         fontName=bold_font,
         fontSize=15,
         textColor=C_TITLE,
-        spaceBefore=12,
-        spaceAfter=4,
+        spaceBefore=14,
+        spaceAfter=6,
     )
     s_cell = ps(
         "V8Cell",
         fontName=base_font,
         fontSize=13,
         textColor=C_BODY,
-        leading=18,
+        leading=20,
         wordWrap="CJK",
     )
     s_bar = ps(
@@ -731,9 +761,9 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     s_cell_h = ps(
         "V8H",
         fontName=bold_font,
-        fontSize=9,
+        fontSize=10,
         textColor=C_TITLE,
-        leading=13,
+        leading=14,
         wordWrap="CJK",
     )
     s_small = ps(
@@ -777,7 +807,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         leftMargin=MARGIN_X,
         rightMargin=MARGIN_X,
         topMargin=MARGIN_Y,
-        bottomMargin=MARGIN_Y,
+        bottomMargin=MARGIN_Y + 4 * mm,
         title=f"한국유나이티드제약 호주 시장분석 보고서 — {payload.product_name}",
     )
     story: list = []
@@ -828,8 +858,8 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
             ]
         )
     )
-    story.append(verdict_tbl)
-    story.append(Spacer(1, 20))
+    story.append(KeepTogether([verdict_tbl]))
+    story.append(Spacer(1, 22))
 
     story.append(Paragraph(_rx("1. 시장 현황"), s_sec))
     story.append(Paragraph(_rx("1-1. 시장 개요"), s_sub))
@@ -918,7 +948,44 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     st_snap = Table(snap_rows, colWidths=[CONTENT_W * 0.36, CONTENT_W * 0.28, CONTENT_W * 0.36])
     st_snap.setStyle(TableStyle(_base_tbl_style(snap_ex)))
     story.append(st_snap)
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 10))
+    cross_ps = ps(
+        "V8Cross",
+        fontName=base_font,
+        fontSize=12,
+        textColor=C_TITLE,
+        leading=17,
+        wordWrap="CJK",
+    )
+    cross_tbl = Table(
+        [
+            [
+                Paragraph(
+                    _rx(
+                        "※ 본 표는 호주 정부 공시 약가 스냅샷입니다. "
+                        "호주 수출가(FOB · 본선 인도가) 3시나리오 역산은 동일 품목의 "
+                        "「한국유나이티드제약 호주 수출전략 제안서」를 참조해 주시길 바랍니다."
+                    ),
+                    cross_ps,
+                )
+            ]
+        ],
+        colWidths=[CONTENT_W],
+    )
+    cross_tbl.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f5f8fb")),
+                ("LINEBEFORE", (0, 0), (0, -1), 3, colors.HexColor("#7a9bc1")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+            ]
+        )
+    )
+    story.append(KeepTogether([cross_tbl]))
+    story.append(Spacer(1, 18))
 
     story.append(Paragraph(_rx("2. 진출 전략"), s_sec))
     es = v8.entry_strategy
@@ -928,7 +995,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     story.append(Paragraph(_rx(_trunc(es.partner_direction)), s_cell))
     story.append(Paragraph(_rx("2-3. 협력 우선순위 근거"), s_sub))
     story.append(Paragraph(_rx(_trunc(es.rationale)), s_cell))
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 18))
 
     story.append(Paragraph(_rx("3. 유의사항 · 리스크"), s_sec))
     rr = v8.regulatory_risk
@@ -1056,7 +1123,7 @@ def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
 
     base_font = _register_korean_font()
     bold_font = f"{base_font}-Bold"
-    if base_font == "HYSMyeongJo-Medium":
+    if base_font in ("HYSMyeongJo-Medium", "HYGothic-Medium"):
         bold_font = base_font
 
     C_TITLE = colors.HexColor("#3a4a5e")
@@ -1512,7 +1579,7 @@ def render_p2_pdf(
 
     base_font = _register_korean_font()
     bold_font = f"{base_font}-Bold"
-    if base_font == "HYSMyeongJo-Medium":
+    if base_font in ("HYSMyeongJo-Medium", "HYGothic-Medium"):
         bold_font = base_font
 
     # 색상 팔레트 (시장조사 PDF와 동일)
@@ -1533,21 +1600,21 @@ def render_p2_pdf(
         return ParagraphStyle(name, **kw)
 
     s_title = ps("P2Title", fontName=bold_font, fontSize=18, leading=24,
-                 alignment=TA_CENTER, textColor=C_NAVY, spaceAfter=4)
+                 alignment=TA_CENTER, textColor=C_NAVY, spaceAfter=6)
     s_date = ps("P2Date", fontName=base_font, fontSize=10, leading=13,
                 alignment=TA_CENTER, textColor=colors.HexColor("#6B7280"))
     s_section = ps("P2Section", fontName=bold_font, fontSize=11, textColor=C_NAVY,
-                   leading=15, spaceBefore=8, spaceAfter=4)
-    s_cell_h = ps("P2CellH", fontName=bold_font, fontSize=9, textColor=C_NAVY,
-                  leading=13, wordWrap="CJK")
-    s_cell = ps("P2Cell", fontName=base_font, fontSize=9, textColor=C_BODY,
-                leading=14, wordWrap="CJK")
-    s_bar = ps("P2Bar", fontName=bold_font, fontSize=9, textColor=colors.white,
-               leading=13, wordWrap="CJK")
+                   leading=15, spaceBefore=10, spaceAfter=6)
+    s_cell_h = ps("P2CellH", fontName=bold_font, fontSize=10, textColor=C_NAVY,
+                  leading=14, wordWrap="CJK")
+    s_cell = ps("P2Cell", fontName=base_font, fontSize=10, textColor=C_BODY,
+                leading=15, wordWrap="CJK")
+    s_bar = ps("P2Bar", fontName=bold_font, fontSize=10, textColor=colors.white,
+               leading=14, wordWrap="CJK")
     s_hdr = ps("P2HdrWhite", fontName=bold_font, fontSize=9, textColor=colors.white,
                leading=13, wordWrap="CJK")
-    s_cell_sm = ps("P2CellSm", fontName=base_font, fontSize=7,
-                   textColor=colors.HexColor("#6B7280"), leading=10, wordWrap="CJK")
+    s_cell_sm = ps("P2CellSm", fontName=base_font, fontSize=8,
+                   textColor=colors.HexColor("#6B7280"), leading=11, wordWrap="CJK")
 
     def _rx(text: str) -> str:
         return ((text or "")
@@ -1563,10 +1630,10 @@ def render_p2_pdf(
         cmds = [
             ("GRID",   (0, 0), (-1, -1), 0.5, C_BORDER),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING",    (0, 0), (-1, -1), 5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+            ("TOPPADDING",    (0, 0), (-1, -1), 7),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 9),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 9),
         ]
         if extra:
             cmds.extend(extra)
@@ -1605,7 +1672,7 @@ def render_p2_pdf(
     doc = SimpleDocTemplate(
         str(out_path), pagesize=A4,
         leftMargin=MARGIN, rightMargin=MARGIN,
-        topMargin=MARGIN, bottomMargin=MARGIN,
+        topMargin=MARGIN, bottomMargin=MARGIN + 4 * mm,
         title=f"수출 전략 제안 보고서 — {product_name}",
     )
     story: list = []
@@ -1613,7 +1680,7 @@ def render_p2_pdf(
     # ── 타이틀 + 날짜 (양식 v5) ──
     story.append(Paragraph(_rx("한국유나이티드제약 호주 수출전략 제안서"), s_title))
     story.append(Paragraph(_rx(generated_date), s_date))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 10))
 
     # ── 제품 바 — 영문 성분·제형 중심 (양식 샘플과 동일 계열) ──
     str_form = " ".join(x for x in [strength, dosage] if x).strip()
@@ -1629,7 +1696,7 @@ def render_p2_pdf(
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]))
     story.append(bar_tbl)
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 12))
 
     aud_usd_rate = float(aud_usd) if aud_usd else 0.64
     aud_krw_rate = float(aud_krw) if aud_krw else 893.0
@@ -1667,7 +1734,7 @@ def render_p2_pdf(
     sum_tbl.setStyle(TableStyle(_base_style(sum_ex)))
     story.append(Paragraph(_rx("수출 가격 3시나리오 — 결론 요약"), s_section))
     story.append(sum_tbl)
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 8))
     story.append(
         Paragraph(
             _rx(
@@ -1698,7 +1765,7 @@ def render_p2_pdf(
     # ── 2. FOB 3시나리오 역산 ──
     story.append(Paragraph(_rx("2. FOB 3시나리오 역산"), s_section))
     story.append(Paragraph(_rx(p2_blocks.get("block_fob_intro", "")), s_cell))
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 6))
 
     # 시나리오 테이블: 시나리오명 | FOB (AUD) | FOB (KRW) | 마진% | 전략 근거
     w_name = CONTENT_W * 0.18

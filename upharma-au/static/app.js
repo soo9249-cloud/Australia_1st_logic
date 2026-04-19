@@ -1930,7 +1930,44 @@ async function _handleCustomCrawlResult(job) {
  * 호주 원본은 _au_raw / _au_blocks / _au_meta 로 보존 — 데이터 전혀 버리지 않음.
  */
 function _auToRenderResult(auRow, blocks, meta) {
-  if (!auRow) return { error: '호주 백엔드에서 품목 row 를 조회하지 못했습니다.' };
+  // row 조회 실패해도 /api/report/generate 가 성공하면 blocks·meta 로 화면·PDF 는 살려야 함(이전에는 error 로만 반환해 PDF UI 가 막혔음)
+  if (!auRow) {
+    if (blocks || meta) {
+      const evMap = { viable: '적합', conditional: '조건부', not_viable: '부적합' };
+      const fromV8Ko = { 가능: '적합', 조건부: '조건부', 불가: '부적합' };
+      const v8Cat = blocks && blocks.verdict && blocks.verdict.category;
+      const metaEv = meta && meta.export_viable;
+      const verdict =
+        (v8Cat && fromV8Ko[v8Cat]) ||
+        (metaEv && evMap[metaEv]) ||
+        (metaEv && fromV8Ko[metaEv]) ||
+        null;
+      const pid = (typeof _currentKey === 'string' && _currentKey) ? _currentKey : '';
+      return {
+        product_id:            pid,
+        trade_name:            (meta && meta.product_name_ko) || '—',
+        inn:                   (meta && meta.inn_normalized) || '',
+        verdict:               verdict,
+        reason_code:           (meta && meta.reason_code) || null,
+        rationale:             null,
+        basis_market_medical:  blocks && blocks.block2_market,
+        basis_regulatory:      blocks && blocks.block2_regulatory,
+        basis_trade:           blocks && blocks.block2_trade,
+        basis_pbs_line:        '품목 DB 행을 불러오지 못했습니다. 보고서·PDF 본문을 참고하세요.',
+        entry_pathway:         blocks && blocks.block3_channel,
+        price_positioning_pbs: blocks && blocks.block3_pricing,
+        risks_conditions:      blocks && blocks.block3_risks,
+        regulatory_checks:     blocks && blocks.block4_regulatory,
+        confidence:            meta && meta.confidence,
+        confidence_breakdown:  meta && meta.confidence_breakdown,
+        pbs_listed:            undefined,
+        _au_raw:               null,
+        _au_blocks:            blocks,
+        _au_meta:              meta,
+      };
+    }
+    return { error: '호주 백엔드에서 품목 row 를 조회하지 못했습니다.' };
+  }
 
   // 판정: ① Claude v8 verdict.category(가능/조건부/불가) → ② meta.export_viable(보고서 응답) → ③ 크롤 row.export_viable
   // (크롤만 보면 Haiku 판정과 어긋나 '미분석'·오표시가 날 수 있음)
@@ -2023,11 +2060,17 @@ function renderResult(result, refs, pdfName) {
       }
       _setText('price-positioning-pbs', '가격 포지셔닝 데이터를 불러오지 못했습니다.');
       _setText('risks-conditions', '분석 데이터 소스 확인 후 재시도해 주세요.');
-      _showP1Note('⚠️ 분석 데이터 오류 — 재시도하거나 서버 로그를 확인하세요.', true);
-      _showReportError();
-      return;
-    }
-
+      const noteErr =
+        pdfName
+          ? '⚠️ 일부 표시용 DB 행을 불러오지 못했습니다. 아래 PDF 는 생성된 파일입니다.'
+          : '⚠️ 분석 데이터 오류 — 재시도하거나 서버 로그를 확인하세요.';
+      _showP1Note(noteErr, true);
+      if (!pdfName) {
+        _showReportError();
+        return;
+      }
+      // PDF 가 있으면 아래 U4 에서 다운로드 표시(이전에는 여기서 return 해 PDF 가 영구히 숨겨짐)
+    } else {
     const verdict = result.verdict;
     const vc      = verdict === '적합'   ? 'v-ok'
                   : verdict === '부적합' ? 'v-err'
@@ -2080,6 +2123,7 @@ function renderResult(result, refs, pdfName) {
       `✅ ${result.trade_name || '제품'} 분석 완료 — 판정: ${vLabel}. 상세 결과는 보고서 탭에서 확인하세요.`,
       false
     );
+    }
   }
 
   /* ─ B4: 논문 카드 ─ */

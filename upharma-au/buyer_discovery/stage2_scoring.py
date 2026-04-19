@@ -40,12 +40,15 @@ from crawler.db.supabase_insert import get_supabase_client  # noqa: E402
 _SEEDS = _UPHARMA_PATH / "buyer_discovery" / "seeds"
 _AU_PRODUCTS_JSON = _UPHARMA_PATH / "crawler" / "au_products.json"
 _SURVIVORS_JSON = Path(
-    r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/survivors_expanded_v3.json"
+    r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/survivors_expanded_v4.json"
 )
 _CATEGORIES_JSON = _SEEDS / "company_categories.json"
 _REVENUE_JSON = _SEEDS / "company_revenue.json"
 _MFR_MATCH_JSON = _SEEDS / "survivors_manufacturer_match.json"
-_HARDCODE_JSON = _SEEDS / "au_buyers_hardcode.json"   # 45개 딥리서치 수동 정정본
+# 45개 딥리서치 수동 정정본 — Documents 쪽이 진짜 완성본 (seeds/ 는 스텁만 있음)
+_HARDCODE_JSON = Path(
+    r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/au_buyers_hardcode.json"
+)
 _OUT_REPORT_JSON = Path(
     r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/stage2_scoring_report.json"
 )
@@ -88,15 +91,68 @@ def _score_manufacturing(canon_key: str, mfr_matches: dict) -> int:
     return 0
 
 
-def _score_sales(canon_key: str, revenue_doc: dict) -> tuple[int, str, float]:
-    """psi_sales_scale + rank 문자열 + confidence.
+def _hardcode_rank_to_score(rank_text: str) -> int:
+    """hardcode 의 annual_revenue_rank 문자열 → 0~100 점수.
 
-    반환 (점수, rank문자열, confidence).
+    매핑 규칙 (au_buyers_hardcode.json 수기 포맷 기준):
+      "TOP 5 (...)"    → 100
+      "TOP 10 (...)"   →  85
+      "TOP 20 (...)"   →  70
+      "TOP 50 (...)"   →  50
+      "niche" / "순위 밖" / "mid-tier" → 30
+      그 외 → 30 (보수적 기본값)
     """
+    text = (rank_text or "").upper().strip()
+    if "???" in text or not text:
+        return 0
+    # 구체적 숫자 매칭 (예: "TOP 5", "TOP 10", "TOP 20", "TOP 50")
+    import re as _re
+    m = _re.search(r"TOP\s*(\d+)", text)
+    if m:
+        n = int(m.group(1))
+        if n <= 5:   return 100
+        if n <= 10:  return 85
+        if n <= 20:  return 70
+        if n <= 50:  return 50
+        return 30
+    if any(kw in text for kw in ("NICHE", "SMALL", "MID-TIER", "MID TIER", "순위 밖", "SPECIALTY")):
+        return 30
+    return 30  # 알 수 없으면 중간값
+
+
+def _score_sales(
+    canon_key: str,
+    revenue_doc: dict,
+    hardcoded_buyers: dict,
+) -> tuple[int, str, float, str]:
+    """psi_sales_scale — hardcode 우선 3단계 폴백.
+
+    우선순위:
+      1. au_buyers_hardcode.json (Jisoo 수기 검증 45개) — confidence 1.0
+      2. company_revenue.json (Perplexity + Haiku 교차검증) — Haiku 반환 confidence
+      3. unknown (0점)
+
+    반환: (score, rank_text, confidence, source)
+      source ∈ {"hardcode", "perplexity_haiku", "none"}
+    """
+    # 1. hardcode 우선 (Jisoo 수기 45개)
+    hc = (hardcoded_buyers or {}).get(canon_key) or {}
+    hc_rank = hc.get("annual_revenue_rank") or ""
+    if hc_rank and "???" not in hc_rank:
+        return _hardcode_rank_to_score(hc_rank), hc_rank, 1.0, "hardcode"
+
+    # 2. Perplexity + Haiku 교차검증 결과
     rev = (revenue_doc.get("revenue") or {}).get(canon_key)
-    if not rev:
-        return 0, "unknown", 0.0
-    return int(rev.get("score") or 0), rev.get("rank") or "unknown", float(rev.get("confidence") or 0.0)
+    if rev and rev.get("rank") and rev.get("rank") != "unknown":
+        return (
+            int(rev.get("score") or 0),
+            rev.get("rank") or "unknown",
+            float(rev.get("confidence") or 0.0),
+            "perplexity_haiku",
+        )
+
+    # 3. 데이터 없음
+    return 0, "unknown", 0.0, "none"
 
 
 def _score_import_exp(survivor_row: dict) -> int:
@@ -169,6 +225,7 @@ def compute_psi_total(scores: dict[str, int]) -> int:
 def classify_tier(
     product_id: str,
     product_therapy_en: set[str],
+    canon_key: str,
     survivor_row: dict,
     categories_doc: dict,
 ) -> str:
@@ -177,6 +234,9 @@ def classify_tier(
     A: ingredient_case ∈ {B_ideal_buyer, A_competitor, C_partial}
     B: 위 D_none 이지만 therapeutic_categories ∩ product_therapy_en ≠ ∅
     C: 나머지 (survivors 에 포함되었으나 품목·카테고리 매칭 모두 없음)
+
+    주의: survivors_expanded_v3.json 의 buyer row 에는 canonical_key 필드가 없음
+          (바깥 dict 키로만 존재) → 호출측에서 명시적으로 canon_key 전달 필수.
     """
     ev = survivor_row.get("evidence") or {}
     case_map = ev.get("ingredient_case_per_product") or {}
@@ -184,7 +244,6 @@ def classify_tier(
     if case != "D_none":
         return "A"
 
-    canon_key = survivor_row.get("canonical_key")
     cat_entry = (categories_doc.get("categories") or {}).get(canon_key) or {}
     buyer_areas = set(cat_entry.get("areas_en") or [])
     if buyer_areas & product_therapy_en:
@@ -251,7 +310,9 @@ def main(dry_run: bool = False) -> None:
     #    sales/manufacturing/import/pharmacy 는 품목 무관 (회사 고유)
     buyer_static_scores: dict[str, dict] = {}
     for canon_key, row in buyers.items():
-        sales_score, sales_rank, sales_conf = _score_sales(canon_key, revenue)
+        sales_score, sales_rank, sales_conf, sales_source = _score_sales(
+            canon_key, revenue, hardcoded_buyers
+        )
         mfg_score = _score_manufacturing(canon_key, mfr_matches)
         imp_score = _score_import_exp(row)
         ph_score = _score_pharmacy_chain(canon_key)
@@ -259,6 +320,7 @@ def main(dry_run: bool = False) -> None:
             "sales": sales_score,
             "sales_rank": sales_rank,
             "sales_confidence": sales_conf,
+            "sales_source": sales_source,  # 'hardcode' / 'perplexity_haiku' / 'none'
             "manufacturing": mfg_score,
             "import_exp": imp_score,
             "pharmacy": ph_score,
@@ -289,7 +351,7 @@ def main(dry_run: bool = False) -> None:
         # 각 바이어에 대해 티어 + psi_total
         scored: list[dict] = []
         for canon_key, row in buyers.items():
-            tier = classify_tier(pid, product_therapy_en, row, categories)
+            tier = classify_tier(pid, product_therapy_en, canon_key, row, categories)
             pipeline_score = _score_pipeline(pid, row)
 
             static = buyer_static_scores[canon_key]
@@ -304,10 +366,12 @@ def main(dry_run: bool = False) -> None:
 
             # 바이어 치료영역
             cat_entry = (categories.get("categories") or {}).get(canon_key) or {}
-            # 하드코딩 시트 (딥리서치 45 완성본) 오버라이드
+            # 하드코딩 시트 (딥리서치 45 완성본)
             hc = hardcoded_buyers.get(canon_key) or {}
-            annual_rank_override = hc.get("annual_revenue_rank")
             factory_hc = hc.get("factory") or {}
+
+            # annual_revenue_rank 는 이미 _score_sales 에서 hardcode 우선 결정됨
+            # static["sales_rank"] 가 곧 최종 표시용 문자열.
 
             scored.append({
                 "canonical_key": canon_key,
@@ -316,7 +380,8 @@ def main(dry_run: bool = False) -> None:
                 "psi_total": psi_total,
                 "scores": scores,
                 "sales_rank_text": static["sales_rank"],
-                "annual_revenue_rank": annual_rank_override or static["sales_rank"],
+                "sales_source": static["sales_source"],
+                "annual_revenue_rank": static["sales_rank"],
                 "therapeutic_categories_en": cat_entry.get("areas_en") or [],
                 "therapeutic_categories_kr": cat_entry.get("areas_kr") or [],
                 "has_au_factory": (

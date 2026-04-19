@@ -2360,7 +2360,6 @@ async function loadNews() {
 
   try {
     const res  = await fetch('/api/news');
-    const newsBackend = (res.headers.get('X-News-Source') || '').trim();
     let raw;
     try {
       raw = await res.json();
@@ -2371,7 +2370,13 @@ async function loadNews() {
       return;
     }
     /* 레거시: 배열만 오던 응답 호환 */
-    const data = Array.isArray(raw) ? { ok: true, items: raw, error: null } : raw;
+    const data = Array.isArray(raw) ? { ok: true, items: raw, error: null, source: null } : raw;
+    /* 샘플 배너: 헤더가 막혀도 본문 source 로 판별 (mock | perplexity) */
+    const newsBackend = String(
+      (data && data.source != null && data.source !== '')
+        ? data.source
+        : (res.headers.get('X-News-Source') || '')
+    ).trim();
     /* HTTP 오류 시 FastAPI는 { detail: "..." } 만 줄 수 있음 — ok/items 없음 */
     if (!res.ok) {
       const detail = (data && (data.detail || data.message)) || res.statusText || 'HTTP 오류';
@@ -2391,7 +2396,9 @@ async function loadNews() {
       if (newsBackend === 'mock') {
         bannerEl.hidden = false;
         bannerEl.innerHTML =
-          '<div class="news-source-hint" role="status">Perplexity 실데이터가 아닌 <strong>샘플</strong>입니다. Render에 <code>PERPLEXITY_API_KEY</code>(또는 <code>PERPLEXITY_KEY</code>)가 설정돼 있고 API가 성공하면 최신 기사로 바뀝니다.</div>';
+          '<div class="news-source-hint" role="status">Perplexity 실데이터가 아닌 <strong>샘플</strong>입니다. '
+          + 'Render <strong>Environment</strong>에 <code>PERPLEXITY_API_KEY</code>(또는 <code>PERPLEXITY_KEY</code>)를 넣고 <strong>Manual Deploy</strong>로 재배포한 뒤 새로고침하세요. '
+          + '키가 있는데도 이러면 서버 로그의 <code>[api/news] mock:</code> 로 시작하는 줄(HTTP 코드·파싱 실패 등)을 확인하세요.</div>';
       } else {
         bannerEl.hidden = true;
         bannerEl.innerHTML = '';
@@ -2439,3 +2446,271 @@ initP2Strategy();       // 수출가격 전략 초기화
 loadNews();             // 시장 뉴스 즉시 로드
 _showReportIdle();      // 01 시장조사: PDF 카드·진행 스테퍼 초기 상태(첫 진입 = 품목/신약만)
 resetProgress();
+
+/* ═══════════════════════════════════════════════════════════════════════
+   바이어 발굴 (Phase 3) — 2026-04-20 신규 추가
+   범위: /api/buyers/{product_id} 호출 + #pb-p3 안의 테이블 렌더
+   1·2단계 (p1/p2) 로직은 절대 건드리지 않음
+   ═══════════════════════════════════════════════════════════════════════ */
+
+(function initBuyersTab() {
+  'use strict';
+
+  // ───── 숫자·문자열 포맷 헬퍼 ─────
+  function fmtInt(v) {
+    if (v === null || v === undefined || Number.isNaN(Number(v))) return '—';
+    return Math.round(Number(v)).toLocaleString();
+  }
+  function escHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function badge(label, color) {
+    return `<span class="p3-badge" style="display:inline-block;padding:2px 6px;border-radius:4px;background:${color};color:white;font-size:11px;margin-right:4px;">${escHtml(label)}</span>`;
+  }
+
+  // ───── 티어 색 ─────
+  function tierColor(tier) {
+    if (tier === 'A' || !tier) return '#22c55e';   // 직접 등재 — 녹색
+    if (tier === 'B') return '#3b82f6';             // 카테고리 매칭 — 파랑
+    return '#9ca3af';                                // C — 회색
+  }
+
+  // ───── 매출 등급 색 ─────
+  function rankColor(rankText) {
+    const t = String(rankText || '').toUpperCase();
+    if (t.includes('TOP 5')) return '#dc2626';
+    if (t.includes('TOP 10')) return '#ea580c';
+    if (t.includes('TOP 20')) return '#ca8a04';
+    if (t.includes('TOP 50')) return '#65a30d';
+    return '#6b7280';
+  }
+
+  // ───── 현재 선택된 품목 ID 읽기 ─────
+  function currentProductId() {
+    const sel = document.getElementById('product-select');
+    if (!sel) return null;
+    const v = sel.value;
+    if (!v || v.startsWith('_')) return null;
+    return v;
+  }
+
+  // ───── 행 렌더 (기본 + 상세 펼침 2행) ─────
+  function renderBuyerRow(buyer, fx) {
+    const tier = (buyer.source_flags || []).find ? null : null;
+    // source_flags 는 JSON array 또는 dict (DB 스키마에 따라)
+    let tierLabel = '';
+    const sf = buyer.source_flags;
+    if (Array.isArray(sf)) {
+      for (const f of sf) if (typeof f === 'string' && f.startsWith('tier_')) tierLabel = f.slice(5);
+    }
+    const theraKr = (buyer.therapeutic_categories || []).join(' · ') || '—';
+    const categoriesRaw = Array.isArray(buyer.therapeutic_categories) ? buyer.therapeutic_categories : [];
+
+    const factoryIcon = buyer.has_au_factory === 'Y' ? '🏭 Y' :
+                        buyer.has_au_factory === 'N' ? '✗' : '?';
+    const factoryColor = buyer.has_au_factory === 'Y' ? '#22c55e' : '#9ca3af';
+    const revColor = rankColor(buyer.annual_revenue_rank);
+    const rowId = 'p3-row-' + buyer.id;
+    const detailId = 'p3-detail-' + buyer.id;
+    const total = Number(buyer.psi_total || 0);
+
+    const assocBadges = [];
+    if (buyer.is_ma_member)   assocBadges.push(badge('MA', '#6366f1'));
+    if (buyer.is_gbma_member) assocBadges.push(badge('GBMA', '#0ea5e9'));
+    if (buyer.is_gpce_exhibitor) assocBadges.push(badge('GPCE', '#a855f7'));
+
+    const evidenceUrls = Array.isArray(buyer.evidence_urls) ? buyer.evidence_urls : [];
+    const evidenceHtml = evidenceUrls.length
+      ? evidenceUrls.slice(0, 3).map(function (u) {
+          return `<a href="${escHtml(u)}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;font-size:12px;display:block;">${escHtml(u.substring(0, 80))}${u.length > 80 ? '…' : ''}</a>`;
+        }).join('')
+      : '<span style="color:#9ca3af;font-size:12px;">근거 URL 없음</span>';
+
+    const factoryLocs = Array.isArray(buyer.factory_locations) ? buyer.factory_locations.filter(Boolean) : [];
+
+    return `
+      <tr id="${rowId}" class="p3-row" style="cursor:pointer;" onclick="toggleBuyerDetail('${detailId}')">
+        <td><span class="p3-rank" style="display:inline-block;background:${tierColor(tierLabel)};color:white;padding:2px 8px;border-radius:999px;font-weight:bold;font-size:12px;">${buyer.rank}</span></td>
+        <td>
+          <div style="font-weight:600;">${escHtml(buyer.company_name)}</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px;">${theraKr}</div>
+        </td>
+        <td style="color:${revColor};font-weight:600;font-size:12px;">${escHtml(buyer.annual_revenue_rank || '—')}</td>
+        <td style="color:${factoryColor};text-align:center;font-weight:600;">${factoryIcon}</td>
+        <td style="text-align:center;"><b style="font-size:16px;">${fmtInt(total)}</b>/100</td>
+        <td style="text-align:center;">
+          ${assocBadges.join('')}
+          <span style="color:#6b7280;font-size:14px;">▾</span>
+        </td>
+      </tr>
+      <tr id="${detailId}" class="p3-detail-row" style="display:none;">
+        <td colspan="6" style="background:#f9fafb;padding:14px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+            <div>
+              <div style="font-weight:600;margin-bottom:8px;">5 지표 점수</div>
+              <table style="width:100%;font-size:13px;">
+                <tr><td style="padding:4px 0;">① 매출 규모</td><td style="text-align:right;"><b>${fmtInt(buyer.psi_sales_scale)}</b>/100 <span style="color:#9ca3af;">×35%</span></td></tr>
+                <tr><td>② 파이프라인 (성분 경험)</td><td style="text-align:right;"><b>${fmtInt(buyer.psi_pipeline)}</b>/100 <span style="color:#9ca3af;">×25%</span></td></tr>
+                <tr><td>③ 호주 제조소</td><td style="text-align:right;"><b>${fmtInt(buyer.psi_manufacturing)}</b>/100 <span style="color:#9ca3af;">×20%</span></td></tr>
+                <tr><td>④ 수입 경험</td><td style="text-align:right;"><b>${fmtInt(buyer.psi_import_exp)}</b>/100 <span style="color:#9ca3af;">×10%</span></td></tr>
+                <tr><td>⑤ 약국 체인 운영</td><td style="text-align:right;"><b>${fmtInt(buyer.psi_pharmacy_chain)}</b>/100 <span style="color:#9ca3af;">×10%</span></td></tr>
+                <tr style="border-top:2px solid #e5e7eb;"><td style="padding-top:6px;font-weight:bold;">총점 (psi_total)</td><td style="text-align:right;padding-top:6px;"><b style="font-size:18px;color:#1d4ed8;">${fmtInt(total)}</b></td></tr>
+              </table>
+            </div>
+            <div>
+              <div style="font-weight:600;margin-bottom:8px;">상세 정보</div>
+              <div style="font-size:13px;line-height:1.7;">
+                <div><b>매출 등급:</b> <span style="color:${revColor};">${escHtml(buyer.annual_revenue_rank || '—')}</span></div>
+                <div><b>TGA ARTG 등록 수:</b> ${fmtInt(buyer.tga_artg_count)} 건</div>
+                <div><b>호주 공장:</b> ${buyer.has_au_factory === 'Y' ? 'Y — ' + (factoryLocs.join(', ') || '(위치 미상)') : 'N (본사 글로벌 공장 수입 의존)'}</div>
+                <div><b>치료영역:</b> ${theraKr}</div>
+                <div><b>소속 협회:</b> ${assocBadges.length ? assocBadges.join('') : '<span style="color:#9ca3af;">없음</span>'}</div>
+                ${buyer.website ? `<div><b>웹사이트:</b> <a href="${escHtml(buyer.website)}" target="_blank" style="color:#2563eb;">${escHtml(buyer.website)}</a></div>` : ''}
+                ${buyer.email ? `<div><b>이메일:</b> ${escHtml(buyer.email)}</div>` : ''}
+                ${buyer.phone ? `<div><b>전화:</b> ${escHtml(buyer.phone)}</div>` : ''}
+              </div>
+              ${buyer.notes ? `<div style="margin-top:8px;padding:8px;background:white;border-radius:4px;font-size:12px;color:#374151;">${escHtml(buyer.notes)}</div>` : ''}
+              <div style="margin-top:10px;">
+                <div style="font-weight:600;font-size:12px;margin-bottom:4px;color:#6b7280;">근거 URL</div>
+                ${evidenceHtml}
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  // ───── 행 토글 ─────
+  window.toggleBuyerDetail = function (detailId) {
+    const el = document.getElementById(detailId);
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+  };
+
+  // ───── 메인 로더 ─────
+  async function loadBuyersForProduct(productId) {
+    if (!productId) return;
+    const note = document.getElementById('p3-note');
+    const meta = document.getElementById('p3-meta');
+    const tbody = document.getElementById('p3-buyer-tbody');
+    const dlBtn = document.getElementById('p3-dl-btn');
+    const fxNote = document.getElementById('p3-fx-note');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p3-empty-cell" style="padding:20px;color:#6b7280;">로딩 중...</td></tr>';
+    if (dlBtn) dlBtn.disabled = true;
+
+    try {
+      const r = await fetch('/api/buyers/' + encodeURIComponent(productId));
+      if (!r.ok) {
+        if (r.status === 404) {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p3-empty-cell" style="padding:20px;color:#6b7280;">아직 바이어 데이터가 없습니다. (Stage 2 scoring 실행 필요)</td></tr>';
+        } else {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p3-empty-cell" style="padding:20px;color:#dc2626;">조회 실패: HTTP ${r.status}</td></tr>`;
+        }
+        return;
+      }
+      const data = await r.json();
+      const buyers = data.buyers || [];
+      const fx = data.fx || {};
+
+      // 상단 메타
+      if (note) note.style.display = 'none';
+      if (meta) {
+        meta.style.display = 'block';
+        const inns = (data.inn_components || []).join(' + ');
+        meta.innerHTML = `
+          <div style="padding:10px;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:4px;font-size:13px;margin-bottom:10px;">
+            <b>${escHtml(data.product_name_ko || productId)}</b>
+            ${data.product_name_en ? '(' + escHtml(data.product_name_en) + ')' : ''}
+            — 성분: <code>${escHtml(inns)}</code>
+            <span style="float:right;color:#6b7280;font-size:12px;">총 ${buyers.length} 명 · 점수 = 교차검증(TGA·PBS·협회) + 5지표 가중치(매출 35% · 성분 25% · 공장 20% · 수입 10% · 약국 10%)</span>
+          </div>
+        `;
+      }
+      if (fxNote && fx.aud_krw) {
+        fxNote.textContent = `(실시간 환율 1 AUD = ${fx.aud_krw.toFixed(2)} KRW · ${(fx.aud_usd * 100).toFixed(2)} USD¢)`;
+      }
+
+      if (tbody) {
+        if (!buyers.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="p3-empty-cell" style="padding:20px;color:#6b7280;">바이어 없음</td></tr>';
+        } else {
+          tbody.innerHTML = buyers.map(function (b) { return renderBuyerRow(b, fx); }).join('');
+        }
+      }
+      if (dlBtn) dlBtn.disabled = false;
+    } catch (exc) {
+      console.error('[buyers] 조회 예외', exc);
+      if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p3-empty-cell" style="padding:20px;color:#dc2626;">조회 예외: ${escHtml(String(exc))}</td></tr>`;
+    }
+  }
+
+  // ───── 바이어 PDF 다운로드 ─────
+  window.generateBuyersPdf = async function () {
+    const pid = currentProductId();
+    if (!pid) {
+      if (typeof showToast === 'function') showToast('품목을 먼저 선택하세요');
+      return;
+    }
+    const dlBtn = document.getElementById('p3-dl-btn');
+    const original = dlBtn ? dlBtn.textContent : '';
+    if (dlBtn) { dlBtn.disabled = true; dlBtn.textContent = '생성 중...'; }
+    try {
+      const r = await fetch('/api/buyers/report/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: pid }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(function () { return { detail: 'HTTP ' + r.status }; });
+        alert('PDF 생성 실패: ' + (err.detail || r.status));
+        return;
+      }
+      const res = await r.json();
+      if (res.download_url) {
+        window.open(res.download_url, '_blank');
+      }
+    } catch (exc) {
+      alert('PDF 생성 예외: ' + String(exc));
+    } finally {
+      if (dlBtn) { dlBtn.disabled = false; dlBtn.textContent = original || '📄 바이어 보고서 PDF 다운로드'; }
+    }
+  };
+
+  // ───── 품목 변경 감지 ─────
+  const ps = document.getElementById('product-select');
+  if (ps) {
+    ps.addEventListener('change', function () {
+      const pid = currentProductId();
+      if (pid && document.getElementById('pb-p3') && !document.getElementById('pb-p3').classList.contains('hidden')) {
+        loadBuyersForProduct(pid);
+      }
+    });
+  }
+
+  // ───── p3 아코디언 첫 열릴 때 로드 ─────
+  // toggleProcess 기존 함수는 건드리지 않고, 아코디언 헤더 클릭 감지용 추가 리스너.
+  const p3header = document.querySelector("[onclick=\"toggleProcess('p3')\"]");
+  if (p3header) {
+    p3header.addEventListener('click', function () {
+      setTimeout(function () {
+        const pid = currentProductId();
+        const pb = document.getElementById('pb-p3');
+        if (pid && pb && !pb.classList.contains('hidden')) {
+          loadBuyersForProduct(pid);
+        }
+      }, 100);
+    });
+  }
+
+  // ───── 초기 로드 (현재 품목이 이미 선택돼 있으면) ─────
+  // p3 아코디언이 기본 open 이므로 페이지 진입 시 자동 로드
+  setTimeout(function () {
+    const pid = currentProductId();
+    if (pid) loadBuyersForProduct(pid);
+  }, 500);
+
+})();

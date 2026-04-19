@@ -445,17 +445,28 @@
       </div>
       <div class="process-body" id="pb-p3">
         <div class="selector-card">
-          <div class="p3-stub-note">시장조사 · 수출가격전략 완료 후 바이어 분석이 활성화됩니다.</div>
+          <div class="p3-note" id="p3-note">품목을 선택하면 해당 품목의 호주 바이어 TOP 10 이 표시됩니다. (교차검증 점수 + 5지표 가중치 기반)</div>
+          <div class="p3-meta" id="p3-meta" style="display:none;"></div>
           <div class="p3-buyer-table">
             <table class="p3-table">
-              <thead><tr><th>#</th><th>바이어명</th><th>국가</th><th>점수</th><th>채널</th></tr></thead>
+              <thead>
+                <tr>
+                  <th style="width:36px;">#</th>
+                  <th>회사명 (바이어)</th>
+                  <th style="width:150px;">매출 등급</th>
+                  <th style="width:80px;">호주공장</th>
+                  <th style="width:70px;">총점</th>
+                  <th style="width:90px;">정보</th>
+                </tr>
+              </thead>
               <tbody id="p3-buyer-tbody">
-                <tr><td colspan="5" class="p3-empty-cell">바이어 데이터 준비 중</td></tr>
+                <tr><td colspan="6" class="p3-empty-cell">품목을 선택해 주세요 (위 시장조사 탭의 품목 드롭다운).</td></tr>
               </tbody>
             </table>
           </div>
-          <div style="margin-top:12px;">
-            <button class="btn-download p3-dl-disabled" id="p3-dl-btn" disabled>📄 바이어 보고서 다운로드</button>
+          <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+            <button class="btn-download" id="p3-dl-btn" onclick="generateBuyersPdf()" disabled>📄 바이어 보고서 PDF 다운로드</button>
+            <span id="p3-fx-note" class="p3-fx-note" style="font-size:12px; color:#666;"></span>
           </div>
         </div>
       </div>

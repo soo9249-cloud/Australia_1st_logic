@@ -37,6 +37,7 @@ _EXTRA_MIGRATION_FILES: tuple[str, ...] = (
     "20260419_new_drug_support.sql",
     "20260420_report_content_v2.sql",
     "20260420_au_buyers_stage2.sql",
+    "20260421_au_buyers_business_columns.sql",
 )
 _MGMT_API = "https://api.supabase.com/v1/projects/{ref}/database/query"
 

@@ -897,16 +897,36 @@ def _news_api_response(
     error: str | None = None,
     source: str = "mock",
 ) -> JSONResponse:
-    """프론트(loadNews)와 동일한 계약: { ok, items, error } — DB 저장 없음.
-    source: mock | perplexity (진단용 헤더 X-News-Source)
+    """프론트(loadNews)와 동일한 계약: { ok, items, error, source } — DB 저장 없음.
+    source: mock | perplexity — 헤더 X-News-Source 와 동일(프록시·CORS 에서 헤더 미노출 시 본문으로 판별).
     """
-    resp = JSONResponse(content={"ok": ok, "items": items, "error": error})
+    resp = JSONResponse(content={"ok": ok, "items": items, "error": error, "source": source})
     resp.headers["X-News-Source"] = source
     return resp
 
 
 # 메인 프리뷰 뉴스 카드에 표시할 기사 개수(프롬프트·파싱·mock 보충과 동일)
 _NEWS_LIST_SIZE = 5
+
+
+def _extract_openai_message_text(message: dict[str, Any] | None) -> str:
+    """chat/completions 의 assistant message.content — str 또는 멀티파트 배열 모두 문자열로 병합."""
+    if not message or not isinstance(message, dict):
+        return ""
+    c = message.get("content")
+    if isinstance(c, str):
+        return c
+    if isinstance(c, list):
+        parts: list[str] = []
+        for block in c:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                t = block.get("text") or block.get("content")
+                if isinstance(t, str):
+                    parts.append(t)
+        return "".join(parts)
+    return ""
 
 
 def _normalize_news_item(raw: dict[str, Any], link_fallback: str = "") -> dict[str, Any]:
@@ -1136,7 +1156,11 @@ def get_news() -> JSONResponse:
 
     if isinstance(data, dict):
         err_top = data.get("error")
-        if isinstance(err_top, dict) and (err_top.get("message") or err_top.get("type")):
+        # 일부 클라이언트가 성공 본문에 error:null 만 넣음 — message/code 가 실제 있을 때만 실패 처리
+        if isinstance(err_top, dict) and (
+            (err_top.get("message") and str(err_top.get("message")).strip())
+            or (err_top.get("code") is not None)
+        ):
             logger.warning("[api/news] mock: Perplexity 응답 error 필드 %s", err_top)
             return _news_api_response(mock_items, source="mock")
 
@@ -1147,7 +1171,11 @@ def get_news() -> JSONResponse:
 
     content = ""
     try:
-        content = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
+        ch0 = (data.get("choices") or [{}])[0]
+        msg0 = ch0.get("message") if isinstance(ch0, dict) else None
+        content = _extract_openai_message_text(msg0 if isinstance(msg0, dict) else None)
+        if not content.strip() and isinstance(ch0, dict):
+            content = str(ch0.get("text") or "")
     except Exception as exc:
         logger.warning("[api/news] mock: 응답 choices 파싱 실패: %s", exc)
         return _news_api_response(mock_items, source="mock")
@@ -3808,3 +3836,189 @@ def download_report(
         filename=target.name,
         content_disposition_type=disp,
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 바이어 발굴 (Phase 3) — 2026-04-20 신규 추가
+# 범위: /api/buyers, /api/buyers/{product_id}, /api/buyers/report/generate
+# 1·2단계 (시장분석·수출전략) 엔드포인트는 절대 건드리지 않음
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _fx_rates_safe() -> dict[str, float]:
+    """buyer_discovery.utils.fx_rate 호출. 실패 시 fallback 환율."""
+    try:
+        from buyer_discovery.utils.fx_rate import get_fx_rates
+        return get_fx_rates()
+    except Exception as exc:
+        logger.warning("fx_rate 조회 실패, fallback: %s", exc)
+        return {"aud_krw": 900.0, "aud_usd": 0.65}
+
+
+def _load_buyer_au_products_meta() -> dict[str, dict[str, Any]]:
+    """au_products.json 메타 로드 — 바이어 UI 에서 품목명·INN 표시용.
+
+    기존 _load_au_products_meta() 가 있으면 우선 사용, 없으면 직접 로드.
+    """
+    try:
+        return _load_au_products_meta()  # 기존 헬퍼 재사용 (있으면)
+    except NameError:
+        pass
+    import json as _json
+    path = _BASE_DIR / "crawler" / "au_products.json"
+    if not path.is_file():
+        return {}
+    try:
+        data = _json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for p in data.get("products") or []:
+        pid = p.get("product_id")
+        if pid:
+            out[pid] = p
+    return out
+
+
+@app.get("/api/buyers")
+def buyers_list_summary() -> JSONResponse:
+    """전 품목 바이어 요약 — 프론트 바이어발굴 탭 상단 카드/리스트 용.
+
+    반환:
+      {
+        "fx": {"aud_krw": ..., "aud_usd": ...},
+        "products": [
+          {
+            "product_id": "au-hydrine-004",
+            "product_name_ko": "Hydrine",
+            "buyer_count": 10,
+            "top3": [
+              {"rank": 1, "company_name": "...", "psi_total": 66,
+               "annual_revenue_rank": "TOP 50 (제네릭/특수)", "has_au_factory": "N"}
+            ]
+          }
+        ]
+      }
+    """
+    try:
+        sb = get_supabase_client()
+        rows = (
+            sb.table("au_buyers")
+            .select(
+                "product_id,rank,company_name,psi_total,"
+                "annual_revenue_rank,has_au_factory,is_ma_member,is_gbma_member"
+            )
+            .order("product_id")
+            .order("rank")
+            .execute()
+            .data
+        ) or []
+    except Exception as exc:
+        logger.error("buyers 조회 실패: %s", exc)
+        raise HTTPException(status_code=500, detail=f"DB 조회 실패: {exc}") from exc
+
+    meta = _load_buyer_au_products_meta()
+    grouped: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        pid = r["product_id"]
+        if pid.startswith("_"):
+            continue  # _test 같은 레거시 rows
+        entry = grouped.setdefault(pid, {
+            "product_id": pid,
+            "product_name_ko": (meta.get(pid) or {}).get("product_name_ko") or pid,
+            "product_name_en": (meta.get(pid) or {}).get("product_name_en"),
+            "inn_components": (meta.get(pid) or {}).get("inn_components") or [],
+            "buyer_count": 0,
+            "top3": [],
+        })
+        entry["buyer_count"] += 1
+        if r["rank"] <= 3:
+            entry["top3"].append({
+                "rank": r["rank"],
+                "company_name": r["company_name"],
+                "psi_total": r["psi_total"],
+                "annual_revenue_rank": r.get("annual_revenue_rank"),
+                "has_au_factory": r.get("has_au_factory"),
+                "is_ma_member": r.get("is_ma_member"),
+                "is_gbma_member": r.get("is_gbma_member"),
+            })
+
+    return JSONResponse({
+        "fx": _fx_rates_safe(),
+        "products": list(grouped.values()),
+    })
+
+
+@app.get("/api/buyers/{product_id}")
+def buyers_for_product(product_id: str) -> JSONResponse:
+    """품목별 바이어 TOP 10 상세 — 프론트 행 클릭 시 펼침 카드 용.
+
+    반환: product 메타 + fx + 10개 buyer 전체 필드 (psi_*, therapeutic_categories,
+          factory, 연락처 등).
+    """
+    if not product_id or product_id.startswith("_"):
+        raise HTTPException(status_code=400, detail="잘못된 product_id")
+
+    try:
+        sb = get_supabase_client()
+        rows = (
+            sb.table("au_buyers")
+            .select("*")
+            .eq("product_id", product_id)
+            .order("rank")
+            .execute()
+            .data
+        ) or []
+    except Exception as exc:
+        logger.error("buyers/%s 조회 실패: %s", product_id, exc)
+        raise HTTPException(status_code=500, detail=f"DB 조회 실패: {exc}") from exc
+
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail=f"바이어 데이터 없음: {product_id}. Stage 2 scoring 실행 필요.",
+        )
+
+    meta = _load_buyer_au_products_meta().get(product_id) or {}
+    return JSONResponse({
+        "product_id": product_id,
+        "product_name_ko": meta.get("product_name_ko"),
+        "product_name_en": meta.get("product_name_en"),
+        "inn_components": meta.get("inn_components") or [],
+        "similar_inns": meta.get("similar_inns") or [],
+        "pricing_case": meta.get("pricing_case"),
+        "fx": _fx_rates_safe(),
+        "buyers": rows,
+    })
+
+
+@app.post("/api/buyers/report/generate")
+def buyers_report_generate(payload: dict[str, Any]) -> JSONResponse:
+    """바이어 발굴 PDF 보고서 생성. payload = {"product_id": "..."} 또는 {} (전체).
+
+    내부적으로 report_generator.render_buyers_pdf() 호출.
+    결과 PDF 는 reports/au_buyers_*.pdf 에 저장되고, /api/report/download?name=...
+    로 받을 수 있음.
+    """
+    product_id = (payload or {}).get("product_id") or None
+    try:
+        from report_generator import render_buyers_pdf  # type: ignore
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"report_generator.render_buyers_pdf 가 없습니다: {exc}",
+        ) from exc
+
+    try:
+        pdf_path = render_buyers_pdf(product_id=product_id, output_dir=_REPORTS_DIR)
+    except Exception as exc:
+        logger.exception("render_buyers_pdf 실패")
+        raise HTTPException(status_code=500, detail=f"PDF 생성 실패: {exc}") from exc
+
+    return JSONResponse({
+        "ok": True,
+        "product_id": product_id or "all",
+        "pdf_path": str(pdf_path),
+        "pdf_filename": Path(pdf_path).name,
+        "download_url": f"/api/report/download?name={Path(pdf_path).name}&inline=1",
+    })

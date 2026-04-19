@@ -447,9 +447,23 @@ _BUYERS_ALLOWED: frozenset[str] = frozenset({
     "psi_total",
     "source_flags",
     "evidence_urls",
-    # Stage 2 (2026-04-20) — DB 컬럼과 동기화 (선택 전달)
+    # Stage 2 (2026-04-20)
     "therapeutic_categories",
     "last_researched_at",
+    # 비즈니스·연락처 (20260421_au_buyers_business_columns.sql)
+    "annual_revenue_rank",
+    "has_au_factory",
+    "factory_locations",
+    "is_ma_member",
+    "is_gbma_member",
+    "is_gpce_exhibitor",
+    "tga_artg_count",
+    "company_key",
+    "reasoning",
+    "notes",
+    "website",
+    "email",
+    "phone",
 })
 
 

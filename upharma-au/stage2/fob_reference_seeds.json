@@ -7,7 +7,8 @@
     "pbs_section": "85(General Schedule) | 100_HS(Highly Specialised) | 85_withdrawn(과거 등재 후 철수) | N/A(미등재)",
     "pbs_status": "listed_product_registered | ingredient_listed_product_unlisted | ingredient_listed | unlisted",
     "confidence_score": "0.0-1.0, 함량·제형 불일치나 데이터 공백시 하락",
-    "reference_aemp_aud": "수기 조사 시점의 PBS 공시 AEMP(미등재면 동성분/대체계열 참고가). 배열이면 함량별",
+    "reference_aemp_aud": "수기 조사 시점의 PBS 공시 AEMP(미등재면 동성분/대체계열 참고가). COMPONENT_SUM 에서는 deprecated — components[].reference_aemp_aud_fallback 사용",
+    "components": "COMPONENT_SUM 전용: [{ingredient, pbs_listed, reference_aemp_aud_fallback?, similar_product_retail_ref?}] 서브케이스 1~3 분기",
     "reference_dpmq_aud": "수기 조사 시점의 PBS 공시 DPMQ",
     "reference_retail_aud": "Logic B용 민간 소매 참고가",
     "competitor_brands_on_pbs": "자사 포지셔닝 기준이 되는 경쟁 브랜드명(수기). 크롤러가 실시간으로 가져온 pbs_brands 리스트와 교차 검증 필요",
@@ -113,13 +114,31 @@
       "commercial_withdrawal_flag": false,
       "hospital_channel_only": false,
       "restricted_benefit": false,
-      "reference_aemp_aud": [2.50, 5.06],
       "reference_dpmq_aud": null,
-      "reference_strength_labels": ["Rosuvastatin 단일 range"],
       "reference_retail_aud": null,
       "competitor_brands_on_pbs": ["Crestor", "Rosuvastatin APOTEX", "Rosuvastatin SANDOZ"],
-      "confidence_score": 0.7,
-      "notes": "복합제(스타틴+오메가3) 조합은 호주 등재 이력 없음. 단일 Rosuvastatin은 등재. PBAC 임상우월성 입증 필수."
+      "components": [
+        {
+          "ingredient": "rosuvastatin",
+          "pbs_listed": true,
+          "pbs_code_ref": null,
+          "reference_aemp_aud_fallback": 2.5
+        },
+        {
+          "ingredient": "omega-3",
+          "pbs_listed": false,
+          "similar_product_retail_ref": {
+            "name": "OMACOR 1000mg 28 capsules (Healthylife)",
+            "retail_aud": 48.95,
+            "units_per_pack": 28,
+            "fdc_units_per_reference_unit": 1,
+            "gst_pct_override": 10,
+            "dose_ratio_note": "복합제 1정당 오메가3 1000mg ≈ 참조 1캡 — 1정당 소매 = pack 가격 / 28"
+          }
+        }
+      ],
+      "confidence_score": 0.55,
+      "notes": "스타틴+오메가3 복합제. 서브케이스 2 (등재+미등재). PBAC 임상우월성 입증 필수."
     },
     {
       "product_id": "au-atmeg-006",
@@ -133,13 +152,31 @@
       "commercial_withdrawal_flag": false,
       "hospital_channel_only": false,
       "restricted_benefit": false,
-      "reference_aemp_aud": [2.50, 4.00],
       "reference_dpmq_aud": null,
-      "reference_strength_labels": ["Atorvastatin 단일 range"],
       "reference_retail_aud": null,
       "competitor_brands_on_pbs": ["Lipitor", "Atorvastatin APOTEX", "Atorvastatin SANDOZ"],
-      "confidence_score": 0.7,
-      "notes": "Rosumeg와 동일 구조. 단일 Atorvastatin만 PBS, 복합제 미등재. PBAC 임상우월성 필요."
+      "components": [
+        {
+          "ingredient": "atorvastatin",
+          "pbs_listed": true,
+          "pbs_code_ref": null,
+          "reference_aemp_aud_fallback": 2.5
+        },
+        {
+          "ingredient": "omega-3",
+          "pbs_listed": false,
+          "similar_product_retail_ref": {
+            "name": "OMACOR 1000mg 28 capsules (Healthylife)",
+            "retail_aud": 48.95,
+            "units_per_pack": 28,
+            "fdc_units_per_reference_unit": 1,
+            "gst_pct_override": 10,
+            "dose_ratio_note": "Rosumeg와 동일 유사제품·환산 — 1정당 소매 = pack / 28"
+          }
+        }
+      ],
+      "confidence_score": 0.55,
+      "notes": "Rosumeg와 동일 구조(아토르바스타틴+오메가3). 서브케이스 2. PBAC 임상우월성 필요."
     },
     {
       "product_id": "au-ciloduo-007",

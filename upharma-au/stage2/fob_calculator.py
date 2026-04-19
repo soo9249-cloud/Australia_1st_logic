@@ -8,7 +8,7 @@
 
 **pricing_case 라우팅**
 - DIRECT                  → Logic A, PBS AEMP 직접 사용
-- COMPONENT_SUM           → Logic A, 성분별 AEMP 합산 (PBAC 임상우월성 경고 부착)
+- COMPONENT_SUM           → Logic A, 성분별 AEMP 합산 (서브케이스 1~3: 양쪽 등재 합산 / 등재+소매역산 / 양쪽 역산)
 - ESTIMATE_private        → Logic B, 소매가에서 유통마진 역산
 - ESTIMATE_withdrawal     → 계산 거절 (Commercial Withdrawal 플래그만 표시)
 - ESTIMATE_substitute     → Logic A 변형, 대체계열 AEMP를 참고가로 차용
@@ -232,6 +232,205 @@ def calculate_three_scenarios(
     return out
 
 
+# ---- COMPONENT_SUM 복합제 성분 합산 (서브케이스 3분기) ------------------------
+def _retail_to_supply_equiv_aud(
+    retail_aud: float,
+    *,
+    gst_pct: float,
+    pharmacy_margin_pct: float = DEFAULT_PHARMACY_MARGIN_PCT,
+    wholesale_margin_pct: float = DEFAULT_WHOLESALE_MARGIN_B_PCT,
+) -> float:
+    """소매가에서 GST·약국·도매만 제거한 금액 (수입상 제외). Logic B의 pre_wholesale 와 동일 단계.
+
+    미등재 성분 유사제품 소매 → AEMP 상당 추정에 사용 (위임식:
+    retail / (1+GST) / (1+pharmacy) / (1+wholesale)).
+    """
+    if retail_aud <= 0:
+        raise ValueError("retail_aud must be positive")
+    pre_gst = retail_aud / (1.0 + float(gst_pct) / 100.0)
+    pre_ph = pre_gst / (1.0 + pharmacy_margin_pct / 100.0)
+    pre_wh = pre_ph / (1.0 + wholesale_margin_pct / 100.0)
+    return pre_wh
+
+
+def _similar_ref_effective_retail_aud(ref: dict[str, Any]) -> tuple[float, str]:
+    """유사제품 pack 소매가 → 복합제 1정(또는 1참조단위)당 유효 소매가.
+
+    환산식: effective = retail_aud / units_per_pack * fdc_units_per_reference_unit
+    (예: 28캡슐 팩 48.95 AUD, 1정=1캡 기준이면 48.95/28).
+    """
+    retail = float(ref.get("retail_aud") or 0)
+    if retail <= 0:
+        raise ValueError("similar_product_retail_ref.retail_aud 가 필요합니다.")
+    units = ref.get("units_per_pack")
+    fdc = float(ref.get("fdc_units_per_reference_unit", 1.0))
+    if isinstance(units, (int, float)) and float(units) > 0:
+        eff = retail / float(units) * fdc
+        note = f"pack {float(units):.0f}단위÷{float(units):.0f}×fdc {fdc:g} → 1정당 {eff:.4f} AUD"
+        return eff, note
+    return retail, "units_per_pack 없음 — 소매가 전량을 1:1 단위로 사용"
+
+
+def _listed_component_aemp_aud(
+    comp: dict[str, Any],
+    idx: int,
+    crawler_row: dict[str, Any] | None,
+) -> float:
+    """등재 성분 AEMP: 시드 reference_aemp_aud_fallback 우선, 없으면 첫 성분만 crawler_row 단일 aemp_aud."""
+    fb = comp.get("reference_aemp_aud_fallback")
+    if isinstance(fb, (int, float)) and float(fb) > 0:
+        return float(fb)
+    cr = crawler_row or {}
+    cr_aemp = cr.get("pbs_aemp_aud") or cr.get("aemp_aud")
+    if idx == 0 and isinstance(cr_aemp, (int, float)) and float(cr_aemp) > 0:
+        return float(cr_aemp)
+    ing = comp.get("ingredient") or "?"
+    raise ValueError(
+        f"성분 {ing!r}: PBS AEMP 없음 (reference_aemp_aud_fallback 또는 crawler aemp_aud)"
+    )
+
+
+def _resolve_component_sum_components(
+    components: list[dict[str, Any]],
+    crawler_row: dict[str, Any] | None,
+    warnings: list[str],
+) -> tuple[float, dict[str, Any]]:
+    """서브케이스 1~3에 따라 기준 AEMP(합산)를 산출. 반환: (total_aemp_aud, inputs 메타)."""
+    if len(components) < 2:
+        raise ValueError("components 는 최소 2성분 필요")
+
+    listed_flags = [bool(c.get("pbs_listed")) for c in components]
+    n_listed = sum(1 for f in listed_flags if f)
+    n = len(components)
+    breakdown: list[dict[str, Any]] = []
+
+    # --- 서브케이스 1: 양쪽 모두 PBS 등재 ---
+    if n_listed == n:
+        total = 0.0
+        for i, comp in enumerate(components):
+            v = _listed_component_aemp_aud(comp, i, crawler_row)
+            total += v
+            breakdown.append(
+                {"ingredient": comp.get("ingredient"), "aemp_aud": round(v, 4), "role": "pbs_listed"}
+            )
+        warnings.append("복합제 합산 방식 = 성분별 단일제 PBS AEMP 합산")
+        meta: dict[str, Any] = {
+            "component_sum_subcase": 1,
+            "component_sum_breakdown": breakdown,
+            "component_sum_method": "sum_listed_pbs_aemp",
+        }
+        return total, meta
+
+    # --- 서브케이스 3: 양쪽 모두 미등재 ---
+    if n_listed == 0:
+        total = 0.0
+        for comp in components:
+            ref = comp.get("similar_product_retail_ref")
+            if not isinstance(ref, dict):
+                ing = comp.get("ingredient") or "?"
+                raise ValueError(f"성분 {ing!r}: similar_product_retail_ref 필요 (서브케이스 3)")
+            eff_r, scale_note = _similar_ref_effective_retail_aud(ref)
+            gst_o = ref.get("gst_pct_override")
+            gst_use = float(gst_o) if isinstance(gst_o, (int, float)) else DEFAULT_GST_PCT
+            eq = _retail_to_supply_equiv_aud(eff_r, gst_pct=gst_use)
+            total += eq
+            breakdown.append({
+                "ingredient": comp.get("ingredient"),
+                "supply_equiv_aud": round(eq, 4),
+                "gst_pct_used": gst_use,
+                "retail_scale_note": scale_note,
+                "role": "unlisted_retail_reverse",
+            })
+        warnings.append("복합제 합산 방식 = 양 성분 모두 유사제품 소매가 역산 추정 합산")
+        warnings.append("confidence: 서브케이스 3 — 양 성분 역산 추정, 0.3~0.4 대역 권고")
+        return total, {
+            "component_sum_subcase": 3,
+            "component_sum_breakdown": breakdown,
+            "component_sum_method": "dual_unlisted_retail_reverse",
+        }
+
+    # --- 서브케이스 2: 등재 + 미등재 혼합 (Rosumeg·Atmeg) ---
+    total = 0.0
+    sim_names: list[str] = []
+    for i, comp in enumerate(components):
+        if comp.get("pbs_listed"):
+            v = _listed_component_aemp_aud(comp, i, crawler_row)
+            total += v
+            breakdown.append(
+                {"ingredient": comp.get("ingredient"), "aemp_aud": round(v, 4), "role": "pbs_listed"}
+            )
+        else:
+            ref = comp.get("similar_product_retail_ref")
+            if not isinstance(ref, dict):
+                ing = comp.get("ingredient") or "?"
+                raise ValueError(f"성분 {ing!r}: 미등재인 경우 similar_product_retail_ref 필요")
+            eff_r, scale_note = _similar_ref_effective_retail_aud(ref)
+            gst_o = ref.get("gst_pct_override")
+            gst_use = float(gst_o) if isinstance(gst_o, (int, float)) else DEFAULT_GST_PCT
+            eq = _retail_to_supply_equiv_aud(eff_r, gst_pct=gst_use)
+            total += eq
+            nm = str(ref.get("name") or "유사제품")
+            sim_names.append(nm)
+            breakdown.append({
+                "ingredient": comp.get("ingredient"),
+                "supply_equiv_aud": round(eq, 4),
+                "gst_pct_used": gst_use,
+                "similar_product": nm,
+                "retail_scale_note": scale_note,
+                "role": "unlisted_retail_reverse",
+            })
+    warnings.append(
+        "복합제 합산 방식 = 등재성분 AEMP + 미등재성분 소매가 역산 추정 합산"
+        + (f" (유사제품: {', '.join(sim_names)})" if sim_names else "")
+    )
+    warnings.append("confidence: 서브케이스 2 — 등재+미등재 혼합, 0.5~0.6 대역 권고")
+    return total, {
+        "component_sum_subcase": 2,
+        "component_sum_breakdown": breakdown,
+        "component_sum_method": "listed_plus_unlisted_retail_reverse",
+    }
+
+
+def _component_sum_legacy_max_or_sum(
+    seed: dict[str, Any],
+    crawler_row: dict[str, Any] | None,
+    warnings: list[str],
+) -> tuple[float, dict[str, Any]]:
+    """구 스키마(reference_aemp_aud 배열 등) 폴백 — 합산 또는 DB 단일값."""
+    cr = crawler_row or {}
+    cr_aemp = cr.get("pbs_aemp_aud") or cr.get("aemp_aud")
+    db_aemp_ok = isinstance(cr_aemp, (int, float)) and float(cr_aemp) > 0
+    aemp_ref = seed.get("reference_aemp_aud")
+
+    if db_aemp_ok:
+        aemp = float(cr_aemp)
+        warnings.append(
+            "COMPONENT_SUM(레거시): DB 단일 aemp_aud 사용 — components[] 스키마로 이관 권장."
+        )
+        return aemp, {"component_sum_method": "legacy_db_single", "component_sum_subcase": None}
+
+    if isinstance(aemp_ref, list):
+        nums = [float(v) for v in aemp_ref if isinstance(v, (int, float))]
+        if not nums:
+            raise ValueError("reference_aemp_aud list empty")
+        aemp = sum(nums)
+        warnings.append(
+            "COMPONENT_SUM(레거시): reference_aemp_aud 배열 합산 — "
+            "components[] + 서브케이스 분기로 이관 권장 (과거 max 상한 사용 아님)."
+        )
+        if crawler_row is not None and not db_aemp_ok:
+            warnings.append("crawler_price_fallback_to_seed")
+        return aemp, {"component_sum_method": "legacy_seed_list_sum", "component_sum_subcase": None}
+
+    if isinstance(aemp_ref, (int, float)):
+        aemp = float(aemp_ref)
+        if crawler_row is not None and not db_aemp_ok:
+            warnings.append("crawler_price_fallback_to_seed")
+        return aemp, {"component_sum_method": "legacy_seed_scalar", "component_sum_subcase": None}
+
+    raise ValueError("COMPONENT_SUM: components[] 또는 reference_aemp_aud 가 필요합니다.")
+
+
 # ---- 안내 문구 (Gross vs Net 디스클레이머) ---------------------------------
 def get_disclaimer_text(logic: str) -> str:
     base = (
@@ -371,39 +570,26 @@ def dispatch_by_pricing_case(
             "blocked_reason": None,
         }
 
-    # --- COMPONENT_SUM: 복합제 성분별 합산 ---
+    # --- COMPONENT_SUM: 복합제 성분별 합산 (서브케이스 1~3 + 레거시 폴백) ---
     if case == "COMPONENT_SUM":
-        cr = crawler_row or {}
-        cr_aemp = cr.get("pbs_aemp_aud") or cr.get("aemp_aud")
-        db_aemp_ok = isinstance(cr_aemp, (int, float)) and float(cr_aemp) > 0
-        aemp_ref = seed.get("reference_aemp_aud")
-
-        if db_aemp_ok:
-            aemp = float(cr_aemp)
-            warnings.append(
-                "COMPONENT_SUM: DB 단일 `aemp_aud`(또는 pbs_aemp_aud) 우선. "
-                "복합제 PBAC·성분 합산은 시드 리스트와 병행 검토."
-            )
-        elif isinstance(aemp_ref, list):
-            nums = [float(v) for v in aemp_ref if isinstance(v, (int, float))]
-            if not nums:
-                return _blocked_no_price(pid, case, "reference_aemp_aud list empty")
-            aemp = max(nums)
-            warnings.append(
-                f"성분 AEMP range ${min(nums):.2f}~${max(nums):.2f} 중 상한 사용. "
-                "오메가3 성분은 PBS 비등재로 별도 가산 필요할 수 있음."
-            )
-            if crawler_row is not None and not db_aemp_ok:
-                warnings.append("crawler_price_fallback_to_seed")
-        elif isinstance(aemp_ref, (int, float)):
-            aemp = float(aemp_ref)
-            if crawler_row is not None and not db_aemp_ok:
-                warnings.append("crawler_price_fallback_to_seed")
-        else:
-            return _blocked_no_price(pid, case, "reference_aemp_aud missing for COMPONENT_SUM")
+        components = seed.get("components")
+        try:
+            if isinstance(components, list) and len(components) >= 2:
+                total_aemp, sum_meta = _resolve_component_sum_components(
+                    components, crawler_row, warnings
+                )
+            else:
+                total_aemp, sum_meta = _component_sum_legacy_max_or_sum(
+                    seed, crawler_row, warnings
+                )
+        except ValueError as exc:
+            return _blocked_no_price(pid, case, str(exc))
 
         scenarios = calculate_three_scenarios(
-            logic="A", aemp_aud=aemp, fx_aud_to_krw=fx_aud_to_krw, presets_pct=presets_pct
+            logic="A",
+            aemp_aud=total_aemp,
+            fx_aud_to_krw=fx_aud_to_krw,
+            presets_pct=presets_pct,
         )
         return {
             "logic": "A",
@@ -411,10 +597,10 @@ def dispatch_by_pricing_case(
             "inputs": {
                 "product_id": pid,
                 "pricing_case": case,
-                "aemp_aud": aemp,
+                "aemp_aud": total_aemp,
                 "alpha_market_uplift_pct": ALPHA_MARKET_UPLIFT_PCT,
                 "fx_aud_to_krw": fx_aud_to_krw,
-                "method": "component_sum_max",
+                **sum_meta,
             },
             "warnings": warnings,
             "disclaimer": get_disclaimer_text("A"),

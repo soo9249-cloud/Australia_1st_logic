@@ -10,6 +10,7 @@ architecture note:
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -199,6 +200,32 @@ def test_logic_b_pbs_listed_gst_free() -> None:
 
 
 # --------------------------------------------------------------------------
+# TEST 9: COMPONENT_SUM Rosumeg — 서브케이스2 (등재+소매역산), FOB USD 밴드
+# --------------------------------------------------------------------------
+def _seed_by_product_id(product_id: str) -> dict:
+    path = _HERE / "fob_reference_seeds.json"
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    for s in data.get("seeds", []):
+        if s.get("product_id") == product_id:
+            return s
+    raise RuntimeError(f"seed not found: {product_id}")
+
+
+def test_component_sum_rosumeg_subcase2() -> None:
+    print("\n[T9] COMPONENT_SUM Rosumeg — 서브케이스2, 평균 FOB USD")
+    seed = _seed_by_product_id("au-rosumeg-005")
+    r = dispatch_by_pricing_case(seed)
+    _assert_true(r["logic"] == "A", "logic == A")
+    _assert_true(r["inputs"].get("component_sum_subcase") == 2, "subcase == 2")
+    avg = r["scenarios"]["average"]
+    aud_usd = 0.716
+    usd = float(avg["fob_aud"]) * aud_usd
+    # 합산 AUD ≈ 2.5 + (48.95/28)/1.1/1.3/1.1 → 평균 시나리오 FOB USD ≈ 2.59 전후
+    _assert_close(usd, 2.586, tol=0.03, label="Rosumeg average FOB USD (subcase 2)")
+
+
+# --------------------------------------------------------------------------
 # TEST 8: 입력 검증 — 음수/0은 ValueError
 # --------------------------------------------------------------------------
 def test_input_validation() -> None:
@@ -236,6 +263,7 @@ def main() -> int:
     test_scenario_monotonicity()
     test_logic_a_average_fob_usd_band()
     test_logic_b_pbs_listed_gst_free()
+    test_component_sum_rosumeg_subcase2()
     test_input_validation()
 
     print("\n" + "=" * 70)

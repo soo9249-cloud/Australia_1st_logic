@@ -387,6 +387,7 @@ function _addReportEntry(result, pdfName) {
   const productName = result ? (result.trade_name || result.product_id || '알 수 없음') : '알 수 없음';
   const entry   = {
     id:        Date.now(),
+    product_id: result ? (result.product_id || '') : '',
     product:   productName,
     stage_label: '시장조사',
     report_title: `시장조사 보고서 - ${productName}`,
@@ -628,6 +629,13 @@ function setP2AiSeg(seg) {
   _p2AiSeg = seg === 'private' ? 'private' : 'public';
 }
 
+/** 서버 `_extract_product_id_from_filename` 과 동일 — `(2)` 복사본 → `_2_` 접미사 허용 */
+function _p2ExtractProductIdFromFilename(name) {
+  const base = String(name || '').split(/[/\\]/).pop() || '';
+  const m = base.match(/(?:\d+_)?au_report_(.+?)_\d{8}_\d{6}/i);
+  return m ? m[1] : '';
+}
+
 async function handleP2FileSelect(inputEl) {
   // TODO (CC 병행 Task) — 이 업로드가 신약(needs_price_upload) 케이스이면
   // /api/crawl/price-pdf-upload 로, 아니면 기존 /api/p2/pipeline 로 라우팅.
@@ -636,22 +644,22 @@ async function handleP2FileSelect(inputEl) {
   const statusEl = document.getElementById('p2-upload-status');
   const textEl = document.getElementById('p2-upload-text');
   if (!file) return;
-  if (!file.name.toLowerCase().endsWith('.pdf')) {
-    if (statusEl) {
-      statusEl.style.display = 'block';
-      statusEl.textContent = 'PDF 파일만 업로드 가능합니다.';
-    }
-    return;
-  }
 
   if (statusEl) {
     statusEl.style.display = 'block';
-    statusEl.textContent = '업로드 중…';
+    statusEl.textContent = '검사 중…';
   }
   if (textEl) textEl.textContent = file.name;
 
   try {
     const arr = await file.arrayBuffer();
+    const head = new Uint8Array(arr.slice(0, 4));
+    const isPdfMagic = head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46;
+    if (!isPdfMagic) {
+      if (statusEl) statusEl.textContent = 'PDF 바이너리(%PDF)가 아닙니다. 파일명·확장자와 무관하게 실제 PDF 여부로 판단합니다.';
+      return;
+    }
+    if (statusEl) statusEl.textContent = '업로드 중…';
     const bytes = new Uint8Array(arr);
     let binary = '';
     for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
@@ -666,10 +674,12 @@ async function handleP2FileSelect(inputEl) {
     if (!res.ok || !data.filename) throw new Error(data.detail || `HTTP ${res.status}`);
 
     _p2UploadedReportFilename = data.filename;
-    _p2AiSelectedReportId = '';
-    const aiSelect = document.getElementById('p2-ai-report-select');
-    if (aiSelect) aiSelect.value = '';
-    if (statusEl) statusEl.textContent = `업로드 완료: ${data.filename}`;
+    /* 임의 이름 PDF를 올려도, 목록에서 선택한 보고서의 product_id 로 파이프라인 품목을 유지 */
+    if (statusEl) {
+      statusEl.textContent = data.original_name
+        ? `업로드 완료: ${data.original_name} (저장: ${data.filename})`
+        : `업로드 완료: ${data.filename}`;
+    }
   } catch (err) {
     if (statusEl) statusEl.textContent = `업로드 실패: ${err.message}`;
   }
@@ -785,6 +795,25 @@ async function runP2AiPipeline() {
     return;
   }
 
+  /* 품목 ID는 파일명과 무관 — 상단 품목 선택이 최우선, 그다음 저장된 보고서, 레거시 폴백만 파일명 */
+  const fromTop = (document.getElementById('product-select')?.value || '').trim();
+  let productCode = fromTop;
+  if (!productCode && selectedReport && selectedReport.product_id) {
+    productCode = String(selectedReport.product_id).trim();
+  }
+  if (!productCode && typeof _currentKey === 'string' && _currentKey) {
+    productCode = _currentKey;
+  }
+  if (!productCode) {
+    productCode = _p2ExtractProductIdFromFilename(reportFilename);
+  }
+  if (!productCode) {
+    _showP2AiError(
+      '분석할 품목을 화면 상단에서 먼저 선택해 주세요. PDF 파일명은 어떤 형식이어도 됩니다.',
+    );
+    return;
+  }
+
   if (_p2AiPollTimer) clearInterval(_p2AiPollTimer);
   _resetP2AiResultView();
   _resetP2Progress();
@@ -797,7 +826,11 @@ async function runP2AiPipeline() {
     const res = await fetch('/api/p2/pipeline', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ report_filename: reportFilename, market: _p2AiSeg }),
+      body: JSON.stringify({
+        report_filename: reportFilename,
+        market: _p2AiSeg,
+        product_code: productCode,
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);

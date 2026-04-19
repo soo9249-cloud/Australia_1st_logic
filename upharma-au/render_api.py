@@ -361,26 +361,72 @@ def _pdf_magic_ok(pdf_bytes: bytes) -> bool:
     return bool(pdf_bytes) and pdf_bytes[:4] == b"%PDF"
 
 
+def _pdf_page_count_raw_scan(pdf_bytes: bytes) -> int:
+    """라이브러리가 실패할 때 PDF 바이너리에서 /Count 정수만 스캔 (최후 수단).
+
+    일부 생성기·암호화 조합에서 pypdf/pdfplumber 가 0페이지·예외를 낼 수 있음.
+    """
+    import re
+
+    head = pdf_bytes[: min(len(pdf_bytes), 2_000_000)]
+    found = [int(m.group(1)) for m in re.finditer(rb"/Count\s+(\d{1,6})\b", head)]
+    if not found:
+        return 0
+    # 루트 Pages 의 Count 가 보통 문서 전체 페이지 수 (과도한 값 제외)
+    reasonable = [n for n in found if 1 <= n <= 5000]
+    return max(reasonable) if reasonable else 0
+
+
 def _pdf_page_count(pdf_bytes: bytes) -> int:
-    """PDF 페이지 수. pypdf 실패 시 pdfplumber 로 재시도."""
+    """PDF 페이지 수. pypdf → pdfplumber → 원시 /Count 스캔."""
     if not pdf_bytes:
         return 0
     from io import BytesIO
 
-    try:
-        from pypdf import PdfReader
+    def _reader_cls():  # noqa: ANN202
+        try:
+            from pypdf import PdfReader
 
-        reader = PdfReader(BytesIO(pdf_bytes))
-        return len(reader.pages)
-    except Exception:
-        pass
+            return PdfReader
+        except ImportError:
+            try:
+                from PyPDF2 import PdfReader  # type: ignore
+
+                return PdfReader
+            except ImportError:
+                return None
+
+    Reader = _reader_cls()
+    if Reader is not None:
+        try:
+            try:
+                reader = Reader(BytesIO(pdf_bytes), strict=False)
+            except TypeError:
+                reader = Reader(BytesIO(pdf_bytes))
+            if getattr(reader, "is_encrypted", False):
+                dec = getattr(reader, "decrypt", lambda _p: 0)
+                try:
+                    dec("")
+                except Exception:
+                    pass
+            n = len(reader.pages)
+            if n > 0:
+                return n
+        except Exception as exc:
+            logger.debug("pypdf/PyPDF2 페이지 수 실패: %s", exc)
+
     try:
         import pdfplumber  # type: ignore
 
         with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
-            return len(pdf.pages)
-    except Exception:
-        return 0
+            n2 = len(pdf.pages)
+            if n2 > 0:
+                return n2
+    except Exception as exc:
+        logger.debug("pdfplumber 페이지 수 실패: %s", exc)
+
+    n3 = _pdf_page_count_raw_scan(pdf_bytes)
+    return n3
 
 
 def _extract_pdf_text(pdf_bytes: bytes) -> str:
@@ -555,10 +601,19 @@ def extract_price_from_pdf(
         )
     _n_pages = _pdf_page_count(pdf_bytes)
     if _n_pages < 1:
-        raise HTTPException(
-            status_code=400,
-            detail="PDF 페이지 수를 확인할 수 없습니다. 파일이 손상되었을 수 있습니다.",
-        )
+        if _pdf_magic_ok(pdf_bytes) and len(pdf_bytes) <= 4 * 1024 * 1024:
+            logger.warning(
+                "가격 PDF 업로드: 페이지 수 미상 → 1로 간주 (pip install pypdf pdfplumber 권장)"
+            )
+            _n_pages = 1
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "PDF 페이지 수를 확인할 수 없습니다. "
+                    "서버에 pypdf 설치 여부를 확인하거나, 4MB 이하인지 확인해 주세요."
+                ),
+            )
     if _n_pages > UPLOAD_PDF_MAX_PAGES:
         raise HTTPException(
             status_code=400,
@@ -2624,10 +2679,21 @@ async def p2_upload_pdf(payload: dict[str, Any]) -> JSONResponse:
         )
     _p2_pages = _pdf_page_count(content)
     if _p2_pages < 1:
-        raise HTTPException(
-            status_code=400,
-            detail="PDF 페이지 수를 확인할 수 없습니다.",
-        )
+        # 패키지 미설치·일부 생성기 PDF — 매직·용량으로만 허용 (4페이지 규칙은 완화)
+        if _pdf_magic_ok(content) and len(content) <= 4 * 1024 * 1024:
+            logger.warning(
+                "P2 업로드: 페이지 수 미상 → 1로 간주 후 허용 (pip install pypdf pdfplumber 권장)"
+            )
+            _p2_pages = 1
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "PDF 페이지 수를 확인할 수 없습니다. "
+                    "서버에 `pip install pypdf pdfplumber` 가 되어 있는지 확인하거나, "
+                    "4MB 이하 PDF 인지 확인해 주세요."
+                ),
+            )
     if _p2_pages > UPLOAD_PDF_MAX_PAGES:
         raise HTTPException(
             status_code=400,

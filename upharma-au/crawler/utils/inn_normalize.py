@@ -49,12 +49,36 @@ _INN_SALT_SUFFIXES: tuple[str, ...] = (
 _INN_SPLIT_RE = re.compile(r"\s*(?:\+|,|;|/|&|\band\b|\bwith\b)\s*", flags=re.IGNORECASE)
 
 
+# INN 동의어 매핑 (2026-04-19 추가) — 동일 성분의 다른 INN 명칭 통합.
+# 왼쪽(USAN/별칭/한국식) → 오른쪽(WHO INN, TGA 공식 표기).
+# strip_inn_salt 최종 단계에서 적용 → extract_inn_set 도 자동으로 정규화됨.
+#
+# 기준: TGA 가 사용하는 WHO INN 을 canonical 로 삼음. 예) TGA 는 "hydroxycarbamide"
+# 로 등재하지만 USAN(미국 약전)·au_products.json 은 "hydroxyurea" 사용 → set-equality
+# 매칭 실패. 이 테이블이 해결.
+_INN_ALIASES: dict[str, str] = {
+    # 항암·혈액계
+    "hydroxyurea": "hydroxycarbamide",
+    # 해열·진통
+    "acetaminophen": "paracetamol",
+    # 호흡기 β2-agonist
+    "albuterol": "salbutamol",
+    # 자율신경
+    "adrenaline": "epinephrine",
+    "noradrenaline": "norepinephrine",
+    # 항응고
+    "warfarin sodium": "warfarin",  # salt-strip 이후 추가 방어 (이미 처리됨)
+}
+
+
 def strip_inn_salt(token: str) -> str:
-    """단일 INN 토큰에서 꼬리 염/에스터/수화물 수식어 제거.
+    """단일 INN 토큰에서 꼬리 염/에스터/수화물 수식어 제거 + 동의어 정규화.
 
       "fluticasone propionate" → "fluticasone"
       "salmeterol xinafoate"   → "salmeterol"
       "hydroxycarbamide"       → "hydroxycarbamide"
+      "hydroxyurea"            → "hydroxycarbamide"  (USAN → WHO INN)
+      "acetaminophen"          → "paracetamol"
       ""                       → ""
     """
     t = (token or "").strip().lower()
@@ -73,7 +97,8 @@ def strip_inn_salt(token: str) -> str:
                 t = ""
                 changed = True
                 break
-    return t
+    # 동의어 정규화 — salt 제거 후 최종 canonical 이름으로 매핑.
+    return _INN_ALIASES.get(t, t)
 
 
 def extract_inn_set(*texts: str | None) -> frozenset[str]:

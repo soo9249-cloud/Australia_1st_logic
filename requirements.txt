@@ -12,6 +12,8 @@ jinja2
 anthropic
 pydantic
 reportlab>=4.0
+pypdf>=4.0
+pdfplumber>=0.11
 yfinance>=0.2.36
 beautifulsoup4
 lxml

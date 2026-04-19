@@ -905,13 +905,14 @@ function recalcP2Col(col) {
   }
   price = Math.max(0, price);
 
-  const usd = _p2ScenarioRaw.sgd_usd > 0 ? (price / _p2ScenarioRaw.sgd_usd).toFixed(2) : '—';
-  const krw = _p2ScenarioRaw.sgd_krw > 0 ? Math.round(price * _p2ScenarioRaw.sgd_krw).toLocaleString('ko-KR') : '—';
+  // 기준가·수수료·운임은 모두 USD 기준 가격에 곱하기/나누기(비율)로 적용. 보조줄은 1 USD = usd_krw KRW.
+  const usdKrw = Number(_p2ScenarioRaw.usd_krw) || 0;
+  const krwTxt = usdKrw > 0 ? `${Math.round(price * usdKrw).toLocaleString('ko-KR')} KRW` : '—';
 
   const priceEl = document.getElementById('p2c-price-' + col);
   const subEl   = document.getElementById('p2c-sub-' + col);
   if (priceEl) priceEl.textContent = price.toFixed(2);
-  if (subEl)   subEl.textContent   = `${usd} USD · ${krw} KRW`;
+  if (subEl)   subEl.textContent   = `${price.toFixed(2)} USD · ${krwTxt}`;
 }
 
 /* P2 컬럼 커스텀 옵션 렌더링 */
@@ -1127,6 +1128,9 @@ function _renderP2AiResult(data) {
     _p2ColData[col] = { opts: [] };
     renderP2ColOptions(col, false);
   });
+
+  _p2ScenarioRaw.usd_krw = usdKrw;
+  ['agg', 'avg', 'cons'].forEach((c) => recalcP2Col(c));
 
   _p2UpdateImporterMarginHints(scenarios);
 

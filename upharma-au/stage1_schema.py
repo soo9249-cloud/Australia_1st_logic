@@ -173,6 +173,27 @@ def default_stage1_db_references() -> list[DbReference]:
     ]
 
 
+def _deep_scrub_forbidden_phrases(obj: Any) -> Any:
+    """LLM 산출물에 남은 v2 금지 표현을 제거해 PDF 검증(model_validate)이 실패하지 않게 한다."""
+    def _scrub_str(s: str) -> str:
+        t = _sanitize_legacy_jargon(s)
+        for _ in range(8):
+            if not _FORBIDDEN_PHRASES.search(t):
+                break
+            t = _FORBIDDEN_PHRASES.sub("", t)
+        return re.sub(r"\s{2,}", " ", t).strip()
+
+    if isinstance(obj, str):
+        return _scrub_str(obj)
+    if isinstance(obj, dict):
+        return {k: _deep_scrub_forbidden_phrases(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_deep_scrub_forbidden_phrases(v) for v in obj]
+    if isinstance(obj, BaseModel):
+        return _deep_scrub_forbidden_phrases(obj.model_dump())
+    return obj
+
+
 def build_report_r1_payload_from_pipeline(
     row: dict[str, Any],
     blocks: dict[str, Any],
@@ -245,9 +266,15 @@ def build_report_r1_payload_from_pipeline(
         "strat_partner_direction": _sanitize_legacy_jargon(b.get("block3_partners", "")),
         "strat_price_positioning": _sanitize_legacy_jargon(b.get("block3_pricing", "")),
         "strat_risk_conditions": _sanitize_legacy_jargon(b.get("block3_risks", "")),
-        "refs_perplexity": paper_models,
-        "refs_databases": default_stage1_db_references(),
+        "refs_perplexity": [p.model_dump() for p in paper_models],
+        "refs_databases": [d.model_dump() for d in default_stage1_db_references()],
     }
+
+    data = _deep_scrub_forbidden_phrases(data)
+    if isinstance(data, dict):
+        vs = data.get("verdict_summary")
+        if isinstance(vs, str) and len(vs) > 200:
+            data["verdict_summary"] = vs[:200]
 
     return ReportR1Payload.model_validate(data)
 

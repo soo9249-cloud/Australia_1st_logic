@@ -30,7 +30,7 @@ except ImportError:
     pass
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -2043,6 +2043,8 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
         pdf_path = _REPORTS_DIR / pdf_name
         r1_payload = build_report_r1_payload_from_pipeline(row, blocks, refs, meta)
         render_pdf(r1_payload, pdf_path)
+        sz = pdf_path.stat().st_size
+        print(f"[render_pdf] OK {pdf_name} ({sz} bytes)", flush=True)
     except Exception as exc:
         # PDF 실패는 치명적이지 않음 — 응답은 내보내되 pdf_name 은 None
         print(f"[render_pdf error] {exc}", flush=True)
@@ -2775,6 +2777,8 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
             pdf_name = f"au_p2_report_{product_id}_{_ts}.pdf"
             pdf_path = _REPORTS_DIR / pdf_name
             render_p2_pdf(row, seed, dispatch_result, p2_blocks, fx_rates, pdf_path)
+            sz = pdf_path.stat().st_size
+            print(f"[render_p2_pdf] OK {pdf_name} ({sz} bytes)", flush=True)
             frontend_result["pdf"] = pdf_name
             # Supabase에 pdf_filename 업데이트
             try:
@@ -2926,16 +2930,29 @@ def _latest_report_pdf() -> Path | None:
 
 
 @app.get("/api/report/download")
-def download_report(name: str | None = None, inline: int = 0) -> FileResponse:
+def download_report(
+    name: str | None = Query(None, description="reports 폴더 내 PDF 파일명 (예: au_report_xxx.pdf)"),
+    inline: int = Query(0, ge=0, le=1, description="1이면 inline 미리보기"),
+) -> FileResponse:
     """reports/ 디렉토리의 PDF 를 반환.
     - inline=1: Content-Disposition: inline → 브라우저 iframe 에서 PDF 뷰어로 표시
     - inline=0(기본): attachment → 파일 다운로드
     name 미지정 시 au_report_*·au_p2_report_* 중 수정 시각 최신 파일 반환.
     """
-    if name:
-        target = _REPORTS_DIR / Path(name).name
+    root = _REPORTS_DIR.resolve()
+    if name and str(name).strip():
+        safe_name = Path(str(name).strip()).name
+        if not safe_name.lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail="PDF 파일만 다운로드할 수 있습니다.")
+        target = (root / safe_name).resolve()
+        try:
+            target.relative_to(root)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="잘못된 파일 경로입니다.") from exc
         if not target.is_file():
-            raise HTTPException(status_code=404, detail=f"not found: {name}")
+            raise HTTPException(status_code=404, detail=f"not found: {safe_name}")
+        if target.stat().st_size <= 0:
+            raise HTTPException(status_code=404, detail=f"빈 파일: {safe_name}")
     else:
         latest = _latest_report_pdf()
         if latest is None:
@@ -2943,7 +2960,9 @@ def download_report(name: str | None = None, inline: int = 0) -> FileResponse:
                 status_code=404,
                 detail="생성된 PDF 가 없습니다. 시장 분석 또는 수출 전략 파이프라인 실행 후 다시 시도하세요.",
             )
-        target = latest
+        target = latest.resolve()
+        if not target.is_file() or target.stat().st_size <= 0:
+            raise HTTPException(status_code=404, detail="PDF 파일을 찾을 수 없습니다.")
 
     disp = "inline" if inline else "attachment"
     return FileResponse(

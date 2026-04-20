@@ -1,23 +1,1234 @@
 {
   "_meta": {
-    "description": "Phase 3.5 dry-run 후 사용자(Jisoo)가 Gemini 딥리서치로 채울 시트. 각 바이어 canonical_key 별로 annual_revenue_rank + factory.has / locations / notes 만 채움.",
-    "updated_at": "PENDING",
-    "source": "jisoo gemini deep research"
+    "description": "Phase 3.5 dry-run 후 Jisoo 가 Gemini 딥리서치(2026-04-18 + 2026-04-20) 및 교차검증으로 채운 하드코딩 시트. 각 바이어 canonical_key 별로 annual_revenue_rank + factory.has / count / locations + notes.",
+    "updated_at": "2026-04-20",
+    "source": "Gemini 딥리서치 2건(2026-04-18 종합 59개사 + 2026-04-20 TOP10 딥다이브) 교차검증 + 개별 웹 검증(Arrotex, Viatris Carole Park)",
+    "cross_validation_notes": [
+      "Arrotex: TOP10 딥다이브는 공장=Y(18/20) 이었으나, 59개사 리포트·Dennis Bastas CEO 인터뷰(Health Industry Hub 등) 모두 자체 GMP 공장 '계획 중' 으로 확인 → factory.has=N 확정.",
+      "Viatris: TOP10 딥다이브는 공장 점수 애매(15/20) 이었으나, 59개사 리포트 및 Australian Made/Viatris 공식자료 모두 Carole Park(브리즈번) 공장 가동 중 → factory.has=Y 확정.",
+      "lilly 와 eli_lilly_australia 는 동일 법인(Eli Lilly Australia Pty Ltd) 의 canonical_key 중복. 동일한 값 할당."
+    ],
+    "last_updated": "2026-04-20",
+    "total": 69,
+    "gemini_deep_research_rounds": 1,
+    "distributors_added": 5,
+    "last_revenue_refresh": "2026-04-20"
   },
   "buyers": {
-    "_template": {
-      "canonical_name": "Viatris Australia",
-      "annual_revenue_rank": "TOP 5 (제네릭 1위)",
+    "medsurge": {
+      "canonical_name": "Medsurge Pharma Pty Ltd",
+      "annual_revenue_rank": "TOP 50 (제네릭/특수) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "Section 19A (긴급 수입 특별 승인) 제도 활용 전문, 제네릭·특수의약품 수입 유통",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.zoominfo.com/c/medsurge/358639910",
+        "https://www.ibisworld.com/blog/top-100-manufacturers-2025/61/5644/",
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market"
+      ]
+    },
+    "organon": {
+      "canonical_name": "Organon",
+      "annual_revenue_rank": "TOP 20 (오리지널/바이오시밀러) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "MSD (Merck Sharp & Dohme) 에서 분사한 여성건강 특화 법인, 호주 자체 제조시설 없음",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.dnb.com/business-directory/company-profiles.organon_pharma_pty_ltd.8ecd2cc999146b423ce35c82f25370a4.html",
+        "https://www.organon.com/wp-content/uploads/sites/2/2025/05/2024-FY-Annual-Report.pdf",
+        "https://www.organon.com/australia/news/organon-team-in-australia-growing-to-support-dedicated-focus-on-womens-health/"
+      ]
+    },
+    "astellas": {
+      "canonical_name": "Astellas",
+      "annual_revenue_rank": "TOP 20 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "일본계 다국적 제약사 호주 마케팅·유통 법인",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/astellas-pharma-australia-pty-ltd/512436/",
+        "https://www.statista.com/statistics/1198793/australia-leading-pharmaceutical-companies-on-the-asx-by-market-cap/",
+        "https://www.asx.com.au/markets/trade-our-cash-market/equity-market-prices/top-50-market-cap"
+      ]
+    },
+    "chiesi_australia": {
+      "canonical_name": "Chiesi Australia Pty Ltd",
+      "annual_revenue_rank": "TOP 50 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "호흡기 특화 이탈리아 제약사, 본사 글로벌 공장에서 전량 수입",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.purchasing.tas.gov.au/Documents/DoH_DoH-5883_Chiesi_Australia_Pty_Ltd.pdf",
+        "https://synapse.patsnap.com/article/what-are-the-top-selling-drugs-of-chiesi-farmaceutici",
+        "https://pharma-trend.com/en/chiesi/"
+      ]
+    },
+    "novartis": {
+      "canonical_name": "Novartis",
+      "annual_revenue_rank": "TOP 10 (오리지널) · 2024 AUD 752.6B",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "스위스계 다국적 제약사 호주 마케팅·상업화 법인",
+      "revenue_aud_millions": 752559,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/novartis-australia-pty-limited/2464/",
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market/companies",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market"
+      ]
+    },
+    "pfizer": {
+      "canonical_name": "Pfizer",
+      "annual_revenue_rank": "TOP 5 (오리지널) · 비공개 (Pty Ltd)",
       "factory": {
         "has": "Y",
         "count": 1,
-        "locations": ["Sydney"]
+        "locations": [
+          "멜버른 (Mulgrave)"
+        ]
       },
-      "notes": "구 Mylan, 2020 Pfizer Upjohn 합병"
+      "notes": "2023년 퍼스 공장 Bridgewest 매각(LumaCina/NovaCina 출범) 후 Mulgrave 공장만 유지, 1.5억 USD 투자 AI 자동화 증설",
+      "revenue_aud_millions": null,
+      "revenue_year": 2023,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/pfizer-pfe-australia-pty-ltd/435695/",
+        "https://www.asx.com.au/markets/company/PFE",
+        "https://www.pfizer.com.au"
+      ]
+    },
+    "viatris": {
+      "canonical_name": "Viatris Australia (Alphapharm)",
+      "annual_revenue_rank": "TOP 10 (제네릭 2위) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "Y",
+        "count": 1,
+        "locations": [
+          "브리즈번 (Carole Park, QLD)"
+        ]
+      },
+      "notes": "구 Mylan + Pfizer Upjohn (2020 합병). Alphapharm 브랜드 통합 운영. Carole Park 공장 연 30억 정·캡슐, 450개 제형, 호주 최대 로컬 PBS 공급사",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://ethical.org.au/companies/4684",
+        "https://australianmade.com.au/licensees/alphapharm-pty-ltd-trading-as-viatris",
+        "https://mednews.com.au/viatris-marks-40-years-in-australia/"
+      ]
+    },
+    "abbvie": {
+      "canonical_name": "AbbVie",
+      "annual_revenue_rank": "TOP 10 (오리지널) · 2024 AUD 687M",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "미국계 다국적 제약사 호주 상업화 법인, 호주 로컬 제조시설 없음",
+      "revenue_aud_millions": 687,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/abbvie-pty-ltd/426825/",
+        "https://ethical.org.au/companies/6347",
+        "https://www.abbvie.com.au/media/abbVie-australia-leadership-credits-employees-for-11th-consecutive-year-of-best-workplaces-list-ranking.html"
+      ]
+    },
+    "amgen": {
+      "canonical_name": "Amgen",
+      "annual_revenue_rank": "TOP 20 (오리지널) · 2024 AUD 565M",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "미국계 바이오 제약사 호주 마케팅·임상 법인",
+      "revenue_aud_millions": 565,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market/companies",
+        "https://www.ibisworld.com/australia/company/amgen-australia-pty-limited/13091/",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market"
+      ]
+    },
+    "boehringer_ingelheim": {
+      "canonical_name": "Boehringer Ingelheim",
+      "annual_revenue_rank": "TOP 20 (오리지널) · 2024 AUD 385M",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "독일계 다국적 제약사 호주 마케팅 법인",
+      "revenue_aud_millions": 385,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/boehringer-ingelheim-pty-limited/11636/",
+        "https://www.boehringer-ingelheim.com/au/about-us/who-we-are"
+      ]
+    },
+    "kyowa_kirin": {
+      "canonical_name": "Kyowa Kirin",
+      "annual_revenue_rank": "TOP 50 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "일본 본사 Takasaki 등 글로벌 공장에서 제조 후 수입",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://ir.kyowakirin.com/en/library/earnings/earnings0/main/011117/teaserItems1/00/linkList/04/link/transcript_2023_q4_en.pdf",
+        "https://au.investing.com/equities/kyowa-hakko-kirin-co.,-ltd."
+      ]
+    },
+    "lilly": {
+      "canonical_name": "Eli Lilly Australia Pty Ltd",
+      "annual_revenue_rank": "TOP 10 (오리지널) · 2025 AUD 462M",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "당뇨·비만(GLP-1) 치료제 주력, 자체 글로벌 공장에서 수입. eli_lilly_australia 와 동일 법인",
+      "revenue_aud_millions": 462,
+      "revenue_year": 2025,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/eli-lilly-australia-pty-limited/8587/",
+        "https://www.lilly.com/au/who-we-are/key-facts"
+      ]
+    },
+    "menarini": {
+      "canonical_name": "Menarini",
+      "annual_revenue_rank": "TOP 50 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "이탈리아계 다국적 제약사 호주 마케팅 법인",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.zoominfo.com/c/menarini-australia-pty-ltd/1131246239",
+        "https://www.menarini.com.au/about-us-2/",
+        "https://companiesmarketcap.com/aud/pharmaceuticals/largest-pharmaceutical-companies-by-market-cap/"
+      ]
+    },
+    "merck": {
+      "canonical_name": "Merck (KGaA)",
+      "annual_revenue_rank": "TOP 20 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "독일 Merck KGaA 호주 법인. 미국 Merck & Co (MSD) 와 별개 회사. 과거 호주 공장 모두 폐쇄, 현재 수입 의존",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.zoominfo.com/top-lists/top-manufacturing-pharmaceuticals-companies-in-AU",
+        "https://www.grandviewresearch.com/horizon/outlook/pharmaceutical-market/australia",
+        "https://www.merckgroup.com/investors/creditor-relations/en/Issuer_Profile-Merck-KGaA-Key-facts-and-26Jun2025-PBC_1451521.pdf"
+      ]
+    },
+    "roche": {
+      "canonical_name": "Roche",
+      "annual_revenue_rank": "TOP 10 (오리지널) · 2024 AUD 637M",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "스위스계 다국적 제약사, 과거 호주 제조시설 철수, 전량 수입 의존",
+      "revenue_aud_millions": 637,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/roche-products-pty-limited/838/",
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market/companies",
+        "https://www.pharmiweb.com/article/top-ten-pharmaceutical-companies-in-australia"
+      ]
+    },
+    "sanofi": {
+      "canonical_name": "Sanofi",
+      "annual_revenue_rank": "TOP 10 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "브리즈번(Virginia) 공장 Tismor 등에 매각 완료, 현재 마케팅 법인 전환 전량 수입",
+      "revenue_aud_millions": null,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/sanofi-aventis-australia-pty-limited/1051/",
+        "https://www.grandviewresearch.com/horizon/outlook/pharmaceutical-market/australia"
+      ]
+    },
+    "takeda": {
+      "canonical_name": "Takeda",
+      "annual_revenue_rank": "TOP 20 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "일본계 다국적 제약사 호주 상업화·유통 법인",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/takeda-pharmaceuticals-australia-pty-ltd/509119/",
+        "https://www.takeda.com/newsroom/newsreleases/2021/takeda-achieves-industry-leading-positions-in-2021-access-to-medicine-index/"
+      ]
+    },
+    "besins_healthcare": {
+      "canonical_name": "Besins Healthcare",
+      "annual_revenue_rank": "TOP 50 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "여성호르몬 특화 프랑스계, 유럽 글로벌 공장에서 수입",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.highperformr.ai/company/besins-healthcare",
+        "https://www.zoominfo.com/c/besins-healthcare-ltd/353971455",
+        "http://bullfincher.io/ranking/top-healthcare-companies-in-australia-by-revenue"
+      ]
+    },
+    "norgine": {
+      "canonical_name": "Norgine",
+      "annual_revenue_rank": "TOP 50 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "소화기계 질환 특화 네덜란드계, 글로벌 공장에서 수입",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.zoominfo.com/c/norgine-pty-ltd/1146155985",
+        "https://pharmexcil.com/data/uploads/Top_150_Companies_Ranked_Country_wise.pdf",
+        "https://norgine.com.au/wp-content/uploads/2020/05/Norgine-2019-Annual-Report-Executive-Summary.pdf"
+      ]
+    },
+    "argenx_australia": {
+      "canonical_name": "Argenx Australia Pty Ltd",
+      "annual_revenue_rank": "순위 밖 (소형사) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "2024년 신설 법인, 희귀 면역질환 신약 상업화 초기 단계",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.tga.gov.au/resources/sponsor/argenx-australia-pty-ltd",
+        "https://reports.argenx.com/2024/argenx-group/company-profile.html",
+        "https://reports.argenx.com/2024/_assets/downloads/grp-presentation-of-group-argenx-ar24.pdf"
+      ]
+    },
+    "daiichi-sankyo": {
+      "canonical_name": "Daiichi-Sankyo",
+      "annual_revenue_rank": "TOP 50 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "일본계 항암제 중심 다국적 마케팅 법인",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.grandviewresearch.com/horizon/outlook/intravenous-iron-drugs-market/australia",
+        "https://www.daiichisankyo.com/about_us/corporate_info/group/",
+        "https://www.drugdiscoverytrends.com/pharma-50-the-50-largest-pharmaceutical-companies-in-the-world-for-2025/"
+      ]
+    },
+    "ptc_therapeutics": {
+      "canonical_name": "PTC Therapeutics",
+      "annual_revenue_rank": "순위 밖 (소형사) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "미국계 희귀질환 특화, 호주 상업화 초기 법인",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.tga.gov.au/resources/sponsor/ptc-therapeutics-australia-pty-limited",
+        "https://au.marketscreener.com/quote/stock/PTC-THERAPEUTICS-INC-13450034/company/",
+        "https://au.investing.com/equities/ptc-therape"
+      ]
+    },
+    "healthcare_logistics": {
+      "canonical_name": "Healthcare Logistics",
+      "annual_revenue_rank": "해당 없음 (유통 · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "EBOS 그룹 산하 의약품 전문 3PL(제3자 물류) 파트너. 바이어 아님 — 유통·보관 전담",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.grandviewresearch.com/horizon/outlook/healthcare-third-party-logistics-market/australia",
+        "https://www.6wresearch.com/industry-report/australia-healthcare-logistics-market",
+        "https://www.databridgemarketresearch.com/nucleus/australia-healthcare-logistics-market"
+      ]
+    },
+    "iqvia": {
+      "canonical_name": "IQVIA",
+      "annual_revenue_rank": "해당 없음 (CRO · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "글로벌 임상수탁기관(CRO) 및 헬스케어 데이터 컨설팅사. 바이어 아님",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.iqvia.com/-/media/iqvia/pdfs/australia-and-new-zealand/white-papers/iqvia-anz-evolving-beyond-the-pbs-whitepaper.pdf",
+        "https://www.iqvia.com/insights/the-iqvia-institute/reports-and-publications/reports/understanding-medicine-spending-in-australia",
+        "https://www.iqvia.com/locations/australia-and-new-zealand/library/white-papers/evolving-beyond-the-pbs"
+      ]
+    },
+    "prospection": {
+      "canonical_name": "Prospection",
+      "annual_revenue_rank": "해당 없음 (컨설팅 법인) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "헬스케어 데이터·환자 여정 분석 컨설팅 기업. 바이어 아님",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.ibisworld.com/australia/industry/pharmaceuticals-wholesaling/1873/"
+      ]
+    },
+    "accord_australia": {
+      "canonical_name": "Accord Australia",
+      "annual_revenue_rank": "TOP 50 (제네릭) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "GBMA (호주 제네릭·바이오시밀러 협회) 주요 멤버. Intas Pharmaceuticals (인도) 자회사, 글로벌 제조망에서 완제 수입",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.zoominfo.com/top-lists/top-manufacturing-pharmaceuticals-companies-in-AU",
+        "https://accord.asn.au/wp-content/uploads/2021/06/Accord-Annual-Report-20-21.pdf"
+      ]
+    },
+    "arrotex_pharmaceuticals": {
+      "canonical_name": "Arrotex Pharmaceuticals Pty Ltd",
+      "annual_revenue_rank": "TOP 10 (제네릭 1위) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "PBS 제네릭 처방 50% 점유 호주 최대 제네릭 기업(DBG Health 산하, 연매출 ~15억 AUD). 자체 GMP 완제 공장 '계획 중'(Dennis Bastas CEO 인터뷰) — 현재 전량 인도·유럽 CMO 위탁",
+      "revenue_aud_millions": null,
+      "revenue_year": 2023,
+      "revenue_sources": [
+        "https://www.pharmaspecialists.com/2024/02/op-20-pharmaceutical-companies-in-australia.html",
+        "https://pharmainfocus.com.au/newsPrint_m.asp?newsid=21391",
+        "https://www.ibisworld.com/australia/company/arrotex-australia-group-pty-ltd/522181/"
+      ]
+    },
+    "fresenius_kabi_australia": {
+      "canonical_name": "Fresenius Kabi Australia Pty Ltd",
+      "annual_revenue_rank": "TOP 20 (제네릭/수액 · 2024 AUD 174M",
+      "factory": {
+        "has": "Y",
+        "count": 1,
+        "locations": [
+          "멜버른 (Derrimut)"
+        ]
+      },
+      "notes": "2016년부터 4,700만 USD 투자 Derrimut 수액·무균 주사제 공장 가동. 호주 무균 조제 항암제 60%+ 공급. GBMA 정회원",
+      "revenue_aud_millions": 174,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/fresenius-kabi-australia-pty-limited/432665/",
+        "https://modernslaveryregister.gov.au/statements/CjOhEIJwuPOfCcv/pdf/"
+      ]
+    },
+    "sandoz": {
+      "canonical_name": "Sandoz Pty Ltd",
+      "annual_revenue_rank": "TOP 10 (제네릭/바이오시밀러) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "2023년 노바티스에서 독립 분사. GBMA 주요 임원사. 전량 글로벌 네트워크(유럽 등)에서 수입",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.dnb.com/business-directory/company-profiles.sandoz_pty_ltd.9a4e8688e95706e48b99401cbdd46a7b.html",
+        "https://www.morningstar.com.au/investments/security/XSWX/SDZ",
+        "https://au.investing.com/equities/sandoz"
+      ]
+    },
+    "teva_pharmaceuticals_australia": {
+      "canonical_name": "Teva Pharmaceuticals Australia Pty Ltd",
+      "annual_revenue_rank": "TOP 10 (제네릭/오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "이스라엘 본사 세계 최대 제네릭사. 호주 자체 완제 공장 없음, 글로벌 포트폴리오 수입",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market",
+        "https://www.tevapharma.com.au/about-teva/facts-and-figures/",
+        "https://en.wikipedia.org/wiki/Teva_Pharmaceuticals"
+      ]
+    },
+    "sinapse": {
+      "canonical_name": "Sinapse Pty Ltd",
+      "annual_revenue_rank": "해당 없음 (IT · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "의료 IT 및 경영 컨설팅 회사. 바이어 아님 — 의약품 유통 수입 실적 없음",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.medicinesaustralia.com.au/wp-content/uploads/sites/65/2024/10/MA_Annual-Report-2024_Final_Digital.pdf"
+      ]
+    },
+    "aspen": {
+      "canonical_name": "Aspen Pharmacare Australia",
+      "annual_revenue_rank": "TOP 20 (제네릭/오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "Y",
+        "count": 1,
+        "locations": [
+          "멜버른 (Dandenong, VIC)"
+        ]
+      },
+      "notes": "Dandenong 호주 최대급 GMP 공장 — 연 30억 정·9천만 사쉐·액제·크림제 생산. TGA/FDA/EMA 승인. 자사 포트폴리오 + 글로벌 3자 CMO 수행",
+      "revenue_aud_millions": null,
+      "revenue_year": 2025,
+      "revenue_sources": [
+        "https://www.aspenpharma.com/about-aspen/aspen-in-australasia/",
+        "https://en.wikipedia.org/wiki/Aspen_Pharmacare",
+        "https://au.marketscreener.com/quote/stock/ASPEN-PHARMACARE-HOLDINGS-1413350/company/"
+      ]
+    },
+    "inmunotek_australia": {
+      "canonical_name": "Inmunotek Australia Pty Ltd",
+      "annual_revenue_rank": "순위 밖 (소형사) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "알레르기·면역 특화 스페인 본사 자회사, 스페인 공장에서 조달",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.tga.gov.au/resources/artg/510886",
+        "https://www.inmunotek.com/en/",
+        "https://www.marketreportanalytics.com/reports/australia-pharmaceutical-market-94566"
+      ]
+    },
+    "inova_pharmaceuticals": {
+      "canonical_name": "iNova Pharmaceuticals",
+      "annual_revenue_rank": "TOP 50 (비처방/처방 혼합) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "사모펀드(Pacific Equity Partners 등) 소유, 전 제품 글로벌 외부 CMO 위탁생산",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.preqin.com/insights/research/blogs/deals-ranked-inova-pharmaceuticals-tops-australias-biggest-pharma-buyout-deals-yet",
+        "https://www.preqin.com/data/profile/asset/inova-pharmaceuticals-australia-pty-limited/40727",
+        "https://www.marketresearch.com/MarketLine-v3883/Pharmaceuticals-Australia-43553725/"
+      ]
+    },
+    "msd_australia": {
+      "canonical_name": "Merck Sharp & Dohme (MSD)",
+      "annual_revenue_rank": "TOP 5 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "미국 Merck & Co 호주 법인. 독일 Merck KGaA (merck) 와 별개. 면역항암제(Keytruda 등) 주력 상업화 수입 법인",
+      "revenue_aud_millions": null,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/merck-sharp-dohme-holdings-pty-ltd/3248/",
+        "https://www.zoominfo.com/c/merck-sharp--dohme-australia-pty-ltd/559284163",
+        "https://www.msd-australia.com.au/company-overview/"
+      ]
+    },
+    "novo_nordisk": {
+      "canonical_name": "Novo Nordisk",
+      "annual_revenue_rank": "TOP 10 (오리지널) · 2024 AUD 907M",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "덴마크계 비만·당뇨 파이프라인(GLP-1) 주력, 글로벌 제조망 활용",
+      "revenue_aud_millions": 907,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/novo-nordisk-pharmaceuticals-pty-limited/3866/",
+        "https://hellostake.com/au/invest/wall-st/how-to-buy/nvo",
+        "https://www.morningstar.com.au/investments/security/nyse/NVO"
+      ]
+    },
+    "actor_pharmaceuticals": {
+      "canonical_name": "Actor Pharmaceuticals",
+      "annual_revenue_rank": "TOP 50 (제네릭/특수) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "Formycon·Adalvo·Megalabs 등 글로벌 파트너 의약품 인라이선싱·수입 전문 (Eylea 바이오시밀러 FYB203 등)",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://prospeo.io/c/actor-pharmaceuticals-pty-revenue",
+        "https://www.zoominfo.com/top-lists/top-manufacturing-pharmaceuticals-companies-in-AU",
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market"
+      ]
+    },
+    "aft_pharmaceuticals": {
+      "canonical_name": "AFT Pharmaceuticals",
+      "annual_revenue_rank": "TOP 50 (비처방/제네릭)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "뉴질랜드 본사 ASX/NZX 이중 상장사, 호주 매출이 전체의 55%+. Maxigesic 등 자사제 외 전량 해외 CMO 위탁",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/aft-pharmaceuticals-limited/441668/",
+        "https://www.morningstar.com.au/investments/security/ASX/AFP",
+        "https://simplywall.st/stocks/au/pharmaceuticals-biotech/asx-afp/aft-pharmaceuticals-shares"
+      ]
+    },
+    "ego_pharmaceuticals": {
+      "canonical_name": "Ego Pharmaceuticals",
+      "annual_revenue_rank": "비처방 전문 (피부과 OTC) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "Y",
+        "count": 1,
+        "locations": [
+          "멜버른 (Braeside, VIC)"
+        ]
+      },
+      "notes": "피부과 OTC 주력이나 Braeside 에 1억 AUD 투자로 최근 생산 능력 2배 확장한 대형 GMP 제조시설 운영",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/ego-pharmaceuticals-holdings-pty-ltd/12716/",
+        "https://www.aph.gov.au/DocumentStore.ashx?id=a94b0d02-b502-421f-beb5-a7a1cf56597f&subId=301623",
+        "https://leadiq.com/c/ego-pharmaceuticals/5a1d7cca240000240056a4ff"
+      ]
+    },
+    "eli_lilly_australia": {
+      "canonical_name": "Eli Lilly Australia Pty Ltd",
+      "annual_revenue_rank": "TOP 10 (오리지널) · 2024 AUD 462M",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "lilly canonical_key 와 동일 법인 (survivors 중복). 당뇨·비만(GLP-1) 주력, 글로벌 공장 수입",
+      "revenue_aud_millions": 462,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/eli-lilly-australia-pty-limited/8587/",
+        "https://www.lilly.com/au/who-we-are/key-facts",
+        "https://en.wikipedia.org/wiki/Eli_Lilly_and_Company"
+      ]
+    },
+    "gsk": {
+      "canonical_name": "GlaxoSmithKline Australia Pty Ltd",
+      "annual_revenue_rank": "TOP 10 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "2022년 멜버른 Boronia 호흡기·액상 제제 공장 최종 폐쇄, 전량 수입 전환",
+      "revenue_aud_millions": null,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/glaxosmithkline-holdings-pty-ltd/8961/",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market",
+        "https://www.gsk.com/media/kn0bknmd/annual-report-2025.pdf"
+      ]
+    },
+    "lundbeck_australia": {
+      "canonical_name": "Lundbeck Australia Pty Ltd",
+      "annual_revenue_rank": "TOP 50 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "덴마크계 CNS(중추신경계) 전문 다국적 마케팅 법인",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.lundbeck.com/au/about-us/This-is-Lundbeck/At-a-glance",
+        "https://www.lundbeck.com/content/dam/lundbeck-com/masters/global-site/annual-reporting/2024/Lundbeck_Annual_Report_2024.pdf.coredownload.pdf",
+        "https://greatplacetowork.com.au/companies/lundbeck-australia-pty-ltd/"
+      ]
+    },
+    "mayne_pharma": {
+      "canonical_name": "Mayne Pharma",
+      "annual_revenue_rank": "TOP 20 (제네릭/오리지널) · 2024 AUD 414M",
+      "factory": {
+        "has": "Y",
+        "count": 1,
+        "locations": [
+          "애들레이드 (Salisbury, SA)"
+        ]
+      },
+      "notes": "Salisbury 12,000㎡ 공장에 연방정부 MMI 지원금(480만 AUD) 포함 총 1,800만 AUD 투입 자동화 고속 캡슐 충전 라인 최근 증설",
+      "revenue_aud_millions": 414,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://stockanalysis.com/quote/asx/MYX/market-cap/",
+        "https://www.morningstar.com.au/investments/security/ASX/MYX",
+        "https://www.tipranks.com/stocks/au:myx"
+      ]
+    },
+    "stallergenes_australia": {
+      "canonical_name": "Stallergenes Australia Pty Ltd",
+      "annual_revenue_rank": "순위 밖 (소형사) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "알레르기 면역요법(SLIT/SCIT) 특화, 스위스·프랑스 등 글로벌 본사 공장에서 조달",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.stallergenesgreer.com/au/about-stallergenes-greer-australia",
+        "https://www.stallergenesgreer.com/sites/default/files/press-releases/h1_2014_revenues_and_results_gb_24_07_03.pdf",
+        "https://www.tga.gov.au/sites/default/files/auspar-american-house-dust-mite-european-house-dust-mite-170809.docx"
+      ]
+    },
+    "theramex": {
+      "canonical_name": "Theramex",
+      "annual_revenue_rank": "순위 밖 (소형사) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "여성건강 특화 영국계 수입·유통 마케팅 법인",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.theramex.com/au/our-history/",
+        "https://www.grandviewresearch.com/horizon/outlook/menopause-market/australia",
+        "https://www.theramex.com/about-theramex/"
+      ]
+    },
+    "avallon_pharmaceuticals": {
+      "canonical_name": "Avallon Pharmaceuticals Pty Ltd",
+      "annual_revenue_rank": "비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "자체 공장이 없는 소형 의약품 도매/유통사. Ciloduo 완제 턴키 독점 공급 제안 방식의 수출 타겟으로 고려 가능.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://creditorwatch.com.au/credit/profile/63126872848/AVALLON-PHARMACEUTICALS-PTY-LIMITED",
+        "https://www.zoominfo.com/c/avallon-pharmaceuticals-pty-ltd/474738903",
+        "https://www.tga.gov.au/resources/sponsor/avallon-pharmaceuticals-pty-ltd"
+      ]
+    },
+    "baxter_healthcare": {
+      "canonical_name": "Baxter Healthcare Pty Ltd",
+      "annual_revenue_rank": "TOP 20 (특수/수액) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "Y",
+        "count": 1,
+        "locations": []
+      },
+      "notes": "호주 병원 수액·주사제 시장의 약 95% 점유 핵심 제조사. Gastiin 주사제 등 병원용 주사제 라인의 강력한 상업화 파트너로 매우 적합.",
+      "revenue_aud_millions": null,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/baxter-healthcare-pty-limited/3030/",
+        "https://en.wikipedia.org/wiki/Australian_Competition_and_Consumer_Commission_v_Baxter_Healthcare_Pty_Ltd",
+        "https://www.baxterhealthcare.com.au"
+      ]
+    },
+    "bayer": {
+      "canonical_name": "Bayer Australia Ltd",
+      "annual_revenue_rank": "TOP 20 (오리지널) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "Gadvoa의 오리지널 제조사이자 다국적 빅파마의 호주 마케팅 법인. 자사 글로벌 파이프라인 집중으로 한국산 제네릭 완제의 직접 바이어로는 적합도 낮음.",
+      "revenue_aud_millions": null,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/bayer-australia-ltd/698/",
+        "https://www.kenresearch.com/australia-pharmaceutical-market",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market"
+      ]
+    },
+    "boucher_&_muir": {
+      "canonical_name": "Boucher & Muir Pty Ltd",
+      "annual_revenue_rank": "TOP 50 (제네릭/특수) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "ADVANZ PHARMA 산하로 호주·뉴질랜드 틈새 특수의약품 수입 유통에 특화. Sereterol 등 특수 제형(흡입기) 호주 진출 파트너로 유망.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://bnmgroup.advanzpharma.com/about",
+        "https://www.cinven.com/news-insights/amco-acquires-australian-company-boucher-and-muir/",
+        "https://bnmgroup.advanzpharma.com"
+      ]
+    },
+    "cipla_australia": {
+      "canonical_name": "Cipla Australia Pty Ltd",
+      "annual_revenue_rank": "TOP 50 (제네릭) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "인도계 글로벌 제네릭사로 탄탄한 자체 글로벌 제조망 보유. Sereterol 등 주요 호흡기 품목이 겹칠 가능성 커 파트너십 매력도 낮음.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.pharmaspecialists.com/2024/02/op-20-pharmaceutical-companies-in-australia.html",
+        "https://www.statista.com/statistics/986087/india-cipla-global-revenue-by-region/",
+        "https://www.morningstar.com.au/investments/security/NSE/CIPLA"
+      ]
+    },
+    "demogen_australia_pty_ltd_trading_as_demogen_pharmaceuticals": {
+      "canonical_name": "Demogen Australia Pty Ltd trading as DEMOGEN Pharmaceuticals",
+      "annual_revenue_rank": "비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "특수 수술용 및 병원용 주사제 제네릭 수입 유통에 집중하는 소형 기업. Gastiin 주사제 등의 B2B 완제 수출 타겟으로 접근 적합.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.tga.gov.au/resources/prescription-medicines-registrations/sugammadex-demogen-demogen-australia-pty-ltd-trading-demogen-pharmaceuticals",
+        "https://www.tga.gov.au/resources/sponsor/demogen-australia-pty-ltd-trading-demogen-pharmaceuticals",
+        "https://abr.business.gov.au/ABN/View?id=77681420280"
+      ]
+    },
+    "generic_health": {
+      "canonical_name": "Generic Health Pty Ltd",
+      "annual_revenue_rank": "TOP 20 (제네릭) · ? AUD 119M",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "글로벌 제약사 Lupin의 자회사로 호주 내 제네릭 4위권 고속 성장. 인도 모회사 파이프라인 의존도 높아 신규 도입 유인 제한적.",
+      "revenue_aud_millions": 119,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/generic-health-pty-ltd/468779/",
+        "https://www.kenresearch.com/australia-generic-pharmaceuticals-market",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market"
+      ]
+    },
+    "gm_pharma_international": {
+      "canonical_name": "GM Pharma International Pty Ltd",
+      "annual_revenue_rank": "niche · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "호주 대형 약국 체인(Sigma/Chemist Warehouse) 연관 소형 제네릭 유통망 추정. Atmeg·Gastiin 등 대중적 제네릭의 약국 유통 PB 채널로 고려 가능.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.tga.gov.au/resources/sponsor/gm-pharma-international-pty-ltd",
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market/companies",
+        "https://www.ibisworld.com/australia/company/gm-holdings-australia-pty-ltd/30/"
+      ]
+    },
+    "helix_pharmaceuticals": {
+      "canonical_name": "Helix Pharmaceuticals Pty Ltd",
+      "annual_revenue_rank": "niche · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "unknown",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "과거 TGA 허가 이력은 있으나 실체·규모 파악 어려운 소형 페이퍼 컴퍼니 추정. 핵심 품목 Sereterol 수출 파트너로는 리스크 큼.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.tga.gov.au/resources/sponsor/helix-pharmaceuticals-pty-ltd",
+        "https://www.asx.com.au/markets/company/HLX",
+        "https://www.intelligentinvestor.com.au/shares/tse-hbp/helix-biopharma-corp"
+      ]
+    },
+    "ipca_pharma": {
+      "canonical_name": "Ipca Pharma (Australia) Pty Ltd",
+      "annual_revenue_rank": "TOP 50 (제네릭) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "인도 Ipca Labs의 호주 유통 법인으로 모든 의약품을 모회사 제조시설에서 전량 수입. 자사 소화기 포트폴리오 있어 Gastiin 완제 외부 조달 동기 약함.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.tga.gov.au/resources/sponsor/ipca-pharma-australia-pty-ltd",
+        "https://portal.tradebrains.in/stocks/IPCALAB"
+      ]
+    },
+    "johnson_&_johnson_pacific": {
+      "canonical_name": "Johnson & Johnson Pacific Pty Ltd",
+      "annual_revenue_rank": "TOP 10 (오리지널/OTC) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "다국적 빅파마 법인으로 자사 블록버스터 오리지널·OTC 마케팅 위주. Gastiin 제네릭 등의 수출 바이어로는 전략적 부합도 떨어짐.",
+      "revenue_aud_millions": null,
+      "revenue_year": 2024,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/johnson-johnson-pty-ltd/209/",
+        "https://www.expertmarketresearch.com.au/reports/australia-pharmaceutical-market",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market"
+      ]
+    },
+    "lumacina_australia": {
+      "canonical_name": "LumaCina Australia Pty Ltd",
+      "annual_revenue_rank": "TOP 50 (특수/주사제) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "Y",
+        "count": 1,
+        "locations": [
+          "Perth, WA"
+        ]
+      },
+      "notes": "화이자 퍼스 공장 인수해 무균 주사제 CDMO·상업화 병행. Gastiin 등 주사제 완제 수입보다 자사 공장 수주 영업 집중 가능성 높음.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market/companies",
+        "https://prospeo.io/c/lumacina-bridgewest-perth-pharma-revenue",
+        "https://lumacina.com.au"
+      ]
+    },
+    "medreich_australia": {
+      "canonical_name": "Medreich Australia Pty Ltd",
+      "annual_revenue_rank": "niche · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "일본 Meiji 그룹 소속으로 아시아·유럽 거점 공장 활용 위탁생산·공급 주력. Rosumeg 등 한국산 제네릭 인라이선싱 유인 약함.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.medreich.com/about-global-presence.html",
+        "https://www.tga.gov.au/resources/sponsor/medreich-australia-pty-ltd",
+        "https://www.icra.in/Rating/GetRationalReportFilePdf/124341~Medreich%20Limited.pdf"
+      ]
+    },
+    "micro_labs": {
+      "canonical_name": "Micro Labs Pty Ltd",
+      "annual_revenue_rank": "비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "글로벌 13개 제조 시설 보유 인도계 다국적 제네릭사의 호주 마케팅 법인. Atmeg 관련 심혈관계 파이프라인 자사 공장 직접 조달 가능해 외부 도입 필요성 낮음.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "http://bullfincher.io/ranking/largest-pharmaceutical-companies-in-australia-by-market-cap",
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market",
+        "https://www.zoominfo.com/top-lists/top-manufacturing-pharmaceuticals-companies-in-AU"
+      ]
+    },
+    "orion_pharma_pty": {
+      "canonical_name": "Orion Pharma (AUS) Pty Limited",
+      "annual_revenue_rank": "비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "호주 내 공장 없음, 핀란드 본사로부터 자체 호흡기 포트폴리오(Easyhaler 등) 조달. Sereterol(흡입기) 분야 직접 경쟁사라 바이어로 매우 부적합.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.orionpharma.com/newsroom/all-news/releases/stock-releases/2025/orion-group-financial-statement-release-januarydecember-2024/",
+        "https://www.orionpharma.com/newsroom/all-news/releases/stock-releases/2025/orion-group-interim-report-januaryseptember-2025/",
+        "https://insights.citeline.com/pharma-insights/the-worlds-top-100-pharma-companies-2024-sales-rankings-Z47XBTXVNJEXFCKYU7Q4EJ45XI/"
+      ]
+    },
+    "pharmacor": {
+      "canonical_name": "Pharmacor Pty Ltd",
+      "annual_revenue_rank": "TOP 20 (제네릭) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "Y",
+        "count": 1,
+        "locations": [
+          "Melbourne, VIC"
+        ]
+      },
+      "notes": "인도 Alkem 산하이나 호주 멜버른 자체 R&D·제조 시설 가동, CDMO 사업 영위. 모회사 수입·자체 조달 기반 강해 Rosumeg/Ciloduo 도입 장벽 높을 수 있음.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.alkemlabs.com/pdf/subsidiary-account/19-20/Pharmacor_Pty_Limited-Australia.pdf",
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market",
+        "https://www.imarcgroup.com/australia-pharmaceutical-market"
+      ]
+    },
+    "southern_cross_pharma": {
+      "canonical_name": "Southern Cross Pharma Pty Ltd",
+      "annual_revenue_rank": "TOP 50 (제네릭) · 2021 AUD 30M",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "2021년 다국적사 Lupin 피인수되어 현재 Generic Health 와 통합 시너지. 인도 본사 풍부한 파이프라인으로 Ciloduo 등 외부 완제 수입 매력도 낮음.",
+      "revenue_aud_millions": 30,
+      "revenue_year": 2021,
+      "revenue_sources": [
+        "https://www.lupin.com/media/press-releases/lupin-acquires-southern-cross-pharma-in-australia",
+        "https://economictimes.com/industry/healthcare/biotech/pharmaceuticals/lupin-acquires-australias-southern-cross-pharma/articleshow/84884854.cms",
+        "https://www.mordorintelligence.com/industry-reports/australia-pharmaceutical-market/companies"
+      ]
+    },
+    "strides_pharma_science": {
+      "canonical_name": "Strides Pharma Science Pty Ltd",
+      "annual_revenue_rank": "niche · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "호주 점유율 1위 Arrotex 에 인도 제조공장 대규모 물량 납품하는 핵심 B2B 공급사. 호주 내 자체 상업화보다 타사 제품 생산 목적이라 바이어 타겟으로 부적합.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.tga.gov.au/resources/sponsor/strides-pharma-science-pty-ltd",
+        "https://www.careratings.com/upload/CompanyFiles/PR/202507120752_STRIDES_PHARMA_SCIENCE_LIMITED.pdf",
+        "https://portal.tradebrains.in/stocks/STAR"
+      ]
+    },
+    "sun_pharma_anz": {
+      "canonical_name": "Sun Pharma ANZ Pty Ltd",
+      "annual_revenue_rank": "TOP 20 (제네릭/특수) · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "안과·종양·피부과 강점 인도 글로벌 빅파마의 호주 법인, 자체 제조 기반 압도적. Atmeg·Ciloduo 등 자사 주력 경쟁 영역에서 타사 제네릭 완제 우선 도입 확률 매우 낮음.",
+      "revenue_aud_millions": null,
+      "revenue_year": null,
+      "revenue_sources": [
+        "https://www.ibisworld.com/australia/company/sun-pharma-anz-pty-ltd/468778/",
+        "https://sunpharma.com/wp-content/uploads/2024/07/Sun-Pharma-ANZ-Pty-Ltd.pdf",
+        "https://www.grandviewresearch.com/horizon/outlook/pharmaceutical-market/australia"
+      ]
+    },
+    "sigma_healthcare": {
+      "canonical_name": "Sigma Healthcare Limited",
+      "annual_revenue_rank": "TOP 1 (도매·체인)",
+      "factory": {
+        "has": "unknown",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "Sigma는 Chemist Warehouse를 포함한 호주 최대 약국 체인과 도매 네트워크를 운영하며, 한국유나이티드제약의 완제 의약품 및 OTC 수출을 위한 안정적 유통 파트너로 적합하다. 병원 약국 서비스와 물류 역량을 활용해 대규모 공급망 진입이 용이할 전망이다.",
+      "role": "distributor",
+      "asx_code": "SIG",
+      "pharmacy_chains": [
+        "Amcal",
+        "Chemist Warehouse",
+        "Guardian",
+        "PharmaSave",
+        "Discount Drug Stores"
+      ],
+      "website": "www.sigmahealthcare.com.au",
+      "evidence_urls": [
+        "https://en.wikipedia.org/wiki/Sigma_Healthcare",
+        "https://www.sigmahealthcare.com.au",
+        "https://www.marketindex.com.au/asx/sig",
+        "https://www.asx.com.au/markets/company/SIG"
+      ]
+    },
+    "ebos_group": {
+      "canonical_name": "EBOS Group Limited",
+      "annual_revenue_rank": "TOP 1 (도매·체인) · 2025 FY AUD 12.5B [2]",
+      "factory": {
+        "has": "unknown",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "EBOS는 호주 최대 제약 도매 및 체인 운영사로, 한국유나이티드제약의 완제 의약품/OTC 수출 파트너로 최적. Symbion 도매망과 TerryWhite Chemmart, HPS 병원약국 채널을 통해 광범위한 유통망 확보 가능.",
+      "role": "distributor",
+      "asx_code": "EBO",
+      "pharmacy_chains": [
+        "Symbion",
+        "TerryWhite Chemmart",
+        "HPS Pharmacies"
+      ],
+      "website": "https://www.ebosgroup.com",
+      "evidence_urls": [
+        "https://www.ibisworld.com/australia/company/ebos-group-limited/4955/",
+        "https://www.ebosgroup.com",
+        "https://en.wikipedia.org/wiki/EBOS_Group",
+        "https://investor.ebosgroup.com/static-files/ac436b10-6d34-42c9-90e5-5784e1695241"
+      ]
+    },
+    "wesfarmers_health": {
+      "canonical_name": "Wesfarmers Health",
+      "annual_revenue_rank": "TOP 3 (도매·체인)",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "웨스파머스 헬스는 API를 통해 강력한 제약 도매 네트워크와 Priceline Pharmacy 체인을 보유해 한국유나이티드제약의 완제 의약품 및 OTC 수출에 이상적인 파트너. 프랜차이즈 및 도매 채널을 활용한 안정적 유통이 가능하며, 최근 Pharmacy 4 Less 인수로 체인 확장 중.",
+      "role": "distributor",
+      "asx_code": "WES",
+      "pharmacy_chains": [
+        "Priceline Pharmacy",
+        "Pharmacy 4 Less",
+        "Your Chemist Shop"
+      ],
+      "website": "https://www.wesfarmershealth.com.au",
+      "evidence_urls": [
+        "https://www.wesfarmers.com.au/our-businesses/wesfarmers-health",
+        "https://www.wesfarmershealth.com.au/who-we-are",
+        "https://en.wikipedia.org/wiki/Wesfarmers"
+      ]
+    },
+    "chemist_warehouse_group": {
+      "canonical_name": "CW Group Holdings Limited",
+      "annual_revenue_rank": "TOP 1 (체인) · 2025 HY AUD 5.15B[5]",
+      "factory": {
+        "has": "N",
+        "count": 0,
+        "locations": []
+      },
+      "notes": "Chemist Warehouse는 호주 최대 약국 체인으로 Sigma와의 합병 후 도매·유통 역량이 강화되어 한국유나이티드제약의 완제 Rx/OTC 의약품 수출에 이상적인 파트너. 대형 네트워크(600+ 매장)와 국제 판매 실적을 활용해 안정적 공급망 구축 가능.",
+      "role": "distributor",
+      "asx_code": "SIG",
+      "pharmacy_chains": [
+        "Chemist Warehouse"
+      ],
+      "website": "https://www.chemistwarehouse.com.au",
+      "evidence_urls": [
+        "https://pharmacydaily.com.au/news/sigma-cwh-merger-complete/113780",
+        "https://en.wikipedia.org/wiki/Chemist_Warehouse",
+        "https://www.nutraingredients.com/Article/2025/02/05/sigma-healthcares-merger-with-chemist-warehouse-completed/"
+      ]
+    },
+    "national_pharmacies": {
+      "canonical_name": "national_pharmacies",
+      "annual_revenue_rank": "niche · 비공개 (Pty Ltd)",
+      "factory": {
+        "has": "unknown",
+        "count": null,
+        "locations": []
+      },
+      "notes": "제공된 검색 결과에서 National Pharmacies에 대한 정보를 찾을 수 없습니다. 검색 결과는 한국의 약사협동조합(대한약국협동조합, 아로파약사협동조합)에 관한 내용만 포함하고 있어 남호주 기반 약국 협동조합 정보 조회가 불가능합니다.",
+      "role": "distributor",
+      "asx_code": null,
+      "pharmacy_chains": [],
+      "website": null,
+      "evidence_urls": [
+        "https://www.dailypharm.com/user/news/151667",
+        "https://blog.naver.com/PostView.naver?blogId=wwwowwwo&logNo=201118302",
+        "https://www.dailypharm.com/user/news/146476",
+        "https://blog.naver.com/nicebongs/150155031361",
+        "https://dailypharm.com/user/news/101915"
+      ]
     }
   },
   "tier_score_mapping": {
-    "TOP 5":  30,
+    "TOP 5": 30,
     "TOP 10": 25,
     "TOP 20": 20,
     "TOP 50": 15,

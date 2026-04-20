@@ -22,6 +22,7 @@ psi_total = Σ(지표 × 가중치), 0~100 스케일
 from __future__ import annotations
 
 import json
+import os
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
@@ -29,28 +30,53 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-_ENV_PATH = Path(r"C:/Users/user/Desktop/Australia_1st_logic/.env")
-_UPHARMA_PATH = Path(r"C:/Users/user/Desktop/Australia_1st_logic/upharma-au")
+# ─────────────────────────────────────────────────────────────────────
+# 경로 해석 — 상대 경로 우선, 외부 폴더는 환경변수 override 가능 (배포 대응)
+# ─────────────────────────────────────────────────────────────────────
+#   · _BUYER_DIR   = upharma-au/buyer_discovery/   (__file__ 기준)
+#   · _UPHARMA_PATH = upharma-au/                   (상위 1단계)
+#   · _PROJECT_ROOT = Australia_1st_logic/          (상위 2단계)
+#   · _SEEDS       = upharma-au/buyer_discovery/seeds/ (레포 내부, 이식성 ✓)
+#   · 외부 Documents 폴더 경로는 BUYER_DISCOVERY_DATA_DIR 환경변수로 override 가능
+#     (미설정 시 seeds/ 내부 파일만 사용 → Render/CI 배포 OK)
 
+_BUYER_DIR = Path(__file__).resolve().parent
+_UPHARMA_PATH = _BUYER_DIR.parent
+_PROJECT_ROOT = _UPHARMA_PATH.parent
+
+_ENV_PATH = _PROJECT_ROOT / ".env"
 load_dotenv(_ENV_PATH, override=True)
 sys.path.insert(0, str(_UPHARMA_PATH))
 
 from crawler.db.supabase_insert import get_supabase_client  # noqa: E402
 
-_SEEDS = _UPHARMA_PATH / "buyer_discovery" / "seeds"
+_SEEDS = _BUYER_DIR / "seeds"
 _AU_PRODUCTS_JSON = _UPHARMA_PATH / "crawler" / "au_products.json"
-_SURVIVORS_JSON = Path(
-    r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/survivors_expanded_v5.json"
-)
+
+# 외부 데이터 폴더 (Documents) 는 선택적 사용 — 환경변수로 override
+# Jisoo 로컬: "C:/Users/user/Documents/Claude/Projects/AX 호주 final"
+# 배포 (Render): 환경변수 미설정 → seeds/ 내부 파일만 사용
+_EXT_DATA_DIR_ENV = os.environ.get("BUYER_DISCOVERY_DATA_DIR")
+_EXT_DATA_DIR = Path(_EXT_DATA_DIR_ENV) if _EXT_DATA_DIR_ENV else None
+
+
+def _resolve_file(filename: str, default_seeds: bool = True) -> Path:
+    """파일 해석. 외부 폴더 우선, 없으면 seeds/ fallback."""
+    if _EXT_DATA_DIR and (_EXT_DATA_DIR / filename).is_file():
+        return _EXT_DATA_DIR / filename
+    return _SEEDS / filename
+
+
+_SURVIVORS_JSON = _resolve_file("survivors_expanded_v5.json")
 _CATEGORIES_JSON = _SEEDS / "company_categories.json"
 _REVENUE_JSON = _SEEDS / "company_revenue.json"
 _MFR_MATCH_JSON = _SEEDS / "survivors_manufacturer_match.json"
-# 45개 딥리서치 수동 정정본 — Documents 쪽이 진짜 완성본 (seeds/ 는 스텁만 있음)
-_HARDCODE_JSON = Path(
-    r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/au_buyers_hardcode.json"
-)
-_OUT_REPORT_JSON = Path(
-    r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/stage2_scoring_report.json"
+# hardcode: seeds/ 내부가 진본 (최신 69개), 외부는 참고용
+_HARDCODE_JSON = _resolve_file("au_buyers_hardcode.json")
+# 리포트는 외부 폴더 있으면 그쪽, 없으면 seeds/ 내부
+_OUT_REPORT_JSON = (
+    (_EXT_DATA_DIR / "stage2_scoring_report.json") if _EXT_DATA_DIR
+    else (_SEEDS / "stage2_scoring_report.json")
 )
 
 
@@ -180,14 +206,22 @@ def _score_import_exp(survivor_row: dict) -> int:
     return min(base, 100)
 
 
-def _score_pharmacy_chain(canon_key: str) -> int:
-    """psi_pharmacy_chain — 미구현 (추후 Perplexity 조사 결과 연동).
+def _score_pharmacy_chain(canon_key: str, buyers_row: dict | None = None) -> int:
+    """psi_pharmacy_chain — 약국 체인 운영 여부.
 
-    현 구현: 전부 0. Chemist Warehouse, Priceline 등 체인 운영 회사만 예외.
+    규칙:
+      · buyers_row.role == "distributor" → 100 (Sigma/EBOS/Wesfarmers/CW 등)
+      · 하드코딩된 체인 모회사 매핑 → 그 점수
+      · 그 외 → 0
     """
+    if buyers_row and buyers_row.get("role") == "distributor":
+        return 100
     known_chain_owners = {
-        "sigma_healthcare": 100,  # Chemist Warehouse 모회사
-        "chemist_warehouse": 100,
+        "sigma_healthcare": 100,
+        "ebos_group": 100,
+        "wesfarmers_health": 90,
+        "chemist_warehouse_group": 100,
+        "national_pharmacies": 70,
         "ramsay_pharmacy": 80,
         "epharmacy": 60,
     }
@@ -238,6 +272,10 @@ def classify_tier(
     주의: survivors_expanded_v3.json 의 buyer row 에는 canonical_key 필드가 없음
           (바깥 dict 키로만 존재) → 호출측에서 명시적으로 canon_key 전달 필수.
     """
+    # 0. 유통 파트너 (Sigma/EBOS/Wesfarmers/CW/National) — 모든 품목에 자동 포함
+    if survivor_row.get("role") == "distributor":
+        return "D_dist"
+
     ev = survivor_row.get("evidence") or {}
     case_map = ev.get("ingredient_case_per_product") or {}
     case = case_map.get(product_id, "D_none")
@@ -304,6 +342,47 @@ def main(dry_run: bool = False) -> None:
     buyers = (survivors.get("buyers") or {})
 
     # ========================================================================
+    # 0. 약국 체인·도매 유통사 (distributor) 합류 — 2026-04-20 Jisoo 추가
+    # ========================================================================
+    #    hardcode 에 role="distributor" 인 엔트리 (Sigma · EBOS · Wesfarmers ·
+    #    Chemist Warehouse · National Pharmacies) 를 buyers 에 더미 survivor 로
+    #    주입. 6 크롤 소스에 안 잡히지만 호주 소매·도매 시장 지배력상 필수 바이어.
+    #    각 품목 TOP 10 은 일반 바이어 7 + 유통 파트너 3 으로 구성.
+    distributor_keys: set[str] = set()
+    for canon_key, hc_entry in hardcoded_buyers.items():
+        if not isinstance(hc_entry, dict):
+            continue
+        if hc_entry.get("role") != "distributor":
+            continue
+        distributor_keys.add(canon_key)
+        if canon_key in buyers:
+            # 이미 survivors 에 있으면 skip (중복 방지)
+            continue
+        # 더미 survivor row 구성. ingredient_case 는 모든 품목 D_none (직접 성분 취급 아님).
+        buyers[canon_key] = {
+            "canonical_name": hc_entry.get("canonical_name") or canon_key,
+            "website": hc_entry.get("website"),
+            "email": None,
+            "phone": None,
+            "state": None,
+            "address": None,
+            "sources": ["distributor"],
+            "stage1_sort_score": 80,  # 유통 파트너 강제 높은 점수
+            "evidence": {
+                "tga_artg_count": 0,
+                "pbs_listed_count": 0,
+                "is_ma_member": False,
+                "is_gbma_member": False,
+                "is_gpce_exhibitor": False,
+                "ingredient_case_per_product": {},  # 모든 품목 D_none
+            },
+            "products_relevant": [],
+            "role": "distributor",  # 티어 분류·정렬용 플래그
+        }
+    if distributor_keys:
+        print(f"[stage2] distributor 합류: {len(distributor_keys)}개 ({sorted(distributor_keys)})", flush=True)
+
+    # ========================================================================
     # 1. 각 바이어에 대해 5지표 점수 전체 산출 (품목 무관)
     # ========================================================================
     #    단, psi_pipeline 는 품목마다 다름 → 품목별 재계산
@@ -315,7 +394,7 @@ def main(dry_run: bool = False) -> None:
         )
         mfg_score = _score_manufacturing(canon_key, mfr_matches)
         imp_score = _score_import_exp(row)
-        ph_score = _score_pharmacy_chain(canon_key)
+        ph_score = _score_pharmacy_chain(canon_key, row)
         buyer_static_scores[canon_key] = {
             "sales": sales_score,
             "sales_rank": sales_rank,
@@ -415,9 +494,15 @@ def main(dry_run: bool = False) -> None:
             })
 
         # A티어 우선 → B티어 → C티어 순 안에서 psi_total 내림차순
-        tier_order = {"A": 0, "B": 1, "C": 2}
-        scored.sort(key=lambda x: (tier_order[x["tier"]], -x["psi_total"]))
-        top10 = scored[:10]
+        # ───── TOP 10 구성 = 일반 바이어 7명 + 유통 파트너 3명 ─────
+        # 유통 파트너 (Sigma/EBOS/Wesfarmers/CW/National) 는 6크롤 안 잡혀서
+        # 순수 psi_total 경쟁 시 밀림. 별도 슬롯 고정 필요.
+        tier_order = {"A": 0, "B": 1, "C": 2, "D_dist": 3}
+        distributors_scored = [x for x in scored if x.get("tier") == "D_dist"]
+        general_scored = [x for x in scored if x.get("tier") != "D_dist"]
+        general_scored.sort(key=lambda x: (tier_order[x["tier"]], -x["psi_total"]))
+        distributors_scored.sort(key=lambda x: -x["psi_total"])
+        top10 = general_scored[:7] + distributors_scored[:3]
 
         # 순위 부여 (1~10)
         for rnk, entry in enumerate(top10, 1):

@@ -37,6 +37,79 @@ Australia_1st_logic/
 
 ---
 
+## 기술 스택 (실제 코드 기준)
+
+- 백엔드 런타임: Python 3.11/3.12 + FastAPI + Uvicorn
+- API/서버 진입점: `upharma-au/render_api.py` (시장조사, P2 가격전략, P3 바이어, PDF 다운로드 포함)
+- 데이터 저장소: Supabase PostgREST (`australia`, `au_reports_history`, `au_reports_r2`, `au_buyers`)
+- 크롤링 소스: TGA / PBS / Chemist Warehouse / buy.nsw / Healthylife
+- AI 모델: Anthropic Claude Haiku (`claude-haiku-4-5-20251001` 고정)
+- PDF 생성: `reportlab` (`upharma-au/report_generator.py`)
+- 프론트엔드: Jinja2 템플릿 + Vanilla JS (`upharma-au/templates/index.html`, `upharma-au/static/app.js`)
+
+> 프론트는 사용자 흐름(실행 버튼/진행 단계/다운로드) 중심으로 단순화되어 있고, 핵심 복잡도는 백엔드 수집·정합성·점수화·보고서 생성 파이프라인에 있습니다.
+
+---
+
+## 백엔드 파이프라인 상세 (크롤링 중심)
+
+### 1) 시장조사 파이프라인 (`POST /api/crawl`)
+
+`render_api.py` 가 품목 코드를 받아 `crawler/au_crawler.py::run_crawler()` 를 호출합니다.  
+핵심 목적은 **외부 소스 재조회 → 단일 스키마 정규화 → Supabase upsert** 입니다.
+
+- `sources/tga.py`: ARTG 등재 상태, sponsor 등 규제 근거 수집
+- `sources/pbs.py`: AEMP/DPMQ/제약조건(restriction) 등 급여·가격 근거 수집
+- `sources/chemist.py`: 소매 가격 관측치 수집
+- `sources/buynsw.py`: 조달 관련 근거 수집
+- `sources/healthylife.py`: 보조 소매 근거 수집
+
+`au_crawler.py` 내부에서 소스별 DTO를 병합해 제품 단위 summary를 만들고,  
+`crawler/db/supabase_insert.py` 의 화이트리스트 필터로 허용 컬럼만 upsert 합니다.
+
+### 2) 가격 정합·추정 로직 (크롤 단계 내부)
+
+`au_crawler.py` 의 `_estimate_retail_price()` 우선순위는 다음과 같습니다.
+
+1. PBS 등재 + DPMQ 존재 시 DPMQ 우선
+2. Chemist 실측치가 신뢰 가능하면 `chemist × RETAIL_MARKUP_MULTIPLIER(기본 1.20)`
+3. AEMP fallback
+4. 값이 없으면 null 유지
+
+핵심은 “무조건 숫자를 채우기”가 아니라, **신뢰도 기준을 통과한 가격만 반영**하는 것입니다.
+
+### 3) 보고서 생성 파이프라인 (`POST /api/report/generate`)
+
+시장조사 결과를 바탕으로 백엔드가 다음을 한 번에 수행합니다.
+
+- Haiku 호출로 분석 블록 생성
+- 참고자료(뉴스/레퍼런스) 결합
+- PDF 렌더링 (`report_generator.py`)
+- 결과 메타/본문을 보고서 테이블(`au_reports_history`, `au_reports_r2`)에 기록
+
+즉, UI는 단일 버튼이지만 서버는 **수집 데이터 + AI 해석 + 산출물 저장**까지 연쇄적으로 처리합니다.
+
+### 4) P2 수출가격 전략 파이프라인 (`/api/p2/pipeline*`)
+
+- `POST /api/p2/pipeline`: 작업 시작
+- `GET /api/p2/pipeline/status`: 단계 상태 반환
+- `GET /api/p2/pipeline/result`: 완료 결과 반환
+
+`stage2/fob_calculator.py` 로 역산한 FOB 시나리오와 AI 블록을 결합해 보고서/PDF를 구성합니다.
+
+### 5) P3 바이어 파이프라인 (현재 구현 포인트)
+
+`render_api.py` 에서 실시간 파이프라인 엔드포인트를 제공합니다.
+
+- `POST /api/p3/buyers/run`
+- `GET /api/p3/buyers/status`
+- `GET /api/p3/buyers/result`
+- `POST /api/buyers/report/generate`
+
+백그라운드 worker가 `buyer_discovery` 모듈을 호출해 Stage1 필터링, Stage2 점수화, `au_buyers` 반영, PDF 생성까지 처리합니다.
+
+---
+
 ## 환경 변수 (`.env`)
 
 | 변수 | 필수 | 용도 |

@@ -20,7 +20,15 @@ pytest-cache-files-*/
 # 시장조사·수출전략 생성 PDF (로컬/Render 디스크·DB 기준 — Git 추적 제외)
 upharma-au/reports/**/*.pdf
 
-# buyer_discovery — 일회성 디버그·로컬 스모크 테스트 (저장소에는 올리지 않음)
+# buyer_discovery — 일회성 디버그·로컬 스모크 테스트·임시 스크립트 (저장소 제외)
 upharma-au/buyer_discovery/**/_debug_*.py
 upharma-au/buyer_discovery/**/_test_*.py
 upharma-au/buyer_discovery/**/test_*.py
+upharma-au/buyer_discovery/**/_probe_*.py
+upharma-au/buyer_discovery/**/_audit_*.py
+upharma-au/buyer_discovery/**/_merge_*.py
+
+# buyer_discovery 실행 리포트 (각 실행마다 변동, DB 가 진본)
+upharma-au/buyer_discovery/seeds/stage2_scoring_report.json
+upharma-au/buyer_discovery/seeds/refresh_revenue_report.json
+upharma-au/buyer_discovery/seeds/verify_factory_report.json

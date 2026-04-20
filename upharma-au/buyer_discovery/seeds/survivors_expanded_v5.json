@@ -1,0 +1,2754 @@
+{
+  "_meta": {
+    "generated_at": "2026-04-19T21:02:43.065357+00:00",
+    "instruction": "각 회사의 'hardcode_needed' 두 필드(annual_revenue_rank + factory) 와 notes 만 채워서 buyer_discovery/seeds/au_buyers_hardcode.json 으로 저장하세요. 다른 필드는 건드리지 마세요. Gemini 딥리서치 권장.",
+    "total_unique": 63
+  },
+  "buyers": {
+    "arrotex_pharmaceuticals": {
+      "canonical_name": "Arrotex Pharmaceuticals Pty Ltd",
+      "website": "https://dbghealth.com.au/arrotex/",
+      "email": null,
+      "phone": "1800 276 839",
+      "address": "Level 3, 459 Church Street, Richmond, VIC 3121",
+      "state": "VIC",
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "gbma",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 100,
+      "evidence": {
+        "tga_artg_count": 5,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": true,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "B_ideal_buyer",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "B_ideal_buyer",
+          "au-atmeg-006": "B_ideal_buyer",
+          "au-ciloduo-007": "C_partial",
+          "au-gastiin-008": "C_partial"
+        }
+      },
+      "products_relevant": [
+        "au-omethyl-001",
+        "au-rosumeg-005",
+        "au-atmeg-006",
+        "au-ciloduo-007",
+        "au-gastiin-008"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "viatris": {
+      "canonical_name": "Alphapharm Pty Ltd",
+      "website": "https://www.viatris.com/en-au/lm/Australia",
+      "email": "au-communications@viatris.com",
+      "phone": "02 9298 3999",
+      "address": "Level 1, 30 The Bond 30-34 Hickson Road, Millers Point NSW 2000",
+      "state": "NSW",
+      "description": "VIATRIS™ is a global healthcare company with a strong local presence and proud history of making high-quality medicines available to patients in Australia since 1982.\nOur diverse portfolio of more than 1,000 medicine products ranges from complex generics to some of the world’s best-known brands, and new innovative medicines to meet the healthcare needs of the future. Our manufacturing facility in Queensland is an important part of our global network of 37 manufacturing, R&D and packaging sites, and produces more than 3.5 billion doses of tablets and capsules each year.  ",
+      "represented_brands": [
+        "Dymista",
+        "EpiPen Auto Injector",
+        "Acnatac",
+        "Elidel",
+        "Relpax",
+        "Celebrex",
+        "Inspra"
+      ],
+      "sources": [
+        "tga",
+        "gbma",
+        "gpce",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 91,
+      "evidence": {
+        "tga_artg_count": 2,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": true,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "C_partial",
+          "au-gastiin-008": "C_partial"
+        }
+      },
+      "products_relevant": [
+        "au-ciloduo-007",
+        "au-gastiin-008"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "pfizer": {
+      "canonical_name": "Pfizer (Perth) Pty Ltd",
+      "website": "https://www.pfizer.com.au/",
+      "email": null,
+      "phone": "02 9850 3333",
+      "address": null,
+      "state": null,
+      "description": "Breakthroughs that change patients’ lives™\n\nThroughout Pfizer's 175 year history, and over 65 years in Australia, we have remained dedicated to discovering and developing new and better ways to prevent and treat disease, and improve the health and wellbeing of people around the world.\nFor more information visit www.pfizer.com.au\n\n",
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "ma",
+        "gpce",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 89,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "C_partial"
+        }
+      },
+      "products_relevant": [
+        "au-gastiin-008"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "gsk": {
+      "canonical_name": "GlaxoSmithKline Australia Pty Ltd",
+      "website": "https://au.gsk.com/en-au",
+      "email": "eleanor.j.ashton@gsk.com",
+      "phone": "1800 033 109",
+      "address": null,
+      "state": null,
+      "description": "GSK is a global biopharma company with the ambition and purpose to unite science, technology and talent to get ahead of disease together. Our global portfolio spans vaccines, specialty and general medicines. For more information on our purpose, strategy and culture, please visit https://au.gsk.com/en-au/company/purpose-strategy-and-culture/",
+      "represented_brands": [
+        "Respiratory and Vaccines"
+      ],
+      "sources": [
+        "tga",
+        "gpce",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 87,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "B_ideal_buyer",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-sereterol-003"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "sandoz": {
+      "canonical_name": "Sandoz Pty Ltd",
+      "website": "https://www.sandoz.com.au/",
+      "email": null,
+      "phone": "1800 726 369",
+      "address": "Suite 1501, 100 Pacific Highway, North Sydney, NSW 2060",
+      "state": "NSW",
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "gbma",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 83,
+      "evidence": {
+        "tga_artg_count": 3,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": true,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "C_partial",
+          "au-atmeg-006": "C_partial",
+          "au-ciloduo-007": "C_partial",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-rosumeg-005",
+        "au-atmeg-006",
+        "au-ciloduo-007"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "sanofi": {
+      "canonical_name": "Sanofi-Aventis Australia Pty Ltd",
+      "website": "https://www.sanofi.com/en/australia",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "ma",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 79,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "C_partial",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-ciloduo-007"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "bayer": {
+      "canonical_name": "Bayer Australia Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 77,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "B_ideal_buyer",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-gadvoa-002"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "cipla_australia": {
+      "canonical_name": "Cipla Australia Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 77,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "B_ideal_buyer",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-sereterol-003"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "orion_pharma_pty": {
+      "canonical_name": "Orion Pharma (AUS) Pty Limited",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 77,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "B_ideal_buyer",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-sereterol-003"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "medreich_australia": {
+      "canonical_name": "Medreich Australia Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 68,
+      "evidence": {
+        "tga_artg_count": 3,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "C_partial",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "C_partial",
+          "au-gastiin-008": "C_partial"
+        }
+      },
+      "products_relevant": [
+        "au-rosumeg-005",
+        "au-ciloduo-007",
+        "au-gastiin-008"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "pharmacor": {
+      "canonical_name": "Pharmacor Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 66,
+      "evidence": {
+        "tga_artg_count": 2,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "C_partial",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "C_partial",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-rosumeg-005",
+        "au-ciloduo-007"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "gm_pharma_international": {
+      "canonical_name": "GM Pharma International Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 66,
+      "evidence": {
+        "tga_artg_count": 2,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "C_partial",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "C_partial"
+        }
+      },
+      "products_relevant": [
+        "au-atmeg-006",
+        "au-gastiin-008"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "sun_pharma_anz": {
+      "canonical_name": "Sun Pharma ANZ Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 66,
+      "evidence": {
+        "tga_artg_count": 2,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "C_partial",
+          "au-ciloduo-007": "C_partial",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-atmeg-006",
+        "au-ciloduo-007"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "medsurge": {
+      "canonical_name": "Medsurge Pharma Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 66,
+      "evidence": {
+        "tga_artg_count": 2,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "B_ideal_buyer",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "C_partial"
+        }
+      },
+      "products_relevant": [
+        "au-hydrine-004",
+        "au-gastiin-008"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "boucher_&_muir": {
+      "canonical_name": "Boucher & Muir Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "C_partial",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-sereterol-003"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "helix_pharmaceuticals": {
+      "canonical_name": "Helix Pharmaceuticals Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "C_partial",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-sereterol-003"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "micro_labs": {
+      "canonical_name": "Micro Labs Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "C_partial",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-atmeg-006"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "avallon_pharmaceuticals": {
+      "canonical_name": "Avallon Pharmaceuticals Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "C_partial",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-ciloduo-007"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "generic_health": {
+      "canonical_name": "Generic Health Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "C_partial",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-ciloduo-007"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "southern_cross_pharma": {
+      "canonical_name": "Southern Cross Pharma Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "C_partial",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-ciloduo-007"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "strides_pharma_science": {
+      "canonical_name": "Strides Pharma Science Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "C_partial",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [
+        "au-ciloduo-007"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "baxter_healthcare": {
+      "canonical_name": "Baxter Healthcare Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "C_partial"
+        }
+      },
+      "products_relevant": [
+        "au-gastiin-008"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "demogen_australia_pty_ltd_trading_as_demogen_pharmaceuticals": {
+      "canonical_name": "Demogen Australia Pty Ltd trading as DEMOGEN Pharmaceuticals",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "C_partial"
+        }
+      },
+      "products_relevant": [
+        "au-gastiin-008"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "ipca_pharma": {
+      "canonical_name": "Ipca Pharma (Australia) Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "C_partial"
+        }
+      },
+      "products_relevant": [
+        "au-gastiin-008"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "johnson_&_johnson_pacific": {
+      "canonical_name": "Johnson & Johnson Pacific Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "C_partial"
+        }
+      },
+      "products_relevant": [
+        "au-gastiin-008"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "lumacina_australia": {
+      "canonical_name": "LumaCina Australia Pty Ltd",
+      "website": null,
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "tga",
+        "tga_inn_match"
+      ],
+      "stage1_sort_score": 64,
+      "evidence": {
+        "tga_artg_count": 1,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "C_partial"
+        }
+      },
+      "products_relevant": [
+        "au-gastiin-008"
+      ],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "organon": {
+      "canonical_name": "Organon",
+      "website": "https://www.organon.com/",
+      "email": null,
+      "phone": "02 7906 5700",
+      "address": "Level 5, 66 King St, Sydney, NSW 2000",
+      "state": "NSW",
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma",
+        "gbma"
+      ],
+      "stage1_sort_score": 30,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": true,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "astellas": {
+      "canonical_name": "Astellas",
+      "website": "https://www.astellas.com/au/",
+      "email": "AAUopsteam@astellas.com",
+      "phone": "1800751755",
+      "address": null,
+      "state": null,
+      "description": "Astellas is a global pharmaceutical company, working at the forefront of healthcare change to turn innovative science into value for patients. Making a positive impact on patients’ lives is the purpose behind everything we do. We are relentless in our pursuit of scientific progress and in tackling unmet medical needs. We work every day to leverage what sets us apart - our focus on patients, our pioneering spirit, our culture of innovation, and the passion of our talented people to pursue the best solutions for patient.",
+      "represented_brands": [
+        "Veoza (Fezolinetant)",
+        "Betmiga (Mirabegron)"
+      ],
+      "sources": [
+        "ma",
+        "gpce"
+      ],
+      "stage1_sort_score": 25,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "chiesi_australia": {
+      "canonical_name": "Chiesi Australia Pty Ltd",
+      "website": "https://chiesi.com.au",
+      "email": "customerservice.au@chiesi.com",
+      "phone": "03 9077 4486 ",
+      "address": null,
+      "state": null,
+      "description": "Chiesi Australia is an affiliate of Chiesi Farmaceutici, a family-owned Italian Pharmaceutical company with over 40 years’ experience manufacturing respiratory products. Chiesi is committed to providing novel asthma and COPD treatments for Australian patients.\nAs a certified B Corp, we’re part of a global community of businesses that meet high standards of social and environmental impact. The company aims at becoming net-zero by 2035. \n\nVisit us at /www.chiesi.com.au/",
+      "represented_brands": [],
+      "sources": [
+        "ma",
+        "gpce"
+      ],
+      "stage1_sort_score": 25,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "lilly": {
+      "canonical_name": "Lilly",
+      "website": "https://www.lilly.com/au/",
+      "email": null,
+      "phone": "1800 454 556",
+      "address": null,
+      "state": null,
+      "description": "Lilly is a medicine company making life better for people around the world. We've turned science into pioneering new discoveries for nearly 150 years, and today, our medicines support more than 51 million people across the globe.\n",
+      "represented_brands": [],
+      "sources": [
+        "ma",
+        "gpce"
+      ],
+      "stage1_sort_score": 25,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "novartis": {
+      "canonical_name": "Novartis",
+      "website": "https://www.novartis.com.au/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": "Novartis is reimagining medicine to improve and extend people’s lives. As a leading global medicines company, we use innovative science and digital technologies to create transformative treatments in areas of great medical need. In our quest to find new medicines, we consistently rank among the world’s top companies investing in research and development. Novartis products reach nearly 800 million people globally and we are finding innovative ways to expand access to our latest treatments. ",
+      "represented_brands": [
+        "ASCVD",
+        "Asthma",
+        "ADHD"
+      ],
+      "sources": [
+        "ma",
+        "gpce"
+      ],
+      "stage1_sort_score": 25,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "abbvie": {
+      "canonical_name": "abbvie",
+      "website": "https://www.abbvie.com.au",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "amgen": {
+      "canonical_name": "Amgen",
+      "website": "https://www.amgen.com.au/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "boehringer_ingelheim": {
+      "canonical_name": "Boehringer Ingelheim",
+      "website": "https://www.boehringer-ingelheim.com/au/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "kyowa_kirin": {
+      "canonical_name": "Kyowa Kirin",
+      "website": "https://www.kyowakirin.com/australia/index.html",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "menarini": {
+      "canonical_name": "Menarini",
+      "website": "https://www.menarini.com/en-us/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "merck": {
+      "canonical_name": "Merck",
+      "website": "https://www.merckgroup.com/au-en/company.html",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "roche": {
+      "canonical_name": "Roche",
+      "website": "https://www.roche-australia.com/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "takeda": {
+      "canonical_name": "Takeda",
+      "website": "https://www.takeda.com/en-au",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "besins_healthcare": {
+      "canonical_name": "Besins Healthcare",
+      "website": "https://besins-healthcare.com.au/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "norgine": {
+      "canonical_name": "Norgine",
+      "website": "https://www.norgine.com.au/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "argenx_australia": {
+      "canonical_name": "Argenx Australia Pty Ltd",
+      "website": "https://argenx.com",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "daiichi-sankyo": {
+      "canonical_name": "Daiichi-Sankyo",
+      "website": "https://www.daiichisankyo.com/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "ptc_therapeutics": {
+      "canonical_name": "PTC therapeutics",
+      "website": "https://www.ptcbio.com/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "healthcare_logistics": {
+      "canonical_name": "Healthcare Logistics",
+      "website": "https://hcl.com.au/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "iqvia": {
+      "canonical_name": "IQVIA",
+      "website": "https://www.iqvia.com/locations/australia-and-new-zealand",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "prospection": {
+      "canonical_name": "Prospection",
+      "website": "https://www.prospection.com/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "accord_australia": {
+      "canonical_name": "Accord Australia",
+      "website": "https://www.accord-healthcare.com.au/",
+      "email": null,
+      "phone": "1800 222 673",
+      "address": "Level 24, 570 Bourke Street, Melbourne VIC 3000",
+      "state": "VIC",
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "gbma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": true,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "fresenius_kabi_australia": {
+      "canonical_name": "Fresenius Kabi Australia Pty Ltd",
+      "website": "https://www.fresenius-kabi.com/au/",
+      "email": null,
+      "phone": "02 9391 5555",
+      "address": "Level 2, 2 Woodland Way Mount Kuring-gai NSW 2080",
+      "state": "NSW",
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "gbma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": true,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "teva_pharmaceuticals_australia": {
+      "canonical_name": "Teva Pharmaceuticals Australia Pty Ltd",
+      "website": "https://www.tevapharma.com.au/",
+      "email": null,
+      "phone": "1800 288 382 (",
+      "address": "37 Epping Road, Macquarie Park, NSW 2113",
+      "state": "NSW",
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "gbma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": true,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "sinapse": {
+      "canonical_name": "Sinapse Pty Ltd",
+      "website": "https://www.sinapse.com.au/",
+      "email": null,
+      "phone": "03 8412 4444",
+      "address": "263 Mary Street, Richmond VIC 3121",
+      "state": "VIC",
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "gbma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": true,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "aspen": {
+      "canonical_name": "Aspen Pharmacare Australia",
+      "website": "https://www.aspenpharma.com.au",
+      "email": "customerservice@aspenpharmacare.com.au",
+      "phone": "02 8436 8300",
+      "address": null,
+      "state": null,
+      "description": "Aspen Australia, an affiliate of the International Aspen Group, commenced operations in Australia and New Zealand in May 2001. Aspen manages pharmaceutical products in most therapeutic categories including Prescription Pharmaceutical brands, Speciality pharmaceutical products, and OTC healthcare products. For more details on specific Aspen products or the extensive range of clinical resources to assist your practice, please visit the Aspen Australia website www.aspenpharma.com.au/products or the Aspen Xpress app (download from the App store or Google play).",
+      "represented_brands": [
+        "www.aspenpharma.com.au"
+      ],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "inmunotek_australia": {
+      "canonical_name": "Inmunotek Australia Pty Ltd",
+      "website": "https://www.inmunotek.com.au",
+      "email": "info@inmunotek.com.au",
+      "phone": "1300706908",
+      "address": null,
+      "state": null,
+      "description": "Inmunotek is a Spanish biopharmaceutical company founded in 1992, dedicated to the research, development, manufacturing, and commercialisation of medicines and medical devices for allergy and immunology. Our commitment to research and innovation is driven by our mission to improve patients’ quality of life and deliver meaningful value to healthcare professionals. In Australia, our dedicated expert support team is leading the way, meeting the needs of Australian healthcare professionals to help deliver effective, personalised patient care.",
+      "represented_brands": [
+        "NIOX®"
+      ],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "inova_pharmaceuticals": {
+      "canonical_name": "iNova Pharmaceuticals",
+      "website": "https://inovapharma.com.au/",
+      "email": "customerservice@inovapharma.com",
+      "phone": "1800 630 056",
+      "address": null,
+      "state": null,
+      "description": "iNova Pharmaceuticals is leading the way to better health by constantly searching for new, practical solutions that improve the everyday health and wellbeing of people around the world.\nOur portfolio of market-leading consumer health brands and prescription medicines are backed by science and span across the key therapeutic areas of throat, cough, cold & flu, skin care, sun care, pain management, wound care, weight management, natural health supplements among many others. \n",
+      "represented_brands": [
+        "ReTrieve",
+        "Norgesic"
+      ],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "msd_australia": {
+      "canonical_name": "Merck Sharp & Dohme",
+      "website": "https://www.msd-australia.com.au/",
+      "email": null,
+      "phone": "02 8988 8000",
+      "address": null,
+      "state": null,
+      "description": "At MSD, known as Merck & Co., Inc., Rahway, NJ, USA in the United States and Canada, we are unified around our purpose: We use the power of leading-edge science to save and improve lives around the world. For more than a century, we’ve been at the forefront of research, bringing forward medicines, vaccines and innovative health solutions for the world’s most challenging diseases.",
+      "represented_brands": [],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "novo_nordisk": {
+      "canonical_name": "Novo Nordisk",
+      "website": "https://www.novonordisk.com.au/",
+      "email": "aunrccc@novonordisk.com",
+      "phone": "1800 668 626",
+      "address": null,
+      "state": null,
+      "description": "We are a global healthcare company, founded in 1923 and headquartered just outside Copenhagen, Denmark.\n\nOur purpose is to drive change to defeat diabetes and other serious chronic diseases such as obesity, and rare blood and rare endocrine diseases.\n\nWe do so by pioneering scientific breakthroughs, expanding access to our medicines and working to prevent and ultimately cure the diseases we treat.\n\nWe employ more than 45,000 people in 80 offices around the world, and market our products in 169 countries.",
+      "represented_brands": [],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "actor_pharmaceuticals": {
+      "canonical_name": "Actor Pharmaceuticals",
+      "website": "https://actorpharma.com.au/",
+      "email": "hello@actorpharma.com.au",
+      "phone": "02 8029 0712",
+      "address": null,
+      "state": null,
+      "description": "At Actor Pharmaceuticals we are passionate about providing new and alternative best-in-class pharmaceuticals and biosimilar medicines to healthcare professionals and patients. This year we are launching our Dermatology division with a suite of 4 new products for the treatment of Psoriasis, Hyperhidrosis and Actinic Keratosis. ",
+      "represented_brands": [
+        "Wynzora",
+        "Axhidrox",
+        "Klisyri",
+        "Canephron"
+      ],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "aft_pharmaceuticals": {
+      "canonical_name": "AFT Pharmaceuticals",
+      "website": "https://www.aftpharm.com",
+      "email": "receptionau@aftpharm.com",
+      "phone": "1800 238 742",
+      "address": null,
+      "state": null,
+      "description": "AFT Pharmaceuticals is an innovator in the Australasian pharmaceutical industry - a thriving ASX listed healthcare organisation constantly seeking to improve upon the status quo through world class R&D that delivers innovative patient solutions. We’re focused on improving the health of Australians through innovation in pain relief, eye care, digestive health, natural health and dermatology, and we’re working harder than ever to provide you with effective options to meet patient needs in these challenging times. Let’s help you turn this innovative thinking into meaningful actions at GPCE.",
+      "represented_brands": [
+        "Maxigesic",
+        "Crystaderm®",
+        "Ferro-Care® Pregnancy Multivitamin",
+        "DiaRelieve",
+        "Coco-Scalp",
+        "Ocuzo"
+      ],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "ego_pharmaceuticals": {
+      "canonical_name": "Ego Pharmaceuticals",
+      "website": "https://www.egopharm.com",
+      "email": "chloe.exadactylos@egopharm.com",
+      "phone": "03 8766 4100",
+      "address": null,
+      "state": null,
+      "description": "Proudly Australian-owned, Ego Pharmaceuticals has led the way in the development, manufacture and marketing of innovative skincare products for over 65 years. Ego’s mission is to exist for people who want healthy skin.\nEgo is the specialist in skincare, backed by science. Products are made in Australia for the people of the world and fulfill the business’s commitment to providing consistently high quality products, underpinned by heritage and integrity.\nFrom its inception as a family business in 1953, Ego has grown to become a world leader, producing a comprehensive dermatological skincare ran",
+      "represented_brands": [
+        "QV",
+        "Resolve",
+        "SolvEasy",
+        "Zatamil",
+        "Kloxema",
+        "Dermaid",
+        "Sunsense",
+        "Azclear",
+        "Numit"
+      ],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "lundbeck_australia": {
+      "canonical_name": "Lundbeck Australia Pty Ltd",
+      "website": "https://www.lundbeck.com/au",
+      "email": "australia@lundbeck.com",
+      "phone": "02 8669 1000",
+      "address": null,
+      "state": null,
+      "description": "Lundbeck is a biopharmaceutical company focusing exclusively on brain health. With more than 70 years of experience in neuroscience, we are committed to improving the lives of people with neurological and psychiatric diseases. \nAs a focused innovator, we strive for our research and development programs to tackle some of the most complex neurological challenges. We develop transformative medicines targeting people for whom there are few or no treatments available, expanding into neuro-specialty and neuro-rare from our strong legacy within psychiatry and neurology.",
+      "represented_brands": [
+        "Lundbeck Australia"
+      ],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "mayne_pharma": {
+      "canonical_name": "Mayne Pharma",
+      "website": "https://www.maynepharma.com/",
+      "email": "au.enquiries@maynepharma.com",
+      "phone": "+61 882 092 666",
+      "address": null,
+      "state": null,
+      "description": "At Mayne Pharma, we are committed to deliver better health outcomes for Australian patients. We use our unique oral drug delivery systems to improve formulations and in-license novel medicines from around the world. Through innovation and collaborative partnerships, our products address unmet clinical needs for Australians. \nWe are proud to support the areas of women’s and men’s health, dermatology and infectious disease. \n",
+      "represented_brands": [
+        "Nextstellis",
+        "Monurol",
+        "Urorec",
+        "Solaraze",
+        "Actikerall"
+      ],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "stallergenes_australia": {
+      "canonical_name": "Stallergenes Australia Pty Ltd",
+      "website": "http://www.stallergenesgreer.com",
+      "email": "allergyaustralia@stallergenesgreer.com",
+      "phone": "1800 824 166",
+      "address": null,
+      "state": null,
+      "description": "Stallergenes Greer is a global biopharmaceutical company specialising in the diagnosis and treatment of allergies through the development and commercialisation of allergen immunotherapy (AIT) products and services.\nStallergenes Greer has over a century of allergen immunotherapy (AIT) experience and expertise. AIT, also known as desensitisation, uniquely alters the natural course of the respiratory allergies. AIT is the only therapeutic class capable of modifying the disease progression and potentially preventing the onset of the disease by inducing tolerance in the immune system.",
+      "represented_brands": [
+        "ORALAIR",
+        "ACTAIR",
+        "ALUSTAL AND ALBEY"
+      ],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "theramex": {
+      "canonical_name": "Theramex",
+      "website": "https://theramex.com.au/",
+      "email": "communications.au@theramex.com",
+      "phone": "1800 843 726",
+      "address": null,
+      "state": null,
+      "description": "Theramex Australia is a specialty  pharmaceutical company solely committed to supporting the health needs of women.\nBy working closely with our partners and healthcare professionals, Theramex Australia provides a diverse portfolio of treatments that help women through life’s stages.\nOur key therapy areas are; Contraception, Osteoporosis, Overactive Bladder, Fertility and Menopause.",
+      "represented_brands": [],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-omethyl-001": "D_none",
+          "au-gadvoa-002": "D_none",
+          "au-sereterol-003": "D_none",
+          "au-hydrine-004": "D_none",
+          "au-rosumeg-005": "D_none",
+          "au-atmeg-006": "D_none",
+          "au-ciloduo-007": "D_none",
+          "au-gastiin-008": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    }
+  }
+}

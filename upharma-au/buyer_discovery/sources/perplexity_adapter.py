@@ -137,27 +137,46 @@ def _call_perplexity(
 # ═══════════════════════════════════════════════════════════════════════
 
 def query_revenue(company_name: str) -> dict[str, Any]:
-    """호주 내 매출 규모 등급 조사.
+    """호주 내 매출 규모 조사 — 등급 + 구체 금액 + 연도 + 출처 통합.
 
-    반환 `parsed` 기대 키: rank, reasoning, sources
-      · rank ∈ {'TOP 5','TOP 10','TOP 20','TOP 50','niche','unknown'}
+    반환 `parsed` 기대 키 (5개):
+      · rank          : 'TOP 5'|'TOP 10'|'TOP 20'|'TOP 50'|'niche'|'unknown'
+      · revenue_aud_millions : int or null  (호주 Rx 매출 AUD 백만 단위)
+      · revenue_year  : int or null         (2023/2024 우선)
+      · is_public_disclosed : bool          (ASX 상장사·공시 여부)
+      · reasoning     : 1-2 sentence 한국어 (출처 포함)
+      · sources       : list of URLs (ASX annual report · IBISWorld · 뉴스 우선)
+
+    프롬프트 기준 통일 (2026-04-20 Jisoo):
+      · 호주 처방의약품(Rx) 매출 기준
+      · 최근 공개 연도 (2024 > 2023)
+      · 비공개 Pty Ltd → is_public_disclosed=false + 추정치 + "비공개" 명시
+      · 글로벌 본사 매출 쓸 수밖에 없으면 reasoning 에 명시
     """
     system = (
-        "You are a pharmaceutical market research analyst specializing in "
-        "the Australian market. Answer ONLY in valid JSON. "
-        "Include at least 2 source URLs in the 'sources' array. "
-        "If data is insufficient, use 'unknown'."
+        "You are a pharmaceutical market analyst for the Australian market. "
+        "Respond ONLY in valid JSON. Use 2024 data when available, "
+        "fallback to 2023. Cite sources (prefer ASX annual reports, "
+        "IBISWorld, Medicines Australia, news outlets like AFR/ABC/SMH)."
     )
     user = (
         f"Company: {company_name} (Australia)\n\n"
-        "Question: What is this company's annual revenue ranking within "
-        "the Australian pharmaceutical market (2023-2024)?\n\n"
-        "Return JSON with keys:\n"
-        "  - 'rank': one of 'TOP 5', 'TOP 10', 'TOP 20', 'TOP 50', 'niche', 'unknown'\n"
-        "  - 'reasoning': 1-2 sentence justification citing sources\n"
-        "  - 'sources': array of 2+ URLs\n"
+        "Question: Australian pharmaceutical market standing?\n\n"
+        "Return JSON with EXACTLY these keys:\n"
+        "  - 'rank': 'TOP 5'|'TOP 10'|'TOP 20'|'TOP 50'|'niche'|'unknown'\n"
+        "  - 'revenue_aud_millions': integer (AUD millions, Australian Rx revenue) or null\n"
+        "  - 'revenue_year': 2024 or 2023 or null\n"
+        "  - 'is_public_disclosed': true if ASX listed or mandatory disclosure, false if Pty Ltd private\n"
+        "  - 'reasoning': 1-2 sentences in Korean — 출처·연도·공개여부 명시. "
+        "비공개 법인이면 '비공개 (Pty Ltd)' 명시. 추정치면 '추정' 명시.\n"
+        "  - 'sources': array of 2+ URLs (ASX annual report > IBISWorld > news)\n\n"
+        "Rules:\n"
+        "  - If Australian subsidiary revenue not disclosed, write Korean note in "
+        "'reasoning' and set 'revenue_aud_millions' to null.\n"
+        "  - Prefer Rx (prescription) revenue over total. If only total, note in reasoning.\n"
+        "  - Unknown? Set rank='unknown', revenue_aud_millions=null."
     )
-    return _call_perplexity(system, user, max_tokens=500)
+    return _call_perplexity(system, user, max_tokens=700)
 
 
 def query_therapeutic_areas(company_name: str) -> dict[str, Any]:

@@ -1048,12 +1048,42 @@ def fetch_pbs_component_sum(components: list[str]) -> dict[str, Any]:
     if not acc:
         return _empty_dto()
 
+    # ── 성분별 개별 가격 분리 (Stage 2 FOB 역산 전용) ──────────────────────────
+    # 크롤러는 날 것 데이터만 저장, 마진 역산·합산은 Stage 2(fob_calculator)에서 수행.
+    # pbs_prices  : PBS 등재 성분 → AEMP 직접 공시값 {ingredient_lower: aemp_aud}
+    # retail_prices: 미등재 성분 → OTC 소매가 원본 {ingredient_lower: retail_price_aud}
+    #                (dpmq_aud 위치에 소매가가 투영되어 저장됨 — line 1036 참조)
+    pbs_prices: dict[str, float] = {}
+    retail_prices: dict[str, float] = {}
+    for _row in acc:
+        _name = (_row.get("drug_name") or "").lower().strip()
+        if not _name:
+            continue
+        if _row.get("pbs_found"):
+            _a = _row.get("aemp_aud")
+            if _a is not None:
+                try:
+                    pbs_prices[_name] = float(_a)
+                except (TypeError, ValueError):
+                    pass
+        else:
+            # 미등재 성분: dpmq_aud 에 소매가가 투영됨
+            _r = _row.get("dpmq_aud")
+            if _r is not None:
+                try:
+                    retail_prices[_name] = float(_r)
+                except (TypeError, ValueError):
+                    pass
+    # ─────────────────────────────────────────────────────────────────────────
+
     from importlib import import_module
     au = import_module("au_crawler")
     merged = au._merge_pbs_rows(acc)
     merged["pricing_case_applied"] = "COMPONENT_SUM"
     merged["_component_rows"] = acc  # 감사 로그용
     merged["missing_from_pbs"] = missing_from_pbs
+    merged["pbs_prices"] = pbs_prices        # Stage 2 전달용 — PBS 등재 성분 개별 AEMP
+    merged["retail_prices"] = retail_prices  # Stage 2 전달용 — 미등재 성분 소매가 원본
     # Task 1 — 3단 fallback 전부 실패한 성분이 있으면 confidence 하향 (0.3).
     # fallback 으로 메꿨으면 0.6, 모든 성분 PBS 정등재면 0.85.
     if missing_from_pbs:

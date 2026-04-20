@@ -25,6 +25,18 @@ _CF_BLOCK_MARKERS = (
     "please enable javascript",
 )
 
+# 배송비·할인·최소주문금액 등 가격 노이즈 패턴 — 이 직후에 나오는 $X.XX 를 제거
+# 예: "Delivery $4.99", "Save $3.00", "From $X" (비제품가), "Spend over $100", "Free over $50"
+_NOISE_PRICE_PAT = re.compile(
+    r"(?:delivery|shipping|dispatch|express|save(?:\s+up\s+to)?|saving|free\s+(?:delivery|shipping)\s+over"
+    r"|spend\s+over|free\s+over|coupon|discount|surcharge|service\s+fee"
+    r"|min(?:imum)?\.?\s+order|from\s+only|from\s+\$"
+    r")\s*\$?\s*\d+(?:,\d{3})*(?:\.\d{1,2})?",
+    re.IGNORECASE,
+)
+# 배송비·쿠폰 등 소액 잡음을 걸러내는 최솟값 — 이하 금액은 제품가 아닌 수수료로 간주
+_MIN_PRODUCT_PRICE_AUD = 3.00
+
 
 def _is_cloudflare_blocked(resp: httpx.Response | None, text: str) -> bool:
     """Chemist Warehouse의 Cloudflare 차단 여부 — 직접 호출 결과만 평가."""
@@ -43,13 +55,23 @@ def _is_cloudflare_blocked(resp: httpx.Response | None, text: str) -> bool:
 
 
 def _extract_first_price(blob: str) -> float | None:
-    """$XX.XX 패턴 중 0보다 큰 첫 값을 float 로 반환."""
-    for m in re.finditer(r"\$\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)", blob or ""):
+    """배송비·할인 등 노이즈를 제거한 뒤 $MIN 이상 첫 번째 가격을 float 로 반환.
+
+    개선 내용:
+    - _NOISE_PRICE_PAT: "Delivery $4.99", "Save $3.00", "Free delivery over $50" 등
+      비제품가 패턴을 공백으로 치환한 후 탐색
+    - _MIN_PRODUCT_PRICE_AUD: $3.00 미만 금액은 배송료·소액수수료로 간주해 스킵
+    """
+    if not blob:
+        return None
+    # 배송비·할인 노이즈 패턴 제거
+    cleaned = _NOISE_PRICE_PAT.sub(" ", blob)
+    for m in re.finditer(r"\$\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)", cleaned):
         try:
             val = float(m.group(1).replace(",", ""))
         except ValueError:
             continue
-        if val > 0:
+        if val >= _MIN_PRODUCT_PRICE_AUD:
             return val
     return None
 

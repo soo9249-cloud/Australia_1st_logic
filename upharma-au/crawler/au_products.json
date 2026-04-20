@@ -30,8 +30,9 @@
       "product_name_ko": "Gadvoa Inj.",
       "inn_normalized": "gadobutrol",
       "inn_components": ["gadobutrol"],
-      "strength": "604.72mg",
-      "dosage_form": "injection",
+      "strength": "604.72mg/mL",
+      "strengths": ["5mL", "7.5mL"],
+      "dosage_form": "prefilled_syringe",
       "hs_code_6": "300630",
       "pricing_case": "ESTIMATE_hospital",
       "pbs_search_terms": ["gadobutrol"],
@@ -54,7 +55,9 @@
       "tga_search_terms": ["fluticasone", "salmeterol", "Sereterol"],
       "fdc_search_term": "fluticasone+salmeterol",
       "chemist_search_term": "seretide",
-      "market_segment": "public"
+      "market_segment": "public",
+      "skip_chemist": true,
+      "_skip_reason": "PBS 등재 처방약 — CW는 환자 본인부담금($25)만 표시. AEMP·DPMQ는 PBS API에서 직접 수집."
     },
     {
       "product_id": "au-hydrine-004",
@@ -67,7 +70,9 @@
       "pricing_case": "DIRECT",
       "pbs_search_terms": ["hydroxycarbamide"],
       "tga_search_terms": ["hydroxyurea", "Hydrine"],
-      "market_segment": "public"
+      "market_segment": "public",
+      "skip_chemist": true,
+      "_skip_reason": "PBS 등재 처방약 — CW는 환자 본인부담금($25)만 표시. AEMP·DPMQ는 PBS API에서 직접 수집."
     },
     {
       "product_id": "au-rosumeg-005",
@@ -75,25 +80,37 @@
       "inn_normalized": "rosuvastatin omega-3-acid ethyl esters",
       "inn_components": ["rosuvastatin", "omega-3-acid ethyl esters"],
       "strength": "복합",
+      "strengths": ["5/1000", "10/1000"],
+      "strength_labels": ["Rosuvastatin 5mg + Omega-3 EE90 1g", "Rosuvastatin 10mg + Omega-3 EE90 1g"],
+      "statin_strengths_mg": [5, 10],
       "dosage_form": "capsule",
       "hs_code_6": "300490",
       "pricing_case": "COMPONENT_SUM",
       "pbs_search_terms": ["rosuvastatin", "omega-3-acid ethyl esters"],
       "tga_search_terms": ["rosuvastatin", "omega-3", "Rosumeg"],
-      "market_segment": "public"
+      "healthylife_slug": "omacor-1000mg-cap-28",
+      "market_segment": "public",
+      "skip_chemist": true,
+      "_skip_reason": "COMPONENT_SUM — CW는 일반 피쉬오일 반환(오인식). 오메가3 EE90 참고가는 Healthylife OMACOR 실시간 크롤링, 스타틴 AEMP는 PBS API에서 수집."
     },
     {
       "product_id": "au-atmeg-006",
       "product_name_ko": "Atmeg Combigel",
       "inn_normalized": "atorvastatin omega-3-acid ethyl esters",
       "inn_components": ["atorvastatin", "omega-3-acid ethyl esters"],
-      "strength": "복합",
+      "strength": "10/1000",
+      "strengths": ["10/1000"],
+      "strength_labels": ["Atorvastatin 10mg + Omega-3 EE90 1g"],
+      "statin_strengths_mg": [10],
       "dosage_form": "capsule",
       "hs_code_6": "300490",
       "pricing_case": "COMPONENT_SUM",
       "pbs_search_terms": ["atorvastatin", "omega-3-acid ethyl esters"],
       "tga_search_terms": ["atorvastatin", "omega-3", "Atmeg"],
-      "market_segment": "public"
+      "healthylife_slug": "omacor-1000mg-cap-28",
+      "market_segment": "public",
+      "skip_chemist": true,
+      "_skip_reason": "COMPONENT_SUM — CW는 일반 피쉬오일 반환(오인식). 오메가3 EE90 참고가는 Healthylife OMACOR 실시간 크롤링, 스타틴 AEMP는 PBS API에서 수집."
     },
     {
       "product_id": "au-ciloduo-007",
@@ -101,6 +118,9 @@
       "inn_normalized": "cilostazol rosuvastatin",
       "inn_components": ["cilostazol", "rosuvastatin"],
       "strength": "복합",
+      "strengths": ["200/10", "200/20"],
+      "strength_labels": ["Cilostazol 200mg + Rosuvastatin 10mg", "Cilostazol 200mg + Rosuvastatin 20mg"],
+      "rosuvastatin_strengths_mg": [10, 20],
       "dosage_form": "tablet",
       "hs_code_6": "300490",
       "pricing_case": "ESTIMATE_substitute",
@@ -108,7 +128,9 @@
       "tga_search_terms": ["cilostazol", "rosuvastatin", "Ciloduo"],
       "withdrawn_component": "cilostazol",
       "similar_inns": ["clopidogrel"],
-      "market_segment": "public"
+      "market_segment": "public",
+      "skip_chemist": true,
+      "_skip_reason": "ESTIMATE_substitute — PBS 프록시(clopidogrel) AEMP로 역산. CW에서 정확한 복합제 가격 수집 불가."
     },
     {
       "product_id": "au-gastiin-008",
@@ -122,7 +144,9 @@
       "pbs_search_terms": ["mosapride", "mosapride citrate"],
       "tga_search_terms": ["mosapride", "Gastiin"],
       "similar_inns": ["domperidone", "metoclopramide"],
-      "market_segment": "public"
+      "market_segment": "public",
+      "skip_chemist": true,
+      "_skip_reason": "ESTIMATE_substitute — 호주 완전 미등재. PBS 프록시(domperidone) AEMP로 추정. CW 검색 무의미."
     }
   ]
 }

@@ -79,6 +79,14 @@ def _parse_first_block(markdown: str) -> dict[str, Any] | None:
         CAN ID CAN-107821 Agency Venues NSW Category Other Publish date
         11-Nov-2025 Contract period 8-Sep-2025 to 8-Sep-2028 Estimated
         amount payable to the contractor (including GST)$1,690,000.00
+
+    파싱 항목:
+        - CAN ID (contract_id)
+        - Agency (발주처)
+        - Contract period start/end (계약 시작·종료일) ← 바이어 발굴 핵심
+        - Publish date (공고일, 하위호환 fallback)
+        - 수주사(awarded_to) — "Supplier:" 패턴 시도
+        - 계약 금액
     """
     headers = list(re.finditer(r"^\s*###\s+\[([^\]]+)\]\(([^)]+)\)", markdown, re.MULTILINE))
     if not headers:
@@ -93,6 +101,12 @@ def _parse_first_block(markdown: str) -> dict[str, Any] | None:
     if re.search(r"No\s+records?\s+matched", markdown, re.IGNORECASE):
         return None
 
+    # CAN ID (예: CAN-107821)
+    can_id: str | None = None
+    m = re.search(r"CAN\s+ID\s+(CAN-\d+)", block_body, re.IGNORECASE)
+    if m:
+        can_id = m.group(1).strip()
+
     # 발주처 (Agency 다음 토큰부터 다음 라벨 직전까지)
     agency: str | None = None
     m = re.search(
@@ -103,32 +117,61 @@ def _parse_first_block(markdown: str) -> dict[str, Any] | None:
     if m:
         agency = re.sub(r"\s+", " ", m.group(1)).strip() or None
 
-    # Publish date (DD-MMM-YYYY)
-    date_s: str | None = None
+    # 계약 기간 — "Contract period DD-MMM-YYYY to DD-MMM-YYYY" (바이어 발굴 핵심)
+    # 계약 종료일 = 현 공급사 독점 만료일 → 경쟁 진입 타이밍 파악 용도
+    _DATE_PAT = r"\d{1,2}[-/]\w{3}[-/]\d{2,4}"
+    contract_start: str | None = None
+    contract_end: str | None = None
     m = re.search(
-        r"Publish\s+date[\s\n]+(\d{1,2}[-/]\w{3}[-/]\d{2,4})",
+        rf"Contract\s+period\s+({_DATE_PAT})\s+to\s+({_DATE_PAT})",
         block_body,
         re.IGNORECASE,
     )
     if m:
-        date_s = m.group(1).strip()
-    else:
-        # fallback: 어떤 형태든 첫 날짜
-        m = re.search(
-            r"\b(\d{1,2}[-/]\w{3}[-/]\d{2,4}|\d{4}-\d{2}-\d{2})\b",
-            block_body,
-        )
+        contract_start = m.group(1).strip()
+        contract_end = m.group(2).strip()
+
+    # Publish date (공고일 — 하위호환·fallback)
+    publish_date: str | None = None
+    m = re.search(
+        rf"Publish\s+date[\s\n]+({_DATE_PAT})",
+        block_body,
+        re.IGNORECASE,
+    )
+    if m:
+        publish_date = m.group(1).strip()
+    elif not contract_start:
+        # 날짜 패턴이 아무것도 없으면 첫 날짜라도 보존 (하위호환)
+        m = re.search(rf"\b({_DATE_PAT}|\d{{4}}-\d{{2}}-\d{{2}})\b", block_body)
         if m:
-            date_s = m.group(1)
+            publish_date = m.group(1)
+
+    # 수주사 (awarded_to) — "Supplier:" / "Contractor:" 패턴 시도
+    # buy.nsw CAN 노티스에 "Supplier:" 명시 시 파싱. 없으면 None (상세 페이지 필요).
+    awarded_to: str | None = None
+    for pat in [
+        r"Supplier[\s:]+(.+?)(?=\s+(?:Contract|Agency|Category|Publish|CAN|Estimated|\$)|\Z)",
+        r"Contractor[\s:]+(.+?)(?=\s+(?:Contract|Agency|Category|Publish|CAN|Estimated|\$)|\Z)",
+    ]:
+        m = re.search(pat, block_body, re.IGNORECASE | re.DOTALL)
+        if m:
+            val = re.sub(r"\s+", " ", m.group(1)).strip()
+            if val:
+                awarded_to = val
+                break
 
     value = _parse_amount(block_body)
-    if value is None and not agency and not date_s:
+    if value is None and not agency and not publish_date and not contract_start:
         return None
 
     return {
+        "contract_id": can_id,                              # CAN-XXXXXX
         "contract_value_aud": value,
-        "supplier_name": agency,
-        "contract_date": date_s,
+        "supplier_name": agency,                            # 발주처 (정부·병원)
+        "awarded_to": awarded_to,                           # 수주사 (계약 체결 기업)
+        "contract_date": publish_date,                      # 하위호환: 공고일
+        "start_date": contract_start or publish_date,       # 계약 시작일
+        "end_date": contract_end,                           # 계약 종료일 ← 바이어 발굴 핵심
     }
 
 
@@ -162,22 +205,21 @@ def fetch_buynsw(search_term: str) -> dict[str, Any]:
     # 매칭 성공 — v2 DTO + 하위호환 키 동시 반환
     value_decimal = Decimal(str(parsed["contract_value_aud"])) if parsed["contract_value_aud"] is not None else None
     agency_val = parsed["supplier_name"]
-    date_val = parsed["contract_date"]
     return {
         # v2 DTO 키
-        "contract_id": None,           # buy.nsw 검색 결과 HTML 구조상 CAN-ID 파싱 가능 — 다음 위임
-        "agency": agency_val,
-        "product_description": None,   # 파싱 범위 밖 — 다음 위임
-        "awarded_to": None,             # NSW 는 agency 발주처 → 수주처는 별도 상세 페이지 필요
+        "contract_id": parsed.get("contract_id"),           # CAN-XXXXXX
+        "agency": agency_val,                               # 발주처 (정부·병원)
+        "product_description": None,                        # 파싱 범위 밖
+        "awarded_to": parsed.get("awarded_to"),             # 수주사 (있으면 채움)
         "contract_value_aud": value_decimal,
-        "start_date": date_val,
-        "end_date": None,
+        "start_date": parsed.get("start_date"),             # 계약 시작일
+        "end_date": parsed.get("end_date"),                 # 계약 종료일 (현 공급사 독점 만료)
         "source_url": canonical,
         "source_name": "buy_nsw",
         "crawled_at": now_kst_iso(),
         # 하위호환 키
         "supplier_name": agency_val,
-        "contract_date": date_val,
+        "contract_date": parsed.get("contract_date"),       # 하위호환: 공고일
         "nsw_source_url": canonical,
         "nsw_note": None,
     }

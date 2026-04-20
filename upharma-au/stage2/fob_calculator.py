@@ -276,17 +276,49 @@ def _listed_component_aemp_aud(
     idx: int,
     crawler_row: dict[str, Any] | None,
 ) -> float:
-    """등재 성분 AEMP: 시드 reference_aemp_aud_fallback 우선, 없으면 첫 성분만 crawler_row 단일 aemp_aud."""
-    fb = comp.get("reference_aemp_aud_fallback")
-    if isinstance(fb, (int, float)) and float(fb) > 0:
-        return float(fb)
+    """등재 성분 AEMP 조회.
+
+    우선순위:
+      1순위: crawler_row["pbs_listed_component_aemp"][ingredient] — 성분별 개별 AEMP (COMPONENT_SUM 전용)
+             fetch_pbs_component_sum()이 등재 성분의 PBS AEMP를 개별 키로 저장 (합산 aemp_aud와 분리)
+      2순위: crawler_row["pbs_aemp_aud"] 또는 ["aemp_aud"] — 단일 성분 DIRECT 전용
+             COMPONENT_SUM에서는 이 값이 전체 합산값이므로 사용 금지
+      3순위: comp["reference_aemp_aud_fallback"] — 수기 시드 폴백 (1·2순위 미수집 시 안전망)
+      셋 다 없으면 ValueError → dispatch_by_pricing_case에서 blocked 반환
+
+    Note: COMPONENT_SUM의 crawler_row["aemp_aud"]는 모든 성분 AEMP 합산값이므로
+    개별 성분 조회에 직접 사용 불가 → pbs_listed_component_aemp 키 필요.
+    (Supabase 컬럼 추가 후 활성화 예정 — 현재 시드 폴백 유지)
+    """
     cr = crawler_row or {}
+
+    # 1순위: ingredients_split["pbs_prices"] — COMPONENT_SUM 전용 성분별 PBS AEMP
+    # au_crawler.build_row() 가 pbs.fetch_pbs_component_sum() 결과에서 분리 저장한 값.
+    # 합산된 aemp_aud 와 달리 각 성분의 개별 AEMP 만 담겨 있어 이중 계산 없음.
+    _is = cr.get("ingredients_split")
+    if isinstance(_is, dict):
+        _pbs_p = _is.get("pbs_prices") or {}
+        _ing = (comp.get("ingredient") or "").lower().strip()
+        _v = _pbs_p.get(_ing)
+        if isinstance(_v, (int, float)) and float(_v) > 0:
+            return float(_v)
+
+    # 2순위: 단일 성분 DIRECT 전용 크롤러 AEMP (idx=0만 — DB 단일 컬럼 제약)
+    # COMPONENT_SUM 에서는 aemp_aud = 모든 성분 합산값 → 1순위 통과 후 여기 오면 안 됨.
     cr_aemp = cr.get("pbs_aemp_aud") or cr.get("aemp_aud")
     if idx == 0 and isinstance(cr_aemp, (int, float)) and float(cr_aemp) > 0:
         return float(cr_aemp)
+
+    # 3순위: 시드 폴백 — 크롤러 미수집 시 안전망 (ingredients_split 미갱신 기존 DB 행 포함)
+    fb = comp.get("reference_aemp_aud_fallback")
+    if isinstance(fb, (int, float)) and float(fb) > 0:
+        return float(fb)
+
     ing = comp.get("ingredient") or "?"
     raise ValueError(
-        f"성분 {ing!r}: PBS AEMP 없음 (reference_aemp_aud_fallback 또는 crawler aemp_aud)"
+        f"성분 {ing!r}: PBS AEMP 없음 — ingredients_split.pbs_prices 미수집, "
+        "crawler aemp_aud 도 없음, seed reference_aemp_aud_fallback 도 없음. "
+        "크롤러 재실행 필요."
     )
 
 
@@ -329,8 +361,30 @@ def _resolve_component_sum_components(
             if not isinstance(ref, dict):
                 ing = comp.get("ingredient") or "?"
                 raise ValueError(f"성분 {ing!r}: similar_product_retail_ref 필요 (서브케이스 3)")
-            eff_r, scale_note = _similar_ref_effective_retail_aud(ref)
-            gst_o = ref.get("gst_pct_override")
+            # 실시간 Healthylife 가격 우선 (use_crawler_healthylife_price 플래그 + healthylife_price_aud)
+            # 크롤러 미수집 + seed fallback 없음 → ValueError → blocked
+            _ref_use = ref
+            if comp.get("use_crawler_healthylife_price"):
+                _hl_raw = (crawler_row or {}).get("healthylife_price_aud")
+                try:
+                    _hl_f = float(_hl_raw) if _hl_raw is not None else None
+                except (TypeError, ValueError):
+                    _hl_f = None
+                if _hl_f and _hl_f > 0:
+                    _ref_use = dict(ref)
+                    _ref_use["retail_aud"] = _hl_f
+                    warnings.append(
+                        f"Healthylife 실시간: {comp.get('ingredient', '?')} 참조가 "
+                        f"AUD {_hl_f:.2f} (Healthylife 크롤링)"
+                    )
+                elif not (isinstance(ref.get("retail_aud"), (int, float)) and float(ref.get("retail_aud") or 0) > 0):
+                    _ing = comp.get("ingredient") or "?"
+                    raise ValueError(
+                        f"{_ing}: Healthylife 실시간 가격 미수집 (healthylife_price_aud 없음). "
+                        "크롤러 재실행 또는 au_products.json healthylife_slug 확인 필요."
+                    )
+            eff_r, scale_note = _similar_ref_effective_retail_aud(_ref_use)
+            gst_o = _ref_use.get("gst_pct_override")
             gst_use = float(gst_o) if isinstance(gst_o, (int, float)) else DEFAULT_GST_PCT
             eq = _retail_to_supply_equiv_aud(eff_r, gst_pct=gst_use)
             total += eq
@@ -364,12 +418,34 @@ def _resolve_component_sum_components(
             if not isinstance(ref, dict):
                 ing = comp.get("ingredient") or "?"
                 raise ValueError(f"성분 {ing!r}: 미등재인 경우 similar_product_retail_ref 필요")
-            eff_r, scale_note = _similar_ref_effective_retail_aud(ref)
-            gst_o = ref.get("gst_pct_override")
+            # 실시간 Healthylife 가격 우선 (use_crawler_healthylife_price 플래그 + healthylife_price_aud)
+            # 크롤러 미수집 + seed fallback 없음 → ValueError → blocked
+            _ref_use = ref
+            if comp.get("use_crawler_healthylife_price"):
+                _hl_raw = (crawler_row or {}).get("healthylife_price_aud")
+                try:
+                    _hl_f = float(_hl_raw) if _hl_raw is not None else None
+                except (TypeError, ValueError):
+                    _hl_f = None
+                if _hl_f and _hl_f > 0:
+                    _ref_use = dict(ref)
+                    _ref_use["retail_aud"] = _hl_f
+                    warnings.append(
+                        f"Healthylife 실시간: {comp.get('ingredient', '?')} 참조가 "
+                        f"AUD {_hl_f:.2f} (Healthylife 크롤링)"
+                    )
+                elif not (isinstance(ref.get("retail_aud"), (int, float)) and float(ref.get("retail_aud") or 0) > 0):
+                    _ing = comp.get("ingredient") or "?"
+                    raise ValueError(
+                        f"{_ing}: Healthylife 실시간 가격 미수집 (healthylife_price_aud 없음). "
+                        "크롤러 재실행 또는 au_products.json healthylife_slug 확인 필요."
+                    )
+            eff_r, scale_note = _similar_ref_effective_retail_aud(_ref_use)
+            gst_o = _ref_use.get("gst_pct_override")
             gst_use = float(gst_o) if isinstance(gst_o, (int, float)) else DEFAULT_GST_PCT
             eq = _retail_to_supply_equiv_aud(eff_r, gst_pct=gst_use)
             total += eq
-            nm = str(ref.get("name") or "유사제품")
+            nm = str(_ref_use.get("name") or "유사제품")
             sim_names.append(nm)
             breakdown.append({
                 "ingredient": comp.get("ingredient"),
@@ -555,7 +631,25 @@ def dispatch_by_pricing_case(
             if crawler_row is not None and not db_aemp_ok:
                 warnings.append("crawler_price_fallback_to_seed")
         else:
-            return _blocked_no_price(pid, case, "reference_aemp_aud missing 및 DB aemp_aud 없음")
+            # DPMQ→AEMP 역산 fallback:
+            # DB 에 aemp_aud 없지만 dpmq_aud 가 있으면 5단계 공식으로 AEMP 역산.
+            # Hydrine DPMQ $48.11 → AEMP $31.92 (오차 <$0.01) 검증 완료.
+            cr_dpmq_raw = cr.get("dpmq_aud") or cr.get("pbs_dpmq")
+            aemp_rev: float | None = None
+            if isinstance(cr_dpmq_raw, (int, float)) and float(cr_dpmq_raw) > 0:
+                aemp_rev = calculate_aemp_from_dpmq(float(cr_dpmq_raw))
+            if aemp_rev and aemp_rev > 0:
+                aemp = aemp_rev
+                aemp_source = "dpmq_reverse"
+                warnings.append(
+                    f"AEMP DB 없음 → DPMQ AUD {float(cr_dpmq_raw):.2f}에서 5단계 공식 역산 "
+                    f"(AEMP ≈ AUD {aemp_rev:.2f}). 시드 reference_aemp_aud 도 없어 역산 사용."
+                )
+            else:
+                return _blocked_no_price(
+                    pid, case,
+                    "reference_aemp_aud missing 및 DB aemp_aud·DPMQ 없음 — 역산 불가",
+                )
 
         scenarios = calculate_three_scenarios(
             logic="A", aemp_aud=aemp, fx_aud_to_krw=fx_aud_to_krw, presets_pct=presets_pct
@@ -641,7 +735,23 @@ def dispatch_by_pricing_case(
             if crawler_row is not None:
                 warnings.append("crawler_price_fallback_to_seed")
         else:
-            return _blocked_no_price(pid, case, "substitute reference_aemp_aud missing 및 DB aemp_aud 없음")
+            # DPMQ→AEMP 역산 fallback (대체계열 크롤러가 DPMQ만 가져온 경우)
+            cr_dpmq_raw = cr.get("dpmq_aud") or cr.get("pbs_dpmq")
+            aemp_rev_s: float | None = None
+            if isinstance(cr_dpmq_raw, (int, float)) and float(cr_dpmq_raw) > 0:
+                aemp_rev_s = calculate_aemp_from_dpmq(float(cr_dpmq_raw))
+            if aemp_rev_s and aemp_rev_s > 0:
+                aemp_use = aemp_rev_s
+                aemp_source = "dpmq_reverse"
+                warnings.append(
+                    f"동일성분 부재 → {sub_name} DPMQ AUD {float(cr_dpmq_raw):.2f}에서 "
+                    f"AEMP 역산(≈ AUD {aemp_rev_s:.2f}). 참고가로 차용."
+                )
+            else:
+                return _blocked_no_price(
+                    pid, case,
+                    "substitute reference_aemp_aud missing 및 DB aemp_aud·DPMQ 없음",
+                )
 
         scenarios = calculate_three_scenarios(
             logic="A", aemp_aud=aemp_use, fx_aud_to_krw=fx_aud_to_krw, presets_pct=presets_pct

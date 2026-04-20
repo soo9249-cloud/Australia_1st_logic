@@ -124,12 +124,21 @@ def _estimate_retail_price(
 
     if pbs_found and dpmq is not None and dpmq > Decimal("0"):
         return dpmq.quantize(Decimal("0.01")), "pbs_dpmq"
+
+    # PBS 등재 + DPMQ 없음: Chemist Warehouse 를 건너뜀.
+    # 근거: PBS 처방약은 CW 에서 환자 본인부담금($25 일반/~$6 연금)만 표시 — 실제 DPMQ(≈$72) 가 아님.
+    # CW × 1.20 로 소매가 추정 시 크게 과소 추정됨 (예: Sereterol 250/50 DPMQ $72 → $30 오산).
+    # PBS 등재 약은 DPMQ > AEMP(보조) 순으로만 처리. Chemist 폴백은 PBS 미등재 약에만 허용.
+    if pbs_found:
+        if aemp is not None and aemp > Decimal("0"):
+            return aemp.quantize(Decimal("0.01")), "aemp_fallback"
+        return None, None
+
+    # PBS 미등재 (private channel): Chemist → AEMP 순
     if chemist_price_aud is not None:
         estimated = chemist_price_aud * RETAIL_MARKUP_MULTIPLIER
         return estimated.quantize(Decimal("0.01")), "chemist_markup"
     if aemp is not None and aemp > Decimal("0"):
-        # dispensing rule API 실패로 DPMQ 없을 때 AEMP를 보조 참고값으로 사용.
-        # 라벨: 'aemp_fallback' (이전 버전에서 'pbs_dpmq' 로 잘못 표기됐던 버그 수정)
         return aemp.quantize(Decimal("0.01")), "aemp_fallback"
     return None, None
 
@@ -497,7 +506,14 @@ def build_product_summary(
         # 을 직접 기록해 보고서·분석 단계에서 JOIN 없이 조회 가능하도록.
         "case_code": product.get("pricing_case"),
         "ingredients_split": (
-            {"components": product.get("inn_components", [])}
+            {
+                "components": product.get("inn_components", []),
+                # COMPONENT_SUM 전용: PBS 등재 성분 개별 AEMP + 미등재 성분 소매가 원본.
+                # 크롤러는 날 것 데이터만 저장 — 마진 역산·합산은 Stage 2(fob_calculator)에서.
+                # pbs.fetch_pbs_component_sum() 이 채운 값 그대로 전달. 비COMPONENT_SUM은 빈 dict.
+                "pbs_prices": pbs.get("pbs_prices") or {},
+                "retail_prices": pbs.get("retail_prices") or {},
+            }
             if product.get("inn_components") else {"components": []}
         ),
         "ai_deep_research_raw": None,    # AI 붙을 때 채움

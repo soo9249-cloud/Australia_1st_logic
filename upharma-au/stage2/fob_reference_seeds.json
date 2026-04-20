@@ -30,10 +30,10 @@
       "reference_aemp_aud": null,
       "reference_dpmq_aud": null,
       "reference_retail_aud": null,
-      "reference_retail_source": "OMACOR 1000mg 28캡슐 (Healthylife, 시드 백업용 — 역산은 DB retail_price_aud 우선)",
+      "reference_retail_source": "Healthylife OMACOR 실시간 크롤링 (healthylife_slug: omacor-1000mg-cap-28) — 크롤러 retail_price_aud 미수집 시 blocked 반환",
       "competitor_brands_on_pbs": [],
       "confidence_score": 0.6,
-      "notes": "함량·제형 불일치(EE90 2g pouch vs OMACOR 1000mg capsule). Logic B(Private) 경로, 소매가에서 유통마진 역산."
+      "notes": "함량·제형 불일치(EE90 2g pouch vs OMACOR 1000mg capsule). Logic B(Private) 경로, 소매가에서 유통마진 역산. 가격은 Healthylife 크롤링 전용 — 수기 seed 없음."
     },
     {
       "product_id": "au-gadvoa-002",
@@ -52,12 +52,29 @@
       "reference_retail_aud": null,
       "reference_retail_source": null,
       "fob_hardcoded_aud": {
-        "bayer_reference_aud": 16.49,
-        "aggressive": 9.89,
-        "average": 12.37,
-        "conservative": 14.02,
-        "bayer_reference_source": "TradeMap 2024 NZ→DE HS 300630 CIF $735.5/kg × density 1.30 g/mL × AU 프리미엄 +25% × 물류 8% (15mL 기준)",
-        "notes": "Bayer Gadovist 호주 FOB(원가) $16.49/병 — 오리지널 기준. 제네릭 진입 시 Penetration 40% off / Reference 25% off / Premium 15% off."
+        "bayer_reference_aud": 8.24,
+        "aggressive": 4.95,
+        "average": 6.18,
+        "conservative": 7.00,
+        "_default_size": "7.5mL",
+        "_note_flat": "dispatch 호환용 기본값 — 7.5mL PFS 기준. 5mL 규격은 by_size 참조.",
+        "per_ml_reference_aud": 1.099,
+        "per_ml_source": "TradeMap 2024 NZ→DE HS 300630 CIF $735.5/kg × density 1.30 g/mL × AU 프리미엄 +25% × 물류 8% → $16.49/15mL = $1.099/mL",
+        "by_size": {
+          "5mL": {
+            "bayer_reference_aud": 5.50,
+            "aggressive": 3.30,
+            "average": 4.12,
+            "conservative": 4.67
+          },
+          "7.5mL": {
+            "bayer_reference_aud": 8.24,
+            "aggressive": 4.95,
+            "average": 6.18,
+            "conservative": 7.00
+          }
+        },
+        "notes": "Bayer Gadovist PFS — 5mL / 7.5mL 두 규격. mL당 FOB $1.099 기준. 제네릭: Penetration 40% off / Reference 25% off / Premium 15% off."
       },
       "competitor_brands_on_pbs": [],
       "confidence_score": 0.5,
@@ -122,23 +139,30 @@
           "ingredient": "rosuvastatin",
           "pbs_listed": true,
           "pbs_code_ref": null,
-          "reference_aemp_aud_fallback": 2.5
+          "reference_aemp_aud_fallback": 2.5,
+          "_fallback_note": "PBS 실시간 크롤링 우선(pbs_listed_component_aemp). 로수바스타틴 5mg과 10mg은 PBS AEMP 상이 — 실시간 수집 전까지 단일 fallback $2.50 사용",
+          "per_strength_fallback": {
+            "5mg": 2.0,
+            "10mg": 2.5,
+            "_note": "PBS 실측치 아님. 크롤러 수집 전 임시값 — pbs_listed_component_aemp 컬럼 적용 후 자동 대체"
+          }
         },
         {
           "ingredient": "omega-3",
           "pbs_listed": false,
+          "use_crawler_healthylife_price": true,
           "similar_product_retail_ref": {
             "name": "OMACOR 1000mg 28 capsules (Healthylife)",
-            "retail_aud": 48.95,
+            "retail_aud": null,
             "units_per_pack": 28,
             "fdc_units_per_reference_unit": 1,
             "gst_pct_override": 10,
-            "dose_ratio_note": "복합제 1정당 오메가3 1000mg ≈ 참조 1캡 — 1정당 소매 = pack 가격 / 28"
+            "dose_ratio_note": "복합제 1정당 오메가3 EE90 1g ≈ OMACOR 1캡 — 1정당 소매 = pack 가격 / 28. retail_aud는 Healthylife 크롤링값 사용"
           }
         }
       ],
       "confidence_score": 0.55,
-      "notes": "스타틴+오메가3 복합제. 서브케이스 2 (등재+미등재). PBAC 임상우월성 입증 필수."
+      "notes": "로수바스타틴 5/1000 · 10/1000 두 함량 복합제. 함량별 FOB 상이 — pbs_listed_component_aemp 크롤러 컬럼 적용 시 자동 분리. 서브케이스 2 (등재+미등재). PBAC 임상우월성 입증 필수."
     },
     {
       "product_id": "au-atmeg-006",
@@ -160,23 +184,25 @@
           "ingredient": "atorvastatin",
           "pbs_listed": true,
           "pbs_code_ref": null,
-          "reference_aemp_aud_fallback": 2.5
+          "reference_aemp_aud_fallback": 2.5,
+          "_fallback_note": "아토르바스타틴 10mg 단일 함량. pbs_listed_component_aemp 크롤러 컬럼 적용 후 PBS 실시간 AEMP로 자동 대체"
         },
         {
           "ingredient": "omega-3",
           "pbs_listed": false,
+          "use_crawler_healthylife_price": true,
           "similar_product_retail_ref": {
             "name": "OMACOR 1000mg 28 capsules (Healthylife)",
-            "retail_aud": 48.95,
+            "retail_aud": null,
             "units_per_pack": 28,
             "fdc_units_per_reference_unit": 1,
             "gst_pct_override": 10,
-            "dose_ratio_note": "Rosumeg와 동일 유사제품·환산 — 1정당 소매 = pack / 28"
+            "dose_ratio_note": "Rosumeg와 동일 유사제품·환산 — 1정당 소매 = pack / 28. retail_aud는 Healthylife 크롤링값 사용"
           }
         }
       ],
       "confidence_score": 0.55,
-      "notes": "Rosumeg와 동일 구조(아토르바스타틴+오메가3). 서브케이스 2. PBAC 임상우월성 필요."
+      "notes": "아토르바스타틴 10mg + EE90 1g 단일 함량(10/1000). 서브케이스 2. PBAC 임상우월성 필요."
     },
     {
       "product_id": "au-ciloduo-007",
@@ -191,14 +217,32 @@
       "commercial_withdrawal_year": 2021,
       "hospital_channel_only": false,
       "restricted_benefit": false,
-      "reference_aemp_aud": 11.87,
+      "reference_aemp_aud": 14.37,
+      "reference_aemp_breakdown": {
+        "cilostazol_proxy_aud": 11.87,
+        "rosuvastatin_generic_aud": 2.50,
+        "note": "Cilostazol: Pletal 100mg PBS AEMP 참고(철수 이전). Rosuvastatin 10mg 제네릭 기준 $2.50. 두 성분 합산 = $14.37."
+      },
+      "reference_aemp_per_strength": {
+        "200/10": {
+          "total_aud": 14.37,
+          "cilostazol_proxy_aud": 11.87,
+          "rosuvastatin_10mg_aud": 2.50
+        },
+        "200/20": {
+          "total_aud": 15.37,
+          "cilostazol_proxy_aud": 11.87,
+          "rosuvastatin_20mg_aud": 3.50,
+          "_note": "Rosuvastatin 20mg PBS AEMP ≈ $3.50 — PBS 실시간 크롤링으로 검증 필요"
+        }
+      },
       "reference_dpmq_aud": null,
       "reference_retail_aud": null,
       "substitute_ingredient": "cilostazol",
       "substitute_drug": "Pletal 100mg (PBS 동성분 참고)",
       "competitor_brands_on_pbs": ["Pletal"],
       "confidence_score": 0.4,
-      "notes": "Cilostazol 2021년 TGA Commercial Withdrawal. 동성분 단일제(Pletal) PBS AEMP를 참고가로 차용. 재진입 시 철수 소명 + PBAC 이중 장벽. FOB는 대체계열 참고 추정치."
+      "notes": "Cilostazol 2021년 TGA Commercial Withdrawal. 복합제(Cilostazol 200mg + Rosuvastatin 10/20mg) 두 성분 AEMP 합산: Pletal PBS 참고가 $11.87 + Rosuvastatin 제네릭 $2.50 = $14.37. 재진입 시 철수 소명 + PBAC 이중 장벽. FOB는 대체계열 참고 추정치."
     },
     {
       "product_id": "au-gastiin-008",
@@ -212,14 +256,14 @@
       "commercial_withdrawal_flag": false,
       "hospital_channel_only": false,
       "restricted_benefit": false,
-      "reference_aemp_aud": 1.85,
+      "reference_aemp_aud": null,
       "reference_dpmq_aud": null,
       "reference_strength_labels": ["Domperidone 10mg 대체계열 참고"],
       "reference_retail_aud": null,
       "substitute_ingredient": "domperidone",
       "competitor_brands_on_pbs": ["Motilium", "Domperidone APOTEX"],
       "confidence_score": 0.3,
-      "notes": "Mosapride 호주 완전 미등재. 대체계열 Domperidone 가격밴드로만 추정. Section 19A 이론상 가능, 실무 이례적."
+      "notes": "Mosapride 호주 완전 미등재. 대체계열 Domperidone AEMP는 PBS 실시간 크롤링 (fetch_pbs_substitute → similar_inns). 크롤 미수집 시 blocked. Section 19A 이론상 가능, 실무 이례적."
     }
   ]
 }

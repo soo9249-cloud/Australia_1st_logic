@@ -215,14 +215,25 @@ def _seed_by_product_id(product_id: str) -> dict:
 def test_component_sum_rosumeg_subcase2() -> None:
     print("\n[T9] COMPONENT_SUM Rosumeg — 서브케이스2, 평균 FOB USD")
     seed = _seed_by_product_id("au-rosumeg-005")
-    r = dispatch_by_pricing_case(seed)
+    # seed retail_aud=null → 크롤러 healthylife_price_aud 필수 (실시간 아키텍처)
+    # ingredients_split.pbs_prices 에 rosuvastatin PBS AEMP 포함 (실제 크롤러 동작 시뮬레이션)
+    # → seed reference_aemp_aud_fallback=2.50 대신 크롤러 실시간값 $2.50 사용 (1순위)
+    mock_crawler = {
+        "healthylife_price_aud": 48.95,
+        "ingredients_split": {
+            "components": ["rosuvastatin", "omega-3-acid ethyl esters"],
+            "pbs_prices": {"rosuvastatin": 2.50},   # PBS API 실시간 (시뮬레이션)
+            "retail_prices": {"omega-3-acid ethyl esters": 48.95},
+        },
+    }
+    r = dispatch_by_pricing_case(seed, crawler_row=mock_crawler)
     _assert_true(r["logic"] == "A", "logic == A")
     _assert_true(r["inputs"].get("component_sum_subcase") == 2, "subcase == 2")
     avg = r["scenarios"]["average"]
     aud_usd = 0.716
     usd = float(avg["fob_aud"]) * aud_usd
-    # 합산 AUD ≈ 2.5 + (48.95/28)/1.1/1.3/1.1 → 평균 시나리오 FOB USD ≈ 2.59 전후
-    _assert_close(usd, 2.586, tol=0.03, label="Rosumeg average FOB USD (subcase 2)")
+    # 합산 AUD ≈ 2.50(statin seed) + (48.95/28)/1.1/1.3/1.1(omega-3 HL역산) → 평균 FOB USD ≈ 2.586
+    _assert_close(usd, 2.586, tol=0.03, label="Rosumeg average FOB USD (subcase 2, Healthylife 실시간)")
 
 
 # --------------------------------------------------------------------------

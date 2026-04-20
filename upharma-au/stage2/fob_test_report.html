@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FOB 수출가 역산 백엔드 테스트 리포트 — UPharma AU</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --navy:#173f78; --navy2:#224f91; --orange:#f0a13a;
+      --red:#c8564d; --green:#2d9870; --yellow:#e8a020;
+      --text:#1e2d45; --muted:#6b7d96;
+      --card:#ffffff; --inner:#f4f6fa; --shell:#f0f4f9;
+      --sh:0 4px 16px rgba(23,63,120,.10);
+      --sh2:0 2px 8px rgba(23,63,120,.06);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--shell);color:var(--text);min-height:100vh;padding:24px 28px}
+    /* ── Top ── */
+    .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+    .topbar h1{font-size:20px;color:var(--navy);font-weight:700}
+    .topbar h1 span{color:var(--muted);font-weight:400;font-size:13px;margin-left:10px}
+    .badge{font-size:11px;color:var(--muted);padding:5px 12px;background:var(--card);border-radius:20px;box-shadow:var(--sh2)}
+    /* ── Meta ── */
+    .meta{background:var(--card);padding:10px 18px;border-radius:10px;box-shadow:var(--sh2);margin-bottom:18px;font-size:12px;color:var(--muted);line-height:1.7}
+    .meta strong{color:var(--navy)}
+    /* ── Stat cards ── */
+    .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+    .stat{background:var(--card);padding:16px 18px;border-radius:10px;box-shadow:var(--sh2);border-top:3px solid var(--navy)}
+    .stat.warn{border-top-color:var(--yellow)}
+    .stat.ok{border-top-color:var(--green)}
+    .stat.err{border-top-color:var(--red)}
+    .stat .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+    .stat .val{font-size:26px;font-weight:700;color:var(--navy)}
+    .stat .val.ok{color:var(--green)}
+    .stat .val.warn{color:var(--yellow)}
+    .stat .val.err{color:var(--red)}
+    .stat .sub{font-size:11px;color:var(--muted);margin-top:4px}
+    /* ── Grid ── */
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+    .full{grid-column:1/-1}
+    .panel{background:var(--card);padding:18px 22px;border-radius:10px;box-shadow:var(--sh)}
+    .panel h2{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:4px}
+    .panel .desc{font-size:11px;color:var(--muted);margin-bottom:14px}
+    .panel canvas{max-height:280px}
+    /* ── Table ── */
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+    th{text-align:left;padding:7px 10px;color:var(--muted);font-size:11px;font-weight:500;text-transform:uppercase;border-bottom:2px solid var(--inner)}
+    td{padding:7px 10px;border-bottom:1px solid var(--inner)}
+    td.num{text-align:right;font-variant-numeric:tabular-nums}
+    tr:hover td{background:var(--inner)}
+    /* ── Tag ── */
+    .tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:12px;font-weight:600}
+    .tag.live{background:#dcfce7;color:#166534}
+    .tag.mock{background:#fef9c3;color:#854d0e}
+    .tag.hard{background:#e0e7ff;color:#3730a3}
+    .tag.seed{background:#f3e8ff;color:#6b21a8}
+    .tag.ok{background:#dcfce7;color:#166534}
+    .tag.warn{background:#fef9c3;color:#854d0e}
+    .tag.block{background:#fee2e2;color:#991b1b}
+    /* ── Issue list ── */
+    .issue{padding:10px 14px;border-radius:8px;margin-bottom:8px;font-size:12px;border-left:4px solid}
+    .issue.warn{background:#fffbeb;border-color:var(--yellow)}
+    .issue.info{background:#eff6ff;border-color:var(--navy)}
+    .issue strong{display:block;margin-bottom:2px}
+    /* ── Footer ── */
+    .footer{margin-top:24px;font-size:11px;color:var(--muted);text-align:center;line-height:1.8}
+    @media(max-width:900px){.stats{grid-template-columns:repeat(3,1fr)}.grid2,.grid3{grid-template-columns:1fr}}
+    @media print{body{background:#fff;padding:8px}.panel,.stat,.meta{box-shadow:none;border:1px solid #e5e7eb;break-inside:avoid}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>FOB 수출가 역산 백엔드 테스트 리포트 <span>UPharma Australia Export AI · 이상치 검사</span></h1>
+  </div>
+  <span class="badge">📸 STANDALONE · 2026-04-21 · 8개 품목 + 케이스별 검증</span>
+</div>
+
+<div class="meta">
+  <strong>테스트 범위:</strong> 6개 pricing_case × 11개 시뮬레이션 케이스 (8품목 + Ciloduo 2함량 + Gadvoa 2사이즈 + 신약 withdrawal 예시)
+  &nbsp;|&nbsp;<strong>환율:</strong> 1 AUD = 910 KRW = 0.716 USD
+  &nbsp;|&nbsp;<strong>크롤링:</strong> PBS API 실시간 + Healthylife 실시간 + mock fallback
+  &nbsp;|&nbsp;<strong>마진:</strong> 약국 30% · 도매 10% (추정값 — 딥리서치 결과 반영 예정)
+</div>
+
+<!-- ── 요약 통계 ── -->
+<div class="stats">
+  <div class="stat ok">
+    <div class="lbl">정상 케이스</div>
+    <div class="val ok">10</div>
+    <div class="sub">FOB 역산 성공</div>
+  </div>
+  <div class="stat err">
+    <div class="lbl">BLOCKED</div>
+    <div class="val err">1</div>
+    <div class="sub">Commercial Withdrawal</div>
+  </div>
+  <div class="stat warn">
+    <div class="lbl">신뢰도 경고</div>
+    <div class="val warn">8</div>
+    <div class="sub">정보성 경고 (정상)</div>
+  </div>
+  <div class="stat warn">
+    <div class="lbl">가격 이슈</div>
+    <div class="val warn">1</div>
+    <div class="sub">HL 가격 불일치</div>
+  </div>
+  <div class="stat">
+    <div class="lbl">실시간 크롤링</div>
+    <div class="val">7 / 11</div>
+    <div class="sub">PBS live · HL live</div>
+  </div>
+</div>
+
+<!-- ── 차트 Row 1 ── -->
+<div class="grid2">
+  <div class="panel">
+    <h2>기준가 시나리오 FOB AUD — 품목별</h2>
+    <div class="desc">Reference Pricing (수입상 마진 20%) 기준. 복수 함량은 별도 표시.</div>
+    <canvas id="chartFOB"></canvas>
+  </div>
+  <div class="panel">
+    <h2>3시나리오 FOB 밴드 — 전 품목</h2>
+    <div class="desc">저가진입(30%)·기준가(20%)·프리미엄(10%) 마진별 FOB AUD 범위</div>
+    <canvas id="chartBand"></canvas>
+  </div>
+</div>
+
+<!-- ── 차트 Row 2 ── -->
+<div class="grid2">
+  <div class="panel">
+    <h2>가격 데이터 출처 분포</h2>
+    <div class="desc">케이스별 크롤링 소스 비율</div>
+    <canvas id="chartSource"></canvas>
+  </div>
+  <div class="panel">
+    <h2>Confidence Score — 품목별</h2>
+    <div class="desc">시드 설정값. 0.9+ 신뢰, 0.5 이하 예비 추정치</div>
+    <canvas id="chartConf"></canvas>
+  </div>
+</div>
+
+<!-- ── 전체 결과 테이블 ── -->
+<div class="panel" style="margin-bottom:16px">
+  <h2>전체 FOB 역산 결과</h2>
+  <div class="desc">전 케이스 3시나리오 FOB · 데이터 출처 · 상태</div>
+  <table>
+    <thead>
+      <tr>
+        <th>품목</th><th>케이스</th><th>데이터 출처</th>
+        <th class="num">FOB AUD (저가)</th>
+        <th class="num">FOB AUD (기준)</th>
+        <th class="num">FOB AUD (프리미엄)</th>
+        <th class="num">FOB USD (기준)</th>
+        <th class="num">FOB KRW (기준)</th>
+        <th>상태</th>
+      </tr>
+    </thead>
+    <tbody id="tbodyResult"></tbody>
+  </table>
+</div>
+
+<!-- ── 이슈 & 이상치 ── -->
+<div class="grid2">
+  <div class="panel">
+    <h2>⚠ 발견된 이슈 & 개선사항</h2>
+    <div class="desc">자동 이상치 검사 + 수동 검토 결과</div>
+    <div style="margin-top:10px">
+      <div class="issue warn">
+        <strong>🔴 Healthylife 가격 불일치 — 즉시 검토 필요</strong>
+        slug <code>omacor-1000mg-cap-28</code>: 첫 호출 AUD 59.95 → 이후 호출 AUD 6.95.
+        Rate limit 또는 다른 제품 반환 의심. OMACOR 28캡 정상가 AUD 55~70 대역.
+        딥리서치 확인 후 mock_retail 값 업데이트 예정.
+      </div>
+      <div class="issue warn">
+        <strong>🟡 Ciloduo 200/10 AEMP 불일치 — 설계 한계</strong>
+        PBS clopidogrel(대체계열) 실시간 AEMP AUD 3.80 vs 시드 합산 추정 AUD 14.37.
+        ESTIMATE_substitute는 단일 대체약만 참조 → 복합제 두 성분 합산 반영 불가.
+        Ciloduo는 ESTIMATE_substitute 한계 품목 — 별도 수기 확정 필요.
+      </div>
+      <div class="issue warn">
+        <strong>🟡 Sereterol 함량별 FOB 미분리</strong>
+        250/50(AEMP $27.07) · 500/50(AEMP $36.65) 평균 $31.86 사용 중.
+        PBS API가 함량별 단일값만 반환 → 함량별 별도 크롤링 구조 필요.
+        현재 confidence_score 0.95 — 정확도는 높으나 함량별 제안 불가.
+      </div>
+      <div class="issue info">
+        <strong>ℹ 경고 임계값 조정 권장</strong>
+        정보성 경고(PBAC 플래그·confidence 안내 등)가 이상치로 집계됨.
+        임계값 MAX_WARNINGS 3 → 5 상향 또는 경고 유형 분류 개선 권장.
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>✅ 확인된 정상 동작</h2>
+    <div class="desc">테스트를 통해 검증된 백엔드 로직</div>
+    <table>
+      <thead><tr><th>검증 항목</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td>PBS API 실시간 AEMP 수집 (Hydrine)</td><td><span class="tag ok">✓ PASS</span></td></tr>
+        <tr><td>DPMQ → AEMP 5단계 역산 (Hydrine $48.11)</td><td><span class="tag ok">✓ Δ=0.00</span></td></tr>
+        <tr><td>ingredients_split.pbs_prices 분리 저장</td><td><span class="tag ok">✓ 신규</span></td></tr>
+        <tr><td>COMPONENT_SUM 이중계산 방지</td><td><span class="tag ok">✓ 수정됨</span></td></tr>
+        <tr><td>Healthylife 실시간 크롤링 (HL live)</td><td><span class="tag warn">⚠ 가격 불일치</span></td></tr>
+        <tr><td>ESTIMATE_hospital 하드코딩 by_size</td><td><span class="tag ok">✓ 5mL/7.5mL</span></td></tr>
+        <tr><td>ESTIMATE_withdrawal BLOCKED</td><td><span class="tag ok">✓ 차단 정상</span></td></tr>
+        <tr><td>3시나리오 단조성 (저가&lt;기준&lt;프리미엄)</td><td><span class="tag ok">✓ 전 품목</span></td></tr>
+        <tr><td>GST 면제 분기 (PBS RX)</td><td><span class="tag ok">✓ PASS</span></td></tr>
+        <tr><td>시드 fallback (크롤러 미수집 시)</td><td><span class="tag ok">✓ 정상</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  UPharma Australia Export AI · FOB 백엔드 테스트 리포트 · 2026-04-21<br>
+  이 파일은 내부 테스트 증거용입니다. 실제 수출 의사결정에는 PBS 실시간 데이터 및 전문가 검토 필요.<br>
+  마진값(약국30%·도매10%)은 추정값 — 딥리서치 확인 후 fob_calculator.py DEFAULT_* 상수 업데이트 예정.
+</div>
+
+<script>
+// ── 시뮬레이션 결과 데이터 ──────────────────────────────────────────────────
+const RESULTS = [
+  {name:'Hydrine\n(HU 500mg)',       case:'DIRECT',             src:'live_pbs',         agg:29.46,avg:31.92,con:34.82, conf:0.98, status:'ok'},
+  {name:'Sereterol\n(Flu/Sal 평균)', case:'DIRECT',             src:'seed_list_avg',    agg:29.41,avg:31.86,con:34.76, conf:0.95, status:'ok'},
+  {name:'Rosumeg\n5/1000',          case:'COMPONENT_SUM',       src:'pbs=mock·hl=live', agg:3.10, avg:3.36, con:3.67,  conf:0.55, status:'warn'},
+  {name:'Rosumeg\n10/1000',         case:'COMPONENT_SUM',       src:'pbs=live·hl=live', agg:2.45, avg:2.66, con:2.90,  conf:0.55, status:'warn'},
+  {name:'Atmeg\n10/1000',           case:'COMPONENT_SUM',       src:'pbs=mock·hl=live', agg:2.45, avg:2.66, con:2.90,  conf:0.55, status:'warn'},
+  {name:'Omethyl\n(EE90 2g)',       case:'ESTIMATE_private',    src:'live_hl',          agg:3.40, avg:3.68, con:4.02,  conf:0.60, status:'warn'},
+  {name:'Gadvoa\n7.5mL PFS',        case:'ESTIMATE_hospital',   src:'hardcoded',        agg:4.95, avg:6.18, con:7.00,  conf:0.50, status:'ok'},
+  {name:'Gadvoa\n5mL PFS',          case:'ESTIMATE_hospital',   src:'hardcoded',        agg:3.30, avg:4.12, con:4.67,  conf:0.50, status:'ok'},
+  {name:'Ciloduo\n200/10',          case:'ESTIMATE_substitute', src:'live_pbs',         agg:3.51, avg:3.80, con:4.15,  conf:0.40, status:'warn'},
+  {name:'Ciloduo\n200/20',          case:'ESTIMATE_substitute', src:'mock',             agg:14.19,avg:15.37,con:16.77, conf:0.40, status:'warn'},
+  {name:'Gastiin CR\n15mg',         case:'ESTIMATE_substitute', src:'mock',             agg:1.71, avg:1.85, con:2.02,  conf:0.30, status:'ok'},
+  {name:'신약예시\nWithdrawal',      case:'ESTIMATE_withdrawal', src:'—',                agg:null, avg:null, con:null,  conf:null, status:'block'},
+];
+const FX_KRW = 910, FX_USD = 0.716;
+
+// ── 테이블 ───────────────────────────────────────────────────────────────────
+const tbody = document.getElementById('tbodyResult');
+RESULTS.forEach(r => {
+  const tr = document.createElement('tr');
+  const srcTag = r.src.startsWith('live') || r.src.includes('live') ? 'live' :
+                 r.src === 'hardcoded' ? 'hard' :
+                 r.src === 'seed_list_avg' ? 'seed' : 'mock';
+  const stTag  = r.status === 'ok' ? 'ok' : r.status === 'block' ? 'block' : 'warn';
+  const stLbl  = r.status === 'ok' ? '✓ 정상' : r.status === 'block' ? '⛔ BLOCKED' : '⚠ 경고';
+  const fmtAUD = v => v == null ? '—' : `$${v.toFixed(2)}`;
+  const fmtUSD = v => v == null ? '—' : `$${(v*FX_USD).toFixed(2)}`;
+  const fmtKRW = v => v == null ? '—' : `₩${(v*FX_KRW).toLocaleString()}`;
+  tr.innerHTML = `
+    <td style="white-space:pre-line;font-weight:500">${r.name}</td>
+    <td><code style="font-size:10px">${r.case}</code></td>
+    <td><span class="tag ${srcTag}">${r.src}</span></td>
+    <td class="num">${fmtAUD(r.agg)}</td>
+    <td class="num" style="font-weight:600">${fmtAUD(r.avg)}</td>
+    <td class="num">${fmtAUD(r.con)}</td>
+    <td class="num">${fmtUSD(r.avg)}</td>
+    <td class="num">${fmtKRW(r.avg)}</td>
+    <td><span class="tag ${stTag}">${stLbl}</span></td>`;
+  tbody.appendChild(tr);
+});
+
+// ── Chart 1: 기준가 FOB 바 ───────────────────────────────────────────────────
+const validR = RESULTS.filter(r => r.avg != null);
+new Chart(document.getElementById('chartFOB'), {
+  type:'bar',
+  data:{
+    labels: validR.map(r => r.name),
+    datasets:[{
+      label:'FOB AUD (기준가)',
+      data: validR.map(r => r.avg),
+      backgroundColor: validR.map(r =>
+        r.conf >= 0.90 ? '#2d9870' :
+        r.conf >= 0.55 ? '#f0a13a' : '#c8564d'),
+      borderRadius:4,
+    }]
+  },
+  options:{
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`AUD $${c.raw.toFixed(2)}`}}},
+    scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:'AUD'},ticks:{callback:v=>`$${v}`}}}
+  }
+});
+
+// ── Chart 2: 밴드 수평 바 ────────────────────────────────────────────────────
+new Chart(document.getElementById('chartBand'), {
+  type:'bar',
+  data:{
+    labels: validR.map(r => r.name),
+    datasets:[
+      {label:'저가진입', data:validR.map(r=>r.agg), backgroundColor:'rgba(200,86,77,.7)', borderRadius:2},
+      {label:'기준가',   data:validR.map(r=>r.avg-r.agg), backgroundColor:'rgba(240,161,58,.7)', borderRadius:2},
+      {label:'프리미엄', data:validR.map(r=>r.con-r.avg), backgroundColor:'rgba(45,152,112,.7)', borderRadius:2},
+    ]
+  },
+  options:{
+    indexAxis:'y',
+    plugins:{legend:{position:'bottom'}},
+    scales:{
+      x:{stacked:true,title:{display:true,text:'FOB AUD'},ticks:{callback:v=>`$${v}`}},
+      y:{stacked:true,ticks:{font:{size:10}}}
+    }
+  }
+});
+
+// ── Chart 3: 데이터 출처 도넛 ───────────────────────────────────────────────
+const srcCount = {live_pbs:0,live_hl:0,mock:0,hardcoded:0,seed:0,blocked:0};
+RESULTS.forEach(r=>{
+  if(r.status==='block'){srcCount.blocked++;return}
+  if(r.src.includes('live_pbs')||r.src.includes('pbs=live'))srcCount.live_pbs++;
+  if(r.src.includes('live_hl')||r.src.includes('hl=live')||r.src==='live_hl')srcCount.live_hl++;
+  if(r.src.includes('mock')||r.src.includes('pbs=mock'))srcCount.mock++;
+  if(r.src==='hardcoded')srcCount.hardcoded++;
+  if(r.src==='seed_list_avg')srcCount.seed++;
+});
+new Chart(document.getElementById('chartSource'),{
+  type:'doughnut',
+  data:{
+    labels:['PBS API 실시간','Healthylife 실시간','Mock fallback','TradeMap 수기','시드 평균','차단'],
+    datasets:[{data:Object.values(srcCount),
+      backgroundColor:['#2d9870','#173f78','#f0a13a','#6366f1','#a855f7','#c8564d'],
+      borderWidth:2}]
+  },
+  options:{plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}}}
+});
+
+// ── Chart 4: Confidence ───────────────────────────────────────────────────────
+new Chart(document.getElementById('chartConf'),{
+  type:'bar',
+  data:{
+    labels: RESULTS.map(r=>r.name),
+    datasets:[{
+      label:'Confidence Score',
+      data: RESULTS.map(r=>r.conf),
+      backgroundColor: RESULTS.map(r=>
+        r.conf == null ? '#e5e7eb' :
+        r.conf >= 0.90 ? '#2d9870' :
+        r.conf >= 0.55 ? '#f0a13a' : '#c8564d'),
+      borderRadius:4,
+    }]
+  },
+  options:{
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{ticks:{font:{size:9}}},
+      y:{min:0,max:1,title:{display:true,text:'Score'},ticks:{callback:v=>v.toFixed(1)}}
+    }
+  }
+});
+</script>
+</body>
+</html>

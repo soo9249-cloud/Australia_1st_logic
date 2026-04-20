@@ -111,7 +111,8 @@ def _estimate_retail_price(
     우선순위:
       1) PBS 등재 + dpmq_aud > 0 → DPMQ 그대로 (method = 'pbs_dpmq')
       2) Chemist 신뢰 가격 → chemist × RETAIL_MARKUP_MULTIPLIER (method = 'chemist_markup')
-      3) aemp_aud 로 fallback (method = 'pbs_dpmq')
+      3) aemp_aud 로 fallback (method = 'aemp_fallback') — dispensing rule API 실패 시
+         주의: AEMP는 제조사 출고가로 DPMQ보다 낮음. FOB Logic B 역산 시 과소 추정 가능.
       4) 모두 없음 → (None, None)
     """
     pbs_found = pbs.get("pbs_found")
@@ -127,7 +128,9 @@ def _estimate_retail_price(
         estimated = chemist_price_aud * RETAIL_MARKUP_MULTIPLIER
         return estimated.quantize(Decimal("0.01")), "chemist_markup"
     if aemp is not None and aemp > Decimal("0"):
-        return aemp.quantize(Decimal("0.01")), "pbs_dpmq"
+        # dispensing rule API 실패로 DPMQ 없을 때 AEMP를 보조 참고값으로 사용.
+        # 라벨: 'aemp_fallback' (이전 버전에서 'pbs_dpmq' 로 잘못 표기됐던 버그 수정)
+        return aemp.quantize(Decimal("0.01")), "aemp_fallback"
     return None, None
 
 
@@ -301,6 +304,10 @@ def build_product_summary(
     # price_source_name / url (하위호환)
     if retail_estimation_method == "pbs_dpmq":
         price_name = "PBS"
+        price_url = pbs.get("source_url") or pbs.get("pbs_source_url") or ""
+    elif retail_estimation_method == "aemp_fallback":
+        # dispensing rule API 실패 → AEMP 보조 참고값. DPMQ보다 낮으므로 FOB 과소 추정 가능.
+        price_name = "PBS (AEMP 보조값 — DPMQ 미수집)"
         price_url = pbs.get("source_url") or pbs.get("pbs_source_url") or ""
     elif retail_estimation_method == "chemist_markup":
         price_name = "Chemist Warehouse"

@@ -728,6 +728,7 @@ def dispatch_by_pricing_case(
             cr_method = (crawler_row or {}).get("retail_estimation_method")
             method_label = {
                 "pbs_dpmq": "PBS DPMQ(최대처방량 총약가)",
+                "aemp_fallback": "PBS AEMP(제조사 출고가) — dispensing rule API 미수집, DPMQ보다 낮음·과소추정 주의",
                 "chemist_markup": "Chemist Warehouse × 1.20 (CHOICE 조사 기준 시장 평균)",
                 "healthylife_actual": "Healthylife 민간 소매(실측)",
                 "healthylife_same_ingredient_diff_form": "Healthylife(동성분·제형 참고)",

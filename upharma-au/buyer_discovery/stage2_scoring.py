@@ -14,6 +14,12 @@ psi_total = Σ(지표 × 가중치), 0~100 스케일
   B티어: 품목 치료영역 ∈ company_categories.areas_en 매칭
   C티어: 나머지 (점수 최상위만 보충)
 
+TOP 10 = 순수 A→B→C 점수순 상위 10개 (유통 파트너 강제 슬롯 없음).
+  · 유통 파트너 (Sigma/EBOS/Wesfarmers 등 role="distributor") 는 TOP 10 에서 제외.
+  · 리포트 별도 섹션 "distribution_partners" 에 수록 → PDF 하단 채널 파트너 섹션 활용.
+  · 이유: 호주 수출 시 TGA 스폰서(의약품 직접 수입·등록 회사)가 진짜 바이어.
+          유통사는 스폰서가 납품하는 다음 단계 채널이므로 바이어 순위 대상 아님.
+
 실행:
   python C:/Users/user/Desktop/Australia_1st_logic/upharma-au/buyer_discovery/stage2_scoring.py
 
@@ -411,6 +417,7 @@ def main(dry_run: bool = False) -> None:
     product_rankings: dict[str, list] = {}
     total_upserts = 0
     tier_dist: Counter = Counter()
+    distributors_scored: list[dict] = []  # 루프 후 리포트용 — 품목 무관 동일
 
     for p in products:
         pid = p["product_id"]
@@ -494,15 +501,14 @@ def main(dry_run: bool = False) -> None:
             })
 
         # A티어 우선 → B티어 → C티어 순 안에서 psi_total 내림차순
-        # ───── TOP 10 구성 = 일반 바이어 7명 + 유통 파트너 3명 ─────
-        # 유통 파트너 (Sigma/EBOS/Wesfarmers/CW/National) 는 6크롤 안 잡혀서
-        # 순수 psi_total 경쟁 시 밀림. 별도 슬롯 고정 필요.
-        tier_order = {"A": 0, "B": 1, "C": 2, "D_dist": 3}
+        # ───── TOP 10 = 순수 스폰서 후보 (유통 파트너 강제 슬롯 없음) ─────
+        # D_dist (Sigma/EBOS/Wesfarmers 등) 는 TOP 10 제외 → 별도 distribution_partners
+        tier_order = {"A": 0, "B": 1, "C": 2}
         distributors_scored = [x for x in scored if x.get("tier") == "D_dist"]
         general_scored = [x for x in scored if x.get("tier") != "D_dist"]
-        general_scored.sort(key=lambda x: (tier_order[x["tier"]], -x["psi_total"]))
+        general_scored.sort(key=lambda x: (tier_order.get(x["tier"], 9), -x["psi_total"]))
         distributors_scored.sort(key=lambda x: -x["psi_total"])
-        top10 = general_scored[:7] + distributors_scored[:3]
+        top10 = general_scored[:10]
 
         # 순위 부여 (1~10)
         for rnk, entry in enumerate(top10, 1):
@@ -515,13 +521,28 @@ def main(dry_run: bool = False) -> None:
             f"[stage2] {pid} | "
             f"A={sum(1 for x in top10 if x['tier']=='A')} "
             f"B={sum(1 for x in top10 if x['tier']=='B')} "
-            f"C={sum(1 for x in top10 if x['tier']=='C')}",
+            f"C={sum(1 for x in top10 if x['tier']=='C')} "
+            f"(유통파트너 별도: {len(distributors_scored)}개)",
             flush=True,
         )
 
     # ========================================================================
     # 3. 리포트 저장
     # ========================================================================
+    # 유통 파트너 — 품목 무관 공통 채널 (보고서 하단 별도 섹션)
+    # distributors_scored 는 마지막 품목 루프의 값 → 어차피 품목 무관 동일
+    dist_partners_out = [
+        {
+            "canonical_key": x["canonical_key"],
+            "canonical_name": x["canonical_name"],
+            "annual_revenue_rank": x.get("annual_revenue_rank"),
+            "website": x.get("website"),
+            "email": x.get("email"),
+            "phone": x.get("phone"),
+            "notes": x.get("notes"),
+        }
+        for x in distributors_scored
+    ]
     report = {
         "_meta": {
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -530,6 +551,8 @@ def main(dry_run: bool = False) -> None:
             "tier_distribution": dict(tier_dist),
         },
         "rankings": product_rankings,
+        # 유통 채널 파트너 (TOP 10 바이어와 별개) — PDF 보고서 하단 섹션 활용
+        "distribution_partners": dist_partners_out,
     }
     _OUT_REPORT_JSON.parent.mkdir(parents=True, exist_ok=True)
     _OUT_REPORT_JSON.write_text(

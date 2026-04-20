@@ -19,9 +19,11 @@
       "canonical_name": "Medsurge Pharma Pty Ltd",
       "annual_revenue_rank": "TOP 50 (제네릭/특수) · 비공개 (Pty Ltd)",
       "factory": {
-        "has": "N",
+        "has": "Y",
         "count": 0,
-        "locations": []
+        "locations": [
+          "VIC"
+        ]
       },
       "notes": "Section 19A (긴급 수입 특별 승인) 제도 활용 전문, 제네릭·특수의약품 수입 유통",
       "revenue_aud_millions": null,
@@ -87,9 +89,11 @@
       "canonical_name": "Novartis",
       "annual_revenue_rank": "TOP 10 (오리지널) · 2024 AUD 752.6B",
       "factory": {
-        "has": "N",
+        "has": "Y",
         "count": 0,
-        "locations": []
+        "locations": [
+          "NSW"
+        ]
       },
       "notes": "스위스계 다국적 제약사 호주 마케팅·상업화 법인",
       "revenue_aud_millions": 752559,
@@ -258,9 +262,11 @@
       "canonical_name": "Roche",
       "annual_revenue_rank": "TOP 10 (오리지널) · 2024 AUD 637M",
       "factory": {
-        "has": "N",
+        "has": "Y",
         "count": 0,
-        "locations": []
+        "locations": [
+          "NSW"
+        ]
       },
       "notes": "스위스계 다국적 제약사, 과거 호주 제조시설 철수, 전량 수입 의존",
       "revenue_aud_millions": 637,
@@ -494,9 +500,11 @@
       "canonical_name": "Sandoz Pty Ltd",
       "annual_revenue_rank": "TOP 10 (제네릭/바이오시밀러) · 비공개 (Pty Ltd)",
       "factory": {
-        "has": "N",
+        "has": "Y",
         "count": 0,
-        "locations": []
+        "locations": [
+          "NSW"
+        ]
       },
       "notes": "2023년 노바티스에서 독립 분사. GBMA 주요 임원사. 전량 글로벌 네트워크(유럽 등)에서 수입",
       "revenue_aud_millions": null,
@@ -581,9 +589,11 @@
       "canonical_name": "iNova Pharmaceuticals",
       "annual_revenue_rank": "TOP 50 (비처방/처방 혼합) · 비공개 (Pty Ltd)",
       "factory": {
-        "has": "N",
+        "has": "Y",
         "count": 0,
-        "locations": []
+        "locations": [
+          "NSW"
+        ]
       },
       "notes": "사모펀드(Pacific Equity Partners 등) 소유, 전 제품 글로벌 외부 CMO 위탁생산",
       "revenue_aud_millions": null,
@@ -958,9 +968,11 @@
       "canonical_name": "Johnson & Johnson Pacific Pty Ltd",
       "annual_revenue_rank": "TOP 10 (오리지널/OTC) · 비공개 (Pty Ltd)",
       "factory": {
-        "has": "N",
+        "has": "Y",
         "count": 0,
-        "locations": []
+        "locations": [
+          "NSW"
+        ]
       },
       "notes": "다국적 빅파마 법인으로 자사 블록버스터 오리지널·OTC 마케팅 위주. Gastiin 제네릭 등의 수출 바이어로는 전략적 부합도 떨어짐.",
       "revenue_aud_millions": null,
@@ -1206,24 +1218,22 @@
       ]
     },
     "national_pharmacies": {
-      "canonical_name": "national_pharmacies",
-      "annual_revenue_rank": "niche · 비공개 (Pty Ltd)",
+      "canonical_name": "National Pharmacies",
+      "annual_revenue_rank": "niche · 비공개 (협동조합)",
       "factory": {
-        "has": "unknown",
+        "has": "N",
         "count": null,
         "locations": []
       },
-      "notes": "제공된 검색 결과에서 National Pharmacies에 대한 정보를 찾을 수 없습니다. 검색 결과는 한국의 약사협동조합(대한약국협동조합, 아로파약사협동조합)에 관한 내용만 포함하고 있어 남호주 기반 약국 협동조합 정보 조회가 불가능합니다.",
+      "notes": "남호주(SA) 기반 약국 협동조합. 약 50개 약국 운영. 비상장 협동조합 구조로 매출 비공개. 제조 없음, 유통·소매 전문.",
       "role": "distributor",
       "asx_code": null,
-      "pharmacy_chains": [],
-      "website": null,
+      "pharmacy_chains": [
+        "National Pharmacies"
+      ],
+      "website": "https://www.nationalpharmacies.com.au",
       "evidence_urls": [
-        "https://www.dailypharm.com/user/news/151667",
-        "https://blog.naver.com/PostView.naver?blogId=wwwowwwo&logNo=201118302",
-        "https://www.dailypharm.com/user/news/146476",
-        "https://blog.naver.com/nicebongs/150155031361",
-        "https://dailypharm.com/user/news/101915"
+        "https://www.nationalpharmacies.com.au"
       ]
     }
   },

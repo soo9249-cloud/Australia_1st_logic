@@ -23,9 +23,7 @@ from buyer_discovery.utils.manufacturer_match import (  # type: ignore
     parse_manufacturers_xml,
 )
 
-_HARDCODE = Path(
-    r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/au_buyers_hardcode.json"
-)
+_HARDCODE = _ROOT / "seeds" / "au_buyers_hardcode.json"  # seeds/ 진본 사용
 _XLS = Path(r"C:/Users/user/Downloads/Australian_Manufacturers.xls")
 _SEEDS = _ROOT / "seeds"
 _OUT = _SEEDS / "verify_factory_report.json"

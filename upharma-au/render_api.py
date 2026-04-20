@@ -3992,6 +3992,190 @@ def buyers_for_product(product_id: str) -> JSONResponse:
     })
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# 바이어 발굴 실시간 실행 파이프라인 (2026-04-20)
+#   버튼 클릭 → 백그라운드 worker:
+#     1. 실시간 크롤링 (MA/GBMA/GPCE HTML·Algolia + TGA/PBS DB) — 25%
+#     2. DB 분석 (Stage 1 4-case + 교차검증 점수)                — 50%
+#     3. AI 분석 (치료영역 태깅 + 매출 캐시 + 추천 근거)          — 75%
+#     4. 리스트 생성 (Stage 2 점수화 + au_buyers UPSERT + PDF)   — 100%
+# ═══════════════════════════════════════════════════════════════════════
+
+import threading as _threading
+import uuid as _uuid
+from datetime import datetime as _dt_p3
+
+# job_id → state dict (in-memory. 서버 재시작 시 소실 — job 은 수분 이내 완료)
+_P3_JOBS: dict[str, dict[str, Any]] = {}
+_P3_JOBS_LOCK = _threading.Lock()
+
+
+def _p3_update(job_id: str, **kwargs: Any) -> None:
+    with _P3_JOBS_LOCK:
+        st = _P3_JOBS.setdefault(job_id, {})
+        st.update(kwargs)
+        st["updated_at"] = _dt_p3.utcnow().isoformat()
+
+
+def _p3_worker(job_id: str, product_id: str) -> None:
+    """백그라운드 Stage1 + Stage2 + PDF 파이프라인.
+
+    각 단계 실패 시 상태만 'error' 로 변경하고 예외 전파 안 함 (폴링 쪽이 감지).
+    """
+    try:
+        # ───── Step 1: 실시간 크롤링 (25%) ─────
+        _p3_update(job_id, status="running", step="실시간 크롤링", progress=5)
+        import asyncio
+        # buyer_discovery 는 upharma-au 루트에서 import
+        from buyer_discovery.pipeline_collect import (  # type: ignore
+            _get_product,
+            collect_all_sources,
+        )
+        from buyer_discovery.stage1_filter import run_stage1  # type: ignore
+
+        product = _get_product(product_id)
+        collected = asyncio.run(collect_all_sources(product_id))
+        _p3_update(job_id, step="실시간 크롤링 완료", progress=25)
+
+        # ───── Step 2: DB 분석 (50%) ─────
+        _p3_update(job_id, step="DB 분석 · Stage 1 필터", progress=30)
+        survivors_list = run_stage1(collected, product)
+        _p3_update(
+            job_id,
+            step=f"DB 분석 완료 ({len(survivors_list)} 후보)",
+            progress=50,
+        )
+
+        # ───── Step 3: AI 분석 (75%) ─────
+        # 현재 설계: 매출·카테고리 조사는 주기적 재실행 기반 (company_revenue.json 시드).
+        # 버튼 클릭 시 실시간 재조사 하면 5~10분 추가 → 사용자 대기 부담.
+        # TOP 10 각각 Haiku 추천 근거 3문장 생성은 향후 구현 포인트.
+        _p3_update(
+            job_id,
+            step="AI 분석 · 매출·카테고리 캐시 활용 + 추천 근거",
+            progress=60,
+        )
+        # (현재는 placeholder — hardcode.notes 가 reasoning 으로 사용됨)
+        _p3_update(job_id, step="AI 분석 완료", progress=75)
+
+        # ───── Step 4: 리스트 생성 + UPSERT + PDF (100%) ─────
+        _p3_update(job_id, step="리스트 생성 · Stage 2 점수화", progress=80)
+        # Stage 1 재생성 결과를 survivors_expanded_v5.json 에도 덮어쓰기 (이력 용)
+        from buyer_discovery.cli import _build_hardcode_template  # type: ignore
+        # 품목별 ingredient_case 맵 (Stage 2 에서 사용)
+        ingredient_per_product = {
+            product_id: {
+                row["canonical_key"]: row.get("ingredient_case", "D_none")
+                for row in survivors_list
+            }
+        }
+        union_map = {row["canonical_key"]: row for row in survivors_list}
+        hardcode_template = _build_hardcode_template(
+            list(union_map.values()),
+            ingredient_per_product,
+        )
+        import json as _json
+        survivors_path = Path(
+            r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/survivors_expanded_v5.json"
+        )
+        # 전 품목 실행이 아니라 단일 품목만 돌린 결과이므로 부분 업데이트 위험.
+        # Stage 2 는 전 품목 DB SELECT 기반이므로 원본 v5 유지. 단일 품목 최신화는 별도.
+        # → 단일 품목 결과는 `seeds/p3_last_run_{product_id}.json` 에 따로 저장.
+        seeds_dir = _BASE_DIR / "buyer_discovery" / "seeds"
+        seeds_dir.mkdir(parents=True, exist_ok=True)
+        (seeds_dir / f"p3_last_run_{product_id}.json").write_text(
+            _json.dumps(hardcode_template, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        # Stage 2 실행 (single product 모드 아님 — 전체 재계산해서 일관성 유지)
+        from buyer_discovery.stage2_scoring import main as _stage2_main  # type: ignore
+        _stage2_main(dry_run=False)
+        _p3_update(job_id, step="au_buyers UPSERT 완료", progress=90)
+
+        # PDF 생성
+        from report_generator import render_buyers_pdf  # type: ignore
+        pdf_path = render_buyers_pdf(product_id=product_id, output_dir=_REPORTS_DIR)
+        _p3_update(
+            job_id,
+            step="PDF 생성 완료",
+            progress=100,
+            status="done",
+            product_id=product_id,
+            pdf_filename=Path(pdf_path).name,
+            download_url=f"/api/report/download?name={Path(pdf_path).name}&inline=1",
+        )
+    except Exception as exc:
+        logger.exception("[p3_worker] 실패 job=%s", job_id)
+        _p3_update(
+            job_id,
+            status="error",
+            error=str(exc),
+            step=f"오류: {type(exc).__name__}",
+        )
+
+
+@app.post("/api/p3/buyers/run")
+def p3_buyers_run(payload: dict[str, Any]) -> JSONResponse:
+    """바이어 발굴 실시간 파이프라인 시작. job_id 반환 (폴링용).
+
+    Body: {"product_id": "au-hydrine-004"}
+    """
+    product_id = (payload or {}).get("product_id")
+    if not product_id or not isinstance(product_id, str):
+        raise HTTPException(status_code=400, detail="product_id 필수")
+
+    job_id = "p3_" + _uuid.uuid4().hex[:12]
+    _p3_update(
+        job_id,
+        status="queued",
+        step="대기 중",
+        progress=0,
+        product_id=product_id,
+        created_at=_dt_p3.utcnow().isoformat(),
+    )
+    # 백그라운드 스레드 시작
+    t = _threading.Thread(target=_p3_worker, args=(job_id, product_id), daemon=True)
+    t.start()
+
+    return JSONResponse({"job_id": job_id, "product_id": product_id, "status": "queued"})
+
+
+@app.get("/api/p3/buyers/status")
+def p3_buyers_status(job_id: str = Query(...)) -> JSONResponse:
+    """폴링용. job 진행 상태 반환."""
+    with _P3_JOBS_LOCK:
+        st = _P3_JOBS.get(job_id)
+    if st is None:
+        raise HTTPException(status_code=404, detail=f"unknown job_id: {job_id}")
+    return JSONResponse(st)
+
+
+@app.get("/api/p3/buyers/result")
+def p3_buyers_result(job_id: str = Query(...)) -> JSONResponse:
+    """job 완료 후 최종 결과 (au_buyers TOP 10 + PDF 파일명)."""
+    with _P3_JOBS_LOCK:
+        st = _P3_JOBS.get(job_id)
+    if st is None:
+        raise HTTPException(status_code=404, detail=f"unknown job_id: {job_id}")
+    if st.get("status") != "done":
+        raise HTTPException(status_code=425, detail=f"아직 완료 안 됨 (status={st.get('status')})")
+
+    pid = st.get("product_id")
+    # 기존 /api/buyers/{pid} 재활용
+    try:
+        inner = buyers_for_product(pid)  # JSONResponse 반환
+        import json as _json
+        data = _json.loads(inner.body.decode("utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"결과 로드 실패: {exc}") from exc
+
+    data["job_id"] = job_id
+    data["pdf_filename"] = st.get("pdf_filename")
+    data["download_url"] = st.get("download_url")
+    return JSONResponse(data)
+
+
 @app.post("/api/buyers/report/generate")
 def buyers_report_generate(payload: dict[str, Any]) -> JSONResponse:
     """바이어 발굴 PDF 보고서 생성. payload = {"product_id": "..."} 또는 {} (전체).

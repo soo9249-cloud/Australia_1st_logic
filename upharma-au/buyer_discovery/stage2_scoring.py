@@ -40,7 +40,7 @@ from crawler.db.supabase_insert import get_supabase_client  # noqa: E402
 _SEEDS = _UPHARMA_PATH / "buyer_discovery" / "seeds"
 _AU_PRODUCTS_JSON = _UPHARMA_PATH / "crawler" / "au_products.json"
 _SURVIVORS_JSON = Path(
-    r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/survivors_expanded_v4.json"
+    r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/survivors_expanded_v5.json"
 )
 _CATEGORIES_JSON = _SEEDS / "company_categories.json"
 _REVENUE_JSON = _SEEDS / "company_revenue.json"
@@ -382,6 +382,12 @@ def main(dry_run: bool = False) -> None:
                 "sales_rank_text": static["sales_rank"],
                 "sales_source": static["sales_source"],
                 "annual_revenue_rank": static["sales_rank"],
+                # 2026-04-20 추가 — Stage 1 에서 실시간 크롤된 연락처
+                "website": row.get("website"),
+                "email": row.get("email"),
+                "phone": row.get("phone"),
+                "address": row.get("address"),
+                "state_location": row.get("state"),
                 "therapeutic_categories_en": cat_entry.get("areas_en") or [],
                 "therapeutic_categories_kr": cat_entry.get("areas_kr") or [],
                 "has_au_factory": (
@@ -495,6 +501,11 @@ def main(dry_run: bool = False) -> None:
                 "evidence_urls":     entry["evidence_urls"],
                 "reasoning":         entry.get("notes") or f"tier={entry['tier']}",
                 "notes":             entry.get("notes"),
+                # 실시간 크롤링 수집 연락처 (GBMA 본문·GPCE Algolia)
+                "website":           entry.get("website"),
+                "email":             entry.get("email"),
+                "phone":             entry.get("phone"),
+                "state":             entry.get("state_location"),
                 "last_researched_at": datetime.now(timezone.utc).isoformat(),
             })
         try:

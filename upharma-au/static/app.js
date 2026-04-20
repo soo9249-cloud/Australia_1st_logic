@@ -2604,36 +2604,117 @@ resetProgress();
     el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
   };
 
-  // ───── 메인 로더 ─────
+  /** P3 진행 스테퍼 — 01·02의 progress-row 와 동일 마크업·클래스 */
+  const P3_STEP_ORDER = ['crawl', 'db', 'ai', 'pdf'];
+
+  function _resetP3Progress() {
+    const row = document.getElementById('p3-progress-row');
+    if (row) row.classList.remove('visible');
+    for (let i = 0; i < P3_STEP_ORDER.length; i++) {
+      const el = document.getElementById('p3prog-' + P3_STEP_ORDER[i]);
+      if (!el) continue;
+      el.className = 'prog-step';
+      const dot = el.querySelector('.prog-dot');
+      if (dot) dot.textContent = String(i + 1);
+    }
+    const wrap = document.getElementById('p3-dl-wrap');
+    if (wrap) wrap.style.display = 'none';
+    const dlBtn = document.getElementById('p3-dl-btn');
+    if (dlBtn) dlBtn.disabled = true;
+  }
+
+  function _setP3StepActive(stepName) {
+    const idx = P3_STEP_ORDER.indexOf(stepName);
+    if (idx < 0) return;
+    const row = document.getElementById('p3-progress-row');
+    if (row) row.classList.add('visible');
+    for (let i = 0; i < P3_STEP_ORDER.length; i++) {
+      const el = document.getElementById('p3prog-' + P3_STEP_ORDER[i]);
+      if (!el) continue;
+      const dot = el.querySelector('.prog-dot');
+      if (i < idx) {
+        el.className = 'prog-step done';
+        if (dot) dot.textContent = '✓';
+      } else if (i === idx) {
+        el.className = 'prog-step active';
+        if (dot) dot.textContent = String(i + 1);
+      } else {
+        el.className = 'prog-step';
+        if (dot) dot.textContent = String(i + 1);
+      }
+    }
+  }
+
+  function _markP3AllDone() {
+    const row = document.getElementById('p3-progress-row');
+    if (row) row.classList.add('visible');
+    for (let i = 0; i < P3_STEP_ORDER.length; i++) {
+      const el = document.getElementById('p3prog-' + P3_STEP_ORDER[i]);
+      if (!el) continue;
+      el.className = 'prog-step done';
+      const dot = el.querySelector('.prog-dot');
+      if (dot) dot.textContent = '✓';
+    }
+  }
+
+  function _setP3StepError(stepName) {
+    const idx = P3_STEP_ORDER.indexOf(stepName);
+    if (idx < 0) return;
+    const row = document.getElementById('p3-progress-row');
+    if (row) row.classList.add('visible');
+    for (let i = 0; i < P3_STEP_ORDER.length; i++) {
+      const el = document.getElementById('p3prog-' + P3_STEP_ORDER[i]);
+      if (!el) continue;
+      const dot = el.querySelector('.prog-dot');
+      if (i < idx) {
+        el.className = 'prog-step done';
+        if (dot) dot.textContent = '✓';
+      } else if (i === idx) {
+        el.className = 'prog-step error';
+        if (dot) dot.textContent = '✕';
+      } else {
+        el.className = 'prog-step';
+        if (dot) dot.textContent = String(i + 1);
+      }
+    }
+  }
+
+  // ───── 메인 로더 (진행 스테퍼는 triggerBuyerDiscovery 가 담당) ─────
+  /** @returns {Promise<{ ok: boolean, buyersCount?: number }>} */
   async function loadBuyersForProduct(productId) {
-    if (!productId) return;
+    if (!productId) return { ok: false };
     const note = document.getElementById('p3-note');
     const meta = document.getElementById('p3-meta');
     const tbody = document.getElementById('p3-buyer-tbody');
     const tableWrap = document.getElementById('p3-buyer-table');
-    const dlBtn = document.getElementById('p3-dl-btn');
-    const progress = document.getElementById('p3-progress');
-
-    if (progress) progress.textContent = '조회 중...';
-    if (dlBtn) dlBtn.disabled = true;
 
     try {
       const r = await fetch('/api/buyers/' + encodeURIComponent(productId));
       if (!r.ok) {
         if (r.status === 404) {
-          if (note) { note.style.display = 'block'; note.textContent = '아직 바이어 데이터가 없습니다. (Stage 2 scoring 실행 필요)'; }
+          if (note) {
+            note.style.display = 'block';
+            note.classList.remove('p3-intro--error');
+            note.textContent = '아직 바이어 데이터가 없습니다. (Stage 2 scoring 실행 필요)';
+          }
           if (tableWrap) tableWrap.style.display = 'none';
-        } else {
-          if (note) { note.style.display = 'block'; note.textContent = `조회 실패: HTTP ${r.status}`; note.style.color = '#dc2626'; }
+          if (meta) meta.style.display = 'none';
+          return { ok: false, notFound: true };
         }
-        if (progress) progress.textContent = '';
-        return;
+        if (note) {
+          note.style.display = 'block';
+          note.classList.add('p3-intro--error');
+          note.textContent = '조회 실패: HTTP ' + r.status;
+        }
+        return { ok: false };
       }
       const data = await r.json();
       const buyers = data.buyers || [];
 
-      // 상단 메타 (간결)
-      if (note) note.style.display = 'none';
+      if (note) {
+        note.style.display = 'none';
+        note.classList.remove('p3-intro--error');
+      }
       if (meta) {
         meta.style.display = 'block';
         const inns = (data.inn_components || []).join(' + ');
@@ -2654,16 +2735,20 @@ resetProgress();
           tbody.innerHTML = buyers.map(function (b) { return renderBuyerRow(b); }).join('');
         }
       }
-      if (dlBtn) dlBtn.disabled = false;
-      if (progress) progress.textContent = `완료 (${buyers.length} 명)`;
+      return { ok: true, buyersCount: buyers.length };
     } catch (exc) {
       console.error('[buyers] 조회 예외', exc);
-      if (note) { note.style.display = 'block'; note.textContent = `조회 예외: ${String(exc)}`; note.style.color = '#dc2626'; }
-      if (progress) progress.textContent = '';
+      if (note) {
+        note.style.display = 'block';
+        note.classList.add('p3-intro--error');
+        note.textContent = '조회 예외: ' + String(exc);
+      }
+      return { ok: false };
     }
   }
 
-  // ───── 시작 버튼 (02 탭 "AI 가격 분석 실행" 과 동일 패턴) ─────
+  // ───── 시작 버튼 — 실시간 파이프라인 (run → status 폴링 → result) ─────
+  // 4단계: 실시간 크롤링(25%) → DB 조회(50%) → AI 분석(75%) → PDF 보고서(100%)
   window.triggerBuyerDiscovery = async function () {
     const pid = currentProductId();
     if (!pid) {
@@ -2673,79 +2758,130 @@ resetProgress();
     }
     const btn = document.getElementById('p3-run-btn');
     const icon = document.getElementById('p3-run-icon');
+    const note = document.getElementById('p3-note');
+    const tableWrap = document.getElementById('p3-buyer-table');
+    const meta = document.getElementById('p3-meta');
     if (btn) btn.disabled = true;
     if (icon) icon.textContent = '⏳';
+    if (tableWrap) tableWrap.style.display = 'none';
+    if (meta) meta.style.display = 'none';
+    if (note) { note.style.display = 'none'; }
+
+    _resetP3Progress();
+
     try {
-      await loadBuyersForProduct(pid);
+      // 1. run 트리거
+      _setP3StepActive('crawl');
+      const runRes = await fetch('/api/p3/buyers/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: pid }),
+      });
+      if (!runRes.ok) {
+        const err = await runRes.json().catch(() => ({ detail: 'HTTP ' + runRes.status }));
+        throw new Error(err.detail || 'run 실패');
+      }
+      const { job_id } = await runRes.json();
+
+      // 2. 상태 폴링 (1.5초 간격, 최대 6분)
+      let final = null;
+      for (let i = 0; i < 240; i++) {
+        await new Promise(r => setTimeout(r, 1500));
+        const sRes = await fetch('/api/p3/buyers/status?job_id=' + encodeURIComponent(job_id));
+        if (!sRes.ok) throw new Error('status HTTP ' + sRes.status);
+        const state = await sRes.json();
+        const progress = Number(state.progress || 0);
+        // 진행률 → 스테퍼 단계 매핑
+        if (progress < 30)       _setP3StepActive('crawl');
+        else if (progress < 55)  _setP3StepActive('db');
+        else if (progress < 90)  _setP3StepActive('ai');
+        else                     _setP3StepActive('pdf');
+
+        if (state.status === 'done')  { final = state; break; }
+        if (state.status === 'error') throw new Error(state.error || state.step || '오류');
+      }
+      if (!final) throw new Error('타임아웃 (6분 초과)');
+
+      // 3. 최종 결과 로드
+      const rRes = await fetch('/api/p3/buyers/result?job_id=' + encodeURIComponent(job_id));
+      if (!rRes.ok) throw new Error('result HTTP ' + rRes.status);
+      const result = await rRes.json();
+
+      // 4. 테이블 렌더
+      const buyers = result.buyers || [];
+      if (meta) {
+        meta.style.display = 'block';
+        const inns = (result.inn_components || []).join(' + ');
+        meta.innerHTML = `
+          <div style="padding:8px 12px; background:#eff6ff; border-left:3px solid #3b82f6; border-radius:3px; font-size:13px; margin-bottom:10px;">
+            <b>${escHtml(result.product_name_ko || pid)}</b>
+            — 성분: <code>${escHtml(inns)}</code>
+            <span style="float:right; color:#6b7280;">실시간 분석 완료 · 총 ${buyers.length} 명</span>
+          </div>
+        `;
+      }
+      if (tableWrap) tableWrap.style.display = 'block';
+      const tbody = document.getElementById('p3-buyer-tbody');
+      if (tbody) {
+        tbody.innerHTML = buyers.length
+          ? buyers.map(b => renderBuyerRow(b)).join('')
+          : '<tr><td colspan="6" style="padding:20px; text-align:center; color:#6b7280;">결과 없음</td></tr>';
+      }
+
+      // 5. 마무리 — 스테퍼 전부 완료 표시 + PDF 다운로드 활성
+      _markP3AllDone();
+      const wrap = document.getElementById('p3-dl-wrap');
+      if (wrap) wrap.style.display = '';
+      const dlBtn = document.getElementById('p3-dl-btn');
+      if (dlBtn) {
+        dlBtn.disabled = false;
+        if (result.download_url) dlBtn.dataset.pdfUrl = result.download_url;
+      }
+    } catch (exc) {
+      console.error('[p3] 파이프라인 실패', exc);
+      _setP3StepError('db');
+      if (note) {
+        note.style.display = 'block';
+        note.classList.add('p3-intro--error');
+        note.textContent = '❌ 실패: ' + (exc.message || exc);
+      }
     } finally {
       if (btn) btn.disabled = false;
       if (icon) icon.textContent = '▶';
     }
   };
 
-  // ───── 바이어 PDF 다운로드 ─────
-  window.generateBuyersPdf = async function () {
-    const pid = currentProductId();
-    if (!pid) {
-      if (typeof showToast === 'function') showToast('품목을 먼저 선택하세요');
-      return;
-    }
+  // ───── PDF 다운로드 — run 에서 이미 생성된 파일 직접 열기 ─────
+  window.generateBuyersPdf = function () {
     const dlBtn = document.getElementById('p3-dl-btn');
-    const original = dlBtn ? dlBtn.textContent : '';
-    if (dlBtn) { dlBtn.disabled = true; dlBtn.textContent = '생성 중...'; }
-    try {
-      const r = await fetch('/api/buyers/report/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: pid }),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(function () { return { detail: 'HTTP ' + r.status }; });
-        alert('PDF 생성 실패: ' + (err.detail || r.status));
-        return;
-      }
-      const res = await r.json();
-      if (res.download_url) {
-        window.open(res.download_url, '_blank');
-      }
-    } catch (exc) {
-      alert('PDF 생성 예외: ' + String(exc));
-    } finally {
-      if (dlBtn) { dlBtn.disabled = false; dlBtn.textContent = original || '📄 바이어 보고서 PDF 다운로드'; }
+    const url = dlBtn && dlBtn.dataset && dlBtn.dataset.pdfUrl;
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      alert('먼저 [▶ 바이어 발굴 실행] 을 눌러주세요');
     }
   };
 
-  // ───── 품목 변경 감지 ─────
+  // ───── 품목 변경 감지 — 자동 로드 아님, 리스트 초기화만 ─────
   const ps = document.getElementById('product-select');
   if (ps) {
     ps.addEventListener('change', function () {
-      const pid = currentProductId();
-      if (pid && document.getElementById('pb-p3') && !document.getElementById('pb-p3').classList.contains('hidden')) {
-        loadBuyersForProduct(pid);
+      // 다른 품목 선택 시 이전 TOP 10 리스트 숨기기. 버튼 클릭 전엔 빈 상태 유지.
+      const tableWrap = document.getElementById('p3-buyer-table');
+      const meta = document.getElementById('p3-meta');
+      const note = document.getElementById('p3-note');
+      if (tableWrap) tableWrap.style.display = 'none';
+      if (meta) meta.style.display = 'none';
+      if (note) {
+        note.style.display = 'block';
+        note.classList.remove('p3-intro--error');
+        note.innerHTML = '품목이 변경되었습니다. <span class="p3-intro-em">[▶ 바이어 발굴 실행]</span> 버튼을 눌러 분석을 시작하세요.';
       }
+      _resetP3Progress();
     });
   }
 
-  // ───── p3 아코디언 첫 열릴 때 로드 ─────
-  // toggleProcess 기존 함수는 건드리지 않고, 아코디언 헤더 클릭 감지용 추가 리스너.
-  const p3header = document.querySelector("[onclick=\"toggleProcess('p3')\"]");
-  if (p3header) {
-    p3header.addEventListener('click', function () {
-      setTimeout(function () {
-        const pid = currentProductId();
-        const pb = document.getElementById('pb-p3');
-        if (pid && pb && !pb.classList.contains('hidden')) {
-          loadBuyersForProduct(pid);
-        }
-      }, 100);
-    });
-  }
-
-  // ───── 초기 로드 (현재 품목이 이미 선택돼 있으면) ─────
-  // p3 아코디언이 기본 open 이므로 페이지 진입 시 자동 로드
-  setTimeout(function () {
-    const pid = currentProductId();
-    if (pid) loadBuyersForProduct(pid);
-  }, 500);
+  // NOTE: 아코디언 열림·페이지 로드 시 자동 로드는 **금지** (Jisoo 2026-04-20 지시).
+  //       버튼 클릭만이 유일한 트리거. 초기 진입 시 테이블은 빈 상태.
 
 })();

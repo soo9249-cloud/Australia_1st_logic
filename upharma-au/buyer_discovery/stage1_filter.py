@@ -95,6 +95,8 @@ def _new_merged_entry(row: dict[str, Any], key: str) -> dict[str, Any]:
             "website": None,
             "email": None,
             "phone": None,
+            "address": None,          # 2026-04-20 추가 — GBMA 페이지 본문에서 파싱
+            "state": None,            # 2026-04-20 추가 — VIC/NSW/QLD 등
             "description": None,
             "represented_brands": [],
         },
@@ -136,9 +138,14 @@ def dedupe_and_merge(all_rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]
             w = row.get("website")
             if isinstance(w, str) and w.startswith("http") and not m["raw_data"]["website"]:
                 m["raw_data"]["website"] = w
+            # 2026-04-20 추가 — GBMA 본문 파싱 결과 병합
+            for fld in ("address", "state", "phone"):
+                v = row.get(fld)
+                if v and not m["raw_data"].get(fld):
+                    m["raw_data"][fld] = v
         elif src == "gpce":
             m["is_gpce_exhibitor"] = True
-            for k in ("website", "email", "phone", "description"):
+            for k in ("website", "email", "phone", "description", "address", "state"):
                 v = row.get(k)
                 if v and not m["raw_data"].get(k):
                     m["raw_data"][k] = v

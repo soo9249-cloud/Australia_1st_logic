@@ -1976,6 +1976,30 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   padding: 0 0 14px;
   line-height: 1.6;
 }
+/* 01·02의 selector-label / 안내 문구와 동일 톤 (대문자 라벨 + 본문) */
+.p3-intro {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+  margin: 0 0 12px;
+  font-weight: 400;
+}
+.p3-intro-em {
+  font-weight: 600;
+  color: var(--muted);
+}
+.p3-intro--error {
+  color: var(--red) !important;
+  font-weight: 600;
+}
+.p3-run-row { margin-top: 4px; }
+.p3-footer-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: 14px;
+  min-height: 40px;
+}
 .p3-buyer-table { overflow-x: auto; }
 .p3-table {
   width: 100%;

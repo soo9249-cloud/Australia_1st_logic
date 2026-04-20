@@ -445,14 +445,8 @@
       </div>
       <div class="process-body" id="pb-p3">
         <div class="selector-card">
-          <!-- 시작/재분석 버튼 -->
-          <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
-            <button class="btn-analyze" id="p3-run-btn" type="button" onclick="triggerBuyerDiscovery()">
-              <span id="p3-run-icon">▶</span> 바이어 발굴 실행
-            </button>
-            <span id="p3-progress" style="font-size:13px; color:#6b7280;"></span>
-          </div>
-          <div class="p3-note" id="p3-note">위 드롭다운에서 품목을 선택하고 <b>[바이어 분석 시작]</b> 버튼을 누르면 Top 10 바이어가 표시됩니다.</div>
+          <div class="selector-label">품목 선택</div>
+          <p class="p3-intro" id="p3-note">위 드롭다운에서 품목을 선택하고 <span class="p3-intro-em">[바이어 발굴 실행]</span> 버튼을 누르면 Top 10 바이어 리스트가 실시간 크롤링을 거쳐 생성됩니다.</p>
           <div class="p3-meta" id="p3-meta" style="display:none;"></div>
           <div class="p3-buyer-table" id="p3-buyer-table" style="display:none;">
             <table class="p3-table">
@@ -460,7 +454,7 @@
                 <tr>
                   <th style="width:36px;">순위</th>
                   <th>회사명</th>
-                  <th style="width:130px;">매출 순위</th>
+                  <th style="width:130px;">매출 (AUD / USD)</th>
                   <th style="width:160px;">주력 제품군</th>
                   <th style="width:130px;">제조소 보유</th>
                   <th style="width:140px;">동일 성분 보유</th>
@@ -469,8 +463,20 @@
               <tbody id="p3-buyer-tbody"></tbody>
             </table>
           </div>
-          <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
-            <button class="btn-download" id="p3-dl-btn" onclick="generateBuyersPdf()" disabled>📄 바이어 보고서 PDF 다운로드</button>
+          <!-- 02 수출가격 전략과 동일: 실행 행 → 진행 스테퍼 → 완료 후 맨 아래 왼쪽 PDF -->
+          <div class="selector-row p2-ai-run-row p3-run-row">
+            <button class="btn-analyze" id="p3-run-btn" type="button" onclick="triggerBuyerDiscovery()">
+              <span id="p3-run-icon">▶</span> 바이어 발굴 실행
+            </button>
+          </div>
+          <div class="progress-row" id="p3-progress-row">
+            <div class="prog-step" id="p3prog-crawl"><div class="prog-dot">1</div><div class="prog-label">실시간 크롤링</div></div>
+            <div class="prog-step" id="p3prog-db"><div class="prog-dot">2</div><div class="prog-label">DB 조회</div></div>
+            <div class="prog-step" id="p3prog-ai"><div class="prog-dot">3</div><div class="prog-label">AI 분석</div></div>
+            <div class="prog-step" id="p3prog-pdf"><div class="prog-dot">4</div><div class="prog-label">PDF 보고서 생성</div></div>
+          </div>
+          <div class="p3-footer-row" id="p3-dl-wrap" style="display:none;">
+            <button class="btn-download" id="p3-dl-btn" onclick="generateBuyersPdf()" disabled>📄 PDF 다운로드</button>
           </div>
         </div>
       </div>

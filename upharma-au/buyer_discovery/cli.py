@@ -69,9 +69,16 @@ def _build_hardcode_template(
             for pid, case_map in ingredient_per_product.items()
             if case_map.get(key) and case_map[key] != "D_none"
         ]
+        _rd = row.get("raw_data") or {}
         buyers[key] = {
             "canonical_name": row.get("canonical_name"),
-            "website": (row.get("raw_data") or {}).get("website"),
+            "website": _rd.get("website"),
+            "email": _rd.get("email"),
+            "phone": _rd.get("phone"),
+            "address": _rd.get("address"),
+            "state": _rd.get("state"),
+            "description": _rd.get("description"),
+            "represented_brands": _rd.get("represented_brands") or [],
             "sources": row.get("sources", []),
             "stage1_sort_score": row.get("stage1_sort_score", 0),
             "evidence": {

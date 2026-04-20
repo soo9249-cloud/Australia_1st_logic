@@ -448,20 +448,8 @@
           <div class="selector-label">품목 선택</div>
           <p class="p3-intro" id="p3-note">위 드롭다운에서 품목을 선택하고 <span class="p3-intro-em">[바이어 발굴 실행]</span> 버튼을 누르면 Top 10 바이어 리스트가 실시간 크롤링을 거쳐 생성됩니다.</p>
           <div class="p3-meta" id="p3-meta" style="display:none;"></div>
-          <div class="p3-buyer-table" id="p3-buyer-table" style="display:none;">
-            <table class="p3-table">
-              <thead>
-                <tr>
-                  <th style="width:36px;">순위</th>
-                  <th>회사명</th>
-                  <th style="width:130px;">매출 (AUD / USD)</th>
-                  <th style="width:160px;">주력 제품군</th>
-                  <th style="width:130px;">제조소 보유</th>
-                  <th style="width:140px;">동일 성분 보유</th>
-                </tr>
-              </thead>
-              <tbody id="p3-buyer-tbody"></tbody>
-            </table>
+          <div id="p3-buyer-table" style="display:none;">
+            <ol class="p3-buyer-list" id="p3-buyer-list"></ol>
           </div>
           <!-- 02 수출가격 전략과 동일: 실행 행 → 진행 스테퍼 → 완료 후 맨 아래 왼쪽 PDF -->
           <div class="selector-row p2-ai-run-row p3-run-row">
@@ -483,6 +471,13 @@
     </div>
 
   </div><!-- /main -->
+
+  <!-- ════════════ 바이어 카드 모달 ════════════ -->
+  <div id="buyer-card-overlay" class="buyer-overlay" style="display:none;" onclick="if(event.target===this)closeBuyerCard()">
+    <div class="buyer-card-modal" id="buyer-card-modal">
+      <!-- openBuyerCard() 가 동적으로 채움 -->
+    </div>
+  </div>
 
   <!-- ════════════ 보고서 탭 ════════════ -->
   <div id="rep" class="page">

@@ -2339,3 +2339,208 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   color: #6b1a1a;
   border: 1px solid #e08080;
 }
+
+/* ════════════════════════════════════════════════════
+   바이어 발굴 — 리스트 + 카드 모달  (2026-04-20)
+   ════════════════════════════════════════════════════ */
+
+/* 바이어 번호 목록 */
+.p3-buyer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.p3-buyer-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 6px;
+}
+.p3-buyer-item:hover { background: #f5f9ff; }
+.p3-buyer-rank {
+  min-width: 26px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-align: right;
+}
+.p3-buyer-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+.p3-buyer-tier-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+}
+.p3-buyer-tier-badge.tier-A { background: #dcfce7; color: #15803d; }
+.p3-buyer-tier-badge.tier-B { background: #dbeafe; color: #1d4ed8; }
+.p3-buyer-tier-badge.tier-C { background: #f3f4f6; color: #6b7280; }
+.p3-buyer-arrow { color: #cbd5e1; font-size: 12px; }
+
+/* 모달 오버레이 */
+.buyer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+/* 카드 */
+.buyer-card-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 720px;
+  max-width: 96vw;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.22);
+}
+.buyer-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+.buyer-card-rank {
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+  min-width: 28px;
+}
+.buyer-card-name {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.2px;
+}
+.buyer-card-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+}
+.buyer-card-close:hover { background: #f3f4f6; color: #374151; }
+
+/* 카드 바디 — 2컬럼 */
+.buyer-card-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+.buyer-card-col {
+  padding: 18px 22px;
+}
+.buyer-card-col + .buyer-card-col {
+  border-left: 1px solid #e5e7eb;
+}
+.buyer-card-col-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.buyer-info-row {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  color: #374151;
+}
+.buyer-info-label {
+  min-width: 52px;
+  color: #9ca3af;
+  font-size: 12px;
+  padding-top: 1px;
+}
+.buyer-info-val { flex: 1; word-break: break-word; }
+.buyer-info-val a { color: #2563eb; text-decoration: none; }
+.buyer-info-val a:hover { text-decoration: underline; }
+
+/* 파트너 적합 판정 행 */
+.buyer-fit-row {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  align-items: flex-start;
+}
+.buyer-fit-label {
+  min-width: 72px;
+  font-size: 12px;
+  color: #9ca3af;
+  padding-top: 1px;
+}
+.buyer-fit-val { flex: 1; color: #1f2937; font-weight: 500; }
+.fit-ok   { color: #15803d; }
+.fit-no   { color: #9ca3af; }
+.fit-hi   { color: #1d4ed8; }
+.fit-mid  { color: #0369a1; }
+.fit-low  { color: #9ca3af; }
+
+/* AI 추천 근거 */
+.buyer-card-reasoning {
+  padding: 16px 22px 20px;
+}
+.buyer-card-reasoning-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.buyer-reasoning-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.buyer-reasoning-line {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #374151;
+  padding-left: 12px;
+  position: relative;
+}
+.buyer-reasoning-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #3b82f6;
+}
+
+@media (max-width: 600px) {
+  .buyer-card-body { grid-template-columns: 1fr; }
+  .buyer-card-col + .buyer-card-col { border-left: none; border-top: 1px solid #e5e7eb; }
+}

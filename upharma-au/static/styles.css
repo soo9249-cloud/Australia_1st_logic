@@ -1528,10 +1528,12 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   min-height: 0;
   margin-bottom: 0;
 }
+/* 지도·뉴스 카드: SG pvblock 스타일 — 헤더에서 패딩 자체 제어 */
 #main .map-news-grid > article.card {
   min-height: 0;
   height: 100%;
-  padding: 10px 12px;
+  padding: 0;
+  overflow: hidden;
   align-self: stretch;
 }
 /* 지도 카드: 플렉스로 지도 영역 확장 */
@@ -1559,18 +1561,14 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 #main .news-card-panel > .sec {
   min-height: 0;
 }
-/* 목록 영역: 5행 고정 그리드(안내 배너는 #news-list 밖 #news-mock-banner 로 분리) */
+/* 목록 영역: SG .preview-news-list 동일 — 자연스러운 높이, 넘치면 스크롤 */
 #main .news-card-panel #news-list.news-list--ready {
   flex: 1 1 0%;
   min-height: 0;
-  height: 100%;
   width: 100%;
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  overflow: hidden;
-  align-content: stretch;
+  display: block;
+  overflow-y: auto;
+  padding: 4px 0;
 }
 #main .news-card-panel #news-list.news-list--busy {
   flex: 1 1 0%;
@@ -1597,54 +1595,57 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   background: rgba(23, 63, 120, 0.06);
   border: 1px solid rgba(23, 63, 120, 0.1);
 }
-/* 뉴스 카드: 각 셀 안에서 텍스트 세로 가운데 */
+/* 뉴스 아이템: SG .pvnews-item 동일 */
 .news-card-panel #news-list > .irow.news-item {
-  min-height: 0;
-  overflow: hidden;
-  display: flex !important;
-  flex-direction: column;
-  justify-content: center;
-  padding: 10px 12px !important;
+  display: block !important;
+  padding: 12px 18px 10px !important;
   margin: 0 !important;
+  text-decoration: none;
+  color: inherit;
+  transition: background .13s;
+}
+.news-card-panel #news-list > .irow.news-item + .irow.news-item {
+  box-shadow: inset 0 1px 0 rgba(23,63,120,.06); /* SG 아이템 구분선 */
 }
 .news-card-panel #news-list > a.irow.news-item {
   text-decoration: none;
   color: inherit;
 }
-.news-card-panel #news-list > .irow:not(.news-item) {
-  grid-column: 1 / -1;
+a.news-card-panel #news-list > a.irow.news-item:hover {
+  background: rgba(23,63,120,.03);
 }
+/* 뉴스 제목: SG .pvnews-title 동일 */
 .news-card-panel .irow .tit {
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 700;
-  margin-bottom: 3px;
-  line-height: 1.3;
+  color: var(--navy);
+  line-height: 1.45;
+  margin-bottom: 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.news-card-panel .irow .news-sum {
-  font-size: 10px;
-  line-height: 1.35;
-  margin-bottom: 3px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
+/* 뉴스 소스+날짜: SG .pvnews-source 동일 */
 .news-card-panel .irow .sub {
-  font-size: 9.5px;
-  line-height: 1.25;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
 }
+/* 지도·뉴스 섹션 헤더: SG .pvblock-header 동일 */
 #main .map-news-grid .sec {
-  margin-bottom: 6px;
+  padding: 14px 18px 12px;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(23,63,120,.06);
+  flex-shrink: 0;
 }
 #main .map-news-grid .sec h3 {
-  font-size: 13px;
+  font-size: 13.5px;
+  font-weight: 800;
 }
 #main .map-news-grid .sec.map-sec-tight {
-  margin-bottom: 6px;
+  padding: 14px 18px 12px;
+  margin-bottom: 0;
 }
 .world-map-container {
   flex: 1;
@@ -1695,14 +1696,14 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 .leaflet-tooltip.au-city-tooltip::before {
   border-top-color: rgba(255, 255, 255, 0.96) !important;
 }
-/* 메인 프리뷰 지도만: 카드 높이에 맞춰 꽉 채움(그리드 열 높이 = 뉴스 패널과 동일) */
+/* 메인 프리뷰 지도: 카드 padding=0이므로 border-radius 불필요, 카드 overflow:hidden 이 처리 */
 #main .map-news-grid .map-card-wrap .sg-leaflet-map {
   flex: 1 1 auto;
   width: 100%;
-  min-height: 300px;
+  min-height: 200px;
   height: auto !important;
   max-height: none !important;
-  border-radius: 12px;
+  border-radius: 0;
   overflow: hidden;
 }
 .sg-leaflet-map {

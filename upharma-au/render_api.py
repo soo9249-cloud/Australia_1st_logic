@@ -1121,16 +1121,19 @@ def get_news() -> JSONResponse:
                     {
                         "role": "system",
                         "content": (
-                            "You are a news search engine for a pharmaceutical export dashboard. "
+                            "You are a real-time news search engine for a pharmaceutical export dashboard. "
                             f"Return EXACTLY {_NEWS_LIST_SIZE} recent TEXT news articles as a JSON array ONLY. "
                             "Output raw JSON — NO markdown fences, NO prose, NO explanation outside the JSON. "
                             "Each item MUST have ALL of these keys: "
                             "\"title\" (original headline exactly as published, in the article's original language), "
                             "\"source\" (publication or site name, e.g. 'RACGP', 'TGA', 'yakup.com'), "
-                            "\"date\" (YYYY-MM-DD publication date), "
+                            "\"date\" (YYYY-MM-DD — the ACTUAL publication date printed on the article page; "
+                            "  DO NOT guess, infer, or fabricate a date; "
+                            "  if you cannot confirm the exact publication date from the article itself, skip it and find another), "
                             "\"link\" (DIRECT URL to the specific article page — NOT a homepage, search page, or video). "
-                            "CRITICAL: every link MUST open actual article text. "
-                            "NEVER include YouTube, Vimeo, or any video URL. "
+                            "CRITICAL date rule: report ONLY dates you can verify from the article. "
+                            "CRITICAL link rule: every link must open actual article text. "
+                            "NEVER include YouTube, Vimeo, or any video/podcast URL. "
                             "If a direct article URL is unavailable, skip that item and find another."
                         ),
                     },
@@ -1139,6 +1142,8 @@ def get_news() -> JSONResponse:
                         "content": (
                             f"Find exactly {_NEWS_LIST_SIZE} TEXT NEWS ARTICLES published within the LAST 48 HOURS. "
                             f"If fewer than {_NEWS_LIST_SIZE} qualify within 48 h, expand to 7 days — always prefer the most recent. "
+                            "DATE ACCURACY IS MANDATORY: report the date exactly as printed on each article. "
+                            "Do NOT approximate or assume — if you are unsure of the real date, skip that article. "
                             "STRICT TOPIC FILTER — every article must be about ONE OR MORE of: "
                             "(A) Australian pharmaceutical / biotech / medical-device industry "
                             "    (TGA approvals, PBS listings/delisting, ARTG changes, drug shortages, hospital procurement, "
@@ -1152,8 +1157,9 @@ def get_news() -> JSONResponse:
                             "PREFERRED SOURCES: racgp.org.au, tga.gov.au, pbs.gov.au, healthshare.nsw.gov.au, "
                             "ausbiotech.org, australianprescriber.com, mja.com.au, pharmaceutical-journal.com, "
                             "yakup.com, hitnews.co.kr, medipana.com, pharmnews.com, Naver News 제약/바이오 섹션. "
-                            "Return fields: title, source, date (YYYY-MM-DD), link (direct article URL ONLY — no videos). "
-                            "Skip any item where a direct article URL cannot be supplied."
+                            "Return fields: title, source, date (YYYY-MM-DD verified from article), "
+                            "link (direct article URL only — no videos, no homepages). "
+                            "Skip any item where either the direct URL or the confirmed date is unavailable."
                         ),
                     },
                 ],
@@ -1244,12 +1250,10 @@ def get_news() -> JSONResponse:
             result = _openai_translate_news_ko(result, openai_key)
         except Exception as _tr_exc:
             logger.warning("[api/news] OpenAI 번역 실패(무시): %s", _tr_exc)
-    # title_ko 폴백: OpenAI 미설치·실패 시 원문 제목 그대로
+    # title_ko 폴백: OpenAI 미설치·실패 시 원문 제목 그대로 표시
     for item in result:
         if not item.get("title_ko"):
             item["title_ko"] = item.get("title", "")
-        if not item.get("summary_ko"):
-            item["summary_ko"] = ""
 
     if len(result) < _NEWS_LIST_SIZE:
         # 카드 높이를 고정했기 때문에 프론트에는 항상 동일 개수를 내려준다.
@@ -2287,9 +2291,9 @@ def _compute_confidence_breakdown(row: dict[str, Any]) -> dict[str, Any]:
 def _openai_translate_news_ko(
     items: list[dict[str, Any]], api_key: str
 ) -> list[dict[str, Any]]:
-    """뉴스 기사 목록을 OpenAI gpt-4o-mini 로 한국어 번역 + 요약.
+    """뉴스 기사 제목을 OpenAI gpt-4o-mini 로 한국어 번역 (제목만, 요약 없음).
 
-    items 각 요소에 'title_ko'·'summary_ko' 를 주입해 반환.
+    items 각 요소에 'title_ko' 만 주입해 반환.
     OpenAI 미설치·API 오류 시 원본 items 그대로 반환(title_ko fallback 은 호출부에서 처리).
     """
     if not items or not api_key:
@@ -2301,27 +2305,22 @@ def _openai_translate_news_ko(
 
     client = OpenAI(api_key=api_key)
 
-    # 번역 대상 텍스트 정리 (제목 + 출처 + 날짜)
+    # 번역 대상 제목 목록
     lines: list[str] = []
     for i, it in enumerate(items):
-        lines.append(
-            f"[{i + 1}] 제목: {it.get('title') or ''}\n"
-            f"    출처: {it.get('source') or ''} | 날짜: {it.get('date') or ''}"
-        )
+        lines.append(f"[{i + 1}] {it.get('title') or ''}")
 
     system_prompt = (
-        "당신은 호주 제약·바이오 산업 전문 번역가입니다. "
-        "주어진 영문 또는 한국어 뉴스 제목을 자연스러운 한국어 대시보드 표시용 제목으로 번역하고, "
-        "수출 담당자 관점에서 기사 내용을 2문장으로 요약하십시오. "
-        "보고서 문체(~함, ~임, ~됨, ~예정) 사용. 마크다운·이모지 금지. "
-        f"반드시 {len(items)}개 항목 모두 번역하십시오. "
-        "출력: 순수 JSON 배열만. 예시: "
-        '[{"title_ko":"제목","summary_ko":"요약"}]'
+        "You are a professional Korean translator specialising in pharmaceutical and biotech news. "
+        "Translate each English (or Korean) news headline into natural, concise Korean suitable for a dashboard UI. "
+        "Rules: no markdown, no emoji, no explanation — output a pure JSON array only. "
+        f"The array must have exactly {len(items)} objects, each with one key: \"title_ko\". "
+        'Example: [{"title_ko":"번역된 제목"}]'
     )
     user_prompt = (
-        f"아래 {len(items)}개 뉴스 기사를 번역·요약하라. "
-        "항목 순서를 유지하고, 각 항목에 title_ko 와 summary_ko 를 포함한 JSON 배열로만 출력하라.\n\n"
-        + "\n\n".join(lines)
+        f"Translate the following {len(items)} headlines to Korean. "
+        "Preserve order. Output only the JSON array.\n\n"
+        + "\n".join(lines)
     )
 
     try:
@@ -2331,8 +2330,8 @@ def _openai_translate_news_ko(
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content": user_prompt},
             ],
-            temperature=0.15,
-            max_tokens=1200,
+            temperature=0.1,
+            max_tokens=600,
         )
         raw = (completion.choices[0].message.content or "").strip()
         # JSON 펜스 제거
@@ -2343,11 +2342,8 @@ def _openai_translate_news_ko(
             for i, t in enumerate(translated):
                 if i >= len(items):
                     break
-                if isinstance(t, dict):
-                    if t.get("title_ko"):
-                        items[i]["title_ko"] = str(t["title_ko"])
-                    if t.get("summary_ko"):
-                        items[i]["summary_ko"] = str(t["summary_ko"])
+                if isinstance(t, dict) and t.get("title_ko"):
+                    items[i]["title_ko"] = str(t["title_ko"])
     except Exception as exc:
         logger.warning("[_openai_translate_news_ko] 번역 실패: %s", exc)
 

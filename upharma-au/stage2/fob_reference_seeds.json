@@ -156,8 +156,8 @@
             "retail_aud": null,
             "units_per_pack": 28,
             "fdc_units_per_reference_unit": 1,
-            "gst_pct_override": 10,
-            "dose_ratio_note": "복합제 1정당 오메가3 EE90 1g ≈ OMACOR 1캡 — 1정당 소매 = pack 가격 / 28. retail_aud는 Healthylife 크롤링값 사용"
+            "gst_pct_override": 0,
+            "dose_ratio_note": "복합제 1정당 오메가3 EE90 1g ≈ OMACOR 1캡 — 1정당 소매 = pack 가격 / 28. retail_aud는 Healthylife 크롤링값 사용. GST=0%(Omacor S4 처방의약품 ATO 면제)"
           }
         }
       ],

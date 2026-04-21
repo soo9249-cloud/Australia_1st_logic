@@ -100,10 +100,27 @@ DEFAULT_FX_AUD_TO_KRW = 900.0  # 참고 환율, UI에서 override 가능
 # 근거: 이혜재·유수연(2020), Voehler et al.(2023) ERP 연구 등 — Logic A(PBS 경로)에만 적용, Logic B(소매 실거래)에는 미적용
 ALPHA_MARKET_UPLIFT_PCT = 20.0
 
-# Logic B (Private) 기본 역산 계수
-DEFAULT_GST_PCT = 10.0          # 호주 GST 10%
-DEFAULT_PHARMACY_MARGIN_PCT = 30.0   # private 약국 마진 (Research doc 권고)
-DEFAULT_WHOLESALE_MARGIN_B_PCT = 10.0  # private 유통 도매 마진
+# ── Logic B (Private 소매 역산) 기본 계수 — 8CPA·1PWA 실증 검증 (2026-04-21 딥리서치) ──
+# ▸ GST: S4 처방의약품 = 0% 면제 (ATO 1999 신세제법), OTC·건기식 = 10%
+DEFAULT_GST_PCT = 0.0    # 처방의약품(S4 등) 기본값 — GST-free
+OTC_GST_PCT = 10.0       # OTC·건강기능식품 등 비처방 품목용
+
+# ▸ 약국 소매 자율 마진 (Pharmacy Retail Markup): 10~20% 범위, 중간값 15% 채택
+#   출처: 8CPA 관행, Pharmacy Guild 2025 독립약국 설문, eMedical·Wizard·Healthylife 교차검증
+DEFAULT_PHARMACY_MARGIN_PCT = 15.0
+
+# ▸ 도매 마진 (Wholesale Markup — 1PWA 확정): AEMP $5.50~$720 구간 7.52% 적용
+#   출처: 1st Pharmaceutical Wholesaler Agreement (1PWA, 2025-01-01 발효)
+DEFAULT_WHOLESALE_MARGIN_B_PCT = 7.52
+
+# ▸ 처방전 고정 수수료: 조제료 $8.88 + AHI Tier 1 $4.91 = $13.79 (8CPA 2025, 처방 1건당)
+#   소매가에서 마진 역산 전 선차감. DISPENSING_FEE_READY·AHI_TIER1_FLAT 와 동일값.
+DEFAULT_DISPENSING_FEE_PRIVATE = 8.88   # 조제료 (Ready-prepared dispensing fee)
+DEFAULT_AHI_FEE_PRIVATE = 4.91          # AHI 인프라 수수료 Tier 1 (매입가 $100 미만)
+
+# ▸ 운임·적하보험료 (Freight & Insurance, FOB 대비 비율)
+#   출처: OECD ITIC, ABS 통관 데이터 의약품 평균 5% (리퍼 컨테이너 포함)
+DEFAULT_FREIGHT_INSURANCE_PCT = 5.0
 
 
 __all__ = [
@@ -113,7 +130,9 @@ __all__ = [
     "AHI_TIER1_FLAT", "AHI_TIER2_PCT", "AHI_TIER3_FLAT",
     "EFC_PREP_FEE", "EFC_DIST_FEE", "EFC_DILUENT_FEE",
     "DEFAULT_PRESETS_PCT", "DEFAULT_FX_AUD_TO_KRW", "ALPHA_MARKET_UPLIFT_PCT",
-    "DEFAULT_GST_PCT", "DEFAULT_PHARMACY_MARGIN_PCT", "DEFAULT_WHOLESALE_MARGIN_B_PCT",
+    "DEFAULT_GST_PCT", "OTC_GST_PCT",
+    "DEFAULT_PHARMACY_MARGIN_PCT", "DEFAULT_WHOLESALE_MARGIN_B_PCT",
+    "DEFAULT_DISPENSING_FEE_PRIVATE", "DEFAULT_AHI_FEE_PRIVATE", "DEFAULT_FREIGHT_INSURANCE_PCT",
     # 함수
     "calculate_aemp_from_dpmq",
     "calculate_fob_logic_a",
@@ -159,38 +178,78 @@ def calculate_fob_logic_a(
 def calculate_fob_logic_b(
     retail_aud: float,
     importer_margin_pct: float,
-    gst_pct: float = DEFAULT_GST_PCT,
+    gst_pct: float = OTC_GST_PCT,   # OTC 기본값 10% (is_pbs_listed_rx=True 시 0%로 강제)
     pharmacy_margin_pct: float = DEFAULT_PHARMACY_MARGIN_PCT,
     wholesale_margin_pct: float = DEFAULT_WHOLESALE_MARGIN_B_PCT,
+    freight_insurance_pct: float = DEFAULT_FREIGHT_INSURANCE_PCT,
+    dispensing_fee: float = DEFAULT_DISPENSING_FEE_PRIVATE,
+    ahi_fee: float = DEFAULT_AHI_FEE_PRIVATE,
     fx_aud_to_krw: float = DEFAULT_FX_AUD_TO_KRW,
     *,
-    is_pbs_listed_rx: bool = False,
+    is_pbs_listed_rx: bool = True,
+    apply_fixed_fees: bool = True,
 ) -> dict[str, float]:
-    """Private 소매가에서 역순 마진 제거.
+    """Private 소매가에서 역순 마진 제거 — 8CPA·1PWA 실증 4단계 역산 (2026-04-21).
 
-    단계:  Retail → (÷1+GST) → (÷1+pharmacy) → (÷1+wholesale) → (÷1+importer) = FOB
-    PBS 등재 처방의약품(is_pbs_listed_rx=True)은 GST 면제 → gst_pct 를 0으로 강제.
+    단계:
+      1. 고정 수수료 차감 — 조제료($8.88) + AHI Tier 1($4.91) = $13.79 (처방 1건당 고정)
+      2. GST 제거 — S4 처방의약품: 0% 면제(기본값) / OTC: 10%
+      3. 약국 소매 마진 제거 — 15% (8CPA 관행 10~20%, 중간값)
+      4. 도매 마진 제거 — 7.52% (1PWA 확정, AEMP $5.50~$720 구간)
+      5. 운임·보험료 제거 — 5% (OECD ITIC 의약품 평균, 리퍼 컨테이너 포함)
+      6. 수입상(스폰서) 마진 제거 = FOB
+
+    is_pbs_listed_rx: True(기본값) = S4 처방의약품 GST 면제. OTC는 False 지정.
+    apply_fixed_fees: False → 소포장·OTC 등 처방 고정 수수료 미적용 시 사용.
     """
     if not isinstance(retail_aud, (int, float)) or retail_aud <= 0:
         raise ValueError(f"retail_aud must be positive, got {retail_aud}")
 
-    eff_gst = 0.0 if is_pbs_listed_rx else float(gst_pct)
+    # Step 1: 고정 수수료 차감 (조제료 + AHI, 처방 1건당)
+    if apply_fixed_fees:
+        total_fixed = float(dispensing_fee) + float(ahi_fee)
+        after_fees = float(retail_aud) - total_fixed
+        if after_fees <= 0:
+            # 소액 품목 안전장치 — 수수료 합이 소매가 초과 시 미적용
+            after_fees = float(retail_aud)
+            _fees_applied = 0.0
+        else:
+            _fees_applied = total_fixed
+    else:
+        after_fees = float(retail_aud)
+        _fees_applied = 0.0
 
-    pre_gst = retail_aud / (1.0 + eff_gst / 100.0)
+    # Step 2: GST 제거 (S4 처방의약품 기본 0%, OTC는 is_pbs_listed_rx=False 로 10% 적용)
+    eff_gst = 0.0 if is_pbs_listed_rx else float(gst_pct)
+    pre_gst = after_fees / (1.0 + eff_gst / 100.0)
+
+    # Step 3: 약국 소매 마진 제거 (15%, 매입가 대비)
     pre_pharmacy = pre_gst / (1.0 + pharmacy_margin_pct / 100.0)
+
+    # Step 4: 도매 마진 제거 (7.52%, 1PWA)
     pre_wholesale = pre_pharmacy / (1.0 + wholesale_margin_pct / 100.0)
-    fob_aud = pre_wholesale / (1.0 + importer_margin_pct / 100.0)
+
+    # Step 5: 운임·보험료 제거 (5%, CIF → FOB)
+    pre_importer = pre_wholesale / (1.0 + freight_insurance_pct / 100.0)
+
+    # Step 6: 수입상 마진 제거 → FOB
+    fob_aud = pre_importer / (1.0 + importer_margin_pct / 100.0)
     fob_krw = fob_aud * fx_aud_to_krw
 
     return {
         "retail_aud": round(float(retail_aud), 4),
+        "dispensing_fee": round(float(dispensing_fee), 4) if _fees_applied > 0 else 0.0,
+        "ahi_fee": round(float(ahi_fee), 4) if _fees_applied > 0 else 0.0,
+        "after_fees_aud": round(after_fees, 4),
         "pre_gst_aud": round(pre_gst, 4),
         "pre_pharmacy_aud": round(pre_pharmacy, 4),
         "pre_wholesale_aud": round(pre_wholesale, 4),
+        "pre_importer_aud": round(pre_importer, 4),
         "gst_pct": float(eff_gst),
         "is_pbs_listed_rx": bool(is_pbs_listed_rx),
         "pharmacy_margin_pct": float(pharmacy_margin_pct),
         "wholesale_margin_pct": float(wholesale_margin_pct),
+        "freight_insurance_pct": float(freight_insurance_pct),
         "importer_margin_pct": float(importer_margin_pct),
         "fob_aud": round(fob_aud, 4),
         "fob_krw": round(fob_krw, 2),

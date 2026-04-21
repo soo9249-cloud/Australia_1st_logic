@@ -111,18 +111,21 @@ def test_logic_a_hydrine_10pct() -> None:
 
 
 # --------------------------------------------------------------------------
-# TEST 5: Logic B Omethyl 소매역산 — retail $48.95 단계별 확인
+# TEST 5: Logic B Omethyl 소매역산 — retail $48.95 단계별 확인 (8CPA·1PWA 4단계)
 # --------------------------------------------------------------------------
 def test_logic_b_omethyl() -> None:
-    print("\n[T5] Logic B Omethyl retail→FOB 역산 단계별")
+    print("\n[T5] Logic B Omethyl retail→FOB 역산 단계별 (8CPA·1PWA 실증)")
     retail = 48.95
     r = calculate_fob_logic_b(retail, importer_margin_pct=20.0)
-    # pre_gst = 48.95 / 1.10 = 44.50
-    _assert_close(r["pre_gst_aud"], retail / 1.10, tol=0.01, label="pre_gst Omethyl")
-    # pre_pharmacy = 44.50 / 1.30 = 34.23
-    _assert_close(r["pre_pharmacy_aud"], (retail / 1.10) / 1.30, tol=0.01, label="pre_pharmacy Omethyl")
-    # FOB는 순차 체인 나눗셈
-    expected_fob = retail / 1.10 / 1.30 / 1.10 / 1.20
+    # Step 1: 고정 수수료 차감 — 조제료 $8.88 + AHI $4.91 = $13.79
+    after_fees = retail - 8.88 - 4.91  # = 35.16
+    _assert_close(r["after_fees_aud"], after_fees, tol=0.01, label="after_fees (수수료 차감 후)")
+    # Step 2: GST 0% (S4 처방의약품, is_pbs_listed_rx=True 기본값)
+    _assert_close(r["pre_gst_aud"], after_fees, tol=0.01, label="pre_gst Omethyl (GST 0% 면제)")
+    # Step 3: 약국 마진 15% 제거
+    _assert_close(r["pre_pharmacy_aud"], after_fees / 1.15, tol=0.01, label="pre_pharmacy Omethyl")
+    # FOB 순차 역산: after_fees / 1.15 / 1.0752 / 1.05 / 1.20
+    expected_fob = after_fees / 1.15 / 1.0752 / 1.05 / 1.20
     _assert_close(r["fob_aud"], expected_fob, tol=0.01, label="Omethyl FOB 20% margin")
 
 
@@ -188,15 +191,18 @@ def test_logic_a_average_fob_usd_band() -> None:
 
 
 # --------------------------------------------------------------------------
-# TEST 7c: Logic B PBS 등재 처방 — GST 면제 분기
+# TEST 7c: Logic B 처방의약품(S4) vs OTC — GST 분기 확인 (고정 수수료 차감 후 기준)
 # --------------------------------------------------------------------------
 def test_logic_b_pbs_listed_gst_free() -> None:
-    print("\n[T7c] Logic B is_pbs_listed_rx=True → pre_gst = retail (GST 0)")
+    print("\n[T7c] Logic B GST 분기: S4 처방(0% 면제) vs OTC(10% 적용) — 수수료 차감 후 비교")
     retail = 48.95
-    r_gst = calculate_fob_logic_b(retail, 20.0, is_pbs_listed_rx=False)
-    r_free = calculate_fob_logic_b(retail, 20.0, is_pbs_listed_rx=True)
-    _assert_close(r_gst["pre_gst_aud"], retail / 1.10, tol=0.01, label="OTC/비등재: GST 10%")
-    _assert_close(r_free["pre_gst_aud"], retail, tol=0.01, label="PBS 등재 RX: GST 면제")
+    after_fees = retail - 8.88 - 4.91  # = 35.16 (고정 수수료 차감 후)
+    r_gst = calculate_fob_logic_b(retail, 20.0, is_pbs_listed_rx=False)   # OTC 시뮬레이션
+    r_free = calculate_fob_logic_b(retail, 20.0, is_pbs_listed_rx=True)   # S4 처방 (기본값)
+    # OTC: 수수료 차감 후 GST 10% 제거
+    _assert_close(r_gst["pre_gst_aud"], after_fees / 1.10, tol=0.01, label="OTC: 수수료차감 후 GST 10% 적용")
+    # S4 처방의약품: 수수료 차감 후 GST 0% (면제)
+    _assert_close(r_free["pre_gst_aud"], after_fees, tol=0.01, label="S4 처방의약품: GST 0% 면제")
 
 
 # --------------------------------------------------------------------------
@@ -232,8 +238,12 @@ def test_component_sum_rosumeg_subcase2() -> None:
     avg = r["scenarios"]["average"]
     aud_usd = 0.716
     usd = float(avg["fob_aud"]) * aud_usd
-    # 합산 AUD ≈ 2.50(statin seed) + (48.95/28)/1.1/1.3/1.1(omega-3 HL역산) → 평균 FOB USD ≈ 2.586
-    _assert_close(usd, 2.586, tol=0.03, label="Rosumeg average FOB USD (subcase 2, Healthylife 실시간)")
+    # 합산 AUD:
+    #   rosuvastatin = 2.50 (seed fallback)
+    #   omega-3 per cap = (48.95/28) / 1.15 / 1.0752 ≈ 1.4139 (GST 0%, 1PWA 7.52%, 약국 15%)
+    #   total AEMP ≈ 3.9139 → Logic A average(20%): FOB = 3.9139 × 1.20/1.20 = 3.9139
+    #   USD = 3.9139 × 0.716 ≈ 2.802
+    _assert_close(usd, 2.802, tol=0.05, label="Rosumeg average FOB USD (subcase 2, Healthylife 실시간)")
 
 
 # --------------------------------------------------------------------------

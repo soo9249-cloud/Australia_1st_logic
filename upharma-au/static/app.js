@@ -375,8 +375,16 @@ function _p2UpdateImporterMarginHints(scenarios) {
 }
 
 function _loadReports() {
-  try   { return JSON.parse(localStorage.getItem(REPORTS_LS_KEY) || '[]'); }
-  catch { return []; }
+  try {
+    const all = JSON.parse(localStorage.getItem(REPORTS_LS_KEY) || '[]');
+    // 24시간 캐시 — id 값이 Date.now() 타임스탬프이므로 24h 이전 항목 자동 만료
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const valid  = all.filter(r => r.id && r.id >= cutoff);
+    if (valid.length !== all.length) {
+      localStorage.setItem(REPORTS_LS_KEY, JSON.stringify(valid));
+    }
+    return valid;
+  } catch { return []; }
 }
 
 /**
@@ -442,10 +450,17 @@ function renderReportTab() {
   }
 
   container.innerHTML = reports.map(r => {
-    const vc = r.verdict === '적합'   ? 'green'
-             : r.verdict === '부적합' ? 'red'
-             : r.verdict !== '—'      ? 'orange'
-             :                          'gray';
+    // 보고서 종류 태그 — 판정(조건부/적합/부적합) 대신 단계 라벨만 표시
+    const stageLabel = r.stage_label === '바이어'    ? '바이어'
+                     : r.stage_label === '바이어발굴' ? '바이어'
+                     : r.stage_label === '수출전략'   ? '가격'
+                     : r.stage_label === '수출가격'   ? '가격'
+                     : r.stage_label === '시장조사'   ? '시장조사'
+                     :                                   null;
+    const stageTag = stageLabel
+      ? `<span class="rep-stage-tag">${stageLabel}</span>`
+      : '';
+
     const innSpan = r.inn
       ? ` <span style="font-weight:400;color:var(--muted);font-size:12px;">· ${_escHtml(r.inn)}</span>`
       : '';
@@ -453,16 +468,9 @@ function renderReportTab() {
       ? `<a class="btn-download"
             href="/api/report/download${r.pdf_name ? `?name=${encodeURIComponent(r.pdf_name)}` : ''}"
             target="_blank"
-            style="padding:7px 14px;font-size:12px;flex-shrink:0;">📄 PDF</a>`
+            style="padding:7px 14px;font-size:12px;flex-shrink:0;">PDF</a>`
       : '';
     const delBtn = `<button class="btn-report-del" onclick="deleteReportEntry(${r.id})" title="보고서 삭제">×</button>`;
-    /* 판정 없음(—)은 뱃지로 두면 대시가 버튼처럼 보여 혼동되므로 표시하지 않음 */
-    const verdictBlock =
-      r.verdict && r.verdict !== '—'
-        ? `<div class="rep-item-verdict">
-          <span class="bdg ${vc}">${_escHtml(r.verdict)}</span>
-        </div>`
-        : '';
 
     return `
       <div class="rep-item">
@@ -470,7 +478,7 @@ function renderReportTab() {
           <div class="rep-item-product">${_escHtml(r.report_title || r.product)}${innSpan}</div>
           <div class="rep-item-meta">${_escHtml(r.timestamp)}</div>
         </div>
-        ${verdictBlock}
+        ${stageTag}
         ${dlBtn}
         ${delBtn}
       </div>`;
@@ -487,6 +495,8 @@ let _p2Tab = 'ai';
 let _p2ManualSeg = 'public';
 let _p2AiSeg = 'public';
 let _p2SelectedReportId = '';
+/** AI 가격 산출 공공/민간 결과 캐시 — 전환 토글용 */
+let _p2Cache = { public: null, private: null };
 let _p2AiSelectedReportId = '';
 let _p2UploadedReportFilename = '';
 let _p2AiPollTimer = null;
@@ -529,7 +539,8 @@ function _makeP2Defaults() {
  *   · S4/S8 처방의약품 → GST-free (0%)
  *   · OTC · 건강기능식품 → 10%
  *
- * 호주 8 품목 중 Omethyl(Omega-3, OTC) 만 10%, 나머지 7개 처방약은 0%.
+ * 호주 8 품목 중 OTC/건강기능식품만 10%, 나머지 처방약(ETC)은 0%.
+ * Omethyl(Omega-3 EE 2g)은 PBS 미등재이지만 ETC 처방약 — GST 0%.
  * product_id 문자열로 분류.
  *
  * @param {string} productId  호주 product_id (예: 'au-omethyl-001')
@@ -539,8 +550,9 @@ function _p2ClassifyGst(productId) {
   const id = String(productId || '');
   // 신약 임시 ID — 시드 없음·초기 PBS 미등재가 기본 → 민간 소매 GST 10% (Logic B 기본과 정합)
   if (id.startsWith('au-newdrug-')) return 10;
+  // OTC / 건강기능식품 — 현재 해당 품목 없음 (Omethyl은 ETC 처방약, GST 0%)
   const OTC_PRODUCT_IDS = new Set([
-    'au-omethyl-001',   // Omega-3 EE 2g — 건강기능식품 카테고리
+    // 추후 OTC 품목 추가 시 여기에 등록
   ]);
   return OTC_PRODUCT_IDS.has(id) ? 10 : 0;
 }
@@ -593,14 +605,23 @@ function initP2Strategy() {
     btn.addEventListener('click', () => {
       const seg = btn.getAttribute('data-p2-manual-seg') || 'public';
       _p2ManualSeg = seg === 'private' ? 'private' : 'public';
+      _p2AiSeg    = _p2ManualSeg; // AI 탭도 동기화
       document.querySelectorAll('.p2-seg-btn[data-p2-manual-seg]').forEach((b) => {
         b.classList.toggle('on', b.getAttribute('data-p2-manual-seg') === seg);
       });
+      // 직접입력 탭 힌트
       const desc = document.getElementById('p2-manual-seg-desc');
       if (desc) {
         desc.textContent = _p2ManualSeg === 'public'
-          ? '공공 시장: PBS 공공급여 채널 · 주 정부 병원조달(HealthShare NSW 등)'
-          : '민간 시장: Chemist Warehouse 등 약국 체인 · 소매 유통 (Logic B 역산)';
+          ? '공공 시장: PBS (의약품급여목록) 기반 AEMP (정부 승인 출고가) 역산 기준'
+          : '민간 시장: Chemist Warehouse · Healthylife 소매가 기반 유통마진 역산 기준';
+      }
+      // AI 탭 힌트
+      const aiHint = document.getElementById('p2-ai-seg-hint');
+      if (aiHint) {
+        aiHint.textContent = _p2ManualSeg === 'public'
+          ? '공공 시장: PBS (의약품급여목록) 기반 AEMP (정부 승인 출고가) 역산 기준'
+          : '민간 시장: Chemist Warehouse · Healthylife 소매가 기반 유통마진 역산 기준';
       }
       if (typeof _renderP2Manual === 'function') _renderP2Manual();
     });
@@ -861,7 +882,42 @@ async function _pollP2AiPipeline() {
       _markP2ProgressAllDone();
       const rr = await fetch('/api/p2/pipeline/result');
       const result = await rr.json();
-      _renderP2AiResult(result);
+
+      const pId = (document.getElementById('product-select')?.value || '').trim()
+        || (typeof _currentKey === 'string' ? _currentKey : '');
+
+      // ── 이중 세그먼트 형식 (새 워커 _p2_pipeline_worker_both) ──────────────
+      if (result.public || result.private) {
+        // 공공·민간 양쪽 캐시
+        if (result.public)  _p2Cache.public  = result.public;
+        if (result.private) _p2Cache.private = result.private;
+
+        // available_segments 에 따라 기본 표시 세그먼트 결정
+        const avail = Array.isArray(result.available_segments)
+          ? result.available_segments
+          : ['public', 'private'];
+        if (!avail.includes(_p2AiSeg)) {
+          _p2AiSeg     = avail[0] || 'public';
+          _p2ManualSeg = _p2AiSeg;
+        }
+
+        // 현재 세그먼트 렌더 (캐시에서 꺼냄)
+        const segResult = _p2Cache[_p2AiSeg];
+        if (segResult) _renderP2AiResult(segResult);
+        _renderP2CacheToggle();
+
+        // 보고서 탭 등록 — 현재 세그먼트 PDF 우선
+        const bestPdf = (_p2Cache[_p2AiSeg] || {}).pdf
+          || (result.public  || {}).pdf
+          || (result.private || {}).pdf
+          || null;
+        _addP2AiReportEntry(INN_MAP[pId] || pId || '제품', bestPdf);
+      } else {
+        // ── 구형 단일 세그먼트 형식 (하위 호환) ─────────────────────────────
+        _renderP2AiResult(result);
+        _addP2AiReportEntry(INN_MAP[pId] || pId || '제품', result?.pdf || null);
+      }
+
       document.getElementById('btn-p2-ai-run')?.removeAttribute('disabled');
       const runIcon = document.getElementById('p2-ai-run-icon');
       if (runIcon) runIcon.textContent = '▶';
@@ -880,15 +936,138 @@ async function _pollP2AiPipeline() {
   }
 }
 
-/* P2 3열 카드: 역산 섹션 토글 */
+/* P2 3열 카드: 역산 섹션 토글 (레거시 — 인라인 펼침, 팝업 미지원 환경 fallback) */
 function toggleP2ColDetail(col) {
   const detail = document.getElementById('p2cd-' + col);
   const btn    = detail?.previousElementSibling?.querySelector('.p2-col-expand-btn');
   if (!detail) return;
   const willOpen = detail.style.display === 'none';
-  /* 기준가·수수료·운임·추가 옵션은 모두 접었다 펼쳐도 유지(값만 사용자가 자유롭게 조정) */
   detail.style.display = willOpen ? '' : 'none';
   if (btn) btn.textContent = (willOpen ? '▾ ' : '▸ ') + '역산 · 옵션 편집';
+}
+
+/* ── P2 계산기 팝업 모달 ── */
+let _modalActiveCol    = null;
+let _modalOrigParent   = null;
+
+/**
+ * 시나리오 카드 "역산 · 옵션 편집" 버튼 클릭 → 모달 팝업으로 표시.
+ * p2cd-{col} 요소를 DOM에서 모달 바디로 이동 후 팝업 오픈.
+ * 닫을 때 원래 위치로 복원.
+ */
+function openP2ColModal(col) {
+  const detail    = document.getElementById('p2cd-' + col);
+  const modal     = document.getElementById('p2-calc-modal');
+  const modalBody = document.getElementById('p2-calc-modal-body');
+  if (!detail || !modal || !modalBody) { toggleP2ColDetail(col); return; }
+
+  _modalActiveCol  = col;
+  _modalOrigParent = detail.parentNode;
+
+  detail.style.display = ''; // 인라인 숨김 해제
+  modalBody.appendChild(detail); // 모달 바디로 이동
+
+  const labels = {
+    agg:  '저가 진입 시나리오 (Penetration Pricing) — 역산 · 옵션 편집',
+    avg:  '기준가 기반 시나리오 (Reference Pricing) — 역산 · 옵션 편집',
+    cons: '프리미엄 시나리오 (Premium Pricing) — 역산 · 옵션 편집',
+  };
+  const titleEl = document.getElementById('p2-calc-modal-title');
+  if (titleEl) titleEl.textContent = labels[col] || '역산 · 옵션 편집';
+
+  modal.style.display = 'flex';
+}
+
+/** 모달 닫기 — p2cd-{col} 을 원래 카드로 복원 */
+function closeP2ColModal() {
+  const modal = document.getElementById('p2-calc-modal');
+  if (!modal) return;
+  if (_modalActiveCol && _modalOrigParent) {
+    const detail = document.getElementById('p2cd-' + _modalActiveCol);
+    if (detail) {
+      detail.style.display = 'none'; // 다시 접힌 상태로
+      _modalOrigParent.appendChild(detail);
+    }
+  }
+  modal.style.display = 'none';
+  _modalActiveCol  = null;
+  _modalOrigParent = null;
+}
+
+/**
+ * 공공/민간 캐시 전환 토글 버튼 렌더링.
+ * _p2Cache 에 결과가 하나라도 있을 때 #p2-cache-toggle-row 에 버튼 표시.
+ */
+function _renderP2CacheToggle() {
+  const container = document.getElementById('p2-cache-toggle-row');
+  if (!container) return;
+  const hasPub = !!_p2Cache.public;
+  const hasPri = !!_p2Cache.private;
+  if (!hasPub && !hasPri) { container.style.display = 'none'; return; }
+  container.style.display = 'flex';
+  container.innerHTML =
+    `<span class="p2-cache-toggle-label">결과 보기:</span>
+     <button class="p2-cache-seg-btn ${_p2AiSeg === 'public'  ? 'on' : ''}"
+             onclick="switchP2CacheSeg('public')"
+             ${hasPub ? '' : 'disabled'}
+             type="button">공공 시장 ${hasPub ? '✓' : '(미실행)'}</button>
+     <button class="p2-cache-seg-btn ${_p2AiSeg === 'private' ? 'on' : ''}"
+             onclick="switchP2CacheSeg('private')"
+             ${hasPri ? '' : 'disabled'}
+             type="button">민간 시장 ${hasPri ? '✓' : '(미실행)'}</button>`;
+}
+
+/**
+ * 캐시된 다른 시장 결과로 전환.
+ * @param {string} seg 'public' | 'private'
+ */
+function switchP2CacheSeg(seg) {
+  if (!_p2Cache[seg]) return;
+  _p2AiSeg    = seg;
+  _p2ManualSeg = seg;
+  // 세그먼트 버튼 활성화 동기화
+  document.querySelectorAll('.p2-seg-btn[data-p2-manual-seg]').forEach((b) => {
+    b.classList.toggle('on', b.getAttribute('data-p2-manual-seg') === seg);
+  });
+  // 힌트 텍스트 동기화
+  const aiHint = document.getElementById('p2-ai-seg-hint');
+  if (aiHint) {
+    aiHint.textContent = seg === 'public'
+      ? '공공 시장: PBS (의약품급여목록) 기반 AEMP (정부 승인 출고가) 역산 기준'
+      : '민간 시장: Chemist Warehouse · Healthylife 소매가 기반 유통마진 역산 기준';
+  }
+  // 캐시된 결과 재렌더
+  _renderP2AiResult(_p2Cache[seg]);
+  _renderP2CacheToggle();
+}
+
+/**
+ * AI 가격 산출 완료 후 "수출전략 보고서" 항목을 보고서 탭에 자동 등록.
+ * @param {string}      productName  품목 표시명
+ * @param {string|null} pdfName      PDF 파일명 (없으면 null)
+ */
+function _addP2AiReportEntry(productName, pdfName) {
+  const reports = _loadReports();
+  const pId     = (document.getElementById('product-select')?.value || '').trim();
+  const entry   = {
+    id:           Date.now(),
+    product_id:   pId,
+    product:      productName,
+    stage_label:  '수출전략',
+    report_title: `수출전략 보고서 - ${productName}`,
+    inn:          INN_MAP[pId] || '',
+    verdict:      '—',
+    timestamp:    new Date().toLocaleString('ko-KR', {
+      month: '2-digit', day: '2-digit',
+      hour:  '2-digit', minute: '2-digit',
+    }),
+    hasPdf:   !!pdfName,
+    pdf_name: pdfName || '',
+  };
+  reports.unshift(entry);
+  localStorage.setItem(REPORTS_LS_KEY, JSON.stringify(reports.slice(0, 30)));
+  renderReportTab();
+  _syncP2ReportsOptions();
 }
 
 /** 커스텀 옵션 한 건을 가격에 반영 (% 가산·% 차감·USD 가산) */
@@ -923,14 +1102,17 @@ function recalcP2Col(col) {
   }
   price = Math.max(0, price);
 
-  // 기준가·수수료·운임은 모두 USD 기준 가격에 곱하기/나누기(비율)로 적용. 보조줄은 1 USD = usd_krw KRW.
+  // 기준가·수수료·운임은 모두 USD 기준 가격에 곱하기/나누기(비율)로 적용.
+  // 보조줄: KRW / AUD 한 줄 슬러시 구분
   const usdKrw = Number(_p2ScenarioRaw.usd_krw) || 0;
-  const krwTxt = usdKrw > 0 ? `${Math.round(price * usdKrw).toLocaleString('ko-KR')} KRW` : '—';
+  const audUsd = Number(_p2ScenarioRaw.aud_usd) || 0;
+  const krwTxt = usdKrw > 0 ? `${Math.round(price * usdKrw).toLocaleString('ko-KR')}원` : '—';
+  const audTxt = audUsd > 0 ? `${(price / audUsd).toFixed(2)} AUD` : '';
 
   const priceEl = document.getElementById('p2c-price-' + col);
   const subEl   = document.getElementById('p2c-sub-' + col);
   if (priceEl) priceEl.textContent = price.toFixed(2);
-  if (subEl)   subEl.textContent   = `${price.toFixed(2)} USD · ${krwTxt}`;
+  if (subEl)   subEl.textContent   = audTxt ? `${krwTxt} / ${audTxt}` : krwTxt;
 }
 
 /* P2 컬럼 커스텀 옵션 렌더링 — 확정 옵션 + 미확정 초안 행(여러 줄 가능) */
@@ -1154,7 +1336,7 @@ function _renderP2AiResult(data) {
 
     if (priceEl)   priceEl.textContent = priceUsd.toFixed(2);
     if (baseInput) baseInput.value     = priceUsd.toFixed(2);
-    if (subEl)     subEl.textContent   = `≈ ${fmtKRW(priceKrw)}`;
+    if (subEl)     subEl.textContent   = `${fmtKRW(priceKrw)} / ${priceAud.toFixed(2)} AUD`;
 
     // 새 AI 결과 올 때마다 각 컬럼의 커스텀 옵션·미확정 초안 행 초기화
     _p2ColData[col] = { opts: [] };
@@ -1166,6 +1348,10 @@ function _renderP2AiResult(data) {
   ['agg', 'avg', 'cons'].forEach((c) => recalcP2Col(c));
 
   _p2UpdateImporterMarginHints(scenarios);
+
+  // 결과 캐시 저장 (공공/민간 전환 토글용)
+  _p2Cache[_p2AiSeg] = data;
+  _renderP2CacheToggle();
 
   // 경쟁가 분포 (DOM 있으면 USD 기준 표기 — Stage 1 HTML 에는 없음, 향후 추가 대비)
   if (scenarios.length >= 3) {
@@ -1193,14 +1379,15 @@ function _renderP2AiResult(data) {
 }
 
 function _p2FillExchangeRate() {
+  // AU: /api/exchange 응답은 aud_usd (AUD→USD 환율). 직접입력 탭 exchange 슬라이더에 반영.
+  // 구 버전: sgd_usd 를 참조하던 버그 → aud_usd 로 수정
   const rates = window._exchangeRates;
   if (!rates) return;
-  const sgdUsd = Number(rates.sgd_usd);
-  if (!sgdUsd || sgdUsd <= 0) return;
-  const usdToSgd = Number((1 / sgdUsd).toFixed(4));
+  const audUsd = Number(rates.aud_usd);
+  if (!audUsd || audUsd <= 0) return;
   ['public', 'private'].forEach((seg) => {
     const opt = _p2Manual[seg].find((x) => x.key === 'exchange');
-    if (opt) opt.value = usdToSgd;
+    if (opt) opt.value = Number(audUsd.toFixed(4));
   });
 }
 
@@ -1224,7 +1411,7 @@ function _syncP2ReportsOptions() {
   if (!_p2Ready) return;
   const reports = _loadReports();
   const reportOpts = reports
-    .map((r) => `<option value="${r.id}">${_escHtml(r.report_title || r.product || '보고서')}</option>`)
+    .map((r) => `<option value="${r.id}">${_escHtml(r.report_title || r.product || '보고서')} · ${_escHtml(r.timestamp || '')}</option>`)
     .join('');
   const manualOptionHtml = `<option value="">보고서를 선택하세요</option>${reportOpts}`;
   const aiOptionHtml =
@@ -1648,6 +1835,10 @@ async function runPipeline() {
   const reBtn = document.getElementById('btn-reanalyze');
   if (reBtn) reBtn.style.display = 'none';
 
+  // 로딩 스피너 표시 (⏳ 아이콘 + "시장조사 분석 중…")
+  const p1LoadingEl = document.getElementById('p1-loading-state');
+  if (p1LoadingEl) p1LoadingEl.style.display = '';
+
   try {
     // ① 크롤링 실행 (동기 · 블로킹) — PDF 카드는 완료·오류 시에만 표시
     setProgress('db_load', 'running');
@@ -1726,6 +1917,9 @@ function _resetBtn() {
   if (analyzeBtn) analyzeBtn.disabled = false;
   const iconEl = document.getElementById('btn-icon');
   if (iconEl) iconEl.textContent = '▶';
+  // 로딩 스피너 숨김
+  const p1LoadingEl = document.getElementById('p1-loading-state');
+  if (p1LoadingEl) p1LoadingEl.style.display = 'none';
 }
 
 // pollPipeline() 제거됨 — 호주는 동기 엔드포인트라 폴링 불필요.
@@ -2165,9 +2359,9 @@ function renderResult(result, refs, pdfName) {
       || (Array.isArray(result.key_factors) ? result.key_factors.join(' / ') : '');
     _setText('risks-conditions', _formatDetailed(riskText));
 
-    // 완료 노트 표시 (result-card는 숨김 DOM이므로 visible 처리 안 함)
+    // 완료 배너 (녹색 박스) — SG와 동일한 "가격 분석을 진행하세요." 메시지
     _showP1Note(
-      `✅ ${result.trade_name || '제품'} 분석 완료 — 판정: ${vLabel}. 상세 결과는 보고서 탭에서 확인하세요.`,
+      `✅ ${result.trade_name || '제품'} 분석 완료 — 가격 분석을 진행하세요.`,
       false
     );
     }
@@ -2863,9 +3057,23 @@ resetProgress();
     const meta = document.getElementById('p3-meta');
     if (btn) btn.disabled = true;
     if (icon) icon.textContent = '⏳';
-    if (tableWrap) tableWrap.style.display = 'none';
     if (meta) meta.style.display = 'none';
     if (note) { note.style.display = 'none'; }
+    // 최종 보고서 버튼 초기화
+    const finalWrap = document.getElementById('p3-final-report-wrap');
+    if (finalWrap) finalWrap.style.display = 'none';
+
+    // 스켈레톤 로딩 — 분석 중 1~10번 자리 표시
+    const skeletonList = document.getElementById('p3-buyer-list');
+    if (tableWrap) tableWrap.style.display = 'block';
+    if (skeletonList) {
+      skeletonList.innerHTML = Array.from({ length: 10 }, (_, i) => `
+        <li class="p3-skeleton-item" style="animation-delay:${i * 0.08}s">
+          <span class="p3-skeleton-rank"></span>
+          <span class="p3-skeleton-name"></span>
+          <span class="p3-skeleton-tag"></span>
+        </li>`).join('');
+    }
 
     _resetP3Progress();
 
@@ -2922,11 +3130,16 @@ resetProgress();
         `;
       }
       if (tableWrap) tableWrap.style.display = 'block';
-      const list = document.getElementById('p3-buyer-list');
-      if (list) {
-        list.innerHTML = buyers.length
-          ? buyers.map((b, i) => renderBuyerListItem(b, i)).join('')
-          : '<li style="padding:20px; text-align:center; color:#6b7280; list-style:none;">결과 없음</li>';
+      // 기준 체크박스 기본값으로 정렬 후 렌더 (p3ResortBuyers 가 _p3BuyersCache 사용)
+      if (typeof window.p3ResortBuyers === 'function') {
+        window.p3ResortBuyers();
+      } else {
+        const list = document.getElementById('p3-buyer-list');
+        if (list) {
+          list.innerHTML = buyers.length
+            ? buyers.map((b, i) => renderBuyerListItem(b, i)).join('')
+            : '<li style="padding:20px; text-align:center; color:#6b7280; list-style:none;">결과 없음</li>';
+        }
       }
 
       // 5. 마무리 — 스테퍼 전부 완료 표시 + PDF 다운로드 활성
@@ -2938,6 +3151,28 @@ resetProgress();
         dlBtn.disabled = false;
         if (result.download_url) dlBtn.dataset.pdfUrl = result.download_url;
       }
+      // 최종 보고서 버튼 활성 (바이어 발굴 완료 시 표시)
+      const finalWrap2 = document.getElementById('p3-final-report-wrap');
+      if (finalWrap2) finalWrap2.style.display = '';
+
+      // 바이어 발굴 보고서 탭 자동 등록
+      const _p3Prd = pid;
+      const _p3Entry = {
+        id:           Date.now(),
+        product_id:   _p3Prd,
+        product:      (typeof INN_MAP !== 'undefined' ? (INN_MAP[_p3Prd] || _p3Prd) : _p3Prd),
+        stage_label:  '바이어',
+        report_title: `바이어 발굴 보고서 - ${(typeof INN_MAP !== 'undefined' ? (INN_MAP[_p3Prd] || _p3Prd) : _p3Prd)}`,
+        inn:          (typeof INN_MAP !== 'undefined' ? (INN_MAP[_p3Prd] || '') : ''),
+        verdict:      '—',
+        timestamp:    new Date().toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+        hasPdf:       !!(result.download_url || result.pdf),
+        pdf_name:     result.pdf || '',
+      };
+      const _p3Reports = (function() { try { return JSON.parse(localStorage.getItem(REPORTS_LS_KEY) || '[]'); } catch { return []; } })();
+      _p3Reports.unshift(_p3Entry);
+      localStorage.setItem(REPORTS_LS_KEY, JSON.stringify(_p3Reports.slice(0, 30)));
+      if (typeof renderReportTab === 'function') renderReportTab();
     } catch (exc) {
       console.error('[p3] 파이프라인 실패', exc);
       _setP3StepError('db');
@@ -2950,6 +3185,63 @@ resetProgress();
       if (btn) btn.disabled = false;
       if (icon) icon.textContent = '▶';
     }
+  };
+
+  // ───── 기준 체크박스 점수 계산 (백엔드 per-criterion 점수 대신 프론트 파생) ─────
+  function _criteriaScore(buyer) {
+    const rev = String(buyer.annual_revenue_rank || '').toUpperCase();
+    const revScore = rev.includes('TOP 5') ? 5
+                   : rev.includes('TOP 10') ? 4
+                   : rev.includes('TOP 20') ? 3
+                   : rev.includes('TOP 50') ? 2 : 1;
+    const artg = Number(buyer.tga_artg_count || 0);
+    const artgScore = artg >= 20 ? 5 : artg >= 10 ? 4 : artg >= 5 ? 3 : artg >= 1 ? 2 : 0;
+    const importScore = artg >= 5 ? 5 : artg >= 1 ? 3 : (buyer.is_gpce_exhibitor ? 2 : 0);
+    return {
+      revenue: revScore,
+      factory: buyer.has_au_factory === 'Y' ? 5 : 0,
+      chain:   Number(buyer.psi_pharmacy_chain || 0) > 0 ? 5 : 0,
+      artg:    artgScore,
+      import:  importScore,
+    };
+  }
+
+  // ───── 기준 체크박스 재정렬 ─────
+  window.p3ResortBuyers = function () {
+    if (!_p3BuyersCache.length) return;
+    const criteria = {
+      revenue: document.getElementById('p3c-revenue')?.checked ?? true,
+      factory: document.getElementById('p3c-factory')?.checked ?? true,
+      chain:   document.getElementById('p3c-chain')?.checked   ?? true,
+      artg:    document.getElementById('p3c-artg')?.checked    ?? true,
+      import:  document.getElementById('p3c-import')?.checked  ?? true,
+    };
+    const sorted = [..._p3BuyersCache].sort((a, b) => {
+      const sa = _criteriaScore(a);
+      const sb = _criteriaScore(b);
+      let totalA = 0, totalB = 0;
+      for (const [key, checked] of Object.entries(criteria)) {
+        if (checked) { totalA += sa[key] || 0; totalB += sb[key] || 0; }
+      }
+      return totalB - totalA;
+    });
+    // 재정렬된 순서로 캐시 업데이트 (카드 클릭 인덱스 정합)
+    _p3BuyersCache = sorted;
+    const list = document.getElementById('p3-buyer-list');
+    if (list) {
+      list.innerHTML = sorted.length
+        ? sorted.map((b, i) => renderBuyerListItem(b, i)).join('')
+        : '<li style="padding:20px;text-align:center;color:#6b7280;list-style:none;">바이어 없음</li>';
+    }
+  };
+
+  // ───── 기준 전체 해제 ─────
+  window.p3ClearAllCriteria = function () {
+    ['p3c-revenue', 'p3c-factory', 'p3c-chain', 'p3c-artg', 'p3c-import'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = false;
+    });
+    window.p3ResortBuyers();
   };
 
   // ───── PDF 다운로드 — run 에서 이미 생성된 파일 직접 열기 ─────
@@ -2986,3 +3278,31 @@ resetProgress();
   //       버튼 클릭만이 유일한 트리거. 초기 진입 시 테이블은 빈 상태.
 
 })();
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   최종 보고서 다운로드 (시장조사 + 수출가격전략 + 바이어 발굴 병합)
+   백엔드: /api/final-report (POST) — 미구현 시 안내 메시지 표시
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+window.downloadFinalReport = async function () {
+  const btn = document.getElementById('p3-final-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 생성 중…'; }
+  try {
+    const res = await fetch('/api/final-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.pdf) throw new Error(data.detail || `HTTP ${res.status}`);
+    window.open('/api/report/download?name=' + encodeURIComponent(data.pdf), '_blank');
+  } catch (err) {
+    // 백엔드 미구현 안내 (404 등)
+    if (typeof showToast === 'function') {
+      showToast('최종 보고서 병합 기능은 백엔드 연동 후 사용 가능합니다.');
+    } else {
+      alert('최종 보고서 생성 실패: ' + err.message);
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📋 최종 보고서 다운로드'; }
+  }
+};

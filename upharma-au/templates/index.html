@@ -126,6 +126,8 @@
                         <span id="p2-ai-run-icon">▶</span> AI 가격 산출
                       </button>
                     </div>
+                    <!-- 공공/민간 선택 시 데이터 소스 힌트 -->
+                    <div id="p2-ai-seg-hint" class="p2-seg-hint-text">공공 시장: PBS (의약품급여목록) 기반 AEMP (정부 승인 출고가) 역산 기준</div>
                     <!-- 로딩/진행 — JS 제어 -->
                     <div id="p2-loading-state" class="p1-simple-loading" style="display:none;">
                       <span class="report-loading-spinner"></span>
@@ -155,6 +157,8 @@
 
                   <!-- 3열 시나리오 카드 (분석 완료 후 표시) -->
                   <div id="p2-ai-result-section" style="display:none;">
+                    <!-- 공공/민간 캐시 전환 토글 (JS 가 동적으로 채움) -->
+                    <div id="p2-cache-toggle-row" class="p2-cache-toggle-row" style="display:none;"></div>
                     <div class="p2-three-col">
 
                       <!-- aggressive — 저가 진입 시나리오 (Penetration Pricing) -->
@@ -166,9 +170,9 @@
                         <div id="p2c-importer-hint-agg" style="font-size:10.5px;color:var(--muted);margin-bottom:8px;">수입상 마진 30%</div>
                         <div class="p2-col-price" id="p2c-price-agg">—</div>
                         <div class="p2-col-currency">USD</div>
-                        <div class="p2-col-sub" id="p2c-sub-agg">≈ — 원</div>
+                        <div class="p2-col-sub" id="p2c-sub-agg">— 원 / — AUD</div>
                         <div class="p2-col-expand-row">
-                          <button class="p2-col-expand-btn" onclick="toggleP2ColDetail('agg')">▸ 역산 · 옵션 편집</button>
+                          <button class="p2-col-expand-btn" onclick="openP2ColModal('agg')">클릭하여 편집</button>
                         </div>
                         <div class="p2-col-detail" id="p2cd-agg" style="display:none;">
                           <div class="p2-col-input-row">
@@ -197,9 +201,9 @@
                         <div id="p2c-importer-hint-avg" style="font-size:10.5px;color:var(--muted);margin-bottom:8px;">수입상 마진 20%</div>
                         <div class="p2-col-price" id="p2c-price-avg">—</div>
                         <div class="p2-col-currency">USD</div>
-                        <div class="p2-col-sub" id="p2c-sub-avg">≈ — 원</div>
+                        <div class="p2-col-sub" id="p2c-sub-avg">— 원 / — AUD</div>
                         <div class="p2-col-expand-row">
-                          <button class="p2-col-expand-btn" onclick="toggleP2ColDetail('avg')">▸ 역산 · 옵션 편집</button>
+                          <button class="p2-col-expand-btn" onclick="openP2ColModal('avg')">클릭하여 편집</button>
                         </div>
                         <div class="p2-col-detail" id="p2cd-avg" style="display:none;">
                           <div class="p2-col-input-row">
@@ -228,9 +232,9 @@
                         <div id="p2c-importer-hint-cons" style="font-size:10.5px;color:var(--muted);margin-bottom:8px;">수입상 마진 10%</div>
                         <div class="p2-col-price" id="p2c-price-cons">—</div>
                         <div class="p2-col-currency">USD</div>
-                        <div class="p2-col-sub" id="p2c-sub-cons">≈ — 원</div>
+                        <div class="p2-col-sub" id="p2c-sub-cons">— 원 / — AUD</div>
                         <div class="p2-col-expand-row">
-                          <button class="p2-col-expand-btn" onclick="toggleP2ColDetail('cons')">▸ 역산 · 옵션 편집</button>
+                          <button class="p2-col-expand-btn" onclick="openP2ColModal('cons')">클릭하여 편집</button>
                         </div>
                         <div class="p2-col-detail" id="p2cd-cons" style="display:none;">
                           <div class="p2-col-input-row">
@@ -398,10 +402,28 @@
               </div>
               <div class="p3-meta" id="p3-meta" style="display:none;"></div>
               <div id="p3-buyer-table" style="display:none;">
+                <!-- 바이어 정렬 기준 체크박스 패널 (기본 5개 모두 선택) -->
+                <div class="p3-criteria-wrap" id="p3-criteria-wrap">
+                  <div class="p3-criteria-header">
+                    <span class="p3-criteria-title">정렬 기준 (체크박스 변경 시 자동 재정렬)</span>
+                    <button class="p3-criteria-clear" type="button" onclick="p3ClearAllCriteria()">전체 해제</button>
+                  </div>
+                  <div class="p3-criteria-list">
+                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-revenue" checked onchange="p3ResortBuyers()"> 매출 규모</label>
+                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-factory" checked onchange="p3ResortBuyers()"> 제조소 보유</label>
+                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-chain"   checked onchange="p3ResortBuyers()"> 약국체인</label>
+                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-artg"    checked onchange="p3ResortBuyers()"> ARTG 등재</label>
+                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-import"  checked onchange="p3ResortBuyers()"> 수입 경험</label>
+                  </div>
+                </div>
                 <ol class="p3-buyer-list" id="p3-buyer-list"></ol>
               </div>
               <div class="p3-footer-row" id="p3-dl-wrap" style="display:none;">
                 <button class="btn-download" id="p3-dl-btn" onclick="generateBuyersPdf()" disabled>📄 PDF 다운로드</button>
+              </div>
+              <!-- 최종 보고서 다운로드 (시장조사+가격전략+바이어 3종 병합) -->
+              <div class="p3-final-report-wrap" id="p3-final-report-wrap" style="display:none;">
+                <button class="btn-download" id="p3-final-btn" onclick="downloadFinalReport()" type="button">📋 최종 보고서 다운로드</button>
               </div>
             </div>
           </div><!-- /pb-p3 -->
@@ -443,6 +465,17 @@
 </div><!-- /app -->
 
 <div class="toast" id="toast"></div>
+
+<!-- ════ P2 역산 계산기 팝업 모달 ════ -->
+<div id="p2-calc-modal" class="p2-calc-modal-overlay" onclick="if(event.target===this)closeP2ColModal()">
+  <div class="p2-calc-modal-inner">
+    <div class="p2-calc-modal-header">
+      <span class="p2-calc-modal-title" id="p2-calc-modal-title">역산 · 옵션 편집</span>
+      <button class="rep-panel-close" onclick="closeP2ColModal()">✕</button>
+    </div>
+    <div id="p2-calc-modal-body"></div>
+  </div>
+</div>
 
 <!-- ════ 보고서 floating 컨테이너 (버튼 + 패널) ════ -->
 <div class="rep-float-wrap" id="rep-float-wrap">

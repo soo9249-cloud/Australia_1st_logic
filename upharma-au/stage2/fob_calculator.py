@@ -139,6 +139,7 @@ __all__ = [
     "calculate_fob_logic_b",
     "calculate_three_scenarios",
     "dispatch_by_pricing_case",
+    "dispatch_both_segments",
     "get_disclaimer_text",
 ]
 
@@ -966,6 +967,229 @@ def _blocked_no_price(pid: str, case: str, reason: str) -> dict[str, Any]:
         "warnings": [f"참고가 데이터 미확보: {reason}"],
         "disclaimer": get_disclaimer_text("blocked"),
         "blocked_reason": "no_reference_price",
+    }
+
+
+def dispatch_both_segments(
+    seed: dict[str, Any],
+    *,
+    fx_aud_to_krw: float = DEFAULT_FX_AUD_TO_KRW,
+    presets_pct: dict[str, float] | None = None,
+    crawler_row: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """공공(Logic A) + 민간(Logic B) 양쪽 FOB 동시 산출.
+
+    기존 dispatch_by_pricing_case()를 내부 재사용 — 기존 코드 무변경.
+
+    반환 스키마::
+
+        {
+            "public":  {dispatch 결과 + "market_note": str},
+            "private": {dispatch 결과 + "market_note": str},
+            "available_segments": ["public","private"] | ["public"] | ["private"] | [],
+            "product_id": str,
+        }
+
+    available_segments 해설
+    -----------------------
+    ["public","private"]  — 양쪽 신뢰 데이터 있음 (UI 토글 모두 활성)
+    ["public"]            — 공공만 신뢰 (민간은 참고치 또는 동일 출처)
+    ["private"]           — 민간만 신뢰 (공공은 참고치 — ESTIMATE_private ETC 처방약)
+    []                    — 양쪽 차단 (ESTIMATE_withdrawal)
+    """
+    case = seed.get("pricing_case", "")
+    pid = seed.get("product_id", "<unknown>")
+
+    # ── ESTIMATE_withdrawal: 양쪽 모두 차단 ────────────────────────────────────
+    if case == "ESTIMATE_withdrawal":
+        blocked = dispatch_by_pricing_case(seed, fx_aud_to_krw=fx_aud_to_krw)
+        note = "PBS 철수 이력 — 재진입 조건 건별 검토 대상 (TGA·PBAC 개별 심의)"
+        pub = {**blocked, "market_note": note}
+        pri = {**blocked, "market_note": note}
+        return {
+            "public": pub, "private": pri,
+            "available_segments": [], "product_id": pid,
+        }
+
+    # ── ESTIMATE_private (Omethyl 등 ETC 처방약, PBS 미등재) ──────────────────
+    # 민간: Logic B 소매가 역산 (기본 산출치)
+    # 공공: 동일 Logic B 결과 + 주석 "PBS 미등재 — AEMP 없음"
+    if case == "ESTIMATE_private":
+        priv = dict(dispatch_by_pricing_case(
+            seed, fx_aud_to_krw=fx_aud_to_krw, presets_pct=presets_pct,
+            crawler_row=crawler_row,
+        ))
+        priv["market_note"] = (
+            "민간 시장: ETC 처방약 소매가 기반 Logic B 역산 (GST 0%, PBS 미등재)"
+        )
+        pub_warnings = (
+            ["PBS 미등재 — 공공 급여 기준가(AEMP) 없음. 민간 소매가 역산 참고치 표시."]
+            + list(priv.get("warnings", []))
+        )
+        pub = {
+            **priv,
+            "warnings": pub_warnings,
+            "market_note": (
+                "공공 시장: PBS 미등재 품목 — AEMP 없음. "
+                "민간 소매가 역산 참고치 (공공 조달 기준 아님)"
+            ),
+        }
+        return {
+            "public": pub, "private": priv,
+            "available_segments": ["private"], "product_id": pid,
+        }
+
+    # ── ESTIMATE_hospital (Gadvoa 조영제, 병원·정부 조달 전용) ──────────────────
+    # 공공: hardcoded FOB (병원 tender 확정값)
+    # 민간: 동일 hardcoded FOB + 주석 "약국 소매 없음"
+    if case == "ESTIMATE_hospital":
+        pub = dict(dispatch_by_pricing_case(
+            seed, fx_aud_to_krw=fx_aud_to_krw, presets_pct=presets_pct,
+            crawler_row=crawler_row,
+        ))
+        pub["market_note"] = (
+            "공공 시장: 병원 tender / HealthShare NSW 정부 조달. "
+            "TradeMap 역산 확정값 기준."
+        )
+        pri_warnings = (
+            ["병원·정부 조달 전용 — 약국 소매 채널 없음. 공공 조달 기준가 참고 표시."]
+            + list(pub.get("warnings", []))
+        )
+        pri = {
+            **pub,
+            "warnings": pri_warnings,
+            "market_note": (
+                "민간 시장: 조영제 특성상 약국 소매 판매 없음. "
+                "병원 조달 기준가 참고 표시."
+            ),
+        }
+        return {
+            "public": pub, "private": pri,
+            "available_segments": ["public"], "product_id": pid,
+        }
+
+    # ── DIRECT / COMPONENT_SUM / ESTIMATE_substitute ─────────────────────────
+    # 공공: dispatch_by_pricing_case 기본 (Logic A)
+    # 민간: Logic B — crawler_row.retail_price_aud 또는 seed.reference_retail_aud
+    pub = dict(dispatch_by_pricing_case(
+        seed, fx_aud_to_krw=fx_aud_to_krw, presets_pct=presets_pct,
+        crawler_row=crawler_row,
+    ))
+    pub["market_note"] = (
+        "공공 시장: PBS AEMP (정부 승인 출고가) 기반 Logic A 역산 — α 20% 시장 보정 포함"
+    )
+
+    cr = crawler_row or {}
+    cr_retail_raw = cr.get("retail_price_aud")
+    seed_retail_raw = seed.get("reference_retail_aud")
+    cr_retail_f: float | None = (
+        float(cr_retail_raw)
+        if isinstance(cr_retail_raw, (int, float)) and float(cr_retail_raw) > 0
+        else None
+    )
+    seed_retail_f: float | None = (
+        float(seed_retail_raw)
+        if isinstance(seed_retail_raw, (int, float)) and float(seed_retail_raw) > 0
+        else None
+    )
+    retail_for_b = cr_retail_f or seed_retail_f
+
+    if retail_for_b:
+        # PBS 등재 여부 → GST 0%(처방약) / GST 10%(OTC) 결정
+        pbs_ok = cr.get("pbs_found") or cr.get("pbs_listed")
+        b_kwargs: dict[str, Any] = {}
+        if pbs_ok:
+            b_kwargs["is_pbs_listed_rx"] = True
+
+        try:
+            priv_scenarios = calculate_three_scenarios(
+                logic="B",
+                retail_aud=retail_for_b,
+                fx_aud_to_krw=fx_aud_to_krw,
+                presets_pct=presets_pct,
+                logic_b_kwargs=b_kwargs,
+            )
+            priv_err: str | None = None
+        except (ValueError, ZeroDivisionError) as exc:
+            priv_scenarios = None
+            priv_err = str(exc)
+
+        if priv_scenarios:
+            retail_src_label = "크롤러·DB" if cr_retail_f else "수기 시드"
+            cr_method = cr.get("retail_estimation_method")
+            method_label_map = {
+                "pbs_dpmq": "PBS DPMQ (최대처방량 총약가)",
+                "aemp_fallback": "PBS AEMP — DPMQ 미수집, 과소추정 주의",
+                "chemist_markup": "Chemist Warehouse × 1.20 (시장 평균)",
+                "healthylife_actual": "Healthylife 소매 (실측)",
+                "healthylife_same_ingredient_diff_form": "Healthylife (동성분·제형 참고)",
+            }
+            method_note = method_label_map.get(cr_method or "", cr_method or "")
+            priv_warnings = [
+                f"소매 참고가: {retail_src_label} AUD {retail_for_b:.2f}"
+                + (f" ({method_note})" if method_note else ""),
+            ]
+            priv: dict[str, Any] = {
+                "logic": "B",
+                "scenarios": priv_scenarios,
+                "inputs": {
+                    "product_id": pid,
+                    "pricing_case": case,
+                    "retail_aud": retail_for_b,
+                    "retail_source": "crawler" if cr_retail_f else "seed",
+                    "is_pbs_listed_rx": bool(b_kwargs.get("is_pbs_listed_rx")),
+                    "fx_aud_to_krw": fx_aud_to_krw,
+                },
+                "warnings": priv_warnings,
+                "disclaimer": get_disclaimer_text("B"),
+                "blocked_reason": None,
+                "market_note": (
+                    f"민간 시장: 소매가 기반 Logic B 역산 — "
+                    f"약국마진 {DEFAULT_PHARMACY_MARGIN_PCT:.0f}% + "
+                    f"도매마진 {DEFAULT_WHOLESALE_MARGIN_B_PCT:.2f}% + "
+                    f"운임 {DEFAULT_FREIGHT_INSURANCE_PCT:.0f}% 차감"
+                ),
+            }
+            return {
+                "public": pub, "private": priv,
+                "available_segments": ["public", "private"], "product_id": pid,
+            }
+
+        # Logic B 계산 실패 → 공공 Logic A 참고치로 대체
+        pri_warnings_err = (
+            [f"민간 Logic B 계산 오류: {priv_err}", "공공 PBS 기준가(Logic A) 참고치로 대체."]
+            + list(pub.get("warnings", []))
+        )
+        pri_fallback: dict[str, Any] = {
+            **pub,
+            "warnings": pri_warnings_err,
+            "market_note": (
+                "민간 시장: Logic B 계산 오류 — 공공 기준가 Logic A 참고치 (민간 실거래가 아님)"
+            ),
+        }
+        return {
+            "public": pub, "private": pri_fallback,
+            "available_segments": ["public"], "product_id": pid,
+        }
+
+    # 소매가 데이터 없음 → 공공 Logic A 참고치로 대체
+    pri_warnings_no_retail = (
+        [
+            "민간 소매가 데이터 없음 (DB retail_price_aud · 시드 reference_retail_aud 모두 없음).",
+            "공공 PBS 기준가(Logic A) 참고치 표시.",
+        ]
+        + list(pub.get("warnings", []))
+    )
+    pri_no_retail: dict[str, Any] = {
+        **pub,
+        "warnings": pri_warnings_no_retail,
+        "market_note": (
+            "민간 시장: 소매가 데이터 미확보 — 공공 PBS 기준가 Logic A 참고치 (민간 실거래가 아님)"
+        ),
+    }
+    return {
+        "public": pub, "private": pri_no_retail,
+        "available_segments": ["public"], "product_id": pid,
     }
 
 

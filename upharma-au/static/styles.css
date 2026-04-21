@@ -2748,3 +2748,217 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   .macro-grid--compact { grid-template-columns: repeat(2,1fr); }
   .rep-panel { width: calc(100vw - 3rem); }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   추가 — 공공/민간 시장 선택 힌트 텍스트
+══════════════════════════════════════════════════════════════════════════ */
+.p2-seg-hint-text {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.4;
+  min-height: 16px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   추가 — P2 역산 계산기 팝업 모달
+══════════════════════════════════════════════════════════════════════════ */
+.p2-calc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+}
+.p2-calc-modal-inner {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 24px 24px 20px;
+  width: min(520px, 94vw);
+  max-height: 82vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.22);
+}
+.p2-calc-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+.p2-calc-modal-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.45;
+  flex: 1;
+}
+/* 모달 안에서 p2-col-detail 인라인 스타일 초기화 */
+#p2-calc-modal-body .p2-col-detail {
+  display: block !important;
+  margin-top: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   추가 — 보고서 탭 단계 태그 (.rep-stage-tag)
+══════════════════════════════════════════════════════════════════════════ */
+.rep-stage-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--inner);
+  color: var(--navy);
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   추가 — P2 시나리오 카드 상단 색 테두리 (저가/기준가/프리미엄)
+══════════════════════════════════════════════════════════════════════════ */
+.p2-col--agg  { border-top: 3px solid var(--orange); }
+.p2-col--avg  { border-top: 3px solid var(--navy);   }
+.p2-col--cons { border-top: 3px solid var(--green);  }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   추가 — P2 공공/민간 결과 캐시 전환 토글 버튼
+══════════════════════════════════════════════════════════════════════════ */
+.p2-cache-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.p2-cache-toggle-label {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-right: 4px;
+}
+.p2-cache-seg-btn {
+  padding: 4px 14px;
+  border-radius: 16px;
+  border: 1.5px solid var(--inner);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.p2-cache-seg-btn.on {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+.p2-cache-seg-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   추가 — 바이어 발굴 스켈레톤 로딩 (분석 중 대기 화면)
+══════════════════════════════════════════════════════════════════════════ */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+.p3-skeleton-item {
+  display: flex;
+  align-items: center;
+  padding: 11px 14px;
+  gap: 10px;
+  border-bottom: 1px solid var(--inner);
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+  list-style: none;
+}
+.p3-skeleton-rank {
+  width: 22px;
+  height: 14px;
+  border-radius: 4px;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+.p3-skeleton-name {
+  flex: 1;
+  height: 14px;
+  border-radius: 4px;
+  background: #e2e8f0;
+}
+.p3-skeleton-tag {
+  width: 56px;
+  height: 14px;
+  border-radius: 4px;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   추가 — 바이어 기준 체크박스 패널 (매출·제조소·약국체인·ARTG·수입경험)
+══════════════════════════════════════════════════════════════════════════ */
+.p3-criteria-wrap {
+  padding: 10px 14px 8px;
+  background: var(--inner);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+.p3-criteria-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.p3-criteria-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.p3-criteria-clear {
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: 1px solid #d0d7e3;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 2px 8px;
+  transition: background 0.15s;
+  line-height: 1.5;
+}
+.p3-criteria-clear:hover { background: rgba(23,63,120,.07); }
+.p3-criteria-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.p3-criteria-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  cursor: pointer;
+  color: var(--text);
+  user-select: none;
+}
+.p3-criteria-item input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--navy);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   추가 — 최종 보고서 다운로드 버튼 래퍼
+══════════════════════════════════════════════════════════════════════════ */
+.p3-final-report-wrap {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--inner);
+  display: flex;
+  justify-content: flex-end;
+}

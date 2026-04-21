@@ -2566,6 +2566,7 @@ try:
         calculate_fob_logic_b,
         calculate_three_scenarios,
         dispatch_by_pricing_case,
+        dispatch_both_segments,
         get_disclaimer_text,
     )
     _STAGE2_OK = True
@@ -3664,6 +3665,388 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
             _p2_state["error_detail"] = str(exc)
 
 
+def _p2_pipeline_worker_both(product_id: str) -> None:
+    """백그라운드 스레드: 공공(Logic A) + 민간(Logic B) 양쪽 동시 산출.
+
+    dispatch_both_segments() 로 FOB 를 한 번에 계산하고,
+    Haiku 분석은 available_segments 에 해당하는 세그먼트만 실행(비용 최적화).
+    나머지 세그먼트는 동일 Haiku 결과 재사용.
+
+    결과 구조: {
+        "public":  {...프론트 스키마...},
+        "private": {...프론트 스키마...},
+        "available_segments": ["public","private"] | ["public"] | ["private"] | []
+    }
+    """
+    try:
+        # ── Step 1: Supabase row 조회 ──────────────────────────────────────────
+        with _p2_lock:
+            _p2_state["step"] = "extract"
+            _p2_state["step_label"] = "① Supabase 품목 데이터 조회 중…"
+        client_sb = get_supabase_client()
+        resp = (
+            client_sb.table(TABLE_NAME)
+            .select("*")
+            .eq("product_code", product_id)
+            .limit(1)
+            .execute()
+        )
+        rows = getattr(resp, "data", None)
+        if not rows:
+            raise ValueError(f"Supabase 조회 실패: product_id={product_id!r} 미존재")
+        row = rows[0]
+        if isinstance(row, dict):
+            _normalize_au_product_row(row)
+
+        # ── Step 2: seed 매칭 ───────────────────────────────────────────────────
+        with _p2_lock:
+            _p2_state["step"] = "ai_extract"
+            _p2_state["step_label"] = "② FOB 시드 매칭 중…"
+        seeds = _load_stage2_seeds()
+        seed = next((s for s in seeds if s.get("product_id") == product_id), None)
+        if not seed:
+            raise ValueError(f"fob_reference_seeds.json 에 {product_id!r} 시드 없음")
+
+        # ── Step 3: 공공+민간 FOB 동시 역산 ────────────────────────────────────
+        with _p2_lock:
+            _p2_state["step"] = "ai_extract"
+            _p2_state["step_label"] = "③ FOB 3시나리오 역산 중 (공공+민간)…"
+        fx_rates = _fetch_exchange_rates_simple()
+        fx_krw = fx_rates.get("aud_krw") or 893.0
+        both = dispatch_both_segments(seed, fx_aud_to_krw=fx_krw, crawler_row=row)
+        pub_dispatch = both["public"]
+        pri_dispatch = both["private"]
+        available_segments = both.get("available_segments", ["public", "private"])
+
+        # 양쪽 모두 blocked(ESTIMATE_withdrawal) 이면 조기 종료
+        if pub_dispatch.get("logic") == "blocked" and pri_dispatch.get("logic") == "blocked":
+            _reason = pub_dispatch.get("blocked_reason", "unknown")
+            _warn_txt = " ".join(w for w in (pub_dispatch.get("warnings") or []) if w)
+            _blocked_seg = {
+                "extracted": {
+                    "product_name": row.get("product_name_ko") or product_id,
+                    "ref_price_text": "해당 없음 (규제 차단)",
+                    "ref_price_aud": None,
+                    "verdict": f"수출 차단: {_reason}",
+                },
+                "analysis": {
+                    "final_price_aud": 0,
+                    "formula_str": "N/A (blocked)",
+                    "rationale": _warn_txt,
+                    "scenarios": [],
+                },
+                "exchange_rates": fx_rates,
+                "pdf": None,
+                "market_note": pub_dispatch.get("market_note", ""),
+            }
+            with _p2_lock:
+                _p2_state["status"] = "done"
+                _p2_state["step_label"] = "완료 (blocked)"
+                _p2_state["result"] = {
+                    "public": _blocked_seg,
+                    "private": {**_blocked_seg, "market_note": pri_dispatch.get("market_note", "")},
+                    "available_segments": [],
+                }
+            return
+
+        # ── Step 4: Haiku 분석 (available_segments 기준 최소 실행) ─────────────
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        if not anthropic_key:
+            raise ValueError("ANTHROPIC_API_KEY 환경변수 미설정")
+
+        run_pub = "public" in available_segments
+        run_pri = "private" in available_segments
+
+        # 4a — 공공 Haiku
+        if run_pub:
+            with _p2_lock:
+                _p2_state["step"] = "ai_analysis"
+                _p2_state["step_label"] = "④ AI(Haiku) 공공 시장 분석 중…"
+            pub_blocks = _haiku_p2_blocks(row, seed, pub_dispatch, "public", anthropic_key)
+            pub_strategy_v5 = _merge_p2_export_strategy_v5(pub_blocks, pub_dispatch, fx_rates, seed)
+        else:
+            pub_blocks = {}
+            pub_strategy_v5 = {}
+
+        # 4b — 민간 Haiku
+        if run_pri:
+            with _p2_lock:
+                _p2_state["step_label"] = "④ AI(Haiku) 민간 시장 분석 중…"
+            pri_blocks = _haiku_p2_blocks(row, seed, pri_dispatch, "private", anthropic_key)
+            pri_strategy_v5 = _merge_p2_export_strategy_v5(pri_blocks, pri_dispatch, fx_rates, seed)
+        else:
+            # 재사용: 공공과 동일 블록 (ESTIMATE_hospital 처럼 동일 데이터)
+            pri_blocks = pub_blocks
+            pri_strategy_v5 = pub_strategy_v5
+
+        # 4c — run_pub=False 인 경우(ESTIMATE_private) 공공도 민간 블록 재사용
+        if not run_pub:
+            pub_blocks = pri_blocks
+            pub_strategy_v5 = pri_strategy_v5
+
+        # ── Step 5: 프론트 스키마 조립 (공통 인라인 헬퍼) ──────────────────────
+        with _p2_lock:
+            _p2_state["step_label"] = "⑤ 결과 조립 중…"
+
+        def _assemble(dispatch_result: dict, p2_blocks: dict, strategy_v5: dict) -> dict:
+            """dispatch 결과 → 프론트 스키마 dict 반환."""
+            sc_raw = dispatch_result.get("scenarios", {})
+            agg  = sc_raw.get("aggressive", {})
+            avg  = sc_raw.get("average", {})
+            cons = sc_raw.get("conservative", {})
+
+            # 참고가 텍스트 — v5 우선, 없으면 출처별 레거시
+            v5_text, v5_ref_aud = _build_p2_ref_price_text_v5(dispatch_result)
+            _inp   = dispatch_result.get("inputs") or {}
+            _logic = dispatch_result.get("logic")
+            if v5_text is not None:
+                ref_text, ref_aud = v5_text, v5_ref_aud
+            elif (
+                _logic == "B"
+                and _inp.get("retail_source") == "crawler"
+                and _inp.get("retail_aud") is not None
+            ):
+                ref_aud = float(_inp["retail_aud"])
+                cr_meth = row.get("retail_estimation_method")
+                if cr_meth == "pbs_dpmq":
+                    ref_text = f"PBS DPMQ(최대처방량 총약가) AUD {ref_aud}"
+                elif cr_meth == "chemist_markup":
+                    ref_text = (
+                        f"시장 추정가 AUD {ref_aud} "
+                        f"(Chemist Warehouse × 1.20, CHOICE 조사 기준)"
+                    )
+                elif cr_meth in ("healthylife_actual", "healthylife_same_ingredient_diff_form"):
+                    ref_text = f"소매 참고가 AUD {ref_aud} (Healthylife·크롤 동기화)"
+                else:
+                    ref_text = f"소매 참고가 AUD {ref_aud} (크롤러·DB 동기화)"
+            elif (
+                _logic == "A"
+                and _inp.get("aemp_source") == "crawler"
+                and _inp.get("aemp_aud") is not None
+            ):
+                ref_aud  = float(_inp["aemp_aud"])
+                ref_text = f"AEMP AUD {ref_aud} (au_products·크롤 동기화)"
+            elif seed.get("reference_aemp_aud") is not None:
+                ref_val = seed["reference_aemp_aud"]
+                if isinstance(ref_val, list):
+                    ref_text = "AEMP " + " / ".join(f"AUD {v}" for v in ref_val)
+                    ref_aud  = sum(float(v) for v in ref_val) / len(ref_val)
+                else:
+                    ref_text = f"AEMP AUD {ref_val}"
+                    ref_aud  = float(ref_val)
+            elif seed.get("reference_retail_aud") is not None:
+                ref_aud  = float(seed["reference_retail_aud"])
+                ref_text = f"{seed.get('reference_retail_source') or '소매가'} AUD {ref_aud}"
+            else:
+                ref_text, ref_aud = "참고가 미확보", None
+
+            _l = dispatch_result.get("logic", "?")
+            if _l == "A":
+                formula_str = (
+                    "FOB = (공시 AEMP × (1+α)) ÷ (1 + 수입상 마진%), "
+                    f"α={int(round(float(ALPHA_MARKET_UPLIFT_PCT)))}% (Logic A 전용)"
+                )
+            elif _l == "hardcoded":
+                formula_str = "FOB = 병원 tender 수기 확정 (seed.fob_hardcoded_aud, α 미적용)"
+            else:
+                formula_str = (
+                    "FOB = 소매가 ÷ (1+GST) ÷ (1+약국마진) ÷ (1+도매마진) ÷ (1+수입상마진)"
+                )
+
+            return {
+                "extracted": {
+                    "product_name": row.get("product_name_ko") or product_id,
+                    "ref_price_text": ref_text,
+                    "ref_price_aud": ref_aud,
+                    "verdict": row.get("export_viable") or row.get("reason_code") or "조건부",
+                },
+                "analysis": {
+                    "final_price_aud": round(avg.get("fob_aud", 0), 2),
+                    "formula_str": formula_str,
+                    "rationale": p2_blocks.get("block_fob_intro", ""),
+                    "scenarios": [
+                        {
+                            "name": "저가 진입 시나리오 (Penetration Pricing)",
+                            "price_aud": round(agg.get("fob_aud", 0), 2),
+                            "reason": p2_blocks.get("scenario_penetration", ""),
+                        },
+                        {
+                            "name": "기준가 기반 시나리오 (Reference Pricing)",
+                            "price_aud": round(avg.get("fob_aud", 0), 2),
+                            "reason": p2_blocks.get("scenario_reference", ""),
+                        },
+                        {
+                            "name": "프리미엄 시나리오 (Premium Pricing)",
+                            "price_aud": round(cons.get("fob_aud", 0), 2),
+                            "reason": p2_blocks.get("scenario_premium", ""),
+                        },
+                    ],
+                },
+                "exchange_rates": fx_rates,
+                "export_strategy_v5": strategy_v5,
+                "market_note": dispatch_result.get("market_note", ""),
+                "pdf": None,
+                # 내부 전달용 (Supabase·PDF 에서 참조)
+                "_ref_text": ref_text,
+                "_ref_aud":  ref_aud,
+                "_logic":    _l,
+                "_formula":  formula_str,
+            }
+
+        pub_frontend = _assemble(pub_dispatch, pub_blocks, pub_strategy_v5)
+        pri_frontend = _assemble(pri_dispatch, pri_blocks, pri_strategy_v5)
+
+        # ── Step 5.5: au_pbs_raw / au_tga_artg 데이터 주입 (PDF 용) ────────────
+        with _p2_lock:
+            _p2_state["step_label"] = "⑤-2 Supabase 저장 중…"
+        try:
+            raw_resp = (
+                client_sb.table("au_pbs_raw")
+                .select("market_form,market_strength")
+                .eq("product_id", product_id)
+                .order("crawled_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            raw_rows = getattr(raw_resp, "data", None) or []
+            if raw_rows:
+                row["market_form"]     = raw_rows[0].get("market_form")
+                row["market_strength"] = raw_rows[0].get("market_strength")
+        except Exception as exc:
+            print(f"[P2-both au_pbs_raw 조회 경고] {exc}", flush=True)
+        try:
+            tga_resp = (
+                client_sb.table("au_tga_artg")
+                .select("strength,dosage_form")
+                .eq("product_id", product_id)
+                .order("crawled_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            tga_rows = getattr(tga_resp, "data", None) or []
+            if tga_rows:
+                row["tga_strength"]    = tga_rows[0].get("strength")
+                row["tga_dosage_form"] = tga_rows[0].get("dosage_form")
+        except Exception as exc:
+            print(f"[P2-both au_tga_artg 조회 경고] {exc}", flush=True)
+
+        # ── Step 5.6: Supabase upsert (공공·민간 각각) ──────────────────────────
+        for seg_label, f_res, d_res, blks in (
+            ("public",  pub_frontend, pub_dispatch, pub_blocks),
+            ("private", pri_frontend, pri_dispatch, pri_blocks),
+        ):
+            try:
+                sb_cl = get_supabase_client()
+                sc_raw = d_res.get("scenarios", {})
+                _agg  = sc_raw.get("aggressive",   {})
+                _avg  = sc_raw.get("average",       {})
+                _cons = sc_raw.get("conservative",  {})
+                upsert_data = {
+                    "product_id":          product_id,
+                    "segment":             seg_label,
+                    "ref_price_text":      f_res["_ref_text"],
+                    "ref_price_aud":       float(f_res["_ref_aud"]) if f_res["_ref_aud"] is not None else None,
+                    "verdict":             row.get("export_viable") or row.get("reason_code"),
+                    "logic":               f_res["_logic"],
+                    "pricing_case":        seed.get("pricing_case"),
+                    "fob_penetration_aud": round(_agg.get("fob_aud",  0), 4) if _agg  else None,
+                    "fob_reference_aud":   round(_avg.get("fob_aud",  0), 4) if _avg  else None,
+                    "fob_premium_aud":     round(_cons.get("fob_aud", 0), 4) if _cons else None,
+                    "fob_penetration_krw": round(_agg.get("fob_krw",  0), 2) if _agg  else None,
+                    "fob_reference_krw":   round(_avg.get("fob_krw",  0), 2) if _avg  else None,
+                    "fob_premium_krw":     round(_cons.get("fob_krw", 0), 2) if _cons else None,
+                    "fx_aud_to_krw":       fx_rates.get("aud_krw"),
+                    "fx_aud_to_usd":       fx_rates.get("aud_usd"),
+                    "formula_str":         f_res["_formula"],
+                    "block_extract":       blks.get("block_extract"),
+                    "block_fob_intro":     blks.get("block_fob_intro"),
+                    "scenario_penetration": blks.get("scenario_penetration"),
+                    "scenario_reference":  blks.get("scenario_reference"),
+                    "scenario_premium":    blks.get("scenario_premium"),
+                    "block_strategy":      blks.get("block_strategy"),
+                    "block_risks":         blks.get("block_risks"),
+                    "block_positioning":   blks.get("block_positioning"),
+                    "warnings":            [w for w in (d_res.get("warnings") or []) if w],
+                    "disclaimer":          d_res.get("disclaimer"),
+                    "llm_model":           _CLAUDE_MODEL,
+                    "generated_at":        _dt_now_utc(),
+                    "report_content_v2":   jsonable_encoder({
+                        "schema_ver":       3,
+                        "report_kind":      "export_strategy_dual",
+                        "product_code":     product_id,
+                        "segment":          seg_label,
+                        "pricing_case":     seed.get("pricing_case"),
+                        "p2_blocks":        blks,
+                        "export_strategy_v5": f_res.get("export_strategy_v5"),
+                        "fx_rates":         fx_rates,
+                        "dispatch_logic":   f_res["_logic"],
+                        "ref_price_text":   f_res["_ref_text"],
+                        "formula_str":      f_res["_formula"],
+                        "market_note":      f_res.get("market_note", ""),
+                        "available_segments": available_segments,
+                    }),
+                }
+                sb_cl.table("au_reports_r2").upsert(
+                    upsert_data, on_conflict="product_id,segment"
+                ).execute()
+                print(f"[P2-both Supabase] UPSERT OK: {product_id} / {seg_label}", flush=True)
+            except Exception as sb_exc:
+                print(f"[P2-both Supabase UPSERT error] {seg_label}: {sb_exc}", flush=True)
+
+        # ── Step 6: PDF 생성 (공공·민간 각각) ──────────────────────────────────
+        with _p2_lock:
+            _p2_state["step"] = "report"
+            _p2_state["step_label"] = "⑥ PDF 보고서 생성 중…"
+        for seg_label, f_res, d_res, blks in (
+            ("public",  pub_frontend, pub_dispatch, pub_blocks),
+            ("private", pri_frontend, pri_dispatch, pri_blocks),
+        ):
+            try:
+                from report_generator import render_p2_pdf
+                from datetime import datetime as _dt
+                _ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+                pdf_name = f"au_p2_report_{product_id}_{seg_label}_{_ts}.pdf"
+                pdf_path = _REPORTS_DIR / pdf_name
+                render_p2_pdf(row, seed, d_res, blks, fx_rates, pdf_path)
+                sz = pdf_path.stat().st_size
+                print(f"[render_p2_pdf-both] OK {pdf_name} ({sz} bytes)", flush=True)
+                f_res["pdf"] = pdf_name
+                try:
+                    sb_cl_pdf = get_supabase_client()
+                    sb_cl_pdf.table("au_reports_r2").update(
+                        {"pdf_filename": pdf_name}
+                    ).eq("product_id", product_id).eq("segment", seg_label).execute()
+                except Exception:
+                    pass
+            except Exception as pdf_exc:
+                print(f"[render_p2_pdf-both error] {seg_label}: {pdf_exc}", flush=True)
+
+        # 내부 전달용 키(_ref_text 등) 제거 후 최종 결과 저장
+        _strip_keys = {"_ref_text", "_ref_aud", "_logic", "_formula"}
+        pub_clean = {k: v for k, v in pub_frontend.items() if k not in _strip_keys}
+        pri_clean = {k: v for k, v in pri_frontend.items() if k not in _strip_keys}
+
+        with _p2_lock:
+            _p2_state["status"] = "done"
+            _p2_state["step_label"] = "완료"
+            _p2_state["result"] = {
+                "public":  pub_clean,
+                "private": pri_clean,
+                "available_segments": available_segments,
+            }
+
+    except Exception as exc:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[P2-both Pipeline Error] {exc}\n{tb}", flush=True)
+        with _p2_lock:
+            _p2_state["status"] = "error"
+            if not _p2_state.get("step"):
+                _p2_state["step"] = "extract"
+            _p2_state["step_label"] = f"오류: {exc}"
+            _p2_state["error_detail"] = str(exc)
+
+
 @app.get("/api/p2/pipeline/status")
 async def p2_pipeline_status() -> JSONResponse:
     """AI 파이프라인 상태 조회."""
@@ -3707,9 +4090,8 @@ def p2_pipeline(payload: dict[str, Any]) -> JSONResponse:
             })
 
     report_filename = str(payload.get("report_filename") or "").strip()
-    segment = str(payload.get("market") or "public").strip()
-    if segment not in ("public", "private"):
-        segment = "public"
+    # segment 파라미터는 하위 호환용으로 수신하되 무시 — 항상 공공+민간 동시 산출
+    _segment_hint = str(payload.get("market") or "both").strip()
 
     explicit_id = str(
         payload.get("product_code") or payload.get("product_id") or ""
@@ -3728,7 +4110,7 @@ def p2_pipeline(payload: dict[str, Any]) -> JSONResponse:
             ),
         )
 
-    # 상태 초기화 & 백그라운드 실행
+    # 상태 초기화 & 백그라운드 실행 (공공+민간 동시 산출 워커)
     with _p2_lock:
         _p2_state["status"] = "running"
         _p2_state["step"] = "extract"
@@ -3737,13 +4119,13 @@ def p2_pipeline(payload: dict[str, Any]) -> JSONResponse:
         _p2_state["error_detail"] = None
 
     worker = _threading.Thread(
-        target=_p2_pipeline_worker,
-        args=(product_id, segment),
+        target=_p2_pipeline_worker_both,
+        args=(product_id,),
         daemon=True,
     )
     worker.start()
 
-    return JSONResponse({"status": "started", "product_id": product_id, "segment": segment})
+    return JSONResponse({"status": "started", "product_id": product_id, "segment": "both"})
 
 
 @app.get("/api/p2/pipeline/result")
@@ -3762,8 +4144,13 @@ def p2_pipeline_result() -> JSONResponse:
         _p2_state["step_label"] = ""
     if result is None:
         raise HTTPException(status_code=500, detail="결과가 비어 있습니다.")
-    # _p2_blocks / _dispatch / _seed 는 내부용이므로 프론트에는 제외
-    frontend_keys = {"extracted", "analysis", "exchange_rates", "pdf"}
+    # _p2_pipeline_worker_both: {"public":…, "private":…, "available_segments":…}
+    # _p2_pipeline_worker(구): {"extracted":…, "analysis":…, "exchange_rates":…, "pdf":…}
+    # 두 포맷 모두 허용하도록 필터 확장
+    frontend_keys = {
+        "extracted", "analysis", "exchange_rates", "pdf",  # 기존 단일 세그먼트
+        "public", "private", "available_segments",          # 신규 이중 세그먼트
+    }
     return JSONResponse({k: v for k, v in result.items() if k in frontend_keys})
 
 

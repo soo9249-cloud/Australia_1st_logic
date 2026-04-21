@@ -906,7 +906,7 @@ def _news_api_response(
 
 
 # 메인 프리뷰 뉴스 카드에 표시할 기사 개수(프롬프트·파싱·mock 보충과 동일)
-_NEWS_LIST_SIZE = 5
+_NEWS_LIST_SIZE = 7
 
 
 def _extract_openai_message_text(message: dict[str, Any] | None) -> str:
@@ -1076,6 +1076,22 @@ _MOCK_NEWS: list[dict[str, Any]] = [
         "source": "NPS MedicineWise",
         "date": "2026-04-14",
         "link": "https://www.nps.org.au",
+    },
+    {
+        "title": "HealthShare NSW tender update for injectable oncology drugs",
+        "title_ko": "HealthShare NSW, 항암주사제 공급 입찰 공고",
+        "summary_ko": "NSW 주 정부 병원 조달 기관이 항암 주사제 및 바이오의약품 공급자 입찰을 공고해 국내 제약사의 수출 진출 기회로 주목됩니다.",
+        "source": "HealthShare NSW",
+        "date": "2026-04-13",
+        "link": "https://www.healthshare.nsw.gov.au",
+    },
+    {
+        "title": "Biotech Australia 2026: Korean companies to exhibit at major conference",
+        "title_ko": "바이오텍 호주 2026, 한국 제약사 참가",
+        "summary_ko": "호주 최대 바이오·제약 박람회에 한국 제약사 3곳이 참가해 제네릭 및 개량신약 파트너십 논의를 진행할 예정입니다.",
+        "source": "AusBiotech",
+        "date": "2026-04-12",
+        "link": "https://www.ausbiotech.org",
     },
 ]
 

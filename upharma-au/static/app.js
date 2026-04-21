@@ -121,6 +121,70 @@ function _setMacro(valId, val, srcId, src) {
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §2-b. 호주 Leaflet 지도 초기화
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/**
+ * Leaflet 호주 지도 — 6개 도시 마커.
+ * Leaflet CSS/JS 는 index.html 에서 unpkg CDN 로드.
+ * id="au-map" 요소 없으면 조기 리턴.
+ */
+function initAuMap() {
+  if (typeof L === 'undefined') return;         // Leaflet 미로드 방어
+  const el = document.getElementById('au-map');
+  if (!el) return;
+  if (el._leaflet_id) return;                  // 이미 초기화된 경우 중복 방지
+
+  /* 호주 중심 + 줌 4 (대륙 전체 표시) */
+  const map = L.map('au-map', { scrollWheelZoom: false }).setView([-27.0, 133.5], 4);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: 'Leaflet · © OpenStreetMap contributors',
+    maxZoom: 18,
+  }).addTo(map);
+
+  /* ── 도시 목록 (한글명 (영문명), 수도 여부) ── */
+  const cities = [
+    { name: '시드니 (Sydney)',      lat: -33.8688, lng: 151.2093, capital: false },
+    { name: '멜버른 (Melbourne)',   lat: -37.8136, lng: 144.9631, capital: false },
+    { name: '브리즈번 (Brisbane)',  lat: -27.4698, lng: 153.0251, capital: false },
+    { name: '퍼스 (Perth)',         lat: -31.9505, lng: 115.8605, capital: false },
+    { name: '캔버라 (Canberra) ★', lat: -35.2809, lng: 149.1300, capital: true  }, // 수도
+    { name: '애들레이드 (Adelaide)', lat: -34.9285, lng: 138.6007, capital: false },
+  ];
+
+  /* 수도(캔버라) 전용 아이콘 — 빨간 핀 */
+  const capitalIcon = L.divIcon({
+    className: '',
+    html: '<div style="width:12px;height:12px;border-radius:50%;background:#e53e3e;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);"></div>',
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  });
+
+  /* 일반 도시 아이콘 — 네이비 핀 */
+  const cityIcon = L.divIcon({
+    className: '',
+    html: '<div style="width:10px;height:10px;border-radius:50%;background:#173f78;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);"></div>',
+    iconSize: [10, 10],
+    iconAnchor: [5, 5],
+  });
+
+  cities.forEach(({ name, lat, lng, capital }) => {
+    L.marker([lat, lng], { icon: capital ? capitalIcon : cityIcon })
+      .addTo(map)
+      .bindTooltip(name, {
+        permanent: true,
+        direction: 'right',
+        offset: [8, 0],
+        className: 'au-city-tooltip',
+      });
+  });
+
+  /* 지도 크기 재계산 (CSS flex 로 div 크기 확정 후 실행) */
+  setTimeout(() => map.invalidateSize(), 150);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    §3. 환율 로드 (N2) — GET /api/exchange
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
@@ -2609,8 +2673,8 @@ async function loadNews() {
       }
     }
 
-    /* 메인 카드는 항상 5건 레이아웃(백엔드와 동일) */
-    const newsItems = items.slice(0, 5);
+    /* 메인 카드는 항상 7건 레이아웃(백엔드와 동일) */
+    const newsItems = items.slice(0, 7);
 
     listEl.className = 'news-list--ready';
     listEl.innerHTML = newsItems.map(item => {
@@ -2645,9 +2709,10 @@ loadKeyStatus();        // API 키 배지
 // 메인에 환율 UI 없음 — 수출전략 FOB·직접입력이 window._exchangeRates 를 쓰므로 초기 1회만 조회
 loadExchange();
 loadMacro();            // 거시 지표 로드
+initAuMap();            // 호주 Leaflet 지도 초기화
 renderReportTab();      // 보고서 탭 초기 렌더
 initP2Strategy();       // 수출가격 전략 초기화
-loadNews();             // 시장 뉴스 즉시 로드
+loadNews();             // 시장 뉴스 즉시 로드 (Perplexity API)
 _showReportIdle();      // 01 시장조사: PDF 카드·진행 스테퍼 초기 상태(첫 진입 = 품목/신약만)
 resetProgress();
 

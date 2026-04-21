@@ -6,6 +6,8 @@
 <title>UPharma Export AI · Australia</title>
 <link rel="icon" type="image/svg+xml" href="/static/flag-au.svg?v={{ static_v }}"/>
 <link rel="stylesheet" href="/static/styles.css?v={{ static_v }}"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 </head>
 <body>
 <div class="app">
@@ -33,6 +35,57 @@
 
   <!-- ════════════ 메인 대시보드 ════════════ -->
   <div id="main" class="page on">
+
+    <!-- ════ 거시 지표 4개 카드 ════ -->
+    <!-- 값 수정: 각 macro-value 텍스트를 직접 바꾸면 됩니다 -->
+    <div class="macro-grid">
+      <div class="macro-card">
+        <div class="macro-label">국가 GDP</div>
+        <div class="macro-value" id="macro-gdp">—</div>
+        <div class="macro-source" id="macro-gdp-src">IMF</div>
+      </div>
+      <div class="macro-card">
+        <div class="macro-label">인구</div>
+        <div class="macro-value" id="macro-pop">—</div>
+        <div class="macro-source" id="macro-pop-src">ABS</div>
+      </div>
+      <div class="macro-card">
+        <div class="macro-label">의약품 시장 규모</div>
+        <div class="macro-value" id="macro-pharma">—</div>
+        <div class="macro-source" id="macro-pharma-src">IQVIA</div>
+      </div>
+      <div class="macro-card">
+        <div class="macro-label">의약품 수입 의존도</div>
+        <div class="macro-value" id="macro-import">—</div>
+        <div class="macro-source" id="macro-import-src">DoH</div>
+      </div>
+    </div>
+
+    <!-- ════ 지도 + 뉴스 ════ -->
+    <div class="map-news-grid">
+
+      <!-- 왼쪽: Leaflet 호주 지도 -->
+      <article class="card map-card-wrap">
+        <div class="sec map-sec-tight">
+          <h3>호주 위치</h3>
+        </div>
+        <div id="au-map" class="sg-leaflet-map"></div>
+      </article>
+
+      <!-- 오른쪽: 뉴스 패널 -->
+      <article class="card news-card-panel">
+        <div class="sec">
+          <h3>호주 의약품 시장 주요 동향</h3>
+          <button class="btn-refresh" id="btn-news-refresh" onclick="loadNews()" type="button">↺ 새로고침</button>
+        </div>
+        <!-- mock 배너 (Perplexity API 키 없을 때 JS 가 채움) -->
+        <div id="news-mock-banner" hidden></div>
+        <div id="news-list">
+          <div class="irow" style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0;">뉴스 로드 중…</div>
+        </div>
+      </article>
+
+    </div><!-- /map-news-grid -->
 
     <!-- ════ 2-컬럼 대시보드 그리드 ════ -->
     <div class="dashboard-grid">
@@ -496,6 +549,8 @@
   </button>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLEg=" crossorigin=""></script>
 <script src="/static/app.js?v={{ static_v }}"></script>
 <script>
 /* ── 신약 직접 입력 폼 토글 ── */

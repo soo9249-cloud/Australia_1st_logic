@@ -141,6 +141,15 @@ function initAuMap() {
   if (!el) return;
   if (el._leaflet_id) return;                  // 이미 초기화된 경우 중복 방지
 
+  /* 컨테이너 높이 0이면 최대 15회 재시도 (flex 레이아웃 미확정 방어) */
+  if (el.offsetHeight < 10) {
+    const retry = (el._mapRetry || 0) + 1;
+    if (retry > 15) return;
+    el._mapRetry = retry;
+    setTimeout(initAuMap, 200);
+    return;
+  }
+
   /* 호주 중심 + 줌 4 (대륙 전체 표시) */
   const map = L.map('au-map', { scrollWheelZoom: false }).setView([-27.0, 133.5], 4);
   window._auLeafletMap = map;   // goTab 에서 invalidateSize 재호출용
@@ -187,9 +196,14 @@ function initAuMap() {
       });
   });
 
-  /* 지도 크기 재계산: 150ms + 500ms 이중 호출 (CSS flex 확정 타이밍 편차 흡수) */
-  setTimeout(() => { map.invalidateSize(); map.setView([-27.0, 133.5], 4); }, 150);
-  setTimeout(() => map.invalidateSize(), 500);
+  /* 지도 크기 재계산: 300ms + 900ms 이중 호출 (CSS flex 확정 타이밍 편차 흡수) */
+  setTimeout(() => { map.invalidateSize(); map.setView([-27.0, 133.5], 4); }, 300);
+  setTimeout(() => map.invalidateSize(), 900);
+
+  /* ResizeObserver: 컨테이너 크기 변화 시 자동 재계산 (탭 전환·뷰포트 변경 등) */
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => map.invalidateSize()).observe(el);
+  }
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

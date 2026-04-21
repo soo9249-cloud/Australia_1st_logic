@@ -2398,14 +2398,21 @@ def _is_valid_news_url(url: str) -> bool:
     if any(d in lower for d in _VIDEO):
         return False
 
-    # ② 호주·제약과 무관한 도메인 (미국 일반뉴스·검색·SNS)
+    # ② 호주·제약과 무관한 도메인 (미국 일반뉴스·검색·SNS·인도 뉴스)
     # ※ 경로 깊이 체크는 제거 — tga.gov.au/resources(9자) 등 정상 URL도 차단하므로
     _BLOCKED = (
+        # 미국 일반 뉴스·검색·SNS
         "cbsnews.com", "usnews.com", "abcnews.go.com", "nbcnews.com",
         "foxnews.com", "cnn.com", "nytimes.com", "washingtonpost.com",
         "google.com", "bing.com", "yahoo.com", "duckduckgo.com",
         "reddit.com", "twitter.com", "x.com", "facebook.com",
         "linkedin.com", "instagram.com", "wikipedia.org",
+        # 인도 뉴스 — 호주 제약 시장과 무관, Perplexity가 혼입시키는 경우 차단
+        "timesofindia.indiatimes.com", "indiatimes.com",
+        "timesnownews.com", "timesnow.com",
+        "ndtv.com", "indiatoday.in", "hindustantimes.com",
+        "thehindu.com", "indianexpress.com", "livemint.com",
+        "economictimes.indiatimes.com",
     )
     if any(d in lower for d in _BLOCKED):
         return False

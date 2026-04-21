@@ -136,19 +136,20 @@ function _setMacro(valId, val, srcId, src) {
  * id="au-map" 요소 없으면 조기 리턴.
  */
 function initAuMap() {
-  if (typeof L === 'undefined') return;         // Leaflet 미로드 방어
+  /* SG 동일: Leaflet 미로드 시 200ms 재시도 (CDN 지연 방어) */
+  if (typeof L === 'undefined') { setTimeout(initAuMap, 200); return; }
   const el = document.getElementById('au-map');
   if (!el) return;
-  if (el._leaflet_id) return;                  // 이미 초기화된 경우 중복 방지
 
-  /* 높이가 없으면 카드 높이에서 헤더 높이 빼서 강제 지정 (flex 미확정 방어) */
-  if (el.offsetHeight < 50) {
-    const card = el.closest('article') || el.parentElement;
-    const sec  = card ? card.querySelector('.sec') : null;
-    const cardH = card ? card.offsetHeight : 0;
-    const secH  = sec  ? sec.offsetHeight  : 56;
-    el.style.height = Math.max(cardH - secH, 300) + 'px';
+  /* SG 동일: leaflet-container 클래스로 이미 초기화 여부 판단 */
+  if (el.classList.contains('leaflet-container')) {
+    if (window._auLeafletMap) window._auLeafletMap.invalidateSize();
+    return;
   }
+
+  /* SG 동일: offsetWidth/Height 가 0 이면 flex/grid 레이아웃 미확정 → 200ms 후 재시도
+     (window.load 직후에도 flex 1fr 계산이 아직 브라우저 렌더 프레임에 반영 안 될 수 있음) */
+  if (el.offsetWidth === 0 || el.offsetHeight === 0) { setTimeout(initAuMap, 200); return; }
 
   /* 호주 중심 + 줌 4 (대륙 전체 표시) */
   const map = L.map('au-map', { scrollWheelZoom: false }).setView([-27.0, 133.5], 4);
@@ -2695,8 +2696,12 @@ async function loadNews() {
       }
     }
 
-    /* 메인 카드는 항상 7건 레이아웃(백엔드와 동일) */
-    const newsItems = items.slice(0, 7);
+    /* 메인 카드는 최대 7건 (URL이 제목인 항목은 프론트에서도 2차 필터링) */
+    const newsItems = items.filter(item => {
+      const head = item.title_ko || item.title || '';
+      /* 제목이 URL 자체이거나 비어있으면 건너뜀 (백엔드 필터 통과 예외 처리) */
+      return head && !head.startsWith('http://') && !head.startsWith('https://');
+    }).slice(0, 7);
 
     listEl.className = 'news-list--ready';
     listEl.innerHTML = newsItems.map(item => {

@@ -1040,7 +1040,6 @@ _MOCK_NEWS: list[dict[str, Any]] = [
     {
         "title": "TGA approves fast-track for PIC/S generics",
         "title_ko": "TGA, PIC/S 제네릭 우선 심사 확대",
-        "summary_ko": "PIC/S 동등성 제네릭에 대한 심사·허가 절차 강화 등 규제 동향을 다룬 샘플 요약입니다.",
         "source": "TGA.gov.au",
         "date": "2026-04-18",
         "link": "https://www.tga.gov.au",
@@ -1048,7 +1047,6 @@ _MOCK_NEWS: list[dict[str, Any]] = [
     {
         "title": "Australia pharma imports from Korea up 11%",
         "title_ko": "한국산 의약품 수입 증가",
-        "summary_ko": "교역 통계와 수입 품목·정책 맥락을 짧게 정리한 샘플 요약입니다.",
         "source": "Austrade",
         "date": "2026-04-17",
         "link": "https://www.austrade.gov.au",
@@ -1056,7 +1054,6 @@ _MOCK_NEWS: list[dict[str, Any]] = [
     {
         "title": "PBS listing reforms: what exporters need to know",
         "title_ko": "PBS 등재 개편과 수출사 관점",
-        "summary_ko": "등재·급여 변화가 수출·가격 전략에 주는 시사점을 담은 샘플 요약입니다.",
         "source": "Dept. of Health",
         "date": "2026-04-16",
         "link": "https://www.pbs.gov.au",
@@ -1064,7 +1061,6 @@ _MOCK_NEWS: list[dict[str, Any]] = [
     {
         "title": "KAFTA and Korea–Australia pharma trade",
         "title_ko": "한·호주 의약품 교역",
-        "summary_ko": "무역협정·관세·규제 환경을 개괄한 샘플 요약입니다.",
         "source": "KITA",
         "date": "2026-04-15",
         "link": "https://www.kita.net",
@@ -1072,7 +1068,6 @@ _MOCK_NEWS: list[dict[str, Any]] = [
     {
         "title": "NPS MedicineWise updates consumer medicines information",
         "title_ko": "NPS, 일반의약품 정보 개정",
-        "summary_ko": "소비자 대상 복약·안내 정보 갱신을 다룬 샘플 요약입니다.",
         "source": "NPS MedicineWise",
         "date": "2026-04-14",
         "link": "https://www.nps.org.au",
@@ -1080,7 +1075,6 @@ _MOCK_NEWS: list[dict[str, Any]] = [
     {
         "title": "HealthShare NSW tender update for injectable oncology drugs",
         "title_ko": "HealthShare NSW, 항암주사제 공급 입찰 공고",
-        "summary_ko": "NSW 주 정부 병원 조달 기관이 항암 주사제 및 바이오의약품 공급자 입찰을 공고해 국내 제약사의 수출 진출 기회로 주목됩니다.",
         "source": "HealthShare NSW",
         "date": "2026-04-13",
         "link": "https://www.healthshare.nsw.gov.au",
@@ -1088,7 +1082,6 @@ _MOCK_NEWS: list[dict[str, Any]] = [
     {
         "title": "Biotech Australia 2026: Korean companies to exhibit at major conference",
         "title_ko": "바이오텍 호주 2026, 한국 제약사 참가",
-        "summary_ko": "호주 최대 바이오·제약 박람회에 한국 제약사 3곳이 참가해 제네릭 및 개량신약 파트너십 논의를 진행할 예정입니다.",
         "source": "AusBiotech",
         "date": "2026-04-12",
         "link": "https://www.ausbiotech.org",

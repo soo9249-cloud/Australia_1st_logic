@@ -2689,13 +2689,9 @@ async function loadNews() {
       const tag    = item.link ? 'a' : 'div';
       const source = [item.source, item.date].filter(Boolean).join(' · ');
       const head   = item.title_ko || item.title || '';
-      const sum    = item.summary_ko
-        ? `<div class="news-sum">${_escHtml(item.summary_ko)}</div>`
-        : '';
       return `
         <${tag} class="irow news-item" ${href}>
           <div class="tit">${_escHtml(head)}</div>
-          ${sum}
           ${source ? `<div class="sub">${_escHtml(source)}</div>` : ''}
         </${tag}>`;
     }).join('');

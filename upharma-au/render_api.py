@@ -1121,45 +1121,39 @@ def get_news() -> JSONResponse:
                     {
                         "role": "system",
                         "content": (
-                            "You are a news aggregator for a Korean pharmaceutical export dashboard focused on Australia. "
-                            f"Return EXACTLY {_NEWS_LIST_SIZE} recent news items as a JSON array ONLY, or one JSON object with key "
-                            "\"items\" whose value is that array. "
-                            "Output raw JSON only — NO markdown fences, NO prose, NO explanation outside the JSON. "
+                            "You are a news search engine for a pharmaceutical export dashboard. "
+                            f"Return EXACTLY {_NEWS_LIST_SIZE} recent TEXT news articles as a JSON array ONLY. "
+                            "Output raw JSON — NO markdown fences, NO prose, NO explanation outside the JSON. "
                             "Each item MUST have ALL of these keys: "
-                            "\"title\" (original headline exactly as published), "
-                            "\"title_ko\" (natural Korean translation of the headline, concise, suitable for a dashboard UI), "
-                            "\"summary_ko\" (Korean, 2–3 sentences summarising what the article covers and why it matters for pharma export to Australia), "
-                            "\"source\" (publication or site name, e.g. 'RACGP', 'TGA', '약업신문', 'Naver News'), "
+                            "\"title\" (original headline exactly as published, in the article's original language), "
+                            "\"source\" (publication or site name, e.g. 'RACGP', 'TGA', 'yakup.com'), "
                             "\"date\" (YYYY-MM-DD publication date), "
-                            "\"link\" (DIRECT URL to the specific article — NOT a homepage or search page). "
-                            "CRITICAL on links: every link must open the actual article text. "
-                            "If a direct URL is unavailable, skip that article and find another. "
-                            "All Korean text must be fluent, professional, and free of machine-translation artifacts."
+                            "\"link\" (DIRECT URL to the specific article page — NOT a homepage, search page, or video). "
+                            "CRITICAL: every link MUST open actual article text. "
+                            "NEVER include YouTube, Vimeo, or any video URL. "
+                            "If a direct article URL is unavailable, skip that item and find another."
                         ),
                     },
                     {
                         "role": "user",
                         "content": (
-                            f"Find exactly {_NEWS_LIST_SIZE} TEXT articles published within the LAST 48 HOURS. "
-                            f"If fewer than {_NEWS_LIST_SIZE} qualify within 48 h, expand to 7 days — but always prefer the most recent. "
-                            "STRICT TOPIC FILTER — every article must be exclusively about ONE OR MORE of: "
-                            "(A) Australian pharmaceutical / biotech / medical-device industry news "
+                            f"Find exactly {_NEWS_LIST_SIZE} TEXT NEWS ARTICLES published within the LAST 48 HOURS. "
+                            f"If fewer than {_NEWS_LIST_SIZE} qualify within 48 h, expand to 7 days — always prefer the most recent. "
+                            "STRICT TOPIC FILTER — every article must be about ONE OR MORE of: "
+                            "(A) Australian pharmaceutical / biotech / medical-device industry "
                             "    (TGA approvals, PBS listings/delisting, ARTG changes, drug shortages, hospital procurement, "
                             "     oncology drugs, generic medicine policy, PBAC decisions, clinical trials in Australia); "
-                            "(B) Korea–Australia pharma / biotech trade, partnerships, regulatory, or export/import stories "
+                            "(B) Korea–Australia pharma / biotech trade, partnerships, regulatory, or export/import "
                             "    (KAFTA, Korean companies entering Australian market, joint ventures, co-development); "
-                            "(C) Korean-language press (including Naver News, 약업신문, 히트뉴스, 메디파나뉴스, 팜뉴스) covering "
-                            "    Australian pharma market OR Korean pharma companies' Australia-related activities. "
+                            "(C) Korean-language pharma press (yakup.com, hitnews.co.kr, medipana.com, pharmnews.com, "
+                            "    Naver News) covering Australian pharma market or Korean pharma companies' Australia activities. "
                             "STRICTLY EXCLUDE: general business, finance, politics, sports, entertainment, "
-                            "non-pharma healthcare (dentistry, mental health apps unless drug-related), "
-                            "and any pharma stories unrelated to Australia. "
-                            "PREFERRED SOURCES (mix where possible): "
-                            "racgp.org.au, tga.gov.au, pbs.gov.au, healthshare.nsw.gov.au, ausbiotech.org, "
-                            "australianprescriber.com, mja.com.au, pharmaceutical-journal.com, "
-                            "약업신문(yakup.com), 히트뉴스(hitnews.co.kr), 메디파나뉴스(medipana.com), "
-                            "팜뉴스(pharmnews.com), 한국경제 제약/바이오면, Naver News 호주+제약 섹션. "
-                            "For each item return: title (original), title_ko, summary_ko, source, date (YYYY-MM-DD), link (direct article URL). "
-                            "Skip any item where you cannot supply a direct article URL."
+                            "non-pharma healthcare, videos, podcasts, and any pharma story unrelated to Australia. "
+                            "PREFERRED SOURCES: racgp.org.au, tga.gov.au, pbs.gov.au, healthshare.nsw.gov.au, "
+                            "ausbiotech.org, australianprescriber.com, mja.com.au, pharmaceutical-journal.com, "
+                            "yakup.com, hitnews.co.kr, medipana.com, pharmnews.com, Naver News 제약/바이오 섹션. "
+                            "Return fields: title, source, date (YYYY-MM-DD), link (direct article URL ONLY — no videos). "
+                            "Skip any item where a direct article URL cannot be supplied."
                         ),
                     },
                 ],
@@ -1220,20 +1214,43 @@ def get_news() -> JSONResponse:
         return _news_api_response(mock_items, source="mock")
 
     result: list[dict[str, Any]] = []
+    link_pool = list(link_list)  # citation URL 풀 (남은 것부터 순서대로 보충)
     for i, it in enumerate(items[:_NEWS_LIST_SIZE]):
         if not isinstance(it, dict):
             continue
-        link_fb = ""
-        if i < len(link_list):
-            link_fb = link_list[i] or ""
         merged = dict(it)
-        if not (merged.get("link") or merged.get("url")) and link_fb:
-            merged["link"] = link_fb
+        # 링크가 없으면 citation 풀에서 보충
+        if not (merged.get("link") or merged.get("url")):
+            for fb_url in link_pool:
+                if _is_valid_news_url(fb_url):
+                    merged["link"] = fb_url
+                    link_pool.remove(fb_url)
+                    break
+        # 유효하지 않은 URL(유튜브·홈페이지 등) 제거
+        raw_link = merged.get("link") or merged.get("url") or ""
+        if raw_link and not _is_valid_news_url(raw_link):
+            logger.info("[api/news] 유효하지 않은 URL 제거: %s", raw_link)
+            merged["link"] = ""
         result.append(_normalize_news_item(merged))
 
     if not result:
         logger.warning("[api/news] mock: 파싱 후 유효 항목 0건")
         return _news_api_response(mock_items, source="mock")
+
+    # ── OpenAI gpt-4o-mini 로 한국어 번역 + 요약 주입 ──────────────────
+    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if openai_key and _OPENAI_AVAILABLE:
+        try:
+            result = _openai_translate_news_ko(result, openai_key)
+        except Exception as _tr_exc:
+            logger.warning("[api/news] OpenAI 번역 실패(무시): %s", _tr_exc)
+    # title_ko 폴백: OpenAI 미설치·실패 시 원문 제목 그대로
+    for item in result:
+        if not item.get("title_ko"):
+            item["title_ko"] = item.get("title", "")
+        if not item.get("summary_ko"):
+            item["summary_ko"] = ""
+
     if len(result) < _NEWS_LIST_SIZE:
         # 카드 높이를 고정했기 때문에 프론트에는 항상 동일 개수를 내려준다.
         for fallback in mock_items:
@@ -2265,6 +2282,97 @@ def _compute_confidence_breakdown(row: dict[str, Any]) -> dict[str, Any]:
         "total": total,
         "checklist": checklist,
     }
+
+
+def _openai_translate_news_ko(
+    items: list[dict[str, Any]], api_key: str
+) -> list[dict[str, Any]]:
+    """뉴스 기사 목록을 OpenAI gpt-4o-mini 로 한국어 번역 + 요약.
+
+    items 각 요소에 'title_ko'·'summary_ko' 를 주입해 반환.
+    OpenAI 미설치·API 오류 시 원본 items 그대로 반환(title_ko fallback 은 호출부에서 처리).
+    """
+    if not items or not api_key:
+        return items
+    try:
+        from openai import OpenAI  # noqa: PLC0415
+    except ImportError:
+        return items
+
+    client = OpenAI(api_key=api_key)
+
+    # 번역 대상 텍스트 정리 (제목 + 출처 + 날짜)
+    lines: list[str] = []
+    for i, it in enumerate(items):
+        lines.append(
+            f"[{i + 1}] 제목: {it.get('title') or ''}\n"
+            f"    출처: {it.get('source') or ''} | 날짜: {it.get('date') or ''}"
+        )
+
+    system_prompt = (
+        "당신은 호주 제약·바이오 산업 전문 번역가입니다. "
+        "주어진 영문 또는 한국어 뉴스 제목을 자연스러운 한국어 대시보드 표시용 제목으로 번역하고, "
+        "수출 담당자 관점에서 기사 내용을 2문장으로 요약하십시오. "
+        "보고서 문체(~함, ~임, ~됨, ~예정) 사용. 마크다운·이모지 금지. "
+        f"반드시 {len(items)}개 항목 모두 번역하십시오. "
+        "출력: 순수 JSON 배열만. 예시: "
+        '[{"title_ko":"제목","summary_ko":"요약"}]'
+    )
+    user_prompt = (
+        f"아래 {len(items)}개 뉴스 기사를 번역·요약하라. "
+        "항목 순서를 유지하고, 각 항목에 title_ko 와 summary_ko 를 포함한 JSON 배열로만 출력하라.\n\n"
+        + "\n\n".join(lines)
+    )
+
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": user_prompt},
+            ],
+            temperature=0.15,
+            max_tokens=1200,
+        )
+        raw = (completion.choices[0].message.content or "").strip()
+        # JSON 펜스 제거
+        if raw.startswith("```"):
+            raw = raw.split("```")[1].lstrip("json").strip()
+        translated: list[dict[str, Any]] = json.loads(raw)
+        if isinstance(translated, list):
+            for i, t in enumerate(translated):
+                if i >= len(items):
+                    break
+                if isinstance(t, dict):
+                    if t.get("title_ko"):
+                        items[i]["title_ko"] = str(t["title_ko"])
+                    if t.get("summary_ko"):
+                        items[i]["summary_ko"] = str(t["summary_ko"])
+    except Exception as exc:
+        logger.warning("[_openai_translate_news_ko] 번역 실패: %s", exc)
+
+    return items
+
+
+def _is_valid_news_url(url: str) -> bool:
+    """YouTube·영상·홈페이지·검색 결과 URL 걸러내기."""
+    if not url:
+        return False
+    lower = url.lower()
+    # 영상 플랫폼
+    video_domains = ("youtube.com", "youtu.be", "vimeo.com", "dailymotion.com", "twitch.tv")
+    if any(d in lower for d in video_domains):
+        return False
+    # 홈페이지 또는 최상위 경로 (경로가 없거나 "/" 뿐)
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        path = parsed.path.rstrip("/")
+        if not path or path in ("/index", "/index.html", "/home"):
+            return False
+    except Exception:
+        pass
+    return True
 
 
 def _openai_summarize_refs_ko(refs: list[dict[str, Any]], api_key: str) -> list[dict[str, Any]]:

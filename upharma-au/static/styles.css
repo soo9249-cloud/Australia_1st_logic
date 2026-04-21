@@ -1478,12 +1478,13 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   letter-spacing: -.01em;
 }
 .macro-value {
-  font-size: 28px;
+  font-size: clamp(20px, 2.2vw, 28px); /* 긴 값(27,724,744명 등) 카드 넘침 방지 */
   font-weight: 900;
   color: var(--navy);
   letter-spacing: -.04em;
   line-height: 1.05;
   margin-bottom: 8px;
+  word-break: keep-all;
 }
 .macro-source {
   font-size: 12px;

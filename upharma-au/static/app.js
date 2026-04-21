@@ -1246,6 +1246,16 @@ function _syncP2ReportsOptions() {
     aiSelect.value = _p2AiSelectedReportId;
   }
 
+  /* 바이어 발굴 드롭다운 동기화 (02 바이어 발굴 컬럼) */
+  const p3Select = document.getElementById('p3-report-select');
+  if (p3Select) {
+    const p3Curr = p3Select.value;
+    p3Select.innerHTML = '<option value="">시장조사 보고서를 선택하세요.</option>' + reportOpts;
+    if (reports.some((r) => String(r.id) === String(p3Curr))) p3Select.value = p3Curr;
+    /* 최신 보고서 자동 선택 (분석 직후 편의) */
+    else if (reports.length > 0) p3Select.value = String(reports[0].id);
+  }
+
 }
 
 function _getP2SelectedReport() {
@@ -2833,10 +2843,17 @@ resetProgress();
   // ───── 시작 버튼 — 실시간 파이프라인 (run → status 폴링 → result) ─────
   // 4단계: 실시간 크롤링(25%) → DB 조회(50%) → AI 분석(75%) → PDF 보고서(100%)
   window.triggerBuyerDiscovery = async function () {
-    const pid = currentProductId();
+    /* p3-report-select 에서 보고서 product_id 우선, 없으면 product-select 사용 */
+    let pid = null;
+    const p3Sel = document.getElementById('p3-report-select');
+    if (p3Sel && p3Sel.value) {
+      const rpt = _loadReports().find((r) => String(r.id) === String(p3Sel.value));
+      if (rpt && rpt.product_id) pid = rpt.product_id;
+    }
+    if (!pid) pid = currentProductId();
     if (!pid) {
-      if (typeof showToast === 'function') showToast('품목을 먼저 선택하세요');
-      else alert('품목을 먼저 선택하세요');
+      if (typeof showToast === 'function') showToast('품목을 먼저 선택하거나 시장조사 보고서를 선택하세요');
+      else alert('품목을 먼저 선택하거나 시장조사 보고서를 선택하세요');
       return;
     }
     const btn = document.getElementById('p3-run-btn');

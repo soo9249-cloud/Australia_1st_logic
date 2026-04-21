@@ -116,11 +116,12 @@
                         <option value="">저장된 분석 보고서를 선택하세요.</option>
                       </select>
                     </div>
-                    <div class="p2-seg-row" style="margin-top:10px;">
-                      <button class="p2-seg-btn on" data-p2-manual-seg="public"  type="button">공공 시장</button>
-                      <button class="p2-seg-btn"    data-p2-manual-seg="private" type="button">민간 시장</button>
-                    </div>
-                    <div class="selector-row p2-ai-run-row">
+                    <!-- 공공/민간 + AI 실행 — SG와 동일하게 한 행 (flex-wrap) -->
+                    <div class="selector-row" style="flex-wrap:wrap;gap:10px;margin-top:10px;">
+                      <div class="p2-seg-row" style="margin-bottom:0;flex:1;min-width:160px;">
+                        <button class="p2-seg-btn on" data-p2-manual-seg="public"  type="button">공공 시장</button>
+                        <button class="p2-seg-btn"    data-p2-manual-seg="private" type="button">민간 시장</button>
+                      </div>
                       <button class="btn-analyze" id="btn-p2-ai-run" type="button" onclick="runP2AiPipeline()">
                         <span id="p2-ai-run-icon">▶</span> AI 가격 분석 실행
                       </button>
@@ -374,7 +375,10 @@
           <div class="process-body" id="pb-p3">
             <div class="selector-card">
               <div class="selector-label">품목 선택</div>
-              <div class="selector-row p2-ai-run-row p3-run-row">
+              <div class="selector-row">
+                <select id="p3-report-select" style="flex:1;">
+                  <option value="">시장조사 보고서를 선택하세요.</option>
+                </select>
                 <button class="btn-analyze" id="p3-run-btn" type="button" onclick="triggerBuyerDiscovery()">
                   <span id="p3-run-icon">▶</span> 바이어 발굴 실행
                 </button>

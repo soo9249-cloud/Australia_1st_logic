@@ -2388,7 +2388,7 @@ def _openai_translate_news_ko(
 
 
 def _is_valid_news_url(url: str) -> bool:
-    """YouTube·영상·홈페이지·미관련 도메인·섹션 페이지 걸러내기."""
+    """YouTube·영상·미관련 도메인·완전한 홈페이지 URL 걸러내기."""
     if not url:
         return False
     lower = url.lower()
@@ -2398,11 +2398,11 @@ def _is_valid_news_url(url: str) -> bool:
     if any(d in lower for d in _VIDEO):
         return False
 
-    # ② 호주·제약과 무관한 도메인 (미국 일반 뉴스·검색·SNS)
+    # ② 호주·제약과 무관한 도메인 (미국 일반뉴스·검색·SNS)
+    # ※ 경로 깊이 체크는 제거 — tga.gov.au/resources(9자) 등 정상 URL도 차단하므로
     _BLOCKED = (
         "cbsnews.com", "usnews.com", "abcnews.go.com", "nbcnews.com",
         "foxnews.com", "cnn.com", "nytimes.com", "washingtonpost.com",
-        "theguardian.com/us", "bbc.com/news/world/us",
         "google.com", "bing.com", "yahoo.com", "duckduckgo.com",
         "reddit.com", "twitter.com", "x.com", "facebook.com",
         "linkedin.com", "instagram.com", "wikipedia.org",
@@ -2410,16 +2410,12 @@ def _is_valid_news_url(url: str) -> bool:
     if any(d in lower for d in _BLOCKED):
         return False
 
-    # ③ 홈페이지·섹션 경로 (경로 깊이가 얕으면 기사가 아닌 섹션 페이지)
+    # ③ 경로가 완전히 없는 순수 홈페이지만 제거 (예: https://cbsnews.com/ )
     try:
         from urllib.parse import urlparse
         parsed = urlparse(url)
         path = parsed.path.rstrip("/")
         if not path or path in ("/index", "/index.html", "/home"):
-            return False
-        # 경로 세그먼트가 1개 이하이고 짧으면 섹션 홈 (예: /us/, /news/, /health/)
-        parts = [p for p in path.split("/") if p]
-        if len(parts) <= 1 and len(parts[0]) < 12 if parts else True:
             return False
     except Exception:
         pass
@@ -2427,9 +2423,9 @@ def _is_valid_news_url(url: str) -> bool:
 
 
 def _is_valid_news_title(title: str) -> bool:
-    """제목이 URL 자체이거나 너무 짧으면 False."""
+    """제목이 URL 자체이거나 비어있으면 False. (한국어 단문 제목 허용)"""
     t = (title or "").strip()
-    if not t or len(t) < 10:
+    if not t:
         return False
     if t.startswith("http://") or t.startswith("https://"):
         return False

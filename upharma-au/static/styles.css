@@ -1638,6 +1638,7 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
   margin-bottom: 0;
   border-bottom: 1px solid rgba(23,63,120,.06);
   flex-shrink: 0;
+  align-items: center; /* 제목+버튼 세로 가운데 — 버튼 높이로 선 밀리는 것 방지 */
 }
 #main .map-news-grid .sec h3 {
   font-size: 13.5px;
@@ -1696,15 +1697,12 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
 .leaflet-tooltip.au-city-tooltip::before {
   border-top-color: rgba(255, 255, 255, 0.96) !important;
 }
-/* 메인 프리뷰 지도: 카드 padding=0이므로 border-radius 불필요, 카드 overflow:hidden 이 처리 */
+/* 메인 프리뷰 지도: flex:1 로 남은 높이 채움, height:auto 제거 (Leaflet 높이 인식 보장) */
 #main .map-news-grid .map-card-wrap .sg-leaflet-map {
-  flex: 1 1 auto;
+  flex: 1;
+  min-height: 0;
   width: 100%;
-  min-height: 200px;
-  height: auto !important;
-  max-height: none !important;
   border-radius: 0;
-  overflow: hidden;
 }
 .sg-leaflet-map {
   height: 300px;

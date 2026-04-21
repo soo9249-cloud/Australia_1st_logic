@@ -141,13 +141,13 @@ function initAuMap() {
   if (!el) return;
   if (el._leaflet_id) return;                  // 이미 초기화된 경우 중복 방지
 
-  /* 컨테이너 높이 0이면 최대 15회 재시도 (flex 레이아웃 미확정 방어) */
-  if (el.offsetHeight < 10) {
-    const retry = (el._mapRetry || 0) + 1;
-    if (retry > 15) return;
-    el._mapRetry = retry;
-    setTimeout(initAuMap, 200);
-    return;
+  /* 높이가 없으면 카드 높이에서 헤더 높이 빼서 강제 지정 (flex 미확정 방어) */
+  if (el.offsetHeight < 50) {
+    const card = el.closest('article') || el.parentElement;
+    const sec  = card ? card.querySelector('.sec') : null;
+    const cardH = card ? card.offsetHeight : 0;
+    const secH  = sec  ? sec.offsetHeight  : 56;
+    el.style.height = Math.max(cardH - secH, 300) + 'px';
   }
 
   /* 호주 중심 + 줌 4 (대륙 전체 표시) */

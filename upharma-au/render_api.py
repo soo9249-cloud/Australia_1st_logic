@@ -1147,6 +1147,9 @@ def get_news() -> JSONResponse:
                             "    Naver News) covering Australian pharma market or Korean pharma companies' Australia activities. "
                             "STRICTLY EXCLUDE: general business, finance, politics, sports, entertainment, "
                             "non-pharma healthcare, videos, podcasts, and any pharma story unrelated to Australia. "
+                            "NEVER return results from: cbsnews.com, usnews.com, cnn.com, foxnews.com, nbcnews.com, "
+                            "abcnews.go.com, nytimes.com, washingtonpost.com, reddit.com, wikipedia.org, "
+                            "or any US general news / social media / search engine. "
                             "PREFERRED SOURCES: racgp.org.au, tga.gov.au, pbs.gov.au, healthshare.nsw.gov.au, "
                             "ausbiotech.org, australianprescriber.com, mja.com.au, pharmaceutical-journal.com, "
                             "yakup.com, hitnews.co.kr, medipana.com, pharmnews.com, Naver News 제약/바이오 섹션. "
@@ -1217,12 +1220,15 @@ def get_news() -> JSONResponse:
             url = str(sr.get("url") or sr.get("link") or "").strip()
             if not url or not _is_valid_news_url(url):
                 continue
+            title = str(sr.get("title") or "").strip()
+            if not _is_valid_news_title(title):   # 제목이 URL이거나 너무 짧으면 건너뜀
+                continue
             try:
                 _src = _urlparse(url).netloc.replace("www.", "")
             except Exception:
                 _src = ""
             result.append(_normalize_news_item({
-                "title": str(sr.get("title") or url),
+                "title": title,
                 "source": _src,
                 "date":   str(sr.get("date") or sr.get("published_date") or ""),
                 "link":   url,
@@ -2382,23 +2388,51 @@ def _openai_translate_news_ko(
 
 
 def _is_valid_news_url(url: str) -> bool:
-    """YouTube·영상·홈페이지·검색 결과 URL 걸러내기."""
+    """YouTube·영상·홈페이지·미관련 도메인·섹션 페이지 걸러내기."""
     if not url:
         return False
     lower = url.lower()
-    # 영상 플랫폼
-    video_domains = ("youtube.com", "youtu.be", "vimeo.com", "dailymotion.com", "twitch.tv")
-    if any(d in lower for d in video_domains):
+
+    # ① 영상 플랫폼
+    _VIDEO = ("youtube.com", "youtu.be", "vimeo.com", "dailymotion.com", "twitch.tv")
+    if any(d in lower for d in _VIDEO):
         return False
-    # 홈페이지 또는 최상위 경로 (경로가 없거나 "/" 뿐)
+
+    # ② 호주·제약과 무관한 도메인 (미국 일반 뉴스·검색·SNS)
+    _BLOCKED = (
+        "cbsnews.com", "usnews.com", "abcnews.go.com", "nbcnews.com",
+        "foxnews.com", "cnn.com", "nytimes.com", "washingtonpost.com",
+        "theguardian.com/us", "bbc.com/news/world/us",
+        "google.com", "bing.com", "yahoo.com", "duckduckgo.com",
+        "reddit.com", "twitter.com", "x.com", "facebook.com",
+        "linkedin.com", "instagram.com", "wikipedia.org",
+    )
+    if any(d in lower for d in _BLOCKED):
+        return False
+
+    # ③ 홈페이지·섹션 경로 (경로 깊이가 얕으면 기사가 아닌 섹션 페이지)
     try:
         from urllib.parse import urlparse
         parsed = urlparse(url)
         path = parsed.path.rstrip("/")
         if not path or path in ("/index", "/index.html", "/home"):
             return False
+        # 경로 세그먼트가 1개 이하이고 짧으면 섹션 홈 (예: /us/, /news/, /health/)
+        parts = [p for p in path.split("/") if p]
+        if len(parts) <= 1 and len(parts[0]) < 12 if parts else True:
+            return False
     except Exception:
         pass
+    return True
+
+
+def _is_valid_news_title(title: str) -> bool:
+    """제목이 URL 자체이거나 너무 짧으면 False."""
+    t = (title or "").strip()
+    if not t or len(t) < 10:
+        return False
+    if t.startswith("http://") or t.startswith("https://"):
+        return False
     return True
 
 

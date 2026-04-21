@@ -208,6 +208,19 @@ body {
 /* ── 5. 페이지 전환 ──────────────────────────────────────────────────────── */
 .page     { display: none; }
 .page.on  { display: block; }
+/* 메인 프리뷰 페이지: 뷰포트 꽉 채움 (스크롤 없이 지도+뉴스 고정) */
+#page-preview.on {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--topbar-h) - 44px); /* 44px = .main padding-top(16)+bottom(28) */
+  gap: 14px;
+  overflow: hidden;
+}
+/* 거시지표 4개 카드: flex 자식이 돼도 높이 유지 (줄어들지 않게) */
+#page-preview.on .macro-grid {
+  flex-shrink: 0;
+  margin-bottom: 0; /* gap으로 대체 */
+}
 #p1 {
   max-width: 1280px;
   margin: 0 auto;
@@ -1502,7 +1515,9 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 #main .map-news-grid {
   align-items: stretch;
   grid-template-rows: minmax(0, 1fr);
-  min-height: clamp(360px, calc(100vh - 295px), 700px);
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 0;
 }
 #main .map-news-grid > article.card {
   min-height: 0;

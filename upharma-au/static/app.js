@@ -187,8 +187,9 @@ function initAuMap() {
       });
   });
 
-  /* 지도 크기 재계산 (CSS flex 로 div 크기 확정 후 실행) */
-  setTimeout(() => map.invalidateSize(), 150);
+  /* 지도 크기 재계산: 150ms + 500ms 이중 호출 (CSS flex 확정 타이밍 편차 흡수) */
+  setTimeout(() => { map.invalidateSize(); map.setView([-27.0, 133.5], 4); }, 150);
+  setTimeout(() => map.invalidateSize(), 500);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2712,7 +2713,13 @@ loadKeyStatus();        // API 키 배지
 // 메인에 환율 UI 없음 — 수출전략 FOB·직접입력이 window._exchangeRates 를 쓰므로 초기 1회만 조회
 loadExchange();
 loadMacro();            // 거시 지표 로드
-initAuMap();            // 호주 Leaflet 지도 초기화
+/* 지도: window.load 이후 실행 — CSS flex 레이아웃 완전 확정 후 Leaflet 초기화
+   (즉시 호출 시 컨테이너 높이 0으로 타일 미로드 현상 방지) */
+if (document.readyState === 'complete') {
+  initAuMap();
+} else {
+  window.addEventListener('load', initAuMap, { once: true });
+}
 renderReportTab();      // 보고서 탭 초기 렌더
 initP2Strategy();       // 수출가격 전략 초기화
 loadNews();             // 시장 뉴스 즉시 로드 (Perplexity API)

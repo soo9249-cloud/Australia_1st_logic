@@ -1494,6 +1494,11 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   margin-bottom: 10px;
   align-items: stretch;
 }
+/* SG 동일: #main 셀렉터 없이도 지도 카드 flex 적용 (Leaflet 0높이 방지) */
+.map-card-wrap {
+  display: flex;
+  flex-direction: column;
+}
 /* 메인: 지도·뉴스 두 카드 같은 높이(stretch) + 뷰포트 기준으로 행을 아래까지 확장
    268 → 295: 매크로 카드 높이 증가분(~27px) 반영 */
 #main .map-news-grid {

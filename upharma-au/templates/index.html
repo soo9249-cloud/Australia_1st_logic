@@ -22,6 +22,11 @@
     </div>
   </div>
   <div class="topbar-r">
+    <!-- 페이지 전환 탭 -->
+    <nav class="topbar-tabs">
+      <a class="tab on" id="tab-preview"  onclick="goTab('page-preview',this)">메인 프리뷰</a>
+      <a class="tab"    id="tab-analysis" onclick="goTab('page-analysis',this)">시장조사 분석</a>
+    </nav>
     <div class="pill">
       <span class="flag-round-wrap flag-round-wrap--au" aria-hidden="true">
         <img class="flag-round" src="/static/flag-au.svg?v={{ static_v }}" width="26" height="26" alt=""/>
@@ -33,8 +38,8 @@
 
 <main class="main">
 
-  <!-- ════════════ 메인 대시보드 ════════════ -->
-  <div id="main" class="page on">
+  <!-- ════════════ 페이지 1: 메인 프리뷰 ════════════ -->
+  <div id="page-preview" class="page on">
 
     <!-- ════ 거시 지표 4개 카드 ════ -->
     <!-- 값 수정: 각 macro-value 텍스트를 직접 바꾸면 됩니다 -->
@@ -86,6 +91,11 @@
       </article>
 
     </div><!-- /map-news-grid -->
+
+  </div><!-- /page-preview -->
+
+  <!-- ════════════ 페이지 2: 시장조사 분석 ════════════ -->
+  <div id="page-analysis" class="page">
 
     <!-- ════ 2-컬럼 대시보드 그리드 ════ -->
     <div class="dashboard-grid">
@@ -489,7 +499,7 @@
     <div id="news-list" style="display:none;" aria-hidden="true"></div>
     <div id="news-mock-banner" style="display:none;" aria-hidden="true"></div>
 
-  </div><!-- /main page -->
+  </div><!-- /page-analysis -->
 
   <!-- ════ 바이어 카드 모달 ════ -->
   <div id="buyer-card-overlay" class="buyer-overlay" style="display:none;" onclick="if(event.target===this)closeBuyerCard()">

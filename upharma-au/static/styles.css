@@ -101,6 +101,23 @@ body {
 }
 .topbar-r { display: flex; align-items: center; gap: 10px; }
 
+/* 탑바 내장 탭 (메인 프리뷰 | 시장조사 분석) */
+.topbar-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  height: 100%;
+}
+.topbar-tabs .tab {
+  height: 44px;          /* 탑바 높이와 동일 */
+  padding: 0 16px;
+  font-size: 13px;
+  border-bottom: none;   /* 탑바 내에서는 nav border-bottom 제거 */
+}
+.topbar-tabs .tab::after {
+  bottom: 0;             /* 탑바 하단에 밑줄 표시 */
+}
+
 .pill {
   height: 42px;
   padding: 0 14px 0 10px;

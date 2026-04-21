@@ -85,7 +85,13 @@ function goTab(id, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
   const page = document.getElementById(id);
   if (page) page.classList.add('on');
-  if (el)   el.classList.add('on');
+  // el 이 문자열(id)이면 요소로 변환, 객체면 그대로 사용
+  const tabEl = (typeof el === 'string') ? document.getElementById(el) : el;
+  if (tabEl) tabEl.classList.add('on');
+  // 메인 프리뷰 탭으로 돌아올 때 Leaflet 지도 크기 재계산
+  if (id === 'page-preview' && window._auLeafletMap) {
+    setTimeout(() => window._auLeafletMap.invalidateSize(), 50);
+  }
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -137,6 +143,7 @@ function initAuMap() {
 
   /* 호주 중심 + 줌 4 (대륙 전체 표시) */
   const map = L.map('au-map', { scrollWheelZoom: false }).setView([-27.0, 133.5], 4);
+  window._auLeafletMap = map;   // goTab 에서 invalidateSize 재호출용
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: 'Leaflet · © OpenStreetMap contributors',

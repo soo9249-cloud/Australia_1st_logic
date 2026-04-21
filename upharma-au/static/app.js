@@ -793,7 +793,7 @@ async function runP2AiPipeline() {
   const reportFilename = _p2UploadedReportFilename || (selectedReport ? (selectedReport.pdf_name || '') : '');
 
   if (!reportFilename) {
-    _showP2AiError('실행 전 PDF가 있는 보고서를 선택하거나 PDF를 직접 업로드해 주세요.');
+    showToast('보고서를 먼저 선택해 주세요. (01 분석 실행 후 자동 반영)', 'warn');
     return;
   }
 

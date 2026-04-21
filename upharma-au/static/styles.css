@@ -143,8 +143,8 @@ body {
 
 /* ── 4. 내비게이션 탭 ────────────────────────────────────────────────────── */
 .main {
-  padding: 12px 22px 16px;
-  max-width: 1280px;
+  padding: 16px 28px 28px;   /* SG 동일: top 16 + bottom 28 = 44px → grid 공식과 일치 */
+  max-width: 1440px;         /* SG 동일 */
   margin-inline: auto;
 }
 
@@ -2559,8 +2559,8 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   grid-template-columns: 1fr 1.45fr;
   gap: 16px;
   align-items: stretch;
-  /* AU main padding: top 12px + bottom 16px = 28px */
-  height: calc(100vh - var(--topbar-h) - 28px);
+  /* SG 동일: main padding top 16 + bottom 28 = 44px */
+  height: calc(100vh - var(--topbar-h) - 44px);
 }
 
 .col-left, .col-right {

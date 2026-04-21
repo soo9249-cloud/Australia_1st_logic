@@ -1204,36 +1204,74 @@ def get_news() -> JSONResponse:
 
     link_list = _extract_perplexity_citation_urls(data if isinstance(data, dict) else {})
 
-    items = _parse_perplexity_news_json_array(content)
-    if items is None:
-        logger.warning(
-            "[api/news] mock: JSON 배열 파싱 실패 content_prefix=%s",
-            (content or "")[:500],
-        )
-        return _news_api_response(mock_items, source="mock")
-
+    # ── 1순위: search_results 직접 활용 (sonar 계열 정식 필드) ───────────
     result: list[dict[str, Any]] = []
-    link_pool = list(link_list)  # citation URL 풀 (남은 것부터 순서대로 보충)
-    for i, it in enumerate(items[:_NEWS_LIST_SIZE]):
-        if not isinstance(it, dict):
-            continue
-        merged = dict(it)
-        # 링크가 없으면 citation 풀에서 보충
-        if not (merged.get("link") or merged.get("url")):
-            for fb_url in link_pool:
-                if _is_valid_news_url(fb_url):
-                    merged["link"] = fb_url
-                    link_pool.remove(fb_url)
+    sr_raw = (data.get("search_results") if isinstance(data, dict) else None) or []
+    if isinstance(sr_raw, list):
+        from urllib.parse import urlparse as _urlparse
+        for sr in sr_raw:
+            if len(result) >= _NEWS_LIST_SIZE:
+                break
+            if not isinstance(sr, dict):
+                continue
+            url = str(sr.get("url") or sr.get("link") or "").strip()
+            if not url or not _is_valid_news_url(url):
+                continue
+            try:
+                _src = _urlparse(url).netloc.replace("www.", "")
+            except Exception:
+                _src = ""
+            result.append(_normalize_news_item({
+                "title": str(sr.get("title") or url),
+                "source": _src,
+                "date":   str(sr.get("date") or sr.get("published_date") or ""),
+                "link":   url,
+            }))
+    logger.info("[api/news] search_results %d건 추출", len(result))
+
+    # ── 2순위: content JSON 파싱 (search_results 부족 시 보충) ────────────
+    if len(result) < _NEWS_LIST_SIZE:
+        items = _parse_perplexity_news_json_array(content)
+        logger.info(
+            "[api/news] content 파싱 결과: %s건 (prefix=%s)",
+            len(items) if items else 0,
+            (content or "")[:200],
+        )
+        link_pool = [u for u in link_list if _is_valid_news_url(u)]
+        if items:
+            for it in items:
+                if len(result) >= _NEWS_LIST_SIZE:
                     break
-        # 유효하지 않은 URL(유튜브·홈페이지 등) 제거
-        raw_link = merged.get("link") or merged.get("url") or ""
-        if raw_link and not _is_valid_news_url(raw_link):
-            logger.info("[api/news] 유효하지 않은 URL 제거: %s", raw_link)
-            merged["link"] = ""
-        result.append(_normalize_news_item(merged))
+                if isinstance(it, dict):
+                    merged = dict(it)
+                    raw_link = str(merged.get("link") or merged.get("url") or "")
+                    if raw_link and not _is_valid_news_url(raw_link):
+                        merged["link"] = ""
+                    if not (merged.get("link") or merged.get("url")) and link_pool:
+                        merged["link"] = link_pool.pop(0)
+                    result.append(_normalize_news_item(merged))
+                elif isinstance(it, str) and _is_valid_news_url(it):
+                    # URL 문자열만 돌아온 경우 (sonar가 JSON 배열로 URL만 반환할 때)
+                    from urllib.parse import urlparse as _urlparse
+                    try:
+                        _src = _urlparse(it).netloc.replace("www.", "")
+                    except Exception:
+                        _src = ""
+                    result.append(_normalize_news_item({"title": it, "source": _src, "link": it}))
+        # citations만 남아 있는 경우 URL만으로 카드 채우기
+        if len(result) < _NEWS_LIST_SIZE:
+            for url in link_pool:
+                if len(result) >= _NEWS_LIST_SIZE:
+                    break
+                from urllib.parse import urlparse as _urlparse
+                try:
+                    _src = _urlparse(url).netloc.replace("www.", "")
+                except Exception:
+                    _src = ""
+                result.append(_normalize_news_item({"title": url, "source": _src, "link": url}))
 
     if not result:
-        logger.warning("[api/news] mock: 파싱 후 유효 항목 0건")
+        logger.warning("[api/news] mock: search_results·content·citations 모두 0건")
         return _news_api_response(mock_items, source="mock")
 
     # ── OpenAI gpt-4o-mini 로 한국어 번역 + 요약 주입 ──────────────────

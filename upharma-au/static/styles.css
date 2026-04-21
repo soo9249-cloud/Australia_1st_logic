@@ -1467,28 +1467,36 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   background: var(--card);
   border-radius: 20px;
   box-shadow: var(--sh);
-  padding: 18px 20px 16px;
+  padding: 14px 16px 12px; /* AU값이 SG보다 길어서 카드 컴팩트하게 */
   text-align: center;
 }
 .macro-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--muted);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   letter-spacing: -.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .macro-value {
-  font-size: clamp(20px, 2.2vw, 28px); /* 긴 값(27,724,744명 등) 카드 넘침 방지 */
+  font-size: 22px; /* AU값(27,724,744명 등)이 SG보다 길어서 시각 균형 맞춤 */
   font-weight: 900;
   color: var(--navy);
   letter-spacing: -.04em;
   line-height: 1.05;
-  margin-bottom: 8px;
-  word-break: keep-all;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .macro-source {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
+  white-space: nowrap;      /* 긴 출처(TGA 호주 연방 의료제품청 등) 한 줄 고정 */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* 메인 프리뷰 매크로 보조 줄(원화 등) — 인라인 12px 보다 우선 */
 #main .macro-card .macro-sub {

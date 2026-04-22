@@ -173,23 +173,23 @@ function initAuMap() {
     maxZoom: 18,
   }).addTo(map);
 
-  /* ── 도시 목록 (한글명 (영문명), 수도 여부) ── */
+  /* ── 도시 목록 (영문 원어명 (한글 표기)) ── */
   const cities = [
-    { name: '시드니 (Sydney)',       lat: -33.8688, lng: 151.2093, capital: false },
-    { name: '멜버른 (Melbourne)',    lat: -37.8136, lng: 144.9631, capital: false },
-    { name: '브리즈번 (Brisbane)',   lat: -27.4698, lng: 153.0251, capital: false },
-    { name: '퍼스 (Perth)',          lat: -31.9505, lng: 115.8605, capital: false },
-    { name: '캔버라 (Canberra) ★',  lat: -35.2809, lng: 149.1300, capital: true  }, // 수도
-    { name: '애들레이드 (Adelaide)', lat: -34.9285, lng: 138.6007, capital: false },
+    { name: 'Sydney (시드니)',        lat: -33.8688, lng: 151.2093 },
+    { name: 'Melbourne (멜버른)',     lat: -37.8136, lng: 144.9631 },
+    { name: 'Brisbane (브리즈번)',    lat: -27.4698, lng: 153.0251 },
+    { name: 'Perth (퍼스)',           lat: -31.9505, lng: 115.8605 },
+    { name: 'Canberra ★ (캔버라)',   lat: -35.2809, lng: 149.1300 },
+    { name: 'Adelaide (애들레이드)',  lat: -34.9285, lng: 138.6007 },
   ];
 
-  /* SG 동일: 기본 파란 Leaflet 핀 마커 + 클릭 팝업 (상시 말풍선 제거) */
-  cities.forEach(({ name, lat, lng, capital }) => {
-    const marker = L.marker([lat, lng])
+  /* SG 완전 동일 스타일: 기본 파란 Leaflet 핀 + 흰 말풍선 팝업
+     autoClose:false + closeOnClick:false → 6개 팝업 동시에 열린 상태 유지 */
+  cities.forEach(({ name, lat, lng }) => {
+    L.marker([lat, lng])
       .addTo(map)
-      .bindPopup(`<b>${name}</b>`);
-    /* 수도(캔버라)는 초기 진입 시 팝업 오픈 (SG의 openPopup() 패턴 동일) */
-    if (capital) marker.openPopup();
+      .bindPopup(`<b>${name}</b>`, { autoClose: false, closeOnClick: false })
+      .openPopup();
   });
 
   /* 지도 크기 재계산: 300ms + 900ms 이중 호출 (CSS flex 확정 타이밍 편차 흡수) */

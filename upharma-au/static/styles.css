@@ -1681,21 +1681,22 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
 }
 
 /* ── Leaflet 지도 컨테이너 (뉴스 패널과 세로 높이 맞춤) ─────────────────────── */
-/* 호주 지도 — 도시명 항상 표시 (Leaflet permanent tooltip, 말풍선 스타일) */
-.leaflet-tooltip.au-city-tooltip {
-  background: rgba(255, 255, 255, 0.96) !important;
-  color: var(--navy) !important;
-  border: 1px solid rgba(23, 63, 120, 0.14) !important;
-  border-radius: 8px !important;
-  padding: 3px 7px !important;
-  font-size: 9.5px !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.02em !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12) !important;
-  line-height: 1.25 !important;
+/* 호주 지도 — 도시 라벨 (화살표 없는 깔끔한 텍스트 레이블) */
+.leaflet-tooltip.au-city-label {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--navy);
+  border: 1px solid rgba(23, 63, 120, 0.18);
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
 }
-.leaflet-tooltip.au-city-tooltip::before {
-  border-top-color: rgba(255, 255, 255, 0.96) !important;
+/* 화살표(말풍선 꼬리) 완전 제거 */
+.leaflet-tooltip.au-city-label::before {
+  display: none !important;
 }
 /* 메인 프리뷰 지도: flex:none 으로 고정 (flex:1+min-height:0 조합이 height:300px를 0으로
    덮어씌우는 문제 해결). 실제 높이는 initAuMap() JS가 getBoundingClientRect 로 설정. */

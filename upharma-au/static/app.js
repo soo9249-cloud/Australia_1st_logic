@@ -673,24 +673,29 @@ function initP2Strategy() {
     btn.addEventListener('click', () => {
       const seg = btn.getAttribute('data-p2-manual-seg') || 'public';
       _p2ManualSeg = seg === 'private' ? 'private' : 'public';
-      _p2AiSeg    = _p2ManualSeg; // AI 탭도 동기화
+      _p2AiSeg    = _p2ManualSeg;
+
+      // 버튼 활성화 (모든 p2-seg-btn 동기화)
       document.querySelectorAll('.p2-seg-btn[data-p2-manual-seg]').forEach((b) => {
         b.classList.toggle('on', b.getAttribute('data-p2-manual-seg') === seg);
       });
-      // 직접입력 탭 힌트
-      const desc = document.getElementById('p2-manual-seg-desc');
-      if (desc) {
-        desc.textContent = _p2ManualSeg === 'public'
-          ? '공공 시장: PBS (의약품급여목록) 기반 AEMP (정부 승인 출고가) 역산 기준'
-          : '민간 시장: Chemist Warehouse · Healthylife 소매가 기반 유통마진 역산 기준';
+
+      // 힌트 텍스트
+      const hintPub  = '공공 시장: PBS (의약품급여목록) 기반 AEMP (정부 승인 출고가) 역산 기준';
+      const hintPri  = '민간 시장: Chemist Warehouse · Healthylife 약국 채널 소매가 기반 역산 기준';
+      const hintText = _p2ManualSeg === 'public' ? hintPub : hintPri;
+      const desc    = document.getElementById('p2-manual-seg-desc');
+      const aiHint  = document.getElementById('p2-ai-seg-hint');
+      if (desc)    desc.textContent   = hintText;
+      if (aiHint)  aiHint.textContent = hintText;
+
+      // ★ AI 결과 캐시가 있으면 바로 해당 시장 결과로 전환
+      if (_p2Cache[seg]) {
+        // 시장 전환 시 옵션 초기화
+        ['agg', 'avg', 'cons'].forEach(c => { _p2ColData[c] = { opts: [] }; });
+        _renderP2AiResult(_p2Cache[seg]);
       }
-      // AI 탭 힌트
-      const aiHint = document.getElementById('p2-ai-seg-hint');
-      if (aiHint) {
-        aiHint.textContent = _p2ManualSeg === 'public'
-          ? '공공 시장: PBS (의약품급여목록) 기반 AEMP (정부 승인 출고가) 역산 기준'
-          : '민간 시장: Chemist Warehouse · Healthylife 소매가 기반 유통마진 역산 기준';
-      }
+
       if (typeof _renderP2Manual === 'function') _renderP2Manual();
     });
   });
@@ -1121,26 +1126,22 @@ function closeP2ColModal() {
 }
 
 /**
- * 공공/민간 캐시 전환 토글 버튼 렌더링.
- * _p2Cache 에 결과가 하나라도 있을 때 #p2-cache-toggle-row 에 버튼 표시.
+ * 공공/민간 전환 — p2-seg-btn 이 직접 처리하므로 별도 토글 행 불필요.
+ * AI 완료 후 버튼에 ✓ 표시 + 현재 활성 세그먼트 on 클래스 동기화.
  */
 function _renderP2CacheToggle() {
-  const container = document.getElementById('p2-cache-toggle-row');
-  if (!container) return;
   const hasPub = !!_p2Cache.public;
   const hasPri = !!_p2Cache.private;
-  if (!hasPub && !hasPri) { container.style.display = 'none'; return; }
-  container.style.display = 'flex';
-  container.innerHTML =
-    `<span class="p2-cache-toggle-label">결과 보기:</span>
-     <button class="p2-cache-seg-btn ${_p2AiSeg === 'public'  ? 'on' : ''}"
-             onclick="switchP2CacheSeg('public')"
-             ${hasPub ? '' : 'disabled'}
-             type="button">공공 시장 ${hasPub ? '✓' : '(미실행)'}</button>
-     <button class="p2-cache-seg-btn ${_p2AiSeg === 'private' ? 'on' : ''}"
-             onclick="switchP2CacheSeg('private')"
-             ${hasPri ? '' : 'disabled'}
-             type="button">민간 시장 ${hasPri ? '✓' : '(미실행)'}</button>`;
+  const BASE_LABELS = { public: '공공 시장', private: '민간 시장' };
+
+  document.querySelectorAll('.p2-seg-btn[data-p2-manual-seg]').forEach((b) => {
+    const s    = b.getAttribute('data-p2-manual-seg');
+    const done = s === 'public' ? hasPub : hasPri;
+    // 텍스트: 기본 레이블 + 완료 시 ✓
+    b.textContent = BASE_LABELS[s] + (done ? ' ✓' : '');
+    // 활성 클래스
+    b.classList.toggle('on', s === _p2AiSeg);
+  });
 }
 
 /**
@@ -1162,7 +1163,7 @@ function switchP2CacheSeg(seg) {
   if (aiHint) {
     aiHint.textContent = seg === 'public'
       ? '공공 시장: PBS (의약품급여목록) 기반 AEMP (정부 승인 출고가) 역산 기준'
-      : '민간 시장: Chemist Warehouse · Healthylife 소매가 기반 유통마진 역산 기준';
+      : '민간 시장: Chemist Warehouse · Healthylife 약국 채널 소매가 기반 역산 기준';
   }
   // 캐시된 결과 재렌더
   _renderP2AiResult(_p2Cache[seg]);

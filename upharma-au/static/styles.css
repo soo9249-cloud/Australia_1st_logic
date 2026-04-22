@@ -1174,15 +1174,22 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   letter-spacing: -.04em;
   line-height: 1;
 }
-.p2-seg-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-.p2-seg-btn {
-  height: 34px; padding: 0 12px; border-radius: 10px;
-  background: rgba(23,63,120,.08); color: var(--navy);
-  font-size: 12px; font-weight: 800; cursor: pointer;
-  transition: background .15s; font-family: inherit;
-  border: none;
+.p2-seg-row {
+  display: flex; align-items: center; margin-bottom: 12px;
+  background: rgba(23,63,120,.08); border-radius: 999px;
+  padding: 3px; gap: 0;
 }
-.p2-seg-btn.on { background: var(--navy); color: #fff; }
+.p2-seg-btn {
+  flex: 1; height: 30px; padding: 0 14px; border-radius: 999px;
+  background: transparent; color: var(--muted);
+  font-size: 12px; font-weight: 800; cursor: pointer;
+  transition: background .2s, color .2s, box-shadow .2s;
+  font-family: inherit; border: none; white-space: nowrap;
+}
+.p2-seg-btn.on {
+  background: var(--navy); color: #fff;
+  box-shadow: 0 2px 8px rgba(23,63,120,.22);
+}
 
 .p2-market-hint {
   font-size: 11px;
@@ -1823,30 +1830,16 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
 ══════════════════════════════════════════════════════════════════════════ */
 .p2-three-col {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 14px;
-  align-items: start;
-  overflow-x: clip;
-  overflow-y: visible;
-  min-height: min-content;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
 }
 .p2-col {
   background: var(--card);
   border-radius: 14px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   box-shadow: var(--sh2);
   border-top: 3px solid transparent;
-  min-height: 0;
-  min-width: 0;
-  max-width: 100%;
-  overflow-x: hidden;
-  overflow-y: visible;
-  box-sizing: border-box;
 }
 .p2-col--agg  { border-top-color: var(--orange); }
 .p2-col--avg  { border-top-color: var(--navy); }
@@ -2873,9 +2866,7 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
 /* ══════════════════════════════════════════════════════════════════════════
    추가 — P2 시나리오 카드 상단 색 테두리 (저가/기준가/프리미엄)
 ══════════════════════════════════════════════════════════════════════════ */
-.p2-col--agg  { border-top: 3px solid var(--orange); }
-.p2-col--avg  { border-top: 3px solid var(--navy);   }
-.p2-col--cons { border-top: 3px solid var(--green);  }
+/* p2-col--agg/avg/cons border-top 은 위 블록(line ~1858)에서 이미 선언 — 중복 제거 */
 
 /* ══════════════════════════════════════════════════════════════════════════
    추가 — P2 공공/민간 결과 캐시 전환 토글 버튼

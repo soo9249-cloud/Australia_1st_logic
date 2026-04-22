@@ -532,12 +532,16 @@ function renderReportTab() {
     const innSpan = r.inn
       ? ` <span style="font-weight:400;color:var(--muted);font-size:12px;">· ${_escHtml(r.inn)}</span>`
       : '';
-    const dlBtn = r.hasPdf
-      ? `<a class="btn-download"
-            href="/api/report/download${r.pdf_name ? `?name=${encodeURIComponent(r.pdf_name)}` : ''}"
+    // pdf_name 누락이면 /api/report/download(무 name) → 서버가 mtime 최신(다른 단계) PDF 를 줄 수 있음
+    const dlBtn =
+      r.hasPdf && r.pdf_name
+        ? `<a class="btn-download"
+            href="/api/report/download?name=${encodeURIComponent(r.pdf_name)}"
             target="_blank"
             style="padding:7px 14px;font-size:12px;flex-shrink:0;">PDF</a>`
-      : '';
+        : r.hasPdf
+          ? `<span class="p3-pdf-broken" style="font-size:11px;color:var(--muted);padding:7px 0;">PDF(파일명 누락·재실행)</span>`
+          : '';
     const delBtn = `<button class="btn-report-del" onclick="deleteReportEntry(${r.id})" title="보고서 삭제">×</button>`;
 
     return `
@@ -1591,11 +1595,12 @@ function _syncP2ReportsOptions() {
     aiSelect.value = _p2AiSelectedReportId;
   }
 
-  /* 바이어 발굴 드롭다운 동기화 (03 컬럼: 수출전략 보고서만) */
+  /* 바이어 발굴 드롭다운 동기화 (03: 품목 ID·메타는 02에서 저장된 P2 엔트리로 연동) */
   const p3Select = document.getElementById('p3-report-select');
   if (p3Select) {
     const p3Curr = p3Select.value;
-    p3Select.innerHTML = '<option value="">수출전략 보고서를 선택하세요.</option>' + p2ReportOpts;
+    p3Select.innerHTML =
+      '<option value="">02(수출가격)에서 저장한 보고서(동일 품목)를 선택</option>' + p2ReportOpts;
     if (p2Reports.some((r) => String(r.id) === String(p3Curr))) p3Select.value = p3Curr;
     /* 최신 보고서 자동 선택 (분석 직후 편의) */
     else if (p2Reports.length > 0) p3Select.value = String(p2Reports[0].id);
@@ -2900,7 +2905,7 @@ resetProgress();
   function renderBuyerListItem(buyer, idx) {
     return `
       <li class="p3-buyer-item" onclick="openBuyerCard(${idx})">
-        <span class="p3-buyer-rank">${buyer.rank || idx + 1}</span>
+        <span class="p3-buyer-rank">${idx + 1}</span>
         <span class="p3-buyer-name">${escHtml(buyer.company_name || '—')}</span>
         <span class="p3-buyer-arrow">›</span>
       </li>`;
@@ -2955,7 +2960,7 @@ resetProgress();
 
     modal.innerHTML = `
       <div class="buyer-card-header">
-        <span class="buyer-card-rank">#${buyer.rank || idx + 1}</span>
+        <span class="buyer-card-rank">#${idx + 1}</span>
         <span class="buyer-card-name">${escHtml(buyer.company_name || '—')}</span>
         <button class="buyer-card-close" onclick="closeBuyerCard()" title="닫기">×</button>
       </div>
@@ -3333,6 +3338,13 @@ resetProgress();
 
       // 바이어 발굴 보고서 탭 자동 등록
       const _p3Prd = pid;
+      const _p3FromUrl = (u) => {
+        const s = String(u || '');
+        const m = s.match(/[?&]name=([^&]+)/);
+        if (!m) return '';
+        try { return decodeURIComponent(m[1]); } catch (e) { return m[1] || ''; }
+      };
+      const _p3Pdf = result.pdf_filename || result.pdf || _p3FromUrl(result.download_url);
       const _p3Entry = {
         id:           Date.now(),
         product_id:   _p3Prd,
@@ -3342,8 +3354,8 @@ resetProgress();
         inn:          (typeof INN_MAP !== 'undefined' ? (INN_MAP[_p3Prd] || '') : ''),
         verdict:      '—',
         timestamp:    new Date().toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
-        hasPdf:       !!(result.download_url || result.pdf),
-        pdf_name:     result.pdf || '',
+        hasPdf:       !!(_p3Pdf || result.download_url),
+        pdf_name:     _p3Pdf,
       };
       const _p3Reports = (function() { try { return JSON.parse(localStorage.getItem(REPORTS_LS_KEY) || '[]'); } catch { return []; } })();
       _p3Reports.unshift(_p3Entry);
@@ -3459,29 +3471,58 @@ resetProgress();
 })();
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   최종 보고서 다운로드 (시장조사 + 수출가격전략 + 바이어 발굴 병합)
-   백엔드: /api/final-report (POST) — 미구현 시 안내 메시지 표시
+   최종 보고서 다운로드 (README: 표지 + P2 + P3 + P1) — POST /api/final-report
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function _finalReportDetail(data) {
+  if (!data || data.detail == null) return '';
+  if (typeof data.detail === 'string') return data.detail;
+  if (Array.isArray(data.detail)) {
+    return data.detail.map((x) => (x && (x.msg || x.message)) || String(x)).join(' ');
+  }
+  return String(data.detail);
+}
+
 window.downloadFinalReport = async function () {
   const btn = document.getElementById('p3-final-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ 생성 중…'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ 생성 중…'; }
+  // triggerBuyerDiscovery 와 동일: P2 연동 드롭다운 → report 엔트리의 product_id, 없으면 품목 셀렉터
+  let product_id = '';
+  const p3Rpt = document.getElementById('p3-report-select');
+  if (p3Rpt && p3Rpt.value) {
+    const rpt = _loadReports().find((r) => String(r.id) === String(p3Rpt.value));
+    if (rpt && rpt.product_id) product_id = String(rpt.product_id).trim();
+  }
+  if (!product_id) {
+    const ps = document.getElementById('product-select');
+    if (ps && ps.value && !String(ps.value).startsWith('_')) product_id = String(ps.value).trim();
+  }
   try {
     const res = await fetch('/api/final-report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify(product_id ? { product_id } : {}),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.pdf) throw new Error(data.detail || `HTTP ${res.status}`);
-    window.open('/api/report/download?name=' + encodeURIComponent(data.pdf), '_blank');
-  } catch (err) {
-    // 백엔드 미구현 안내 (404 등)
+    const name = (data && (data.pdf || data.pdf_filename)) || '';
+    if (!res.ok || !name) {
+      const detail = _finalReportDetail(data) || `HTTP ${res.status}`;
+      throw new Error(detail);
+    }
+    window.open('/api/report/download?name=' + encodeURIComponent(name), '_blank');
     if (typeof showToast === 'function') {
-      showToast('최종 보고서 병합 기능은 백엔드 연동 후 사용 가능합니다.');
+      showToast('최종 PDF 가 생성되었습니다. (reports/ ' + name + ')');
+    }
+  } catch (err) {
+    const msg = err && err.message ? err.message : String(err);
+    if (typeof showToast === 'function') {
+      showToast('최종 보고서: ' + msg);
     } else {
-      alert('최종 보고서 생성 실패: ' + err.message);
+      alert('최종 보고서 생성 실패: ' + msg);
     }
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '📋 최종 보고서 다운로드'; }
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '↓ 최종 보고서<br>다운로드';
+    }
   }
 };

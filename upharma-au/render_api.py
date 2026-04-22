@@ -4653,7 +4653,8 @@ def download_report(
     """reports/ 디렉토리의 PDF 를 반환.
     - inline=1: Content-Disposition: inline → 브라우저 iframe 에서 PDF 뷰어로 표시
     - inline=0(기본): attachment → 파일 다운로드
-    name 미지정 시 au_report_*·au_p2_report_* 중 수정 시각 최신 파일 반환.
+    name 미지정 시 *단계 구분 없이* au_report_*·au_p2_report_*·au_buyers_*·
+    au_final_report_* 중 **수정 시각 최신** 1개를 반환(혼동 주의. 단계별는 name 필수).
     """
     root = _REPORTS_DIR.resolve()
     if name and str(name).strip():
@@ -5022,7 +5023,11 @@ def p3_buyers_result(job_id: str = Query(...)) -> JSONResponse:
         raise HTTPException(status_code=500, detail=f"결과 로드 실패: {exc}") from exc
 
     data["job_id"] = job_id
-    data["pdf_filename"] = st.get("pdf_filename")
+    _pfn = st.get("pdf_filename")
+    data["pdf_filename"] = _pfn
+    # 하위호환: 프론트에서 result.pdf 를 읽는 예전 스크립트
+    if _pfn:
+        data["pdf"] = _pfn
     data["download_url"] = st.get("download_url")
     return JSONResponse(data)
 
@@ -5057,6 +5062,29 @@ def buyers_report_generate(payload: dict[str, Any]) -> JSONResponse:
         "pdf_filename": Path(pdf_path).name,
         "download_url": f"/api/report/download?name={Path(pdf_path).name}&inline=1",
     })
+
+
+def _product_id_from_report_basename(filename: str) -> str | None:
+    """reports PDF 파일명에서 product_id 추출. public/private 이 파일명에 끼는 경우(p2) 처리."""
+    stem = Path(str(filename).strip()).stem
+    for pfx in ("au_report_", "au_p2_report_", "au_buyers_"):
+        if stem.lower().startswith(pfx):
+            rest = stem[len(pfx) :]
+            break
+    else:
+        return None
+    m2 = re.match(
+        r"^(.+)_(\d{8})_(\d{6})(?:\([0-9]+\))?$",
+        rest,
+    )
+    if not m2:
+        return None
+    mid = m2.group(1)
+    for seg in ("_public", "_private"):
+        if mid.lower().endswith(seg):
+            mid = mid[: -len(seg)]
+            break
+    return mid.strip() or None
 
 
 def _infer_product_id_for_final_report(payload: dict[str, Any] | None) -> str | None:
@@ -5126,10 +5154,9 @@ def _infer_product_id_for_final_report(payload: dict[str, Any] | None) -> str | 
         files.extend(_REPORTS_DIR.glob(pat))
     if files:
         latest = max(files, key=lambda p: p.stat().st_mtime)
-        name = latest.name
-        m = _re.search(r"(?:au_report_|au_p2_report_|au_buyers_)(.+?)_\d{8}_\d{6}", name, _re.I)
-        if m:
-            return m.group(1)
+        pid2 = _product_id_from_report_basename(latest.name)
+        if pid2:
+            return pid2
     return None
 
 
@@ -5304,7 +5331,11 @@ def final_report_generate(payload: dict[str, Any]) -> JSONResponse:
 
     cover_path = _build_final_cover_pdf(pid)
     from datetime import datetime as _dt
-    from pypdf import PdfMerger
+
+    try:
+        from pypdf import PdfMerger
+    except ImportError:
+        from PyPDF2 import PdfMerger  # type: ignore[no-redef,import-not-found]
 
     final_name = f"au_final_report_{pid}_{_dt.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     final_path = _REPORTS_DIR / final_name
@@ -5315,15 +5346,21 @@ def final_report_generate(payload: dict[str, Any]) -> JSONResponse:
         _REPORTS_DIR / p3_name,
         _REPORTS_DIR / p1_name,
     ]
+    merger = None
     try:
         merger = PdfMerger()
         for p in merge_paths:
             merger.append(str(p))
         merger.write(str(final_path))
-        merger.close()
+        logger.info("최종 PDF 병합 완료: %s (품목 %s)", final_path, pid)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"최종 병합 실패: {exc}") from exc
     finally:
+        if merger is not None:
+            try:
+                merger.close()
+            except Exception:
+                pass
         try:
             cover_path.unlink(missing_ok=True)
         except Exception:

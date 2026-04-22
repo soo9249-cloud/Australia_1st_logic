@@ -1691,23 +1691,248 @@ def _claude_blocks_schema():
 
 
 def _row_summary_for_llm(row: dict[str, Any]) -> dict[str, Any]:
-    """LLM 프롬프트에 넣을 지정 컬럼 + 판정·가격 출처 보조 필드를 추려서 반환."""
+    """LLM 프롬프트에 넣을 지정 컬럼 + 판정·가격 출처 보조 필드를 추려서 반환.
+
+    au_products v2( tga_sponsors, tga_artg_ids, pbs_code, aemp_aud, dpmq_aud )는
+    반드시 포함해야 시장보고서 v8 의 TGA/경쟁 서술이 '미확보'·빈 표로만 나오지 않는다.
+    (기존에는 v1 키만 보내 v2 행이 대부분 null 로 보였음.)
+    """
     keys = [
         "product_name_ko",
-        "product_code",  # DB 품목 코드 (있으면)
-        "artg_status", "artg_number", "tga_schedule", "tga_sponsor",
-        "pbs_listed", "pbs_item_code", "pbs_price_aud", "pbs_dpmq",
-        "pbs_patient_charge", "pbs_brand_name", "pbs_innovator",
+        "product_code",
+        # TGA — v1 + v2
+        "artg_status",
+        "artg_number",
+        "tga_schedule",
+        "tga_sponsor",
+        "tga_found",
+        "tga_artg_ids",
+        "tga_sponsors",
+        "match_type",
+        # PBS / 가격 — v1(별칭) + v2 원본(중복이어도 LLM이 수치·코드 맞출 수 있게)
+        "pbs_listed",
+        "pbs_found",
+        "pbs_item_code",
+        "pbs_code",
+        "pbs_price_aud",
+        "aemp_aud",
+        "pbs_dpmq",
+        "dpmq_aud",
+        "pbs_dpmq_aud",
+        "pbs_patient_charge",
+        "pbs_brand_name",
+        "pbs_innovator",
         "pbs_formulary",
-        "retail_price_aud", "price_source_name", "retail_estimation_method",
-        "export_viable", "reason_code", "nsw_note",
-        "inn_normalized", "dosage_form", "strength", "hs_code_6",
-        # 시드·메타가 row에 붙은 경우만 — PBAC/철수 사실 전달용(해석 단정 금지는 시스템 프롬프트)
+        "pbs_brands",
+        "top_generics",
+        "competitor_count",
+        "retail_price_aud",
+        "price_source_name",
+        "retail_estimation_method",
+        "export_viable",
+        "reason_code",
+        "nsw_note",
+        "inn_normalized",
+        "dosage_form",
+        "strength",
+        "hs_code_6",
+        "originator_brand_name",
+        "originator_sponsor",
         "pbac_superiority_required",
         "commercial_withdrawal_flag",
         "commercial_withdrawal_year",
     ]
     return {k: row.get(k) for k in keys}
+
+
+def _v8_competitor_rows_from_row(row: dict[str, Any]) -> list[dict[str, str]]:
+    """PBS·TGA가 row에 있으면 경쟁 브랜드 절(1-2)용 {role, detail} 후보를 만든다."""
+    out: list[dict[str, str]] = []
+    obn = (row.get("originator_brand_name") or row.get("originator_brand") or "") or ""
+    if str(obn).strip() and str(obn).strip().lower() not in ("none", "null", "false"):
+        out.append(
+            {
+                "role": "PBS·오리지네이터(원천) 브랜드",
+                "detail": str(obn).strip()[:500],
+            }
+        )
+    brs = row.get("pbs_brands")
+    if isinstance(brs, list):
+        for i, b in enumerate(brs[:4]):
+            if isinstance(b, str) and b.strip():
+                out.append(
+                    {
+                        "role": f"동일 스케줄·공시 브랜드({i + 1})",
+                        "detail": b.strip()[:500],
+                    }
+                )
+            elif isinstance(b, dict):
+                nm = b.get("name") or b.get("brand") or b.get("brand_name")
+                if nm:
+                    out.append(
+                        {
+                            "role": "PBS 품목(크롤)",
+                            "detail": str(nm).strip()[:500],
+                        }
+                    )
+    tga_ids = row.get("tga_artg_ids")
+    if isinstance(tga_ids, list) and tga_ids:
+        out.append(
+            {
+                "role": "TGA ARTG(호주 등록)",
+                "detail": ", ".join(str(x) for x in tga_ids[:4]),
+            }
+        )
+    sps = row.get("tga_sponsors")
+    if isinstance(sps, list) and sps:
+        s0: Any = sps[0]
+        sp = s0 if isinstance(s0, str) else (s0.get("name") if isinstance(s0, dict) else str(s0))
+        if sp:
+            out.append(
+                {
+                    "role": "스폰서(등록·유통·크롤)",
+                    "detail": str(sp).strip()[:500],
+                }
+            )
+    pbs_c = str(row.get("pbs_code") or row.get("pbs_item_code") or "").strip()
+    if not out and pbs_c:
+        out.append(
+            {
+                "role": "PBS 코드(급여)",
+                "detail": f"PBS 코드 {pbs_c} — 상세 브랜드 목록은 PBS 일람·크롤 `pbs_brands` 필드 확보 시 보강 가능",
+            }
+        )
+    return out[:6]
+
+
+def _v8_market_structure_from_row(row: dict[str, Any]) -> str:
+    """시장 구도(1-3) 짧은 서술 — DB 사실만."""
+    parts: list[str] = []
+    if row.get("pbs_found") is True or row.get("pbs_listed") is True:
+        parts.append("PBS(공공급여) 스케줄 등재·처방·조제 채널")
+    if row.get("tga_found") is True or (str(row.get("artg_status") or "").lower() == "registered"):
+        parts.append("TGA(ARTG) 등록 의약품")
+    cc = row.get("competitor_count")
+    if cc is not None:
+        try:
+            parts.append(f"크롤·메타 기준 경쟁·유사 품목 수 약 {int(cc)}")
+        except Exception:
+            pass
+    mt = row.get("match_type")
+    if mt:
+        parts.append(f"성분/제형 매칭: {mt}")
+    return " · ".join(parts) if parts else ""
+
+
+def _v8_artg_paragraph_from_row(row: dict[str, Any]) -> str:
+    """규제 절 TGA 문단 — DB에 있으면만 연결."""
+    bits: list[str] = []
+    an = row.get("artg_number")
+    if an:
+        bits.append(f"대표 ARTG(크롤): {an}")
+    tga_ids = row.get("tga_artg_ids")
+    if isinstance(tga_ids, list) and tga_ids:
+        bits.append("ARTG ID: " + ", ".join(str(x) for x in tga_ids[:5]))
+    sps = row.get("tga_sponsors")
+    if isinstance(sps, list) and sps:
+        s0: Any = sps[0]
+        sp = s0 if isinstance(s0, str) else (s0.get("name") if isinstance(s0, dict) else str(s0))
+        if sp:
+            bits.append("스폰서(크롤): " + str(sp).strip()[:200])
+    if bits:
+        return " · ".join(bits)
+    if row.get("tga_found") is True and not bits:
+        return "TGA 등록은 있으나(`tga_found`) ARTG/스폰서 문자열은 row에 비어 있음 — 크롤 재수집 권장"
+    return ""
+
+
+def _v8_price_snapshot_from_row(
+    d: dict[str, Any], row: dict[str, Any]
+) -> tuple[dict[str, Any], bool]:
+    """price_snapshot.aemp·dpmq·코드가 비었으면 row(숫자)로 채운다."""
+    ps = d.get("price_snapshot")
+    if not isinstance(ps, dict):
+        return d, False
+    changed = False
+
+    def _fmt(v: Any) -> str:
+        if v is None or str(v).strip() in ("", "None", "null"):
+            return ""
+        if isinstance(v, (int, float)):
+            return f"{float(v):.2f}"
+        return str(v).strip()
+
+    for psk, rkey in (
+        ("aemp_aud", "aemp_aud"),
+        ("aemp_usd", "aemp_usd"),
+        ("dpmq_aud", "dpmq_aud"),
+        ("dpmq_usd", "dpmq_usd"),
+    ):
+        if (ps.get(psk) or "").strip():
+            continue
+        st = _fmt(row.get(rkey))
+        if st:
+            ps[psk] = st
+            changed = True
+    pbc = str(row.get("pbs_code") or row.get("pbs_item_code") or "").strip()
+    if pbc and not (ps.get("pbs_code") or "").strip():
+        ps["pbs_code"] = pbc
+        changed = True
+    if not (ps.get("market_class") or "").strip() and (
+        row.get("pbs_found") is True or row.get("pbs_listed") is True
+    ):
+        ps["market_class"] = "공공(PBS) 등재"
+        changed = True
+    d["price_snapshot"] = ps
+    return d, changed
+
+
+def _enrich_v8_blocks_from_au_row(blocks: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
+    """Haiku 시장보고서 v8 출력을 au_products row로 보강(빈 표·미확보 완화)."""
+    from stage1_schema import MarketAnalysisV8, is_v8_market_blocks
+
+    if not blocks or not is_v8_market_blocks(blocks):
+        return blocks
+    try:
+        v8 = MarketAnalysisV8.model_validate(blocks)
+    except Exception:
+        return blocks
+    d: dict[str, Any] = v8.model_dump()
+    changed = False
+    cbs = d.get("competitor_brands") or []
+    has_comp = any(
+        (isinstance(c, dict) and ((c.get("role") or "").strip() or (c.get("detail") or "").strip()))
+        for c in cbs
+    )
+    if not has_comp:
+        new_cb = _v8_competitor_rows_from_row(row)
+        if new_cb:
+            d["competitor_brands"] = new_cb
+            changed = True
+    ms = d.get("market_structure")
+    if isinstance(ms, dict):
+        p = (ms.get("paragraph") or "").strip()
+        if len(p) < 6 or p.startswith("미확보") or p == "미확보.":
+            alt = _v8_market_structure_from_row(row)
+            if alt:
+                d["market_structure"] = {**ms, "paragraph": alt, "tag": (ms.get("tag") or "").strip() or "크롤·DB"}
+                changed = True
+    rr = d.get("regulatory_risk")
+    if isinstance(rr, dict):
+        ap0 = (rr.get("artg_paragraph") or "").strip()
+        if len(ap0) < 12 or ap0.startswith("미확보") or "미확보" in ap0[:8]:
+            apn = _v8_artg_paragraph_from_row(row)
+            if apn:
+                d["regulatory_risk"] = {**rr, "artg_paragraph": apn}
+                changed = True
+    d, c2 = _v8_price_snapshot_from_row(d, row)
+    changed = changed or c2
+    if not changed:
+        return blocks
+    try:
+        return MarketAnalysisV8.model_validate(d).model_dump()
+    except Exception:
+        return blocks
 
 
 def _anthropic_tool_input_schema(schema_cls: Any) -> dict[str, Any]:
@@ -2875,6 +3100,8 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
 
     # 2) Claude Haiku 4.5 호출 — 크롤링 row 해석 → 10개 블록 생성
     blocks = _claude_generate_blocks(row, anthropic_key)
+    # 2b) v8이 경쟁·시장·TGA·가격 스냅샷을 비우는 경우, 동일 row(au_products)로 보강
+    blocks = _enrich_v8_blocks_from_au_row(blocks, row)
 
     # 3) 하이브리드 논문 검색 — Semantic Scholar → PubMed → Perplexity 순 폴백
     #    카테고리당 1개씩 총 3개 공신력 있는 출처 (논문 우선).

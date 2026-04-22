@@ -238,20 +238,23 @@
                           <button class="p2-col-expand-btn" onclick="openP2ColModal('agg')">클릭하여 편집</button>
                         </div>
                         <div class="p2-col-detail" id="p2cd-agg" style="display:none;">
+                          <!-- AI 참조가 (읽기 전용) -->
+                          <div class="p2-col-input-row">
+                            <label class="p2-col-input-label">AI 결과 참조가</label>
+                            <div class="p2-ref-price-box">
+                              <span id="p2ci-ref-aud-agg">—</span> AUD &nbsp;≈&nbsp; <span id="p2ci-ref-usd-agg">—</span> USD
+                            </div>
+                          </div>
+                          <!-- 기준가 (USD, 수동 조정 가능) -->
                           <div class="p2-col-input-row">
                             <label class="p2-col-input-label">기준가 (USD)</label>
-                            <input class="p2-col-input" type="number" id="p2ci-base-agg" value="0" step="0.1" min="0" oninput="recalcP2Col('agg')">
+                            <input class="p2-col-input" type="number" id="p2ci-base-agg" value="0" step="0.01" min="0" oninput="recalcP2Col('agg')">
                           </div>
-                          <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">에이전트 수수료(%)</label>
-                            <input class="p2-col-input" type="number" id="p2ci-fee-agg" value="3.0" step="0.5" min="0" max="50" oninput="recalcP2Col('agg')">
-                          </div>
-                          <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">운임 배수</label>
-                            <input class="p2-col-input" type="number" id="p2ci-freight-agg" value="0.85" step="0.05" min="0.1" max="5" oninput="recalcP2Col('agg')">
-                          </div>
+                          <!-- 시장별 조정 옵션 (openP2ColModal 에서 동적 채움) -->
+                          <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;font-weight:700;">조정 옵션</div>
                           <div id="p2co-agg" class="p2-custom-opts"></div>
                           <button class="p2c-add-btn" onclick="addP2ColOption('agg')">+ 옵션 추가</button>
+                          <div class="p2-col-result-row">계산 결과: <strong id="p2ci-result-agg" style="color:var(--navy);">—</strong></div>
                         </div>
                       </div>
 
@@ -270,19 +273,19 @@
                         </div>
                         <div class="p2-col-detail" id="p2cd-avg" style="display:none;">
                           <div class="p2-col-input-row">
+                            <label class="p2-col-input-label">AI 결과 참조가</label>
+                            <div class="p2-ref-price-box">
+                              <span id="p2ci-ref-aud-avg">—</span> AUD &nbsp;≈&nbsp; <span id="p2ci-ref-usd-avg">—</span> USD
+                            </div>
+                          </div>
+                          <div class="p2-col-input-row">
                             <label class="p2-col-input-label">기준가 (USD)</label>
-                            <input class="p2-col-input" type="number" id="p2ci-base-avg" value="0" step="0.1" min="0" oninput="recalcP2Col('avg')">
+                            <input class="p2-col-input" type="number" id="p2ci-base-avg" value="0" step="0.01" min="0" oninput="recalcP2Col('avg')">
                           </div>
-                          <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">에이전트 수수료(%)</label>
-                            <input class="p2-col-input" type="number" id="p2ci-fee-avg" value="5.0" step="0.5" min="0" max="50" oninput="recalcP2Col('avg')">
-                          </div>
-                          <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">운임 배수</label>
-                            <input class="p2-col-input" type="number" id="p2ci-freight-avg" value="1.00" step="0.05" min="0.1" max="5" oninput="recalcP2Col('avg')">
-                          </div>
+                          <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;font-weight:700;">조정 옵션</div>
                           <div id="p2co-avg" class="p2-custom-opts"></div>
                           <button class="p2c-add-btn" onclick="addP2ColOption('avg')">+ 옵션 추가</button>
+                          <div class="p2-col-result-row">계산 결과: <strong id="p2ci-result-avg" style="color:var(--navy);">—</strong></div>
                         </div>
                       </div>
 
@@ -301,19 +304,19 @@
                         </div>
                         <div class="p2-col-detail" id="p2cd-cons" style="display:none;">
                           <div class="p2-col-input-row">
+                            <label class="p2-col-input-label">AI 결과 참조가</label>
+                            <div class="p2-ref-price-box">
+                              <span id="p2ci-ref-aud-cons">—</span> AUD &nbsp;≈&nbsp; <span id="p2ci-ref-usd-cons">—</span> USD
+                            </div>
+                          </div>
+                          <div class="p2-col-input-row">
                             <label class="p2-col-input-label">기준가 (USD)</label>
-                            <input class="p2-col-input" type="number" id="p2ci-base-cons" value="0" step="0.1" min="0" oninput="recalcP2Col('cons')">
+                            <input class="p2-col-input" type="number" id="p2ci-base-cons" value="0" step="0.01" min="0" oninput="recalcP2Col('cons')">
                           </div>
-                          <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">에이전트 수수료(%)</label>
-                            <input class="p2-col-input" type="number" id="p2ci-fee-cons" value="10.0" step="0.5" min="0" max="50" oninput="recalcP2Col('cons')">
-                          </div>
-                          <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">운임 배수</label>
-                            <input class="p2-col-input" type="number" id="p2ci-freight-cons" value="1.20" step="0.05" min="0.1" max="5" oninput="recalcP2Col('cons')">
-                          </div>
+                          <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;font-weight:700;">조정 옵션</div>
                           <div id="p2co-cons" class="p2-custom-opts"></div>
                           <button class="p2c-add-btn" onclick="addP2ColOption('cons')">+ 옵션 추가</button>
+                          <div class="p2-col-result-row">계산 결과: <strong id="p2ci-result-cons" style="color:var(--navy);">—</strong></div>
                         </div>
                       </div>
 

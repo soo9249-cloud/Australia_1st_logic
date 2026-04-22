@@ -1023,25 +1023,83 @@ let _modalOrigParent   = null;
  * p2cd-{col} 요소를 DOM에서 모달 바디로 이동 후 팝업 오픈.
  * 닫을 때 원래 위치로 복원.
  */
+/**
+ * 시장(공공/민간)별 기본 옵션을 _p2ColData[col]에 미리 채운다 (SG 패턴).
+ * - 이미 옵션이 있거나 같은 시장으로 이미 초기화된 경우 → 유지
+ * - 시장이 바뀐 경우(공공↔민간) → 강제 재초기화
+ *
+ * @param {string} col  'agg' | 'avg' | 'cons'
+ * @param {string} seg  'public' | 'private'
+ */
+function _initP2ColDataForMarket(col, seg) {
+  const existing = _p2ColData[col];
+  // 이미 같은 시장의 옵션이 채워져 있으면 그대로 유지 (사용자 편집 보존)
+  if (existing?.market === seg && existing?.opts?.length) return;
+
+  const impDefaults = { agg: 30, avg: 20, cons: 10 };
+  const agentFee    = { agg: 3.0, avg: 5.0, cons: 10.0 };
+  const imp  = impDefaults[col] ?? 20;
+  const fee  = agentFee[col]  ?? 5.0;
+
+  if (seg === 'public') {
+    // 공공 시장 (PBS AEMP 기반 역산): AI FOB 기준가 → 조정 옵션
+    _p2ColData[col] = { market: 'public', opts: [
+      { id: 'alpha',   name: 'α 조정계수 (AEMP 시장 보정률 — +20% 기본)',          type: 'pct_add',    value: 20.0  },
+      { id: 'importer',name: '수입상 마진 (호주 스폰서 — Importer/Sponsor Margin)', type: 'pct_deduct', value: imp   },
+      { id: 'agent',   name: '에이전트 수수료 (Agent Commission)',                 type: 'pct_deduct', value: fee   },
+    ]};
+  } else {
+    // 민간 시장 (소매가 역산): AI FOB 기준가 → 조정 옵션
+    _p2ColData[col] = { market: 'private', opts: [
+      { id: 'gst',      name: 'GST (소비세 — 처방약 S4 면제 0% / OTC 10%)',         type: 'pct_deduct', value: 0.0   },
+      { id: 'pharmacy', name: '약국 소매 마진 (Pharmacy Markup — 8CPA 기준 15%)',    type: 'pct_deduct', value: 15.0  },
+      { id: 'wholesale',name: '도매 마진 (Wholesale — 1PWA 협정 7.52%)',             type: 'pct_deduct', value: 7.52  },
+      { id: 'importer', name: '수입상 마진 (호주 스폰서 — Importer/Sponsor Margin)', type: 'pct_deduct', value: imp   },
+      { id: 'agent',    name: '에이전트 수수료 (Agent Commission)',                 type: 'pct_deduct', value: fee   },
+    ]};
+  }
+}
+
 function openP2ColModal(col) {
   const detail    = document.getElementById('p2cd-' + col);
   const modal     = document.getElementById('p2-calc-modal');
   const modalBody = document.getElementById('p2-calc-modal-body');
-  if (!detail || !modal || !modalBody) { toggleP2ColDetail(col); return; }
+  if (!detail || !modal || !modalBody) { return; }
 
   _modalActiveCol  = col;
   _modalOrigParent = detail.parentNode;
 
+  // ① AI 결과 참조가 업데이트 (AUD 원본 + USD 환산)
+  const audUsd  = Number(_p2ScenarioRaw.aud_usd) || Number(window._exchangeRates?.aud_usd) || 0;
+  const baseUsd = _p2ScenarioRaw[col] || 0;
+  const baseAud = (_p2ScenarioRaw[col + '_aud']) || (audUsd > 0 ? baseUsd / audUsd : 0);
+  const refAudEl = document.getElementById('p2ci-ref-aud-' + col);
+  const refUsdEl = document.getElementById('p2ci-ref-usd-' + col);
+  if (refAudEl) refAudEl.textContent = baseAud > 0 ? baseAud.toFixed(2) : '—';
+  if (refUsdEl) refUsdEl.textContent = baseUsd > 0 ? baseUsd.toFixed(2) : '—';
+
+  // ② 기준가 초기화 (AI 결과 USD — 사용자가 수동 조정 가능)
+  const baseInput = document.getElementById('p2ci-base-' + col);
+  if (baseInput && baseUsd > 0) baseInput.value = baseUsd.toFixed(2);
+
+  // ③ 시장별 기본 옵션 채우기 (SG 패턴)
+  _initP2ColDataForMarket(col, _p2AiSeg);
+
   detail.style.display = ''; // 인라인 숨김 해제
   modalBody.appendChild(detail); // 모달 바디로 이동
 
+  const segLabel = _p2AiSeg === 'public' ? '공공 시장' : '민간 시장';
   const labels = {
-    agg:  '저가 진입 시나리오 (Penetration Pricing) — 역산 · 옵션 편집',
-    avg:  '기준가 기반 시나리오 (Reference Pricing) — 역산 · 옵션 편집',
-    cons: '프리미엄 시나리오 (Premium Pricing) — 역산 · 옵션 편집',
+    agg:  `저가 진입 시나리오 (Penetration Pricing) · ${segLabel}`,
+    avg:  `기준가 기반 시나리오 (Reference Pricing) · ${segLabel}`,
+    cons: `프리미엄 시나리오 (Premium Pricing) · ${segLabel}`,
   };
   const titleEl = document.getElementById('p2-calc-modal-title');
   if (titleEl) titleEl.textContent = labels[col] || '역산 · 옵션 편집';
+
+  // ④ 옵션 목록 렌더 + 재계산
+  renderP2ColOptions(col);
+  recalcP2Col(col);
 
   modal.style.display = 'flex';
 }
@@ -1093,6 +1151,8 @@ function switchP2CacheSeg(seg) {
   if (!_p2Cache[seg]) return;
   _p2AiSeg    = seg;
   _p2ManualSeg = seg;
+  // 시장 전환 시 옵션 초기화 → 다음 modal 오픈 때 시장별 기본값 재적용
+  ['agg', 'avg', 'cons'].forEach(c => { _p2ColData[c] = { opts: [] }; });
   // 세그먼트 버튼 활성화 동기화
   document.querySelectorAll('.p2-seg-btn[data-p2-manual-seg]').forEach((b) => {
     b.classList.toggle('on', b.getAttribute('data-p2-manual-seg') === seg);
@@ -1148,39 +1208,55 @@ function _p2ApplyOptToPrice(price, type, rawVal) {
   return price;
 }
 
-/* P2 3열 카드: 기준가/수수료/운임/커스텀옵션 변경 시 가격 재계산 — 확정 옵션 + 미확정 초안 행 모두 상단 메인 금액에 반영 */
+/**
+ * P2 3열 카드 가격 재계산 (SG 패턴).
+ * 기준가(USD) + _p2ColData[col].opts 의 % 옵션을 순서대로 적용.
+ * 모달 미열림 시 → _p2ScenarioRaw[col] 그대로 표시(옵션 없음).
+ */
 function recalcP2Col(col) {
-  const base    = parseFloat(document.getElementById('p2ci-base-' + col)?.value || 0);
-  const fee     = parseFloat(document.getElementById('p2ci-fee-' + col)?.value || 0);
-  const freight = parseFloat(document.getElementById('p2ci-freight-' + col)?.value || 1);
+  const audUsd = Number(_p2ScenarioRaw.aud_usd) || Number(window._exchangeRates?.aud_usd) || 0;
+  const audKrw = Number(_p2ScenarioRaw.aud_krw) || 0;
+  const usdKrw = audUsd > 0 ? audKrw / audUsd : 0;
 
-  let price = base * (1 - fee / 100) * freight;
+  // 기준가: 모달이 열려 있으면 p2ci-base-{col} 값, 아니면 AI 결과 그대로
+  const rawBase  = parseFloat(document.getElementById('p2ci-base-' + col)?.value);
+  let priceUsd   = (rawBase > 0) ? rawBase : (_p2ScenarioRaw[col] || 0);
 
+  // _p2ColData 옵션 적용 (pct_add/pct_deduct/multiply/abs_add)
   const opts = _p2ColData[col]?.opts || [];
   for (const opt of opts) {
-    price = _p2ApplyOptToPrice(price, opt.type, opt.value);
+    const v = Number(opt.value ?? 0);
+    if      (opt.type === 'pct_add')    priceUsd *= (1 + v / 100);
+    else if (opt.type === 'pct_deduct') priceUsd *= (1 - v / 100);
+    else if (opt.type === 'multiply')   priceUsd *= v;
+    else if (opt.type === 'abs_add')    priceUsd += v;
   }
+
+  // 미확정 초안 행 적용
   const drafts = _p2ColPendingDrafts[col] || [];
   for (const d of drafts) {
-    const rid = String(d.id).replace(/[^a-zA-Z0-9_-]/g, '') || 'd0';
+    const rid  = String(d.id).replace(/[^a-zA-Z0-9_-]/g, '') || 'd0';
     const type = document.getElementById('p2c-newtype-' + col + '-' + rid)?.value || 'pct_deduct';
-    const raw = document.getElementById('p2c-newval-' + col + '-' + rid)?.value;
+    const raw  = document.getElementById('p2c-newval-' + col + '-' + rid)?.value;
     if (raw === undefined || raw === '') continue;
-    price = _p2ApplyOptToPrice(price, type, raw);
+    priceUsd = _p2ApplyOptToPrice(priceUsd, type, raw);
   }
-  price = Math.max(0, price);
+  priceUsd = Math.max(0, priceUsd);
 
-  // 기준가·수수료·운임은 모두 USD 기준 가격에 곱하기/나누기(비율)로 적용.
-  // 보조줄: KRW / AUD 한 줄 슬러시 구분
-  const usdKrw = Number(_p2ScenarioRaw.usd_krw) || 0;
-  const audUsd = Number(_p2ScenarioRaw.aud_usd) || 0;
-  const krwTxt = usdKrw > 0 ? `${Math.round(price * usdKrw).toLocaleString('ko-KR')}원` : '—';
-  const audTxt = audUsd > 0 ? `${(price / audUsd).toFixed(2)} AUD` : '';
-
+  // 카드 상단 가격 갱신
+  const krwTxt  = usdKrw > 0 ? `${Math.round(priceUsd * usdKrw).toLocaleString('ko-KR')}원` : '—';
+  const audTxt  = audUsd > 0 ? `${(priceUsd / audUsd).toFixed(2)} AUD` : '';
   const priceEl = document.getElementById('p2c-price-' + col);
-  const subEl   = document.getElementById('p2c-sub-' + col);
-  if (priceEl) priceEl.textContent = price.toFixed(2);
+  const subEl   = document.getElementById('p2c-sub-'   + col);
+  if (priceEl) priceEl.textContent = priceUsd.toFixed(2);
   if (subEl)   subEl.textContent   = audTxt ? `${krwTxt} / ${audTxt}` : krwTxt;
+
+  // 모달 내 계산 결과 줄 (열려 있을 때만)
+  const resultEl = document.getElementById('p2ci-result-' + col);
+  if (resultEl) {
+    const audStr = audUsd > 0 ? ` · ${(priceUsd / audUsd).toFixed(2)} AUD` : '';
+    resultEl.textContent = priceUsd > 0 ? `${priceUsd.toFixed(2)} USD${audStr}` : '—';
+  }
 }
 
 /* P2 컬럼 커스텀 옵션 렌더링 — 확정 옵션 + 미확정 초안 행(여러 줄 가능) */
@@ -1190,16 +1266,16 @@ function renderP2ColOptions(col) {
   const opts = (_p2ColData[col] || { opts: [] }).opts;
   const drafts = _p2ColPendingDrafts[col] || [];
 
-  const typeLabel = { pct_add: '% 가산', pct_deduct: '% 차감', abs_add: 'USD 가산' };
+  const typeLabel = { pct_add: '% 가산', pct_deduct: '% 차감', multiply: '× 배수', abs_add: 'USD 가산' };
 
-  /* 표시만 역순: 나중에 추가한 옵션이 운임 입력에 가깝게(목록 위쪽) 쌓임. 적용 순서(recalc)는 배열 순서 유지 */
-  const displayOpts = opts.slice().reverse();
+  /* 적용 순서(recalc)는 배열 순서 그대로 유지하되, 화면은 원본 순서로 표시 */
+  const displayOpts = opts.slice();
 
   let html = displayOpts.map(opt => `
     <div class="p2c-opt-row">
       <span class="p2c-opt-name">${_escHtml(opt.name)}</span>
       <span class="p2c-opt-type-label">${typeLabel[opt.type] || opt.type}</span>
-      <input class="p2c-opt-val" type="number" value="${opt.value}" step="0.1" min="0"
+      <input class="p2c-opt-val" type="number" value="${opt.value}" step="0.01" min="0"
         onchange="updateP2ColOption('${col}','${_escHtml(opt.id)}',this.value)">
       <button type="button" class="p2c-opt-del" onclick="removeP2ColOption('${col}','${_escHtml(opt.id)}')">×</button>
     </div>`).join('');
@@ -1403,10 +1479,10 @@ function _renderP2AiResult(data) {
 
     const priceEl   = document.getElementById('p2c-price-' + col);
     const subEl     = document.getElementById('p2c-sub-' + col);
-    const baseInput = document.getElementById('p2ci-base-' + col);
+    // baseInput 은 _renderP2ColDetailInputs() 에서 시장별로 초기화 (AUD 기준)
+    // 여기서 USD값을 직접 세팅하면 공공/민간 공식과 단위 충돌 → 제거
 
     if (priceEl)   priceEl.textContent = priceUsd.toFixed(2);
-    if (baseInput) baseInput.value     = priceUsd.toFixed(2);
     if (subEl)     subEl.textContent   = `${fmtKRW(priceKrw)} / ${priceAud.toFixed(2)} AUD`;
 
     // 새 AI 결과 올 때마다 각 컬럼의 커스텀 옵션·미확정 초안 행 초기화

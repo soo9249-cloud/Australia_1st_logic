@@ -38,6 +38,32 @@ class DbReference(BaseModel):
 # ── 시장분석 v8 (Haiku 단일 호출 계층 스키마 · 양식 04191700 v8) ─────────────
 
 
+def _coerce_to_list(v: Any) -> list:
+    """Haiku가 list 필드에 '{}'(str) 또는 {}(dict)를 반환할 때 [] 로 강제 변환.
+
+    Pydantic v2 field_validator(mode='before') 공용 헬퍼.
+    - None / {}(dict) / '{}'(str) / '[]'(str) → []
+    - 유효한 JSON 문자열 → 파싱 후 list이면 반환, 아니면 []
+    - 이미 list → 그대로 반환
+    """
+    if v is None:
+        return []
+    if isinstance(v, list):
+        return v
+    if isinstance(v, dict):
+        return []
+    if isinstance(v, str):
+        s = v.strip()
+        if not s or s in ("{}", "[]"):
+            return []
+        try:
+            parsed = json.loads(s)
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+    return []
+
+
 class VerdictV8(BaseModel):
     category: Literal["가능", "조건부", "불가"] = "조건부"
     narrative: str = ""
@@ -52,6 +78,11 @@ class DiseaseItemV8(BaseModel):
 class MarketOverviewV8(BaseModel):
     paragraph: str = ""
     disease_block: list[DiseaseItemV8] = Field(default_factory=list)
+
+    @field_validator("disease_block", mode="before")
+    @classmethod
+    def _coerce_disease_block(cls, v: Any) -> list:
+        return _coerce_to_list(v)
 
 
 class CompetitorBrandV8(BaseModel):
@@ -107,6 +138,12 @@ class MarketAnalysisV8(BaseModel):
     operational_risk: str = ""
     product_specific_risk: str = ""
     references: list[ReferenceItemV8] = Field(default_factory=list)
+
+    @field_validator("competitor_brands", "references", mode="before")
+    @classmethod
+    def _coerce_list_fields(cls, v: Any) -> list:
+        """Haiku가 list 필드에 '{}'(str) 또는 {}(dict)를 반환할 때 []로 변환."""
+        return _coerce_to_list(v)
 
 
 def flatten_v8_to_legacy_blocks(v8: MarketAnalysisV8 | dict[str, Any]) -> dict[str, str]:

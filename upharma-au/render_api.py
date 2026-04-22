@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -1610,6 +1611,10 @@ _CLAUDE_SYSTEM_PROMPT = (
     "한국어 존댓말('-합니다', '-습니다', '-해주시길 바랍니다')로 채웁니다.\n\n"
     "보고서 제목은 고정: 「한국유나이티드제약 호주 시장분석 보고서」에 대응합니다.\n"
     "회사 표기는 '한국유나이티드제약'만 사용합니다 (UPharma 금지).\n\n"
+    "【분량·최신성 규칙】\n"
+    "- 시장분석 본문은 핵심 정보 중심으로 간결하게 작성해 PDF 기준 1페이지 내에 들어갈 밀도를 목표로 합니다.\n"
+    "- 거시 지표·시장 규모 수치가 필요할 때는 가능하면 2025년 이후 값을 우선 사용하고, 없으면 최신 연도 값을 명시합니다.\n"
+    "- 데이터가 없으면 '미확보'로 표기하며 수치를 추정·창작하지 않습니다.\n\n"
     "【판정 정합】\n"
     "- verdict.category 는 크롤 JSON의 export_viable 과 논리적으로 맞춥니다: "
     "viable → 가능, conditional → 조건부, not_viable → 불가. "
@@ -1886,7 +1891,8 @@ def _claude_generate_blocks(row: dict[str, Any], api_key: str) -> dict[str, Any]
 # 수출 전략 제안서 — Haiku 어댑터
 # ───────────────────────────────────────────────────────────────
 # 입력: 크롤링 row(Supabase) + Stage 2 seed + fob_calculator dispatch_result + segment
-# 출력: 8개 한국어 보고서체 블록
+# 출력: 9개 한국어 보고서체 블록
+#   - block_market_macro   : 국가 거시시장 핵심 요약 (GDP·시장규모·수입의존도)
 #   - block_extract        : 추출정보 요약 (품목·참고가·TGA/PBS 판정)
 #   - block_fob_intro      : 3시나리오 FOB 메타 해설 (왜 이 가격대가 나오는지)
 #   - scenario_penetration : "저가 진입 시나리오(Penetration Pricing)" reason 1~2문장
@@ -1911,6 +1917,9 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "  · scenario_premium      ← scenarios.conservative.fob_aud (고 FOB · Premium)\n"
     "각 scenario_* 문장에는 해당 키의 fob_aud 를 AUD 소수 둘째 자리로 반드시 인용함.\n\n"
     "【필드 정의】\n"
+    "  block_market_macro   : 1문단(3~4문장). 호주 거시시장 핵심만 요약. "
+    "가능하면 2025년 이후 수치(1인당 GDP·의약품 시장 규모·수입 의존도)를 포함하고, "
+    "없으면 최신 연도로 대체하며 연도를 명시.\n"
     "  block_extract        : 1문단(3~5문장). 제품명·참고가(AEMP 또는 retail)·TGA/PBS 판정 요약.\n"
     "  block_fob_intro      : 1문단(3~5문장). dispatch.logic(A 또는 B 등)에 따라 왜 해당 역산 경로인지, "
     "                         3시나리오 FOB(AUD) 범위를 한 줄로 요약.\n"
@@ -1931,6 +1940,11 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "- 위 매핑에 따라 각 scenario_* 에 해당 시나리오의 fob_aud 만 인용 (다른 키의 숫자를 섞지 않음).\n"
     "- pricing_case / warnings / disclaimer 를 논리에 반영.\n"
     "- 모르는 사실은 '제공 데이터 범위 외로 별도 검증 필요함' 으로 명시.\n\n"
+    "【시나리오 근거 차별화 규칙】\n"
+    "- 세 시나리오 근거를 동일 문장 템플릿으로 반복하지 않습니다. 각 시나리오마다 서로 다른 전략 논리를 제시합니다.\n"
+    "- 호주 수출 구조상 스폰서(수입상) 마진이 FOB에 미치는 영향을 최소 1회 이상 명시합니다.\n"
+    "- 품목이 복합제(FDC)이고 현지가 단일 성분 위주라면, 복합제 편의성(복약·채널 운영·포지셔닝)을 근거에 반영합니다.\n"
+    "- 반대로 복합제 근거 데이터가 없으면 단정하지 말고 '별도 검증 필요'를 명시합니다.\n\n"
     "【사실·중립 — PBAC·철수·우월성】\n"
     "- seed.warnings·dispatch.warnings·pricing_case 에 적힌 사실만 반영하고, "
     "그 범위를 넘는 사업 적합성·‘반드시’·‘불가’ 단정은 하지 않습니다.\n"
@@ -1938,11 +1952,12 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "최종 필요 여부·재진입 가능성은 개별 심의·검토 대상임을 밝힙니다.\n"
     "- 독자에게 특정 칸을 직접 채우라고 지시하는 문구는 쓰지 않습니다.\n\n"
     "【품질 규칙】\n"
-    "1. block_extract · block_fob_intro · block_strategy · block_risks · block_positioning 각 3~5문장 (문장 40~100자).\n"
+    "1. block_market_macro 는 3~4문장, 나머지 block_extract · block_fob_intro · "
+    "block_strategy · block_risks · block_positioning 각 3~5문장 (문장 40~100자).\n"
     "2. scenario_* 3개는 각각 1~2문장 (60~140자), 지정된 fob_aud 인용 필수.\n"
     "3. segment='public' 이면 PBS·AEMP/DPMQ 중심, 'private' 이면 소매·GST·약국 유통 중심으로 서술.\n"
     "4. 'TBD', '추후', '데이터 부족' 같은 플레이스홀더 금지.\n"
-    "5. 8개 필드 모두 반드시 채움.\n\n"
+    "5. 9개 필드 모두 반드시 채움.\n\n"
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     "【Few-shot 좋은 예시 — scenario_penetration】\n"
     "입력: scenarios.aggressive.fob_aud=26.50, pricing_case=DIRECT, segment=public\n"
@@ -1959,6 +1974,7 @@ def _claude_p2_blocks_schema():
     from pydantic import BaseModel, Field
 
     class P2Blocks(BaseModel):
+        block_market_macro: str = Field(description="국가 거시시장 요약(1인당 GDP·의약품 시장 규모·수입 의존도, 가능하면 2025년 이후)")
         block_extract: str = Field(description="추출정보 요약 (보고서체 ~함/~임)")
         block_fob_intro: str = Field(description="3시나리오 FOB 메타 해설 (보고서체)")
         scenario_penetration: str = Field(description="저가 진입 시나리오(Penetration Pricing) 근거 1~2문장, fob_aud 인용 필수")
@@ -1990,7 +2006,7 @@ def _haiku_p2_blocks(
     segment: str,
     api_key: str,
 ) -> dict[str, str]:
-    """Claude Haiku 4.5 를 호출해 수출 전략 제안서 용 8개 블록을 생성.
+    """Claude Haiku 4.5 를 호출해 수출 전략 제안서 용 9개 블록을 생성.
 
     Args:
         row               : Supabase `au_products` 행 (크롤링 결과)
@@ -2001,8 +2017,8 @@ def _haiku_p2_blocks(
         api_key           : ANTHROPIC_API_KEY
 
     Returns:
-        dict[str, str] — 8개 필드 (block_extract / block_fob_intro / scenario_* x3 /
-                                   block_strategy / block_risks / block_positioning)
+        dict[str, str] — 9개 필드 (block_market_macro / block_extract / block_fob_intro /
+                                   scenario_* x3 / block_strategy / block_risks / block_positioning)
     """
     import anthropic
     import json as _json
@@ -2021,7 +2037,7 @@ def _haiku_p2_blocks(
 
     user_content = (
         "다음 품목의 (1) 크롤링 row, (2) Stage 2 seed, (3) fob_calculator dispatch 결과를 종합해 "
-        "수출 전략 제안서용 8개 블록(tool: emit_p2_blocks)을 한국어 존댓말로 작성합니다.\n"
+        "수출 전략 제안서용 9개 블록(tool: emit_p2_blocks)을 한국어 존댓말로 작성합니다.\n"
         "【숫자 인용】 scenario_penetration ← scenarios.aggressive.fob_aud, "
         "scenario_reference ← scenarios.average.fob_aud, "
         "scenario_premium ← scenarios.conservative.fob_aud (각각 AUD 소수 둘째 자리).\n"
@@ -2061,7 +2077,7 @@ def _haiku_p2_blocks(
         schema_cls=P2Blocks,
         tool_name="emit_p2_blocks",
         tool_description=(
-            "수출 전략 제안서 8블록 — dispatch.scenarios aggressive/average/conservative 의 "
+            "수출 전략 제안서 9블록 — dispatch.scenarios aggressive/average/conservative 의 "
             "fob_aud 를 scenario_penetration/reference/premium 에 각각 인용."
         ),
         usage_log_fn=_log_usage_p2,
@@ -4602,7 +4618,7 @@ def p2_report(payload: dict[str, Any]) -> JSONResponse:
 def _latest_report_pdf() -> Path | None:
     """시장조사·수출전략 PDF 파일명 패턴을 모두 고려해 reports/ 최신 파일을 고름."""
     candidates: list[Path] = []
-    for pattern in ("au_report_*.pdf", "au_p2_report_*.pdf"):
+    for pattern in ("au_report_*.pdf", "au_p2_report_*.pdf", "au_buyers_*.pdf", "au_final_report_*.pdf"):
         candidates.extend(_REPORTS_DIR.glob(pattern))
     if not candidates:
         return None
@@ -5021,3 +5037,289 @@ def buyers_report_generate(payload: dict[str, Any]) -> JSONResponse:
         "pdf_filename": Path(pdf_path).name,
         "download_url": f"/api/report/download?name={Path(pdf_path).name}&inline=1",
     })
+
+
+def _infer_product_id_for_final_report(payload: dict[str, Any] | None) -> str | None:
+    """최종 보고서 병합 대상 product_id 추론.
+
+    우선순위:
+      1) 요청 body 의 product_id
+      2) 최근 완료된 P3 job 메모리 상태
+      3) au_reports_r2 최신 생성 행
+      4) au_reports_history(gong=1) 최신 생성 행
+    """
+    requested = str((payload or {}).get("product_id") or "").strip()
+    if requested:
+        return requested
+
+    # 1) 최근 완료된 p3 job 에서 추론
+    with _P3_JOBS_LOCK:
+        done_rows = [v for v in _P3_JOBS.values() if isinstance(v, dict) and v.get("status") == "done"]
+    if done_rows:
+        done_rows.sort(key=lambda x: str(x.get("updated_at") or x.get("created_at") or ""), reverse=True)
+        pid = str(done_rows[0].get("product_id") or "").strip()
+        if pid:
+            return pid
+
+    # 2) DB 최신 p2 행 (환경별 스키마 차이 대응: generated_at/created_at)
+    sb = get_supabase_client()
+    for select_cols, order_col in (
+        ("product_id,generated_at", "generated_at"),
+        ("product_id,created_at", "created_at"),
+        ("product_id", "product_id"),
+    ):
+        try:
+            q = sb.table("au_reports_r2").select(select_cols).limit(1)
+            if order_col != "product_id":
+                q = q.order(order_col, desc=True)
+            rows = q.execute().data or []
+            if rows and rows[0].get("product_id"):
+                return str(rows[0]["product_id"])
+        except Exception as exc:
+            logger.warning("final-report product 추론(r2) fallback 실패(%s): %s", order_col, exc)
+
+    # 3) DB 최신 p1 행
+    try:
+        sb = get_supabase_client()
+        rows = (
+            sb.table("au_reports_history")
+            .select("product_id,generated_at")
+            .eq("gong", 1)
+            .order("generated_at", desc=True)
+            .limit(1)
+            .execute()
+            .data
+        ) or []
+        if rows and rows[0].get("product_id"):
+            return str(rows[0]["product_id"])
+    except Exception as exc:
+        logger.warning("final-report product 추론(history) 실패: %s", exc)
+
+    # 4) 로컬 PDF 파일명 fallback (DB 스키마가 오래된 환경 대응)
+    patterns = (
+        "au_report_*_*.pdf",
+        "au_p2_report_*_*.pdf",
+        "au_buyers_*_*.pdf",
+    )
+    files: list[Path] = []
+    for pat in patterns:
+        files.extend(_REPORTS_DIR.glob(pat))
+    if files:
+        latest = max(files, key=lambda p: p.stat().st_mtime)
+        name = latest.name
+        m = _re.search(r"(?:au_report_|au_p2_report_|au_buyers_)(.+?)_\d{8}_\d{6}", name, _re.I)
+        if m:
+            return m.group(1)
+    return None
+
+
+def _latest_pdf_from_history(product_id: str) -> str | None:
+    """au_reports_history(snapshot.pdf_filename) 에서 최신 P1 PDF 파일명 조회."""
+    rows: list[dict[str, Any]] = []
+    sb = get_supabase_client()
+    for select_cols, order_col in (
+        ("snapshot,generated_at", "generated_at"),
+        ("snapshot,created_at", "created_at"),
+        ("snapshot", "snapshot"),
+    ):
+        try:
+            q = (
+                sb.table("au_reports_history")
+                .select(select_cols)
+                .eq("product_id", product_id)
+                .eq("gong", 1)
+                .limit(20)
+            )
+            if order_col != "snapshot":
+                q = q.order(order_col, desc=True)
+            rows = q.execute().data or []
+            if rows:
+                break
+        except Exception as exc:
+            logger.warning("P1 PDF 조회 fallback 실패(%s): %s", order_col, exc)
+
+    for r in rows:
+        snap = r.get("snapshot") if isinstance(r, dict) else None
+        if isinstance(snap, dict):
+            name = str(snap.get("pdf_filename") or "").strip()
+            if name:
+                p = (_REPORTS_DIR / Path(name).name)
+                if p.is_file():
+                    return p.name
+    # 로컬 파일명 패턴 fallback
+    files = sorted(_REPORTS_DIR.glob(f"au_report_{product_id}_*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return files[0].name if files else None
+
+
+def _latest_pdf_from_r2(product_id: str) -> str | None:
+    """au_reports_r2 에서 최신 P2 PDF 파일명 조회 (public 우선)."""
+    rows: list[dict[str, Any]] = []
+    sb = get_supabase_client()
+    for select_cols, order_col in (
+        ("segment,pdf_filename,generated_at", "generated_at"),
+        ("segment,pdf_filename,created_at", "created_at"),
+        ("pdf_filename,generated_at", "generated_at"),
+        ("pdf_filename,created_at", "created_at"),
+        ("pdf_filename", "pdf_filename"),
+    ):
+        try:
+            q = (
+                sb.table("au_reports_r2")
+                .select(select_cols)
+                .eq("product_id", product_id)
+                .limit(20)
+            )
+            if order_col not in ("pdf_filename",):
+                q = q.order(order_col, desc=True)
+            rows = q.execute().data or []
+            if rows:
+                break
+        except Exception as exc:
+            logger.warning("P2 PDF 조회 fallback 실패(%s): %s", order_col, exc)
+
+    preferred: list[dict[str, Any]] = []
+    fallback: list[dict[str, Any]] = []
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        name = str(r.get("pdf_filename") or "").strip()
+        if not name:
+            continue
+        p = _REPORTS_DIR / Path(name).name
+        if not p.is_file():
+            continue
+        if str(r.get("segment") or "").lower() == "public":
+            preferred.append(r)
+        else:
+            fallback.append(r)
+
+    if preferred:
+        return Path(str(preferred[0]["pdf_filename"])).name
+    if fallback:
+        return Path(str(fallback[0]["pdf_filename"])).name
+
+    files = sorted(_REPORTS_DIR.glob(f"au_p2_report_{product_id}_*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return files[0].name if files else None
+
+
+def _latest_pdf_from_p3(product_id: str) -> str | None:
+    """P3 PDF 파일명 조회 (job 메모리 상태 → 로컬 파일 fallback)."""
+    with _P3_JOBS_LOCK:
+        done_rows = [
+            v for v in _P3_JOBS.values()
+            if isinstance(v, dict) and v.get("status") == "done" and str(v.get("product_id") or "") == product_id
+        ]
+    if done_rows:
+        done_rows.sort(key=lambda x: str(x.get("updated_at") or x.get("created_at") or ""), reverse=True)
+        name = str(done_rows[0].get("pdf_filename") or "").strip()
+        if name:
+            p = _REPORTS_DIR / Path(name).name
+            if p.is_file():
+                return p.name
+
+    files = sorted(_REPORTS_DIR.glob(f"au_buyers_{product_id}_*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return files[0].name if files else None
+
+
+def _build_final_cover_pdf(product_id: str) -> Path:
+    """최종 병합용 표지 PDF 생성."""
+    from datetime import datetime as _dt
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+    from report_generator import _register_korean_font  # type: ignore
+
+    ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+    out = _REPORTS_DIR / f"_cover_{product_id}_{ts}.pdf"
+    c = canvas.Canvas(str(out), pagesize=A4)
+    w, h = A4
+
+    font_base = _register_korean_font()
+    font_bold = f"{font_base}-Bold"
+    try:
+        c.setFont(font_bold, 24)
+    except Exception:
+        c.setFont(font_base, 24)
+    c.drawCentredString(w / 2, h - 70 * mm, "호주 진출 전략 최종 보고서")
+
+    c.setFont(font_base, 13)
+    c.drawCentredString(w / 2, h - 90 * mm, f"품목 코드: {product_id}")
+    c.drawCentredString(w / 2, h - 100 * mm, f"생성 일시: {_dt.now().strftime('%Y-%m-%d %H:%M')}")
+    c.drawCentredString(w / 2, h - 115 * mm, "문서 순서: 수출가격 전략 > 바이어 후보 리스트 > 시장분석")
+
+    c.showPage()
+    c.save()
+    return out
+
+
+@app.post("/api/final-report")
+def final_report_generate(payload: dict[str, Any]) -> JSONResponse:
+    """최종 보고서 생성 (표지 + 2 > 3 > 1).
+
+    프론트는 빈 body 로 호출할 수 있으므로 product_id 는 서버에서 추론 가능해야 한다.
+    """
+    pid = _infer_product_id_for_final_report(payload)
+    if not pid:
+        raise HTTPException(
+            status_code=400,
+            detail="병합 대상 product_id 를 찾지 못했습니다. 먼저 시장조사/P2/P3 보고서를 생성해 주세요.",
+        )
+
+    p2_name = _latest_pdf_from_r2(pid)
+    p3_name = _latest_pdf_from_p3(pid)
+    p1_name = _latest_pdf_from_history(pid)
+
+    missing = []
+    if not p2_name:
+        missing.append("P2(수출가격 전략)")
+    if not p3_name:
+        missing.append("P3(바이어 리스트)")
+    if not p1_name:
+        missing.append("P1(시장분석)")
+    if missing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"최종 병합에 필요한 PDF 가 없습니다: {', '.join(missing)}",
+        )
+
+    cover_path = _build_final_cover_pdf(pid)
+    from datetime import datetime as _dt
+    from pypdf import PdfMerger
+
+    final_name = f"au_final_report_{pid}_{_dt.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    final_path = _REPORTS_DIR / final_name
+
+    merge_paths = [
+        cover_path,
+        _REPORTS_DIR / p2_name,
+        _REPORTS_DIR / p3_name,
+        _REPORTS_DIR / p1_name,
+    ]
+    try:
+        merger = PdfMerger()
+        for p in merge_paths:
+            merger.append(str(p))
+        merger.write(str(final_path))
+        merger.close()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"최종 병합 실패: {exc}") from exc
+    finally:
+        try:
+            cover_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    return JSONResponse(
+        {
+            "ok": True,
+            "product_id": pid,
+            "pdf": final_name,
+            "pdf_filename": final_name,
+            "download_url": f"/api/report/download?name={final_name}",
+            "parts": {
+                "p2": p2_name,
+                "p3": p3_name,
+                "p1": p1_name,
+            },
+        }
+    )

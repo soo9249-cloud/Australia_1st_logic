@@ -108,6 +108,29 @@ Australia_1st_logic/
 
 백그라운드 worker가 `buyer_discovery` 모듈을 호출해 Stage1 필터링, Stage2 점수화, `au_buyers` 반영, PDF 생성까지 처리합니다.
 
+### 6) 보고서 섹션별 DB 매핑 (운영 기준)
+
+최종 보고서는 **DB 저장본을 재조회**해서 생성합니다. 메모리 상태값은 진행률 표시용이며,
+문서 산출은 아래 테이블을 단일 진실원으로 사용합니다.
+
+- `P1 시장보고서`
+  - 본문/근거 블록: `au_reports_history` (`gong=1`, `report_content_v2`)
+  - PDF 파일명: `au_reports_history.snapshot.pdf_filename`
+  - 규제 보강 근거: `au_tga_artg`, `au_pbs_raw`
+- `P2 수출가격 전략`
+  - 시나리오/근거 블록: `au_reports_r2` (`report_content_v2`, `block_*`, `scenario_*`)
+  - PDF 파일명: `au_reports_r2.pdf_filename`
+  - 계산 스냅샷: `au_reports_r2` (FOB/환율/공식 관련 컬럼)
+- `P3 바이어 후보 리스트`
+  - TOP10 원천 데이터: `au_buyers` (순위/점수/기업 상세)
+  - 선정 규칙: 1차 하드필터(API 원료 중심·다국적 글로벌·오리지널 제외) 후 2차 가중치 랭킹
+  - 2차 가중치 우선순위: ①매출규모 ②파이프라인 ③제조소 ④수입경험 ⑤약국체인
+  - PDF 파일명: `reports/au_buyers_{product_id}_*.pdf` (생성 시점 파일)
+- `최종 병합 보고서`
+  - 순서: `표지 + P2 + P3 + P1`
+  - API: `POST /api/final-report`
+  - 출력 파일: `reports/au_final_report_{product_id}_*.pdf`
+
 ---
 
 ## 환경 변수 (`.env`)

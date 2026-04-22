@@ -258,6 +258,54 @@ def compute_psi_total(scores: dict[str, int]) -> int:
     return int(round(total))
 
 
+_API_ONLY_HINTS = (
+    "api", "ingredient", "intermediate", "raw material", "원료", "중간체",
+)
+_FINISHED_DOSAGE_HINTS = (
+    "tablet", "capsule", "inhaler", "injection", "syrup", "완제", "finished dosage", "제네릭", "generic",
+)
+_MULTINATIONAL_HINTS = (
+    "다국적", "multinational", "global", "글로벌", "일본계", "미국계", "스위스계", "독일계",
+)
+_ORIGINATOR_HINTS = (
+    "오리지널", "originator", "innovator",
+)
+
+
+def _exclude_reason_from_hard_filter(canon_key: str, survivor_row: dict, hardcoded_buyers: dict) -> str | None:
+    """TOP10 선정 전 1차 하드필터.
+
+    요구사항:
+      - 제외: API 원료 중심, 다국적 글로벌, 오리지널 제약사
+      - 포함 우대: 완제품(FDF) 판매 회사
+    """
+    hc = hardcoded_buyers.get(canon_key) or {}
+    name = str(survivor_row.get("canonical_name") or canon_key)
+    notes = str(hc.get("notes") or "")
+    desc = str(survivor_row.get("description") or "")
+    blob = f"{name} {notes} {desc}".lower()
+
+    # 유통/체인 파트너는 오리지널/다국적 키워드가 있어도 별도 운영 채널로 간주해 통과
+    if survivor_row.get("role") == "distributor":
+        return None
+
+    # 1) API 원료 중심 (완제품 힌트가 없으면 제외)
+    if any(k in blob for k in _API_ONLY_HINTS):
+        has_fdf_hint = any(k in blob for k in _FINISHED_DOSAGE_HINTS)
+        if not has_fdf_hint:
+            return "api_only"
+
+    # 2) 다국적 글로벌 제외
+    if any(k in blob for k in _MULTINATIONAL_HINTS):
+        return "multinational_global"
+
+    # 3) 오리지널 제약사 제외
+    if any(k in blob for k in _ORIGINATOR_HINTS):
+        return "original_innovator"
+
+    return None
+
+
 # ──────────────────────────────────────────────────────────────────────
 # A/B/C 티어 분류
 # ──────────────────────────────────────────────────────────────────────
@@ -434,9 +482,13 @@ def main(dry_run: bool = False) -> None:
             k = strip_inn_salt(inn)
             product_therapy_en |= _inn_to_therapy_en(k, inn_map)
 
-        # 각 바이어에 대해 티어 + psi_total
+        # 각 바이어에 대해 1차 하드필터 + 티어 + psi_total
         scored: list[dict] = []
         for canon_key, row in buyers.items():
+            ex_reason = _exclude_reason_from_hard_filter(canon_key, row, hardcoded_buyers)
+            if ex_reason:
+                continue
+
             tier = classify_tier(pid, product_therapy_en, canon_key, row, categories)
             pipeline_score = _score_pipeline(pid, row)
 

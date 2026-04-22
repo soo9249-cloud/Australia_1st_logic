@@ -496,7 +496,7 @@ def _render_pdf_legacy_v2(
                 .replace("<", "&lt;")
                 .replace(">", "&gt;"))
 
-    def _trunc(text: str, limit: int = 800) -> str:
+    def _trunc(text: str, limit: int = 520) -> str:
         s = (text or "").strip()
         return s if len(s) <= limit else s[:limit] + "…"
 
@@ -828,7 +828,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
             .replace(">", "&gt;")
         )
 
-    def _trunc(text: str, limit: int = 4000) -> str:
+    def _trunc(text: str, limit: int = 1800) -> str:
         s = (text or "").strip()
         return s if len(s) <= limit else s[:limit] + "…"
 
@@ -916,9 +916,10 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
 
     story.append(Paragraph(_rx("1. 시장 현황"), s_sec))
     story.append(Paragraph(_rx("1-1. 시장 개요"), s_sub))
-    story.append(Paragraph(_rx(_trunc(v8.market_overview.paragraph)), s_cell))
+    story.append(Paragraph(_rx(_trunc(v8.market_overview.paragraph, 900)), s_cell))
     story.append(Spacer(1, 8))
-    for d in v8.market_overview.disease_block:
+    # P1 본문 1페이지 목표: 질환 블록은 최대 2개만 요약 반영
+    for d in (v8.market_overview.disease_block or [])[:2]:
         term_txt = f"<b>{_rx(d.name_ko)}</b> ({_rx(d.short_en)}) — {_rx(d.plain_desc)}"
         term_box = Table([[Paragraph(term_txt, s_small)]], colWidths=[CONTENT_W])
         term_box.setStyle(
@@ -940,11 +941,12 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         [Paragraph(_rx("구분"), s_cell_h), Paragraph(_rx("상세"), s_cell_h)]
     ]
     ex_cb: list[tuple] = [("BACKGROUND", (0, 0), (-1, 0), C_HDR_BG)]
-    for i, c in enumerate(v8.competitor_brands, 1):
+    # 경쟁 브랜드는 핵심 3개까지만 반영 (분량 제어)
+    for i, c in enumerate((v8.competitor_brands or [])[:3], 1):
         cb_rows.append(
             [
                 Paragraph(_rx(c.role), s_cell),
-                Paragraph(_rx(_trunc(c.detail, 1200)), s_cell),
+                Paragraph(_rx(_trunc(c.detail, 650)), s_cell),
             ]
         )
         if i % 2 == 0:
@@ -959,7 +961,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     story.append(Paragraph(_rx("1-3. 시장 구도"), s_sub))
     ms = v8.market_structure
     ms_tag = _rx(ms.tag or "")
-    ms_para = _rx(_trunc(ms.paragraph))
+    ms_para = _rx(_trunc(ms.paragraph, 700))
     ms_text = f"<b>{ms_tag}</b>. {ms_para}" if ms_tag else ms_para
     story.append(
         Paragraph(ms_text, s_cell)
@@ -1035,11 +1037,11 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     story.append(Paragraph(_rx("2. 진출 전략"), s_sec))
     es = v8.entry_strategy
     story.append(Paragraph(_rx("2-1. 진입 채널"), s_sub))
-    story.append(Paragraph(_rx(_trunc(es.channel)), s_cell))
+    story.append(Paragraph(_rx(_trunc(es.channel, 500)), s_cell))
     story.append(Paragraph(_rx("2-2. 우선 접근 파트너 방향성"), s_sub))
-    story.append(Paragraph(_rx(_trunc(es.partner_direction)), s_cell))
+    story.append(Paragraph(_rx(_trunc(es.partner_direction, 420)), s_cell))
     story.append(Paragraph(_rx("2-3. 협력 우선순위 근거"), s_sub))
-    story.append(Paragraph(_rx(_trunc(es.rationale)), s_cell))
+    story.append(Paragraph(_rx(_trunc(es.rationale, 420)), s_cell))
     story.append(Spacer(1, 18))
 
     story.append(Paragraph(_rx("3. 유의사항 · 리스크"), s_sec))
@@ -1058,7 +1060,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
                         )
                         if x
                     ),
-                    4000,
+                    900,
                 )
             ),
             s_cell,
@@ -1084,9 +1086,9 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         story.append(ft_tbl)
 
     story.append(Paragraph(_rx("3-2. 데이터 · 운영 유의사항"), s_sub))
-    story.append(Paragraph(_rx(_trunc(v8.operational_risk)), s_cell))
+    story.append(Paragraph(_rx(_trunc(v8.operational_risk, 480)), s_cell))
     story.append(Paragraph(_rx("3-3. 본 품목 고유 리스크"), s_sub))
-    story.append(Paragraph(_rx(_trunc(v8.product_specific_risk)), s_cell))
+    story.append(Paragraph(_rx(_trunc(v8.product_specific_risk, 420)), s_cell))
 
     story.append(PageBreak())
 
@@ -1102,7 +1104,8 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     apx_a_rows: list[list] = [
         [Paragraph(_rx("[별첨 A] 참고자료"), s_apx_head)],
     ]
-    pplx = list(payload.refs_perplexity or [])
+    # 별첨 1페이지 유지 목표: 참고자료는 최대 3건만 노출
+    pplx = list(payload.refs_perplexity or [])[:3]
     num = 0
     if pplx:
         apx_a_rows.append(
@@ -1116,7 +1119,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         for p in pplx:
             num += 1
             line = (
-                f"[{num}] {p.source or ''} — {_trunc(p.title, 400)} — {_trunc(p.summary_ko, 800)}"
+                f"[{num}] {p.source or ''} — {_trunc(p.title, 220)} — {_trunc(p.summary_ko, 320)}"
             )
             apx_a_rows.append([Paragraph(_rx(line), s_apx)])
     if v8_academic:
@@ -1125,7 +1128,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         )
         for r in v8_academic:
             num += 1
-            line = f"[{num}] {_trunc(r.citation, 500)} — {_trunc(r.summary, 800)}"
+            line = f"[{num}] {_trunc(r.citation, 240)} — {_trunc(r.summary, 320)}"
             apx_a_rows.append([Paragraph(_rx(line), s_apx)])
     if not pplx and not v8_academic:
         if refs_bad and not pplx:
@@ -1772,7 +1775,13 @@ def render_p2_pdf(
 
     aud_krw = fx_rates.get("aud_krw")
     aud_usd = fx_rates.get("aud_usd")
-    fx_str = f"1 AUD = {aud_krw:.2f} KRW / {aud_usd:.4f} USD" if aud_krw and aud_usd else "환율 미확인"
+    usd_krw = None
+    try:
+        if aud_krw and aud_usd:
+            usd_krw = float(aud_krw) / float(aud_usd)
+    except Exception:
+        usd_krw = None
+    fx_str = f"1 USD = {usd_krw:,.2f} KRW" if usd_krw else "USD/KRW 환산 미확인"
 
     # ── Doc ──
     doc = SimpleDocTemplate(
@@ -1804,6 +1813,16 @@ def render_p2_pdf(
     story.append(bar_tbl)
     story.append(Spacer(1, 12))
 
+    # ── 1. 호주 거시 시장 (요약) ──
+    story.append(Paragraph(_rx("1. 호주 거시 시장"), s_section))
+    story.append(
+        Paragraph(
+            _rx(_trunc(p2_blocks.get("block_market_macro", "데이터 미확보 — 최신 공신력 출처 확인 필요"), 520)),
+            s_cell,
+        )
+    )
+    story.append(Spacer(1, 8))
+
     aud_usd_rate = float(aud_usd) if aud_usd else 0.64
     aud_krw_rate = float(aud_krw) if aud_krw else 893.0
 
@@ -1831,14 +1850,14 @@ def render_p2_pdf(
             [
                 Paragraph(_rx(label_ko), s_cell_h),
                 Paragraph(_rx(price_line), s_cell),
-                Paragraph(_rx(_trunc(reason, 400)), s_cell),
+                Paragraph(_rx(_trunc(reason, 260)), s_cell),
             ]
         )
         if idx % 2 == 0:
             sum_ex.append(("BACKGROUND", (0, idx), (-1, idx), C_ALT))
     sum_tbl = Table(sum_rows, colWidths=[CONTENT_W * 0.22, CONTENT_W * 0.33, CONTENT_W * 0.45])
     sum_tbl.setStyle(TableStyle(_base_style(sum_ex)))
-    story.append(Paragraph(_rx("수출 가격 3시나리오 — 결론 요약"), s_section))
+    story.append(Paragraph(_rx("2. 의약품 단가(시장 기준가) 및 가격 시나리오 요약"), s_section))
     story.append(sum_tbl)
     story.append(Spacer(1, 8))
     cross_top = Table(
@@ -1891,7 +1910,7 @@ def render_p2_pdf(
         Paragraph(
             _rx(
                 "호주 공시 가격 중 AEMP (정부 승인 출고가)를 수출가 역산의 출발점으로 사용합니다. "
-                f"현재 분석 기준 환율은 {fx_str}입니다."
+                f"본 보고서는 {fx_str} 기준으로 USD/KRW를 병기합니다."
             ),
             s_cell,
         )
@@ -1915,8 +1934,17 @@ def render_p2_pdf(
             Paragraph(_rx("공시 AEMP"), s_cell),
             Paragraph(
                 _rx(
-                    f"AUD {float(listed_aemp_aud):.2f} / USD {float(listed_aemp_aud) * aud_usd_rate:.2f}"
-                ) if listed_aemp_aud is not None else _rx("미확보"),
+                    (
+                        f"USD {float(listed_aemp_aud) * aud_usd_rate:.2f} / "
+                        f"KRW {(float(listed_aemp_aud) * aud_usd_rate * usd_krw):,.0f}원"
+                    )
+                    if (listed_aemp_aud is not None and usd_krw)
+                    else (
+                        f"USD {float(listed_aemp_aud) * aud_usd_rate:.2f} / KRW 미확보"
+                        if listed_aemp_aud is not None
+                        else "미확보"
+                    )
+                ),
                 s_cell,
             ),
             Paragraph(_rx("호주 공시 출고가"), s_cell),
@@ -1930,8 +1958,17 @@ def render_p2_pdf(
             Paragraph(_rx("기준 AEMP (보정 완료)"), s_cell_h),
             Paragraph(
                 _rx(
-                    f"AUD {float(adjusted_aemp_aud):.2f} / USD {float(adjusted_aemp_aud) * aud_usd_rate:.2f}"
-                ) if adjusted_aemp_aud is not None else _rx("미확보"),
+                    (
+                        f"USD {float(adjusted_aemp_aud) * aud_usd_rate:.2f} / "
+                        f"KRW {(float(adjusted_aemp_aud) * aud_usd_rate * usd_krw):,.0f}원"
+                    )
+                    if (adjusted_aemp_aud is not None and usd_krw)
+                    else (
+                        f"USD {float(adjusted_aemp_aud) * aud_usd_rate:.2f} / KRW 미확보"
+                        if adjusted_aemp_aud is not None
+                        else "미확보"
+                    )
+                ),
                 s_cell_h,
             ),
             Paragraph(_rx("3시나리오 FOB 산정 출발점"), s_cell),
@@ -2015,14 +2052,14 @@ def render_p2_pdf(
         nums = (
             f"수입상 마진 {margin_txt}\n"
             f"FOB USD {fob_usd:.2f}\n"
-            f"AUD {fob_aud:.2f} / KRW {fob_krw:,.0f}원\n"
+            f"KRW {fob_krw:,.0f}원\n"
             f"= {formula_txt}"
         )
         sce_rows.append(
             [
                 Paragraph(_rx(short_labels.get(key, key)), s_cell_h),
                 Paragraph(_rx(nums), s_cell),
-                Paragraph(_rx(_trunc(p2_blocks.get(block_key, "—"), 420)), s_cell),
+                Paragraph(_rx(_trunc(p2_blocks.get(block_key, "—"), 240)), s_cell),
             ]
         )
         if idx % 2 == 0:
@@ -2035,7 +2072,7 @@ def render_p2_pdf(
     # ── 3. 본 품목 유의사항 ──
     story.append(Paragraph(_rx("3. 본 품목 유의사항"), s_section))
     story.append(Paragraph(_rx("3-1. 처방 물량 제한 (급여 조건)"), s_sub))
-    story.append(Paragraph(_rx(_trunc(p2_blocks.get("block_risks", "—"), 1200)), s_cell))
+    story.append(Paragraph(_rx(_trunc(p2_blocks.get("block_risks", "—"), 650)), s_cell))
     story.append(Spacer(1, 4))
     story.append(Paragraph(_rx("3-2. 수출 조건"), s_sub))
     story.append(
@@ -2074,7 +2111,7 @@ def render_p2_pdf(
                     f"· 적용 환율: {_rx(fx_str)}<br/>"
                     f"· 경고 사항: {_rx(warn_text)}<br/>"
                     f"· 시드·데이터 표시: {_rx(flag_text)}<br/>"
-                    f"· 면책 조항: {_rx(_trunc(disclaimer or '없음', 500))}"
+                    f"· 면책 조항: {_rx(_trunc(disclaimer or '없음', 280))}"
                 ),
                 s_cell_sm,
             )
@@ -2341,9 +2378,9 @@ def render_buyers_pdf(
         story.append(tbl)
 
         story.append(Spacer(1, 10))
-        story.append(Paragraph("상위 3 바이어 상세", s_sec))
+        story.append(Paragraph("TOP 10 바이어 상세", s_sec))
 
-        for b in buyers[:3]:
+        for b in buyers[:10]:
             cats = b.get("therapeutic_categories") or []
             if isinstance(cats, list):
                 cats_str = " · ".join(str(c) for c in cats) or "—"

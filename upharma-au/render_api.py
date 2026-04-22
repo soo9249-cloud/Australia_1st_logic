@@ -908,6 +908,100 @@ def _news_api_response(
 # 메인 프리뷰 뉴스 카드에 표시할 기사 개수(프롬프트·파싱·mock 보충과 동일)
 _NEWS_LIST_SIZE = 7
 
+# 뉴스 10분 캐시 (SG 동일)
+_news_cache: dict[str, Any] = {"data": None, "ts": 0.0}
+_NEWS_TTL = 600  # 10분
+
+
+def _scrape_naver_news_au(count: int = 7) -> list[dict[str, Any]]:
+    """Naver 모바일 뉴스 '호주 의약품' 스크레이핑 (SG 동일 패턴 — sync httpx 버전).
+    BeautifulSoup 파싱 → regex 폴백 순서.
+    """
+    import re as _re
+
+    r = httpx.get(
+        "https://m.search.naver.com/search.naver",
+        params={"where": "m_news", "query": "호주 의약품", "sort": "1"},
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+                "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+                "Version/17.0 Mobile/15E148 Safari/604.1"
+            ),
+            "Accept-Language": "ko-KR,ko;q=0.9",
+            "Referer": "https://m.naver.com/",
+        },
+        timeout=10.0,
+        follow_redirects=True,
+    )
+    r.raise_for_status()
+    html = r.text
+    items: list[dict[str, Any]] = []
+
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+        seen: set[str] = set()
+
+        for a in soup.find_all("a", href=_re.compile(r"n\.news\.naver\.com")):
+            if len(items) >= count:
+                break
+            href = str(a.get("href", ""))
+            if href in seen:
+                continue
+            seen.add(href)
+
+            # 제목: title 속성 > 텍스트 > 상위 heading
+            title = (a.get("title") or a.get_text(" ", strip=True)).strip()
+            if not title or len(title) < 8:
+                for parent in a.parents:
+                    h = parent.find(["strong", "h2", "h3", "h4"])
+                    if h:
+                        t = h.get_text(strip=True)
+                        if len(t) >= 8:
+                            title = t
+                            break
+                    if parent.name in ("body", "html"):
+                        break
+            if not title or len(title) < 8:
+                continue
+
+            # 언론사·날짜: 5단계 상위 컨테이너에서 탐색
+            container = a
+            for _ in range(5):
+                container = container.parent
+                if not container:
+                    break
+            press = date = ""
+            if container:
+                pe = container.select_one(".press, .source, .media_nm, .info.press")
+                de = container.select_one(".time, .date, .info_time")
+                press = pe.get_text(strip=True) if pe else ""
+                date  = de.get_text(strip=True) if de else ""
+
+            items.append(_normalize_news_item({
+                "title": title, "title_ko": title,
+                "source": press, "date": date, "link": href,
+            }))
+
+        if items:
+            return items
+    except ImportError:
+        pass
+
+    # regex 폴백
+    for m in _re.finditer(
+        r'href="(https://n\.news\.naver\.com/[^"]+)"[^>]*title="([^"]{8,})"', html
+    ):
+        if len(items) >= count:
+            break
+        items.append(_normalize_news_item({
+            "title": m.group(2).strip(), "title_ko": m.group(2).strip(),
+            "source": "", "date": "", "link": m.group(1),
+        }))
+
+    return items
+
 
 def _extract_openai_message_text(message: dict[str, Any] | None) -> str:
     """chat/completions 의 assistant message.content — str 또는 멀티파트 배열 모두 문자열로 병합."""
@@ -1093,9 +1187,34 @@ _FX_FALLBACK: dict[str, Any] = {"aud_krw": 893.0, "aud_usd": 0.6412, "updated": 
 
 @app.get("/api/news")
 def get_news() -> JSONResponse:
-    """Perplexity sonar: 호주·제약 관련 뉴스(호주 현지 또는 한국 등 해외 매체의 호주/교역 연관 기사) + 한국어 제목·요약. 키 없거나 실패 시 mock."""
-    api_key = (os.environ.get("PERPLEXITY_API_KEY") or "").strip() or (os.environ.get("PERPLEXITY_KEY") or "").strip()
+    """호주 의약품 뉴스 — Naver '호주 의약품' 스크레이핑 1순위 → Perplexity 폴백 → mock (SG 동일 패턴).
+    10분 캐시 적용.
+    """
+    import time as _time
+
+    # ── 캐시 확인 ──────────────────────────────────────────────────────────
+    if _news_cache["data"] and _time.time() - _news_cache["ts"] < _NEWS_TTL:
+        logger.info("[api/news] cache hit")
+        return JSONResponse(_news_cache["data"])
+
     mock_items = [_normalize_news_item(x) for x in _MOCK_NEWS]
+
+    # ── ① Naver 모바일 뉴스 스크레이핑 ('호주 의약품') ─────────────────────
+    try:
+        naver_items = _scrape_naver_news_au(_NEWS_LIST_SIZE)
+        if naver_items:
+            logger.info("[api/news] naver: %d건", len(naver_items))
+            resp_data = {"ok": True, "items": naver_items, "error": None, "source": "naver"}
+            _news_cache["data"] = resp_data
+            _news_cache["ts"]   = _time.time()
+            response = JSONResponse(content=resp_data)
+            response.headers["X-News-Source"] = "naver"
+            return response
+    except Exception as _nv_exc:
+        logger.warning("[api/news] naver 실패 → Perplexity 폴백: %s", _nv_exc)
+
+    # ── ② Perplexity 폴백 ──────────────────────────────────────────────────
+    api_key = (os.environ.get("PERPLEXITY_API_KEY") or "").strip() or (os.environ.get("PERPLEXITY_KEY") or "").strip()
 
     if not api_key:
         logger.warning("[api/news] mock: 환경변수 PERPLEXITY_API_KEY(또는 PERPLEXITY_KEY) 비어 있음")
@@ -1279,7 +1398,13 @@ def get_news() -> JSONResponse:
             if len(result) >= _NEWS_LIST_SIZE:
                 break
             result.append(fallback)
-    return _news_api_response(result, source="perplexity")
+
+    final_resp = _news_api_response(result, source="perplexity")
+    # Perplexity 성공 결과도 10분 캐시
+    import time as _time2
+    _news_cache["data"] = {"ok": True, "items": result, "error": None, "source": "perplexity"}
+    _news_cache["ts"]   = _time2.time()
+    return final_resp
 
 
 @app.get("/api/exchange")

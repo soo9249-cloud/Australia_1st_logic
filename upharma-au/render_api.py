@@ -913,15 +913,37 @@ _news_cache: dict[str, Any] = {"data": None, "ts": 0.0}
 _NEWS_TTL = 600  # 10분
 
 
+# 호주 관련 뉴스 판별 키워드 (제목에 하나라도 포함돼야 유효한 호주 기사)
+_AU_TITLE_KEYWORDS: frozenset[str] = frozenset([
+    "호주", "australia", "australian",
+    "tga", "artg", "pbac", "pbs listing",
+    "therapeutic goods", "medsafe", "aemp", "dpmq",
+])
+
+
+def _is_australia_news(item: dict[str, Any]) -> bool:
+    """기사 제목·출처·URL에 호주 관련 키워드가 하나라도 있으면 True.
+    Naver 검색에서 혼입되는 EU/미국/한국 국내 뉴스를 걸러내기 위해 사용.
+    """
+    text = " ".join([
+        (item.get("title") or ""),
+        (item.get("title_ko") or ""),
+        (item.get("source") or ""),
+        (item.get("link") or ""),
+    ]).lower()
+    return any(kw in text for kw in _AU_TITLE_KEYWORDS)
+
+
 def _scrape_naver_news_au(count: int = 7) -> list[dict[str, Any]]:
-    """Naver 모바일 뉴스 '호주 의약품' 스크레이핑 (SG 동일 패턴 — sync httpx 버전).
+    """Naver 모바일 뉴스 '호주 TGA 의약품' 스크레이핑 (SG 동일 패턴 — sync httpx 버전).
     BeautifulSoup 파싱 → regex 폴백 순서.
+    수집 후 _is_australia_news() 로 호주 무관 기사 제거.
     """
     import re as _re
 
     r = httpx.get(
         "https://m.search.naver.com/search.naver",
-        params={"where": "m_news", "query": "호주 의약품", "sort": "1"},
+        params={"where": "m_news", "query": "호주 TGA 의약품 제약", "sort": "1"},
         headers={
             "User-Agent": (
                 "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
@@ -979,10 +1001,13 @@ def _scrape_naver_news_au(count: int = 7) -> list[dict[str, Any]]:
                 press = pe.get_text(strip=True) if pe else ""
                 date  = de.get_text(strip=True) if de else ""
 
-            items.append(_normalize_news_item({
+            candidate = _normalize_news_item({
                 "title": title, "title_ko": title,
                 "source": press, "date": date, "link": href,
-            }))
+            })
+            # 호주 무관 기사 제외 (EU/미국/한국 국내 뉴스 혼입 차단)
+            if _is_australia_news(candidate):
+                items.append(candidate)
 
         if items:
             return items
@@ -995,10 +1020,12 @@ def _scrape_naver_news_au(count: int = 7) -> list[dict[str, Any]]:
     ):
         if len(items) >= count:
             break
-        items.append(_normalize_news_item({
+        candidate = _normalize_news_item({
             "title": m.group(2).strip(), "title_ko": m.group(2).strip(),
             "source": "", "date": "", "link": m.group(1),
-        }))
+        })
+        if _is_australia_news(candidate):
+            items.append(candidate)
 
     return items
 
@@ -1044,7 +1071,7 @@ def _scrape_serpapi_news_au(count: int = 7) -> list[dict[str, Any]]:
                     "api_key": api_key,
                     "hl": "en",            # 영어 UI → 호주 영어 기사 우선 (hl=ko 시 한국뉴스 혼입)
                     "gl": "au",            # 호주 지역 뉴스 우선
-                    "tbs": "qdr:d3",       # 72시간 이내 기사만 (최신성 필터)
+                    "tbs": "qdr:w",        # 1주일 이내 기사 (qdr:d3 72h는 너무 엄격 → 결과 0건 위험)
                     "num": str(count),
                 },
                 timeout=12.0,
@@ -2615,6 +2642,15 @@ def _is_valid_news_url(url: str) -> bool:
         "neca.re.kr",        # 한국보건의료연구원
         "hises.or.kr",       # 건강보험공단 관련
         "kpbma.or.kr",       # 한국제약바이오협회 — 국내 행정
+        # 한국 제약 전문 언론 — 호주 무관 국내 제약 뉴스 차단
+        "pharmstock.co.kr",  # 팜스탁 — 한국 제약 증권·산업 뉴스
+        "medigatenews.com",  # 메디게이트뉴스
+        "biopharma.co.kr",   # 바이오파마
+        "hitnews.co.kr",     # 히트뉴스
+        "dailypharm.com",    # 데일리팜
+        "pharmnews.com",     # 팜뉴스
+        "yakup.com",         # 약업신문
+        "v.daum.net",        # 다음 뉴스 뷰 — 한국 뉴스 집계 (호주 전용 기사 아님)
     )
     if any(d in lower for d in _BLOCKED):
         return False

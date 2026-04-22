@@ -26,7 +26,7 @@ try:
     # project root (upharma-au 의 부모) 의 .env 를 탐색
     _env_path = _BASE_DIR.parent / ".env"
     if _env_path.is_file():
-        load_dotenv(_env_path, override=False)
+        load_dotenv(_env_path, override=True)
 except ImportError:
     pass
 

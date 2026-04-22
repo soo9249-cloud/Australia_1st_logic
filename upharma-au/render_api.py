@@ -1609,8 +1609,18 @@ _CLAUDE_SYSTEM_PROMPT = (
     "당신은 한국유나이티드제약의 호주 수출 전문 애널리스트입니다. "
     "주어진 크롤링 JSON(TGA·PBS·Chemist·NSW)만 근거로, 아래 계층 필드를 "
     "한국어 존댓말('-합니다', '-습니다', '-해주시길 바랍니다')로 채웁니다.\n\n"
-    "보고서 제목은 고정: 「한국유나이티드제약 호주 시장분석 보고서」에 대응합니다.\n"
+    "보고서 제목 형식은 「{국가} 시장보고서 - {의약품명}」에 대응합니다.\n"
     "회사 표기는 '한국유나이티드제약'만 사용합니다 (UPharma 금지).\n\n"
+    "【데이터 원칙 — 최우선】\n"
+    "- 입력 JSON은 DB(au_products 등)에서 읽어 온 최신 요약값입니다. 문장과 수치는 입력 JSON 범위를 벗어나 창작하지 않습니다.\n"
+    "- 등록 개수, 등재/미등재, 가격, 코드, 심사 관련 사실은 반드시 입력 JSON 값과 정합시킵니다.\n"
+    "- 값이 없으면 '미확보' 또는 '별도 검증 필요함'으로 명시합니다.\n\n"
+    "【양식 매핑 규칙】\n"
+    "- 1) 의료 거시환경 파악: market_overview.paragraph 에 시장 사이즈·거시 지표를 2~4문장으로 요약합니다.\n"
+    "- 2) 무역/규제 환경: regulatory_risk.artg_paragraph·pbac_paragraph 에 등록 여부(등재/미등재/신규 등록 필요성), Fast Track 가능 경로, 관세 혜택 맥락을 포함합니다.\n"
+    "- 3) 참고 가격: price_snapshot 에 크롤링 가격(AEMP/DPMQ/코드)을 입력 JSON 그대로 반영하고, 출처 맥락(PBS/TGA 등)을 references 에 연결합니다.\n"
+    "- 4) 리스크/조건: regulatory_risk.prescription_limit_paragraph 및 operational_risk/product_specific_risk 에 심사 소요기간·난이도·운영 리스크를 기술합니다.\n"
+    "- 5) 근거 및 출처: references 에 논문/기관 출처를 채우고 허구 출처를 금지합니다.\n\n"
     "【분량·최신성 규칙】\n"
     "- 시장분석 본문은 핵심 정보 중심으로 간결하게 작성해 PDF 기준 1페이지 내에 들어갈 밀도를 목표로 합니다.\n"
     "- 거시 지표·시장 규모 수치가 필요할 때는 가능하면 2025년 이후 값을 우선 사용하고, 없으면 최신 연도 값을 명시합니다.\n"
@@ -1907,7 +1917,17 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "당신은 한국유나이티드제약(주)의 호주 수출 전략 시니어 애널리스트임. "
     "주어진 품목의 (1) 크롤링 row, (2) Stage 2 시드(규제·참고가), "
     "(3) fob_calculator 가 이미 계산한 3시나리오 FOB 결과를 종합해 "
-    "'수출 전략 제안서'에 들어갈 한국어 보고서체 블록 8개를 작성함.\n\n"
+    "'수출가격 전략 보고서'에 들어갈 한국어 보고서체 블록 9개를 작성함.\n\n"
+    "【데이터 원칙 — 최우선】\n"
+    "- 입력 row/seed/dispatch 는 DB 및 계산 결과의 원본 요약입니다. 범위를 벗어난 수치·업체·가격을 창작하지 않습니다.\n"
+    "- 거래처 참고 가격, 기준가, FOB 역산식은 입력 JSON에 있는 값만 사용합니다.\n"
+    "- 값이 없으면 '미확보' 또는 '제공 데이터 범위 외로 별도 검증 필요함'으로 명시합니다.\n\n"
+    "【양식 매핑 규칙】\n"
+    "- 1. {국가} 거시 시장: block_market_macro (3~4문장).\n"
+    "- 2. {의약품명} 단가(시장기준가): block_extract 에 기준 가격·산정 방식·시장 구분(공공/민간) 근거를 포함합니다.\n"
+    "- 3. 거래처 참고 가격: block_extract 또는 block_positioning 에 업체/제품/성분/시장가의 근거 요약을 포함합니다.\n"
+    "- 4. 가격 시나리오: block_fob_intro + scenario_penetration/reference/premium 에 공공·민간 시나리오 근거와 FOB 역산 논리를 반영합니다.\n"
+    "- 영어 약어는 최초 1회만 괄호로 풀어 씁니다. 예: PBS (Pharmaceutical Benefits Scheme, 호주 의약품 급여 제도).\n\n"
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     "【시나리오 키 매핑 — 반드시 준수】\n"
     "dispatch.scenarios 는 aggressive / average / conservative 세 키를 가짐. "
@@ -5240,12 +5260,12 @@ def _build_final_cover_pdf(product_id: str) -> Path:
         c.setFont(font_bold, 24)
     except Exception:
         c.setFont(font_base, 24)
-    c.drawCentredString(w / 2, h - 70 * mm, "호주 진출 전략 최종 보고서")
+    c.drawCentredString(w / 2, h - 70 * mm, "호주 진출 전략 보고서")
 
     c.setFont(font_base, 13)
     c.drawCentredString(w / 2, h - 90 * mm, f"품목 코드: {product_id}")
     c.drawCentredString(w / 2, h - 100 * mm, f"생성 일시: {_dt.now().strftime('%Y-%m-%d %H:%M')}")
-    c.drawCentredString(w / 2, h - 115 * mm, "문서 순서: 수출가격 전략 > 바이어 후보 리스트 > 시장분석")
+    c.drawCentredString(w / 2, h - 115 * mm, "수출가격 전략 - 바이어 후보 리스트 - 시장분석")
 
     c.showPage()
     c.save()

@@ -853,13 +853,13 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         rightMargin=MARGIN_X,
         topMargin=MARGIN_Y,
         bottomMargin=MARGIN_Y + 4 * mm,
-        title=f"한국유나이티드제약 호주 시장분석 보고서 — {payload.product_name}",
+        title=f"호주 시장보고서 - {payload.product_name}",
     )
     story: list = []
 
     # 제목에서 "시장분석"과 "보고서" 사이 불필요한 줄바꿈 완화 (좁은 열에서 단어 단위 줄바꿈 방지)
     story.append(
-        Paragraph(_rx("한국유나이티드제약 호주 시장분석\u00a0보고서"), s_title)
+        Paragraph(_rx(f"호주 시장보고서 - {payload.product_name}"), s_title)
     )
     story.append(Paragraph(_rx(payload.report_date or datetime.now().strftime("%Y-%m-%d")), s_date))
 
@@ -914,7 +914,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     story.append(KeepTogether([verdict_tbl]))
     story.append(Spacer(1, 22))
 
-    story.append(Paragraph(_rx("1. 시장 현황"), s_sec))
+    story.append(Paragraph(_rx("1. 의료 거시환경 파악"), s_sec))
     story.append(Paragraph(_rx("1-1. 시장 개요"), s_sub))
     story.append(Paragraph(_rx(_trunc(v8.market_overview.paragraph, 900)), s_cell))
     story.append(Spacer(1, 8))
@@ -1034,9 +1034,9 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     story.append(KeepTogether([cross_tbl]))
     story.append(Spacer(1, 18))
 
-    story.append(Paragraph(_rx("2. 진출 전략"), s_sec))
+    story.append(Paragraph(_rx("2. 무역/규제 환경"), s_sec))
     es = v8.entry_strategy
-    story.append(Paragraph(_rx("2-1. 진입 채널"), s_sub))
+    story.append(Paragraph(_rx("2-1. 진입 채널 및 접근 방식"), s_sub))
     story.append(Paragraph(_rx(_trunc(es.channel, 500)), s_cell))
     story.append(Paragraph(_rx("2-2. 우선 접근 파트너 방향성"), s_sub))
     story.append(Paragraph(_rx(_trunc(es.partner_direction, 420)), s_cell))
@@ -1044,9 +1044,9 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     story.append(Paragraph(_rx(_trunc(es.rationale, 420)), s_cell))
     story.append(Spacer(1, 18))
 
-    story.append(Paragraph(_rx("3. 유의사항 · 리스크"), s_sec))
+    story.append(Paragraph(_rx("3. 참고 가격"), s_sec))
     rr = v8.regulatory_risk
-    story.append(Paragraph(_rx("3-1. 규제 리스크"), s_sub))
+    story.append(Paragraph(_rx("3-1. 규제 리스크 및 가격 영향"), s_sub))
     story.append(
         Paragraph(
             _rx(
@@ -1085,9 +1085,10 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         story.append(Spacer(1, 8))
         story.append(ft_tbl)
 
-    story.append(Paragraph(_rx("3-2. 데이터 · 운영 유의사항"), s_sub))
+    story.append(Paragraph(_rx("4. 리스크 / 조건"), s_sec))
+    story.append(Paragraph(_rx("4-1. 데이터 · 운영 유의사항"), s_sub))
     story.append(Paragraph(_rx(_trunc(v8.operational_risk, 480)), s_cell))
-    story.append(Paragraph(_rx("3-3. 본 품목 고유 리스크"), s_sub))
+    story.append(Paragraph(_rx("4-2. 본 품목 고유 리스크"), s_sub))
     story.append(Paragraph(_rx(_trunc(v8.product_specific_risk, 420)), s_cell))
 
     story.append(PageBreak())
@@ -1102,7 +1103,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     v8_academic = v8_academic[:2]
 
     apx_a_rows: list[list] = [
-        [Paragraph(_rx("[별첨 A] 참고자료"), s_apx_head)],
+        [Paragraph(_rx("5. 근거 및 출처"), s_apx_head)],
     ]
     # 별첨 1페이지 유지 목표: 참고자료는 최대 3건만 노출
     pplx = list(payload.refs_perplexity or [])[:3]
@@ -1111,7 +1112,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         apx_a_rows.append(
             [
                 Paragraph(
-                    _rx("검색·요약 근거 (Semantic Scholar / PubMed / Perplexity 등)"),
+                    _rx("Perplexity 실시간 규제·시장 정보 및 검색 근거"),
                     s_apx_head,
                 )
             ]
@@ -1398,11 +1399,11 @@ def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
         rightMargin=MARGIN_X,
         topMargin=MARGIN_Y,
         bottomMargin=MARGIN_Y,
-        title=f"호주 시장 분석 보고서 — {payload.product_name}",
+        title=f"호주 시장보고서 - {payload.product_name}",
     )
     story: list = []
 
-    story.append(Paragraph(_rx("호주 시장 분석 보고서"), s_title))
+    story.append(Paragraph(_rx(f"호주 시장보고서 - {payload.product_name}"), s_title))
     story.append(Paragraph(_rx(payload.report_date or datetime.now().strftime("%Y-%m-%d")), s_date))
 
     bar_line = (
@@ -1793,7 +1794,7 @@ def render_p2_pdf(
     story: list = []
 
     # ── 타이틀 + 날짜 (양식 v5) ──
-    story.append(Paragraph(_rx("한국유나이티드제약 호주 수출전략 제안서"), s_title))
+    story.append(Paragraph(_rx(f"호주 수출가격 전략 보고서 - {product_name}"), s_title))
     story.append(Paragraph(_rx(generated_date), s_date))
     story.append(Spacer(1, 10))
 
@@ -1857,7 +1858,62 @@ def render_p2_pdf(
             sum_ex.append(("BACKGROUND", (0, idx), (-1, idx), C_ALT))
     sum_tbl = Table(sum_rows, colWidths=[CONTENT_W * 0.22, CONTENT_W * 0.33, CONTENT_W * 0.45])
     sum_tbl.setStyle(TableStyle(_base_style(sum_ex)))
-    story.append(Paragraph(_rx("2. 의약품 단가(시장 기준가) 및 가격 시나리오 요약"), s_section))
+    # 2. 단가(시장기준가) — 요청 양식 표 구조 반영
+    story.append(Paragraph(_rx(f"2. {product_name} 단가(시장기준가)"), s_section))
+    avg_sc = scenarios.get("average", {}) if isinstance(scenarios, dict) else {}
+    dispatch_inputs = dispatch.get("inputs") or {}
+    listed_aemp_aud = avg_sc.get("aemp_aud") or dispatch_inputs.get("aemp_aud")
+    adjusted_aemp_aud = avg_sc.get("adjusted_aemp_aud")
+    if adjusted_aemp_aud is None and listed_aemp_aud is not None:
+        try:
+            adjusted_aemp_aud = float(listed_aemp_aud) * 1.2
+        except Exception:
+            adjusted_aemp_aud = None
+
+    benchmark_usd = 0.0
+    try:
+        if adjusted_aemp_aud is not None:
+            benchmark_usd = float(adjusted_aemp_aud) * aud_usd_rate
+        elif listed_aemp_aud is not None:
+            benchmark_usd = float(listed_aemp_aud) * aud_usd_rate
+    except Exception:
+        benchmark_usd = 0.0
+    benchmark_rows = [
+        [Paragraph(_rx("기준 가격"), s_cell_h), Paragraph(_rx(f"USD {benchmark_usd:.2f}" if benchmark_usd > 0 else "USD 미확보"), s_cell)],
+        [Paragraph(_rx("산정 방식"), s_cell_h), Paragraph(_rx("AEMP (Approved Ex-Manufacturer Price, 정부 승인 출고가) 기반 + 시장 보정(α) + FOB 역산"), s_cell)],
+        [Paragraph(_rx("시장 구분"), s_cell_h), Paragraph(_rx("공공 / 민간"), s_cell)],
+    ]
+    benchmark_tbl = Table(benchmark_rows, colWidths=[CONTENT_W * 0.24, CONTENT_W * 0.76])
+    benchmark_tbl.setStyle(TableStyle(_base_style([("BACKGROUND", (0, 0), (0, -1), C_ALT)])))
+    story.append(benchmark_tbl)
+    story.append(Spacer(1, 8))
+
+    story.append(Paragraph(_rx("3. 거래처 참고 가격"), s_section))
+    ref_rows = [
+        [
+            Paragraph(_rx("업체명"), s_hdr),
+            Paragraph(_rx("제품명"), s_hdr),
+            Paragraph(_rx("성분함량"), s_hdr),
+            Paragraph(_rx("시장가"), s_hdr),
+        ],
+        [
+            Paragraph(_rx("크롤링 근거 종합"), s_cell),
+            Paragraph(_rx(product_name), s_cell),
+            Paragraph(_rx((f"{inn} {strength} {dosage}").strip() or "미확보"), s_cell),
+            Paragraph(_rx(_trunc(p2_blocks.get("block_extract", "시장가 데이터 미확보"), 180)), s_cell),
+        ],
+    ]
+    ref_tbl = Table(ref_rows, colWidths=[CONTENT_W * 0.16, CONTENT_W * 0.24, CONTENT_W * 0.24, CONTENT_W * 0.36])
+    ref_tbl.setStyle(TableStyle(_base_style([("BACKGROUND", (0, 0), (-1, 0), C_NAVY), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white)])))
+    story.append(ref_tbl)
+    story.append(Spacer(1, 8))
+
+    story.append(Paragraph(_rx("4. 가격 시나리오"), s_section))
+    story.append(Paragraph(_rx("4-1. 공공 시장 (데이터 소스: 정부 입찰가, PBS 공시가 등)"), s_sub))
+    story.append(Paragraph(_rx("※ 어려운 영어 용어는 괄호로 한글 설명 병기: PBS (Pharmaceutical Benefits Scheme, 호주 의약품 급여 제도)"), s_cell_sm))
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph(_rx("4-2. 민간 시장 (데이터 소스: 병원, 약국)"), s_sub))
     story.append(sum_tbl)
     story.append(Spacer(1, 8))
     cross_top = Table(
@@ -1903,9 +1959,9 @@ def render_p2_pdf(
     if alpha_pct is None:
         alpha_pct = 20.0
 
-    # ── 1. 기준 가격 산정 근거 (v5 양식 순서) ──
-    story.append(Paragraph(_rx("1. 기준 가격 산정 근거"), s_section))
-    story.append(Paragraph(_rx("1-1. 공시 AEMP (출발점)"), s_sub))
+    # ── 부록: 기준 가격 산정 상세 ──
+    story.append(Paragraph(_rx("부록 A. 기준 가격 산정 상세"), s_section))
+    story.append(Paragraph(_rx("A-1. 공시 AEMP (출발점)"), s_sub))
     story.append(
         Paragraph(
             _rx(
@@ -1916,7 +1972,7 @@ def render_p2_pdf(
         )
     )
 
-    story.append(Paragraph(_rx("1-2. 시장 보정 (α)"), s_sub))
+    story.append(Paragraph(_rx("A-2. 시장 보정 (α)"), s_sub))
     story.append(
         Paragraph(
             _rx(
@@ -1927,7 +1983,7 @@ def render_p2_pdf(
         )
     )
 
-    story.append(Paragraph(_rx("1-3. 기준 AEMP (최종값)"), s_sub))
+    story.append(Paragraph(_rx("A-3. 기준 AEMP (최종값)"), s_sub))
     calc_rows = [
         [Paragraph(_rx("항목"), s_cell_h), Paragraph(_rx("값"), s_cell_h), Paragraph(_rx("설명"), s_cell_h)],
         [
@@ -1989,9 +2045,9 @@ def render_p2_pdf(
     story.append(calc_tbl)
     story.append(Spacer(1, 6))
 
-    # ── 2. 호주 수출가(FOB) 3시나리오 ──
-    story.append(Paragraph(_rx("2. 호주 수출가(FOB) 3시나리오"), s_section))
-    story.append(Paragraph(_rx("2-1. 호주 제약 스폰서 유통 구조"), s_sub))
+    # ── 부록: FOB 역산 상세 ──
+    story.append(Paragraph(_rx("부록 B. FOB 역산 상세"), s_section))
+    story.append(Paragraph(_rx("B-1. 공공 시장"), s_sub))
     story.append(
         Paragraph(
             _rx(
@@ -2002,7 +2058,7 @@ def render_p2_pdf(
         )
     )
 
-    story.append(Paragraph(_rx("2-2. 계산식"), s_sub))
+    story.append(Paragraph(_rx("B-1-1. 계산식"), s_sub))
     formula_rows = [
         [Paragraph(_rx("1단계"), s_cell_h), Paragraph(_rx("공시 AEMP × (1+α) = 기준 AEMP"), s_cell)],
         [Paragraph(_rx("2단계"), s_cell_h), Paragraph(_rx("기준 AEMP ÷ (1 + 수입상 마진%) = FOB"), s_cell)],
@@ -2021,7 +2077,8 @@ def render_p2_pdf(
     story.append(formula_tbl)
     story.append(Spacer(1, 6))
 
-    story.append(Paragraph(_rx("2-3. 시나리오 비교 표"), s_sub))
+    story.append(Paragraph(_rx("B-2. 민간 시장"), s_sub))
+    story.append(Paragraph(_rx("B-2-1. 시나리오 비교 표"), s_sub))
     sce_header = [
         Paragraph("시나리오", s_hdr),
         Paragraph("핵심 수치", s_hdr),
@@ -2131,6 +2188,15 @@ def render_p2_pdf(
         )
     )
     story.append(footer_tbl)
+    story.append(Spacer(1, 6))
+    story.append(
+        Paragraph(
+            _rx(
+                "* 본 산출 결과는 AI 분석에 기반한 추정치이므로, 최종 의사결정 전 반드시 담당자의 검토 및 확인이 필요합니다."
+            ),
+            s_cell_sm,
+        )
+    )
 
     doc.build(story)
 
@@ -2301,7 +2367,7 @@ def render_buyers_pdf(
     )
     story: list = []
 
-    story.append(Paragraph("호주 수출 바이어발굴 보고서", s_title))
+    story.append(Paragraph("호주 바이어 후보 리스트", s_title))
     story.append(Paragraph(
         f"한국유나이티드제약 · 생성 {datetime.now().strftime('%Y-%m-%d %H:%M')} · "
         f"실시간 환율 1 AUD = {fx.get('aud_krw', 0):.1f} KRW · {fx.get('aud_usd', 0) * 100:.2f} USD¢",
@@ -2322,6 +2388,7 @@ def render_buyers_pdf(
             f"【 {safe(pname)} 】 {safe(pen, '')}",
             s_sec,
         ))
+        story.append(Paragraph("1. 바이어 후보 리스트 (전체 10개사)", s_sec))
         story.append(Paragraph(
             f"성분: <b>{safe(inns)}</b> · 가격 케이스: {safe(meta.get('pricing_case'))} · "
             f"바이어 TOP {len(buyers)} (최대 10)",
@@ -2378,7 +2445,7 @@ def render_buyers_pdf(
         story.append(tbl)
 
         story.append(Spacer(1, 10))
-        story.append(Paragraph("TOP 10 바이어 상세", s_sec))
+        story.append(Paragraph("2. 우선 접촉 바이어 상세 정보 (상위 10개사)", s_sec))
 
         for b in buyers[:10]:
             cats = b.get("therapeutic_categories") or []

@@ -59,8 +59,8 @@ const STEP_ORDER = ['db_load', 'analyze', 'refs', 'report'];
 let _pollTimer  = null;   // 파이프라인 폴링 타이머
 let _currentKey = null;   // 현재 선택된 product_key
 
-// P2 3열 시나리오용 원본 데이터
-let _p2ScenarioRaw = { agg: 0, avg: 0, cons: 0, sgd_usd: 0, sgd_krw: 0 };
+// P2 3열 시나리오용 원본 데이터 (호주: USD 기준. aud_usd/aud_krw/usd_krw는 loadExchange로 실시간 반영)
+let _p2ScenarioRaw = { agg: 0, avg: 0, cons: 0, aud_usd: 0, aud_krw: 0, usd_krw: 0 };
 
 // P2 컬럼별 커스텀 옵션 데이터
 let _p2ColData = {
@@ -1278,8 +1278,11 @@ function _renderP2AiResult(data) {
   //   · 원본 AUD 는 _p2ScenarioRaw + window._exchangeRates 에 보존 (디버깅·Stage 4 재계산용)
   const extracted = data?.extracted || {};
   const analysis = data?.analysis || {};
-  // 응답의 exchange_rates 우선, 없으면 전역 fallback (loadExchange 저장본)
-  const rates = data?.exchange_rates || window._exchangeRates || {};
+  // 실시간 환율 우선 (window._exchangeRates = loadExchange 최신값),
+  // 없으면 파이프라인 응답의 exchange_rates (Supabase 저장 시점 환율 — 구형 폴백)
+  const rates = (window._exchangeRates && Number(window._exchangeRates.aud_usd) > 0)
+    ? window._exchangeRates
+    : (data?.exchange_rates || window._exchangeRates || {});
   const scenarios = Array.isArray(analysis.scenarios) ? analysis.scenarios : [];
   const resultSection = document.getElementById('p2-ai-result-section');
   if (resultSection) resultSection.style.display = '';
@@ -1448,15 +1451,25 @@ function _renderP2AiResult(data) {
 
 function _p2FillExchangeRate() {
   // AU: /api/exchange 응답은 aud_usd (AUD→USD 환율). 직접입력 탭 exchange 슬라이더에 반영.
-  // 구 버전: sgd_usd 를 참조하던 버그 → aud_usd 로 수정
+  // loadExchange() 호출마다 실시간 반영 — 3열 카드 KRW/AUD 보조줄도 즉시 갱신.
   const rates = window._exchangeRates;
   if (!rates) return;
   const audUsd = Number(rates.aud_usd);
   if (!audUsd || audUsd <= 0) return;
+
+  // ① 직접입력 탭 exchange 슬라이더 갱신
   ['public', 'private'].forEach((seg) => {
     const opt = _p2Manual[seg].find((x) => x.key === 'exchange');
     if (opt) opt.value = Number(audUsd.toFixed(4));
   });
+
+  // ② _p2ScenarioRaw 실시간 환율 갱신 (recalcP2Col이 참조하는 usd_krw/aud_usd 최신화)
+  _p2ScenarioRaw.aud_usd = audUsd;
+  _p2ScenarioRaw.aud_krw = Number(rates.aud_krw) || 0;
+  _p2ScenarioRaw.usd_krw = Number(rates.usd_krw) || 0;
+
+  // ③ 3열 카드 KRW·AUD 보조줄 즉시 재계산 (메인 USD 가격은 그대로, 환산 보조줄만 갱신)
+  ['agg', 'avg', 'cons'].forEach((c) => recalcP2Col(c));
 }
 
 function _p2FillBaseFromReport() {
@@ -1630,6 +1643,24 @@ function _renderP2Manual() {
   const avgFormula  = `FOB USD ${avg.toFixed(2)} (기준가 그대로)`;
   const consFormula = `FOB USD ${calc.kup.toFixed(2)} × 1.10 = USD ${cons.toFixed(2)}`;
   _p2LastScenarios = { mode: 'manual', seg: _p2ManualSeg, base: calc.kup, agg, avg, cons, formulaStr: calc.formulaStr, aggReason, avgReason, consReason, aggFormula, avgFormula, consFormula, rationaleLines: [] };
+
+  // ── 3열 시나리오 카드 즉시 반영 (실시간 환율로 KRW/AUD 보조줄 계산) ──
+  if (_p2ManualCalculated) {
+    const rt    = window._exchangeRates || {};
+    const usdKrw = Number(_p2ScenarioRaw.usd_krw) || Number(rt.usd_krw) || 0;
+    const audUsd = Number(_p2ScenarioRaw.aud_usd) || Number(rt.aud_usd) || 0;
+    [['agg', agg], ['avg', avg], ['cons', cons]].forEach(([col, price]) => {
+      const priceEl   = document.getElementById('p2c-price-' + col);
+      const subEl     = document.getElementById('p2c-sub-' + col);
+      const baseInput = document.getElementById('p2ci-base-' + col);
+      if (priceEl)   priceEl.textContent = price.toFixed(2);
+      if (baseInput) baseInput.value     = price.toFixed(2);
+      const krwTxt = usdKrw > 0 ? `${Math.round(price * usdKrw).toLocaleString('ko-KR')}원` : '—';
+      const audTxt = audUsd > 0 ? `${(price / audUsd).toFixed(2)} AUD` : '';
+      if (subEl) subEl.textContent = audTxt ? `${krwTxt} / ${audTxt}` : krwTxt;
+      _p2ScenarioRaw[col] = price;   // recalcP2Col 기준값 동기화
+    });
+  }
 }
 
 function _p2OptionCardHtml(opt) {

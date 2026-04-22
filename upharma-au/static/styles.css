@@ -2397,35 +2397,35 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
    바이어 발굴 — 리스트 + 카드 모달  (2026-04-20)
    ════════════════════════════════════════════════════ */
 
-/* 바이어 번호 목록 */
-.p3-buyer-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
+/* 바이어 번호 목록 — 하단 스켈레톤 섹션에서 재정의 */
 .p3-buyer-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 16px;
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: var(--sh2);
   cursor: pointer;
-  transition: background 0.15s;
-  border-radius: 6px;
+  transition: box-shadow 0.15s, transform 0.1s;
 }
-.p3-buyer-item:hover { background: #f5f9ff; }
+.p3-buyer-item:hover {
+  box-shadow: 0 4px 14px rgba(23,63,120,.13);
+  transform: translateY(-1px);
+}
 .p3-buyer-rank {
-  min-width: 26px;
+  min-width: 24px;
   font-size: 13px;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--navy);
+  opacity: 0.35;
   text-align: right;
 }
 .p3-buyer-name {
   flex: 1;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text);
 }
 .p3-buyer-tier-badge {
   font-size: 11px;
@@ -2916,39 +2916,78 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.45; }
 }
+/* 스켈레톤 행 — 개별 흰 카드 형태 (SG 패턴) */
 .p3-skeleton-item {
   display: flex;
   align-items: center;
-  padding: 11px 14px;
-  gap: 10px;
-  border-bottom: 1px solid var(--inner);
+  padding: 14px 16px;
+  gap: 14px;
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: var(--sh2);
   animation: skeletonPulse 1.4s ease-in-out infinite;
   list-style: none;
 }
-.p3-skeleton-rank {
-  width: 22px;
-  height: 14px;
-  border-radius: 4px;
-  background: #e2e8f0;
+.p3-skeleton-num {
+  min-width: 22px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
   flex-shrink: 0;
+  opacity: 0.35;
 }
 .p3-skeleton-name {
   flex: 1;
-  height: 14px;
-  border-radius: 4px;
+  height: 13px;
+  border-radius: 6px;
   background: #e2e8f0;
 }
-.p3-skeleton-tag {
-  width: 56px;
-  height: 14px;
-  border-radius: 4px;
-  background: #e2e8f0;
-  flex-shrink: 0;
+/* p3-buyer-list: 고정 높이 스크롤 박스 (SG 패턴) */
+.p3-buyer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0 4px 0 0;
+  max-height: 460px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(23,63,120,.18) transparent;
 }
+.p3-buyer-list::-webkit-scrollbar { width: 4px; }
+.p3-buyer-list::-webkit-scrollbar-track { background: transparent; }
+.p3-buyer-list::-webkit-scrollbar-thumb { background: rgba(23,63,120,.18); border-radius: 99px; }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   추가 — 바이어 기준 체크박스 패널 (매출·제조소·약국체인·ARTG·수입경험)
+   추가 — 바이어 기준 체크박스 패널 (SG 패턴 — 기준 왼쪽·다운로드 오른쪽)
 ══════════════════════════════════════════════════════════════════════════ */
+/* 외부 flex 행: 체크박스 영역(왼쪽) + 다운로드 버튼(오른쪽) */
+.p3-criteria-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px 8px;
+  background: var(--inner);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+/* 체크박스 영역 내부 — flex:1 로 나머지 공간 차지 */
+.p3-criteria-wrap-inner {
+  flex: 1;
+  min-width: 0;
+}
+/* Top 10 헤딩 */
+.p3-top10-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  margin-bottom: 6px;
+}
+/* 기존 .p3-criteria-wrap 클래스 유지 (레거시 호환) */
 .p3-criteria-wrap {
   padding: 10px 14px 8px;
   background: var(--inner);
@@ -2968,16 +3007,17 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
 }
 .p3-criteria-clear {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--orange2);
   background: none;
-  border: 1px solid #d0d7e3;
+  border: 1px solid var(--orange);
   border-radius: 6px;
   cursor: pointer;
   padding: 2px 8px;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
   line-height: 1.5;
+  font-weight: 600;
 }
-.p3-criteria-clear:hover { background: rgba(23,63,120,.07); }
+.p3-criteria-clear:hover { background: rgba(240,161,58,.1); color: var(--orange2); }
 .p3-criteria-list {
   display: flex;
   flex-wrap: wrap;

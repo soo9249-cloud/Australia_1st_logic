@@ -2869,13 +2869,10 @@ resetProgress();
 
   // ───── 리스트 아이템 (이름만 표시) ─────
   function renderBuyerListItem(buyer, idx) {
-    const tier = _buyerTier(buyer);
-    const tierLabel = tier === 'A' ? '성분 직접' : tier === 'B' ? '영역 일치' : '기타';
     return `
       <li class="p3-buyer-item" onclick="openBuyerCard(${idx})">
         <span class="p3-buyer-rank">${buyer.rank || idx + 1}</span>
         <span class="p3-buyer-name">${escHtml(buyer.company_name || '—')}</span>
-        <span class="p3-buyer-tier-badge tier-${tier}">${tierLabel}</span>
         <span class="p3-buyer-arrow">›</span>
       </li>`;
   }
@@ -3217,15 +3214,17 @@ resetProgress();
     const finalWrap = document.getElementById('p3-final-report-wrap');
     if (finalWrap) finalWrap.style.display = 'none';
 
-    // 스켈레톤 로딩 — 분석 중 1~10번 자리 표시
+    // 스켈레톤 로딩 — 분석 중 1~8번 자리 표시 (SG 패턴: 번호 보이고 내용만 회색 바)
     const skeletonList = document.getElementById('p3-buyer-list');
-    if (tableWrap) tableWrap.style.display = 'block';
+    if (tableWrap) { tableWrap.style.display = 'block'; }
+    // 스켈레톤 중 criteria 패널은 숨김
+    const criteriaWrap = document.getElementById('p3-criteria-wrap');
+    if (criteriaWrap) criteriaWrap.style.display = 'none';
     if (skeletonList) {
-      skeletonList.innerHTML = Array.from({ length: 10 }, (_, i) => `
-        <li class="p3-skeleton-item" style="animation-delay:${i * 0.08}s">
-          <span class="p3-skeleton-rank"></span>
+      skeletonList.innerHTML = Array.from({ length: 8 }, (_, i) => `
+        <li class="p3-skeleton-item" style="animation-delay:${i * 0.07}s">
+          <span class="p3-skeleton-num">${i + 1}</span>
           <span class="p3-skeleton-name"></span>
-          <span class="p3-skeleton-tag"></span>
         </li>`).join('');
     }
 
@@ -3272,18 +3271,12 @@ resetProgress();
       // 4. 리스트 렌더
       const buyers = result.buyers || [];
       _p3BuyersCache = buyers;
-      if (meta) {
-        meta.style.display = 'block';
-        const inns = (result.inn_components || []).join(' + ');
-        meta.innerHTML = `
-          <div style="padding:8px 12px; background:#eff6ff; border-left:3px solid #3b82f6; border-radius:3px; font-size:13px; margin-bottom:10px;">
-            <b>${escHtml(result.product_name_ko || pid)}</b>
-            — 성분: <code>${escHtml(inns)}</code>
-            <span style="float:right; color:#6b7280;">실시간 분석 완료 · 총 ${buyers.length} 명 · 기업명 클릭 시 상세 카드</span>
-          </div>
-        `;
-      }
+      // 메타 바 제거 — 별도 표시 안 함
+      if (meta) meta.style.display = 'none';
       if (tableWrap) tableWrap.style.display = 'block';
+      // 결과 로드 후 criteria 패널 다시 표시
+      const criteriaWrapR = document.getElementById('p3-criteria-wrap');
+      if (criteriaWrapR) criteriaWrapR.style.display = '';
       // 기준 체크박스 기본값으로 정렬 후 렌더 (p3ResortBuyers 가 _p3BuyersCache 사용)
       if (typeof window.p3ResortBuyers === 'function') {
         window.p3ResortBuyers();
@@ -3341,22 +3334,25 @@ resetProgress();
     }
   };
 
-  // ───── 기준 체크박스 점수 계산 (백엔드 per-criterion 점수 대신 프론트 파생) ─────
+  // ───── 기준 체크박스 점수 계산
+  // ① 매출규모  ② 파이프라인(동일성분/유사품 취급)  ③ 제조소 보유  ④ 수입 경험  ⑤ 약국체인
   function _criteriaScore(buyer) {
     const rev = String(buyer.annual_revenue_rank || '').toUpperCase();
     const revScore = rev.includes('TOP 5') ? 5
                    : rev.includes('TOP 10') ? 4
                    : rev.includes('TOP 20') ? 3
                    : rev.includes('TOP 50') ? 2 : 1;
+    // 파이프라인: tier A(성분 직접) = 5, tier B(영역 일치) = 3, 기타 = 1
+    const tier = _buyerTier(buyer);
+    const pipelineScore = tier === 'A' ? 5 : tier === 'B' ? 3 : 1;
     const artg = Number(buyer.tga_artg_count || 0);
-    const artgScore = artg >= 20 ? 5 : artg >= 10 ? 4 : artg >= 5 ? 3 : artg >= 1 ? 2 : 0;
     const importScore = artg >= 5 ? 5 : artg >= 1 ? 3 : (buyer.is_gpce_exhibitor ? 2 : 0);
     return {
-      revenue: revScore,
-      factory: buyer.has_au_factory === 'Y' ? 5 : 0,
-      chain:   Number(buyer.psi_pharmacy_chain || 0) > 0 ? 5 : 0,
-      artg:    artgScore,
-      import:  importScore,
+      revenue:  revScore,
+      pipeline: pipelineScore,
+      factory:  buyer.has_au_factory === 'Y' ? 5 : 0,
+      import:   importScore,
+      chain:    Number(buyer.psi_pharmacy_chain || 0) > 0 ? 5 : 0,
     };
   }
 
@@ -3364,11 +3360,11 @@ resetProgress();
   window.p3ResortBuyers = function () {
     if (!_p3BuyersCache.length) return;
     const criteria = {
-      revenue: document.getElementById('p3c-revenue')?.checked ?? true,
-      factory: document.getElementById('p3c-factory')?.checked ?? true,
-      chain:   document.getElementById('p3c-chain')?.checked   ?? true,
-      artg:    document.getElementById('p3c-artg')?.checked    ?? true,
-      import:  document.getElementById('p3c-import')?.checked  ?? true,
+      revenue:  document.getElementById('p3c-revenue')?.checked  ?? true,
+      pipeline: document.getElementById('p3c-pipeline')?.checked ?? true,
+      factory:  document.getElementById('p3c-factory')?.checked  ?? true,
+      import:   document.getElementById('p3c-import')?.checked   ?? true,
+      chain:    document.getElementById('p3c-chain')?.checked    ?? true,
     };
     const sorted = [..._p3BuyersCache].sort((a, b) => {
       const sa = _criteriaScore(a);
@@ -3391,7 +3387,7 @@ resetProgress();
 
   // ───── 기준 전체 해제 ─────
   window.p3ClearAllCriteria = function () {
-    ['p3c-revenue', 'p3c-factory', 'p3c-chain', 'p3c-artg', 'p3c-import'].forEach((id) => {
+    ['p3c-revenue', 'p3c-pipeline', 'p3c-factory', 'p3c-import', 'p3c-chain'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.checked = false;
     });

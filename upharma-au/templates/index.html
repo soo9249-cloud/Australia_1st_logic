@@ -419,7 +419,6 @@
           </div>
           <div class="process-body" id="pb-p3">
             <div class="selector-card">
-              <div class="selector-label">품목 선택</div>
               <div class="selector-row">
                 <select id="p3-report-select" style="flex:1;">
                   <option value="">시장조사 보고서를 선택하세요.</option>
@@ -442,30 +441,36 @@
                 <div class="prog-step" id="p3prog-pdf"><div class="prog-dot">4</div><div class="prog-label">PDF 보고서 생성</div></div>
               </div>
               <div class="p3-meta" id="p3-meta" style="display:none;"></div>
-              <div id="p3-buyer-table" style="display:none;">
-                <!-- 바이어 정렬 기준 체크박스 패널 (기본 5개 모두 선택) -->
-                <div class="p3-criteria-wrap" id="p3-criteria-wrap">
+            </div>
+
+            <!-- 바이어 목록 (스켈레톤 로딩 → 실결과, selector-card 밖) -->
+            <div id="p3-buyer-table" style="display:none;">
+              <!-- 기준 + 최종 보고서 다운로드 한 행 (SG 패턴) -->
+              <div class="p3-criteria-row" id="p3-criteria-wrap">
+                <div class="p3-criteria-wrap-inner">
                   <div class="p3-criteria-header">
-                    <span class="p3-criteria-title">정렬 기준 (체크박스 변경 시 자동 재정렬)</span>
+                    <span class="p3-criteria-title">기업 평가 기준 <span style="font-weight:400;color:var(--muted);">(체크된 항목들에 대해 평가 후 추천 순위 배열)</span></span>
                     <button class="p3-criteria-clear" type="button" onclick="p3ClearAllCriteria()">전체 해제</button>
                   </div>
                   <div class="p3-criteria-list">
-                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-revenue" checked onchange="p3ResortBuyers()"> 매출 규모</label>
-                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-factory" checked onchange="p3ResortBuyers()"> 제조소 보유</label>
-                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-chain"   checked onchange="p3ResortBuyers()"> 약국체인</label>
-                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-artg"    checked onchange="p3ResortBuyers()"> ARTG 등재</label>
-                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-import"  checked onchange="p3ResortBuyers()"> 수입 경험</label>
+                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-revenue"  checked onchange="p3ResortBuyers()"> ① 매출규모</label>
+                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-pipeline" checked onchange="p3ResortBuyers()"> ② 파이프라인</label>
+                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-factory"  checked onchange="p3ResortBuyers()"> ③ 제조소 보유</label>
+                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-import"   checked onchange="p3ResortBuyers()"> ④ 수입 경험</label>
+                    <label class="p3-criteria-item"><input type="checkbox" id="p3c-chain"    checked onchange="p3ResortBuyers()"> ⑤ 약국체인 운영</label>
                   </div>
                 </div>
-                <ol class="p3-buyer-list" id="p3-buyer-list"></ol>
+                <!-- 최종 보고서 다운로드 버튼 (오른쪽 고정) -->
+                <div id="p3-final-report-wrap" style="display:none;flex-shrink:0;">
+                  <button class="btn-analyze" id="p3-final-btn" onclick="downloadFinalReport()" type="button" style="height:56px;padding:0 20px;font-size:13px;">↓ 최종 보고서<br>다운로드</button>
+                </div>
               </div>
-              <div class="p3-footer-row" id="p3-dl-wrap" style="display:none;">
-                <button class="btn-download" id="p3-dl-btn" onclick="generateBuyersPdf()" disabled>📄 PDF 다운로드</button>
-              </div>
-              <!-- 최종 보고서 다운로드 (시장조사+가격전략+바이어 3종 병합) -->
-              <div class="p3-final-report-wrap" id="p3-final-report-wrap" style="display:none;">
-                <button class="btn-download" id="p3-final-btn" onclick="downloadFinalReport()" type="button">📋 최종 보고서 다운로드</button>
-              </div>
+              <!-- Top 10 헤딩 -->
+              <div class="p3-top10-heading">Top 10</div>
+              <ol class="p3-buyer-list" id="p3-buyer-list"></ol>
+            </div>
+            <div class="p3-footer-row" id="p3-dl-wrap" style="display:none;">
+              <button class="btn-download" id="p3-dl-btn" onclick="generateBuyersPdf()" disabled>📄 PDF 다운로드</button>
             </div>
           </div><!-- /pb-p3 -->
         </div><!-- /process-section -->

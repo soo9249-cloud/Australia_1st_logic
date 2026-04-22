@@ -1260,19 +1260,21 @@ function recalcP2Col(col) {
   }
 }
 
-/* P2 컬럼 커스텀 옵션 렌더링 — 확정 옵션 + 미확정 초안 행(여러 줄 가능) */
+/* P2 컬럼 커스텀 옵션 렌더링 — 확정 옵션 + 항상 보이는 빈 추가 행 (SG 패턴) */
 function renderP2ColOptions(col) {
   const container = document.getElementById('p2co-' + col);
   if (!container) return;
   const opts = (_p2ColData[col] || { opts: [] }).opts;
-  const drafts = _p2ColPendingDrafts[col] || [];
 
   const typeLabel = { pct_add: '% 가산', pct_deduct: '% 차감', multiply: '× 배수', abs_add: 'USD 가산' };
+  const typeOptions = `
+    <option value="pct_deduct">% 차감</option>
+    <option value="pct_add">% 가산</option>
+    <option value="multiply">× 배수</option>
+    <option value="abs_add">USD 가산</option>`;
 
-  /* 적용 순서(recalc)는 배열 순서 그대로 유지하되, 화면은 원본 순서로 표시 */
-  const displayOpts = opts.slice();
-
-  let html = displayOpts.map(opt => `
+  // 확정 옵션 행
+  let html = opts.map(opt => `
     <div class="p2c-opt-row">
       <span class="p2c-opt-name">${_escHtml(opt.name)}</span>
       <span class="p2c-opt-type-label">${typeLabel[opt.type] || opt.type}</span>
@@ -1281,22 +1283,15 @@ function renderP2ColOptions(col) {
       <button type="button" class="p2c-opt-del" onclick="removeP2ColOption('${col}','${_escHtml(opt.id)}')">×</button>
     </div>`).join('');
 
-  drafts.forEach((d) => {
-    const rid = String(d.id).replace(/[^a-zA-Z0-9_-]/g, '') || 'd0';
-    html += `
-      <div class="p2c-opt-row p2c-add-row">
-        <input class="p2c-opt-name-input" type="text" placeholder="옵션명" id="p2c-newname-${col}-${rid}" maxlength="20">
-        <select class="p2c-opt-type-select" id="p2c-newtype-${col}-${rid}" onchange="recalcP2Col('${col}')">
-          <option value="pct_deduct">% 차감</option>
-          <option value="pct_add">% 가산</option>
-          <option value="abs_add">USD 가산</option>
-        </select>
-        <input class="p2c-opt-val" type="number" placeholder="값" id="p2c-newval-${col}-${rid}" step="0.1" min="0"
-          oninput="recalcP2Col('${col}')">
-        <button type="button" class="p2c-confirm-btn" onclick="confirmP2ColOption('${col}','${rid}')">✓</button>
-        <button type="button" class="p2c-draft-cancel" onclick="cancelP2ColDraft('${col}','${rid}')" title="이 줄 취소">×</button>
-      </div>`;
-  });
+  // 항상 표시되는 빈 추가 행 (SG 패턴 — ✓ 클릭 시 확정)
+  const aid = 'always_' + col;
+  html += `
+    <div class="p2c-opt-row p2c-add-row">
+      <input class="p2c-opt-name-input" type="text" placeholder="옵션명" id="p2c-newname-${col}-${aid}" maxlength="20">
+      <select class="p2c-opt-type-select" id="p2c-newtype-${col}-${aid}">${typeOptions}</select>
+      <input class="p2c-opt-val" type="number" placeholder="값" id="p2c-newval-${col}-${aid}" step="0.1" min="0">
+      <button type="button" class="p2c-confirm-btn" onclick="confirmP2ColOption('${col}','${aid}')">✓</button>
+    </div>`;
 
   container.innerHTML = html;
   recalcP2Col(col);
@@ -1325,8 +1320,10 @@ function confirmP2ColOption(col, draftId) {
   if (!name || Number.isNaN(val) || val < 0) return;
   _p2ColData[col] = _p2ColData[col] || { opts: [] };
   _p2ColData[col].opts.push({ id: 'o' + Date.now(), name, type, value: val });
+  // always_ 행은 _p2ColPendingDrafts 에 없으므로 filter 는 무해
   _p2ColPendingDrafts[col] = (_p2ColPendingDrafts[col] || []).filter((d) => String(d.id) !== did);
   renderP2ColOptions(col);
+  recalcP2Col(col);
 }
 
 /* 옵션 삭제 */
@@ -1448,18 +1445,7 @@ function _renderP2AiResult(data) {
   // 산정 이유
   _setText('p2r-rationale', analysis.rationale || '산정 이유 없음');
 
-  // 다운로드 링크 (호주 /api/report/download 그대로 호환)
-  const dlState = document.getElementById('p2-report-dl-state');
-  if (dlState) {
-    if (data?.pdf) {
-      dlState.innerHTML = `
-        <a class="btn-download"
-           href="/api/report/download?name=${encodeURIComponent(data.pdf)}"
-           target="_blank">📄 수출전략 보고서 다운로드</a>`;
-    } else {
-      dlState.innerHTML = `<span style="font-size:13px;color:var(--red);">PDF 생성에 실패했습니다.</span>`;
-    }
-  }
+  // 다운로드 링크 — 보고서 탭에 자동 등록 (아래 _addP2AiReportEntry 에서 처리)
 
   // ── 3열 시나리오 카드 (Stage 1 HTML `p2-three-col`) — USD 메인 + KRW 보조 ──
   const cols = ['agg', 'avg', 'cons'];
@@ -1509,21 +1495,6 @@ function _renderP2AiResult(data) {
     _setText('p2-dist-p75', `${prices[2].toFixed(2)} USD`);
   }
 
-  // 제품 목록 (추출된 product_name 기준)
-  const prodList = document.getElementById('p2-product-list');
-  if (prodList && extracted.product_name) {
-    prodList.innerHTML = `
-      <table class="p2-prod-table">
-        <thead><tr><th>제품</th><th>참조가 (원문)</th><th>출처</th></tr></thead>
-        <tbody>
-          <tr>
-            <td>${_escHtml(extracted.product_name || '—')}</td>
-            <td>${_escHtml(extracted.ref_price_text || '—')}</td>
-            <td>report</td>
-          </tr>
-        </tbody>
-      </table>`;
-  }
 }
 
 function _p2FillExchangeRate() {

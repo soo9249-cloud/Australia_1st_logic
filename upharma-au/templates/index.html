@@ -222,13 +222,9 @@
                   <div id="p2-ai-result-section" style="display:none;">
                     <div class="p2-three-col">
 
-                      <!-- aggressive — 저가 진입 시나리오 (Penetration Pricing) -->
+                      <!-- aggressive — 저가 진입 (Penetration Pricing) -->
                       <div class="p2-col p2-col--agg">
-                        <div class="p2-col-rank-row">
-                          <span class="p2-col-label">저가 진입 시나리오</span>
-                          <span class="p2-rank-badge">Penetration</span>
-                        </div>
-                        <div id="p2c-importer-hint-agg" style="font-size:10.5px;color:var(--muted);margin-bottom:8px;">수입상 마진 30%</div>
+                        <div class="p2-col-label">저가 진입</div>
                         <div class="p2-col-price" id="p2c-price-agg">—</div>
                         <div class="p2-col-currency">USD</div>
                         <div class="p2-col-sub" id="p2c-sub-agg">— 원 / — AUD</div>
@@ -236,33 +232,25 @@
                           <button class="p2-col-expand-btn" onclick="openP2ColModal('agg')">클릭하여 편집</button>
                         </div>
                         <div class="p2-col-detail" id="p2cd-agg" style="display:none;">
-                          <!-- AI 참조가 (읽기 전용) -->
                           <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">AI 결과 참조가</label>
+                            <label class="p2-col-input-label">보고서 가격</label>
                             <div class="p2-ref-price-box">
-                              <span id="p2ci-ref-aud-agg">—</span> AUD &nbsp;≈&nbsp; <span id="p2ci-ref-usd-agg">—</span> USD
+                              <span id="p2ci-ref-usd-agg">—</span> USD &nbsp;≈&nbsp; <span id="p2ci-ref-aud-agg">—</span> AUD
                             </div>
                           </div>
-                          <!-- 기준가 (USD, 수동 조정 가능) -->
                           <div class="p2-col-input-row">
                             <label class="p2-col-input-label">기준가 (USD)</label>
                             <input class="p2-col-input" type="number" id="p2ci-base-agg" value="0" step="0.01" min="0" oninput="recalcP2Col('agg')">
                           </div>
-                          <!-- 시장별 조정 옵션 (openP2ColModal 에서 동적 채움) -->
-                          <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;font-weight:700;">조정 옵션</div>
+                          <div class="p2-modal-opts-header">추가 옵션</div>
                           <div id="p2co-agg" class="p2-custom-opts"></div>
-                          <button class="p2c-add-btn" onclick="addP2ColOption('agg')">+ 옵션 추가</button>
-                          <div class="p2-col-result-row">계산 결과: <strong id="p2ci-result-agg" style="color:var(--navy);">—</strong></div>
+                          <div class="p2-col-result-row">결과: <strong id="p2ci-result-agg">—</strong></div>
                         </div>
                       </div>
 
-                      <!-- average — 기준가 기반 시나리오 (Reference Pricing) -->
+                      <!-- average — 기준가 (Reference Pricing) -->
                       <div class="p2-col p2-col--avg">
-                        <div class="p2-col-rank-row">
-                          <span class="p2-col-label">기준가 기반 시나리오</span>
-                          <span class="p2-rank-badge">Reference</span>
-                        </div>
-                        <div id="p2c-importer-hint-avg" style="font-size:10.5px;color:var(--muted);margin-bottom:8px;">수입상 마진 20%</div>
+                        <div class="p2-col-label">기준가</div>
                         <div class="p2-col-price" id="p2c-price-avg">—</div>
                         <div class="p2-col-currency">USD</div>
                         <div class="p2-col-sub" id="p2c-sub-avg">— 원 / — AUD</div>
@@ -271,29 +259,24 @@
                         </div>
                         <div class="p2-col-detail" id="p2cd-avg" style="display:none;">
                           <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">AI 결과 참조가</label>
+                            <label class="p2-col-input-label">보고서 가격</label>
                             <div class="p2-ref-price-box">
-                              <span id="p2ci-ref-aud-avg">—</span> AUD &nbsp;≈&nbsp; <span id="p2ci-ref-usd-avg">—</span> USD
+                              <span id="p2ci-ref-usd-avg">—</span> USD &nbsp;≈&nbsp; <span id="p2ci-ref-aud-avg">—</span> AUD
                             </div>
                           </div>
                           <div class="p2-col-input-row">
                             <label class="p2-col-input-label">기준가 (USD)</label>
                             <input class="p2-col-input" type="number" id="p2ci-base-avg" value="0" step="0.01" min="0" oninput="recalcP2Col('avg')">
                           </div>
-                          <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;font-weight:700;">조정 옵션</div>
+                          <div class="p2-modal-opts-header">추가 옵션</div>
                           <div id="p2co-avg" class="p2-custom-opts"></div>
-                          <button class="p2c-add-btn" onclick="addP2ColOption('avg')">+ 옵션 추가</button>
-                          <div class="p2-col-result-row">계산 결과: <strong id="p2ci-result-avg" style="color:var(--navy);">—</strong></div>
+                          <div class="p2-col-result-row">결과: <strong id="p2ci-result-avg">—</strong></div>
                         </div>
                       </div>
 
-                      <!-- conservative — 프리미엄 시나리오 (Premium Pricing) -->
+                      <!-- conservative — 프리미엄 (Premium Pricing) -->
                       <div class="p2-col p2-col--cons">
-                        <div class="p2-col-rank-row">
-                          <span class="p2-col-label">프리미엄 시나리오</span>
-                          <span class="p2-rank-badge">Premium</span>
-                        </div>
-                        <div id="p2c-importer-hint-cons" style="font-size:10.5px;color:var(--muted);margin-bottom:8px;">수입상 마진 10%</div>
+                        <div class="p2-col-label">프리미엄</div>
                         <div class="p2-col-price" id="p2c-price-cons">—</div>
                         <div class="p2-col-currency">USD</div>
                         <div class="p2-col-sub" id="p2c-sub-cons">— 원 / — AUD</div>
@@ -302,28 +285,22 @@
                         </div>
                         <div class="p2-col-detail" id="p2cd-cons" style="display:none;">
                           <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">AI 결과 참조가</label>
+                            <label class="p2-col-input-label">보고서 가격</label>
                             <div class="p2-ref-price-box">
-                              <span id="p2ci-ref-aud-cons">—</span> AUD &nbsp;≈&nbsp; <span id="p2ci-ref-usd-cons">—</span> USD
+                              <span id="p2ci-ref-usd-cons">—</span> USD &nbsp;≈&nbsp; <span id="p2ci-ref-aud-cons">—</span> AUD
                             </div>
                           </div>
                           <div class="p2-col-input-row">
                             <label class="p2-col-input-label">기준가 (USD)</label>
                             <input class="p2-col-input" type="number" id="p2ci-base-cons" value="0" step="0.01" min="0" oninput="recalcP2Col('cons')">
                           </div>
-                          <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;font-weight:700;">조정 옵션</div>
+                          <div class="p2-modal-opts-header">추가 옵션</div>
                           <div id="p2co-cons" class="p2-custom-opts"></div>
-                          <button class="p2c-add-btn" onclick="addP2ColOption('cons')">+ 옵션 추가</button>
-                          <div class="p2-col-result-row">계산 결과: <strong id="p2ci-result-cons" style="color:var(--navy);">—</strong></div>
+                          <div class="p2-col-result-row">결과: <strong id="p2ci-result-cons">—</strong></div>
                         </div>
                       </div>
 
                     </div><!-- /p2-three-col -->
-
-                    <div class="selector-card" style="margin-top:12px;">
-                      <div id="p2-product-list"></div>
-                      <div id="p2-report-dl-state" style="margin-top:12px;"></div>
-                    </div>
 
                   </div><!-- /p2-ai-result-section -->
 

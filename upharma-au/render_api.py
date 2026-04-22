@@ -2642,15 +2642,8 @@ def _is_valid_news_url(url: str) -> bool:
         "neca.re.kr",        # 한국보건의료연구원
         "hises.or.kr",       # 건강보험공단 관련
         "kpbma.or.kr",       # 한국제약바이오협회 — 국내 행정
-        # 한국 제약 전문 언론 — 호주 무관 국내 제약 뉴스 차단
-        "pharmstock.co.kr",  # 팜스탁 — 한국 제약 증권·산업 뉴스
-        "medigatenews.com",  # 메디게이트뉴스
-        "biopharma.co.kr",   # 바이오파마
-        "hitnews.co.kr",     # 히트뉴스
-        "dailypharm.com",    # 데일리팜
-        "pharmnews.com",     # 팜뉴스
-        "yakup.com",         # 약업신문
-        "v.daum.net",        # 다음 뉴스 뷰 — 한국 뉴스 집계 (호주 전용 기사 아님)
+        # ※ 한국 제약 언론(pharmstock, medigatenews 등)은 차단하지 않음.
+        #   한-호주 협력·수출 뉴스가 실릴 수 있으므로 _is_australia_news() 제목 필터로만 걸러냄.
     )
     if any(d in lower for d in _BLOCKED):
         return False

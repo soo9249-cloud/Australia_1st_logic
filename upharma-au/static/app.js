@@ -1539,18 +1539,33 @@ function _p2FillBaseFromReport() {
 function _syncP2ReportsOptions() {
   if (!_p2Ready) return;
   const reports = _loadReports();
-  const reportOpts = reports
+  const isP1 = (r) => String(r?.stage_label || '').trim() === '시장조사';
+  const isP2 = (r) => {
+    const s = String(r?.stage_label || '').trim();
+    return s === '수출전략' || s === '수출가격' || s === '가격';
+  };
+
+  // 02 수출가격 전략 입력 소스 = 01 시장조사(P1) 보고서만
+  const p1Reports = reports.filter(isP1);
+  // 03 바이어 발굴 입력 소스 = 02 수출전략(P2) 보고서만
+  const p2Reports = reports.filter(isP2);
+
+  const p1ReportOpts = p1Reports
     .map((r) => `<option value="${r.id}">${_escHtml(r.report_title || r.product || '보고서')} · ${_escHtml(r.timestamp || '')}</option>`)
     .join('');
-  const manualOptionHtml = `<option value="">보고서를 선택하세요</option>${reportOpts}`;
+  const p2ReportOpts = p2Reports
+    .map((r) => `<option value="${r.id}">${_escHtml(r.report_title || r.product || '보고서')} · ${_escHtml(r.timestamp || '')}</option>`)
+    .join('');
+
+  const manualOptionHtml = `<option value="">시장조사 보고서를 선택하세요</option>${p1ReportOpts}`;
   const aiOptionHtml =
-    '<option value="">01 시장조사에서 생성된 보고서가 여기에 자동 반영됩니다 (최근 24시간).</option>' + reportOpts;
+    '<option value="">01 시장조사에서 생성된 보고서가 여기에 자동 반영됩니다 (최근 24시간).</option>' + p1ReportOpts;
 
   const manualSelect = document.getElementById('p2-report-select');
   if (manualSelect) {
     const curr = _p2SelectedReportId;
     manualSelect.innerHTML = manualOptionHtml;
-    _p2SelectedReportId = reports.some((r) => String(r.id) === String(curr)) ? curr : '';
+    _p2SelectedReportId = p1Reports.some((r) => String(r.id) === String(curr)) ? curr : '';
     manualSelect.value = _p2SelectedReportId;
   }
 
@@ -1558,18 +1573,18 @@ function _syncP2ReportsOptions() {
   if (aiSelect) {
     const curr = _p2AiSelectedReportId;
     aiSelect.innerHTML = aiOptionHtml;
-    _p2AiSelectedReportId = reports.some((r) => String(r.id) === String(curr)) ? curr : '';
+    _p2AiSelectedReportId = p1Reports.some((r) => String(r.id) === String(curr)) ? curr : '';
     aiSelect.value = _p2AiSelectedReportId;
   }
 
-  /* 바이어 발굴 드롭다운 동기화 (02 바이어 발굴 컬럼) */
+  /* 바이어 발굴 드롭다운 동기화 (03 컬럼: 수출전략 보고서만) */
   const p3Select = document.getElementById('p3-report-select');
   if (p3Select) {
     const p3Curr = p3Select.value;
-    p3Select.innerHTML = '<option value="">시장조사 보고서를 선택하세요.</option>' + reportOpts;
-    if (reports.some((r) => String(r.id) === String(p3Curr))) p3Select.value = p3Curr;
+    p3Select.innerHTML = '<option value="">수출전략 보고서를 선택하세요.</option>' + p2ReportOpts;
+    if (p2Reports.some((r) => String(r.id) === String(p3Curr))) p3Select.value = p3Curr;
     /* 최신 보고서 자동 선택 (분석 직후 편의) */
-    else if (reports.length > 0) p3Select.value = String(reports[0].id);
+    else if (p2Reports.length > 0) p3Select.value = String(p2Reports[0].id);
   }
 
 }

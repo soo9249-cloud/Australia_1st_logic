@@ -147,22 +147,8 @@ function initAuMap() {
     return;
   }
 
-  /* 지도 높이를 CSS flex 체인에 의존하지 않고 JS 에서 직접 계산.
-     원인: .sg-leaflet-map { flex:1 } + min-height:0 조합이 flex-basis:0% 를 만들어
-     height:300px 를 무력화하고 offsetHeight=0 으로 만드는 문제.
-     해결: 부모 카드의 getBoundingClientRect 로 실제 렌더된 높이 확인 후 직접 지정. */
-  const card = el.closest('article') || el.parentElement;
-  const sec  = card ? card.querySelector('.sec') : null;
-  const cardH = card ? card.getBoundingClientRect().height : 0;
-  const secH  = sec  ? sec.getBoundingClientRect().height  : 46;
-
-  if (cardH > 50) {
-    /* 카드 높이가 확정된 경우: 헤더 제외 나머지 채움 */
-    el.style.height = Math.max(cardH - secH - 2, 200) + 'px';
-  } else {
-    /* 레이아웃 미확정: 뷰포트 기반 fallback (상단바 58 + 메인 패딩 44 + 여유 150) */
-    el.style.height = Math.max(window.innerHeight - 252, 200) + 'px';
-  }
+  /* 높이는 CSS flex:1 + min-height:200px 가 담당 (JS 직접 계산 제거).
+     invalidateSize() 로 Leaflet이 CSS 높이를 인식하게 함. */
 
   /* 호주 중심 + 줌 4 (대륙 전체 표시) — SG 동일: scrollWheelZoom 활성화 */
   const map = L.map('au-map', { zoomControl: true }).setView([-27.0, 133.5], 4);
@@ -192,8 +178,8 @@ function initAuMap() {
       .openPopup();
   });
 
-  /* 지도 크기 재계산: 300ms + 900ms 이중 호출 (CSS flex 확정 타이밍 편차 흡수) */
-  setTimeout(() => { map.invalidateSize(); map.setView([-27.0, 133.5], 4); }, 300);
+  /* 지도 크기 재계산: invalidateSize() 만 (setView 제거 — 팝업 애니메이션 반복 방지) */
+  setTimeout(() => map.invalidateSize(), 300);
   setTimeout(() => map.invalidateSize(), 900);
 
   /* ResizeObserver: 컨테이너 크기 변화 시 자동 재계산 (탭 전환·뷰포트 변경 등) */

@@ -1698,10 +1698,12 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
 .leaflet-tooltip.au-city-label::before {
   display: none !important;
 }
-/* 메인 프리뷰 지도: flex:none 으로 고정 (flex:1+min-height:0 조합이 height:300px를 0으로
-   덮어씌우는 문제 해결). 실제 높이는 initAuMap() JS가 getBoundingClientRect 로 설정. */
+/* 메인 프리뷰 지도: flex:1 + min-height:200px 로 카드 하단까지 채움.
+   (flex:none + JS 높이 계산 방식은 타이밍 오차로 하단 흰 공백 발생)
+   min-height:200px 가 과거 flex:1+min-height:0 의 0높이 붕괴 문제를 막아줌. */
 #main .map-news-grid .map-card-wrap .sg-leaflet-map {
-  flex: none;
+  flex: 1;
+  min-height: 200px;
   width: 100%;
   border-radius: 0;
 }

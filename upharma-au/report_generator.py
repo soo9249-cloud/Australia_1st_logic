@@ -1789,7 +1789,7 @@ def render_p2_pdf(
         str(out_path), pagesize=A4,
         leftMargin=MARGIN, rightMargin=MARGIN,
         topMargin=MARGIN, bottomMargin=MARGIN + 4 * mm,
-        title=f"수출 전략 제안 보고서 — {product_name}",
+        title=f"호주 수출가격 전략 보고서 - {product_name}",
     )
     story: list = []
 
@@ -1860,15 +1860,7 @@ def render_p2_pdf(
     sum_tbl.setStyle(TableStyle(_base_style(sum_ex)))
     # 2. 단가(시장기준가) — 요청 양식 표 구조 반영
     story.append(Paragraph(_rx(f"2. {product_name} 단가(시장기준가)"), s_section))
-    avg_sc = scenarios.get("average", {}) if isinstance(scenarios, dict) else {}
-    dispatch_inputs = dispatch.get("inputs") or {}
-    listed_aemp_aud = avg_sc.get("aemp_aud") or dispatch_inputs.get("aemp_aud")
-    adjusted_aemp_aud = avg_sc.get("adjusted_aemp_aud")
-    if adjusted_aemp_aud is None and listed_aemp_aud is not None:
-        try:
-            adjusted_aemp_aud = float(listed_aemp_aud) * 1.2
-        except Exception:
-            adjusted_aemp_aud = None
+    # 상단 2. 단가(시장기준가)에서 계산한 기준값 재사용
 
     benchmark_usd = 0.0
     try:
@@ -2126,12 +2118,12 @@ def render_p2_pdf(
     story.append(sce_tbl)
     story.append(Spacer(1, 8))
 
-    # ── 3. 본 품목 유의사항 ──
-    story.append(Paragraph(_rx("3. 본 품목 유의사항"), s_section))
-    story.append(Paragraph(_rx("3-1. 처방 물량 제한 (급여 조건)"), s_sub))
+    # ── 부록 C: 본 품목 유의사항 ──
+    story.append(Paragraph(_rx("부록 C. 본 품목 유의사항"), s_section))
+    story.append(Paragraph(_rx("C-1. 처방 물량 제한 (급여 조건)"), s_sub))
     story.append(Paragraph(_rx(_trunc(p2_blocks.get("block_risks", "—"), 650)), s_cell))
     story.append(Spacer(1, 4))
-    story.append(Paragraph(_rx("3-2. 수출 조건"), s_sub))
+    story.append(Paragraph(_rx("C-2. 수출 조건"), s_sub))
     story.append(
         Paragraph(
             _rx(

@@ -1595,11 +1595,13 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
   background: rgba(23, 63, 120, 0.06);
   border: 1px solid rgba(23, 63, 120, 0.1);
 }
-/* 뉴스 아이템: SG .pvnews-item 동일 */
+/* 뉴스 아이템: SG .pvnews-item 동일 — 배경·둥근모서리 제거 (irow 기본값 투명화) */
 .news-card-panel #news-list > .irow.news-item {
   display: block !important;
   padding: 12px 18px 10px !important;
   margin: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
   text-decoration: none;
   color: inherit;
   transition: background .13s;

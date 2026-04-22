@@ -1539,10 +1539,20 @@ function _p2FillBaseFromReport() {
 function _syncP2ReportsOptions() {
   if (!_p2Ready) return;
   const reports = _loadReports();
-  const isP1 = (r) => String(r?.stage_label || '').trim() === '시장조사';
+  const isP1 = (r) => {
+    const stage = String(r?.stage_label || '').trim();
+    const title = String(r?.report_title || '').trim();
+    return stage === '시장조사' || title.includes('시장조사');
+  };
   const isP2 = (r) => {
-    const s = String(r?.stage_label || '').trim();
-    return s === '수출전략' || s === '수출가격' || s === '가격';
+    const stage = String(r?.stage_label || '').trim();
+    const title = String(r?.report_title || '').trim();
+    return stage === '수출전략'
+      || stage === '수출가격'
+      || stage === '가격'
+      || title.includes('수출전략')
+      || title.includes('수출가격')
+      || title.includes('가격');
   };
 
   // 02 수출가격 전략 입력 소스 = 01 시장조사(P1) 보고서만
@@ -1565,7 +1575,9 @@ function _syncP2ReportsOptions() {
   if (manualSelect) {
     const curr = _p2SelectedReportId;
     manualSelect.innerHTML = manualOptionHtml;
-    _p2SelectedReportId = p1Reports.some((r) => String(r.id) === String(curr)) ? curr : '';
+    _p2SelectedReportId = p1Reports.some((r) => String(r.id) === String(curr))
+      ? curr
+      : (p1Reports.length > 0 ? String(p1Reports[0].id) : '');
     manualSelect.value = _p2SelectedReportId;
   }
 
@@ -1573,7 +1585,9 @@ function _syncP2ReportsOptions() {
   if (aiSelect) {
     const curr = _p2AiSelectedReportId;
     aiSelect.innerHTML = aiOptionHtml;
-    _p2AiSelectedReportId = p1Reports.some((r) => String(r.id) === String(curr)) ? curr : '';
+    _p2AiSelectedReportId = p1Reports.some((r) => String(r.id) === String(curr))
+      ? curr
+      : (p1Reports.length > 0 ? String(p1Reports[0].id) : '');
     aiSelect.value = _p2AiSelectedReportId;
   }
 

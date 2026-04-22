@@ -1110,7 +1110,7 @@ def get_news() -> JSONResponse:
                 "Content-Type": "application/json",
             },
             json={
-                "model": (os.environ.get("PERPLEXITY_NEWS_MODEL") or "sonar").strip(),
+                "model": (os.environ.get("PERPLEXITY_NEWS_MODEL") or "sonar-pro").strip(),
                 "messages": [
                     {
                         "role": "system",
@@ -1125,10 +1125,14 @@ def get_news() -> JSONResponse:
                         "role": "user",
                         "content": (
                             f"Find the latest {_NEWS_LIST_SIZE} news articles about: "
-                            "Australian pharmaceutical industry (TGA approvals, PBS listings, ARTG changes, "
-                            "drug shortages, PBAC decisions, biotech/medical-device news in Australia), "
+                            "Australian pharmaceutical industry — TGA (호주 의약품 규제청) approvals, "
+                            "PBS (호주 의약품 급여 목록) listings, ARTG (호주 의약품 등록 시스템) changes, "
+                            "drug shortages in Australia, PBAC decisions, biotech/medical-device news in Australia, "
                             "or Korea-Australia pharma/biotech trade and export. "
-                            "Strictly exclude: non-pharma news, Indian news, US general news, videos, social media. "
+                            "Sources MUST be from Australian government (.gov.au), Australian media, "
+                            "international pharma publications, or Korea-Australia bilateral trade organizations. "
+                            "Strictly exclude: Korean domestic government research papers, Korean domestic health policy, "
+                            "Indian news, US general news, videos, social media. "
                             "Return a JSON array. Each item must have: "
                             "title (Korean translation of headline), source (site name), "
                             "date (YYYY-MM-DD, actual publication date), link (direct article URL)."
@@ -2390,6 +2394,14 @@ def _is_valid_news_url(url: str) -> bool:
         "ndtv.com", "indiatoday.in", "hindustantimes.com",
         "thehindu.com", "indianexpress.com", "livemint.com",
         "economictimes.indiatimes.com",
+        # 한국 국내 정부·기관 도메인 — 호주 시장 뉴스와 무관한 국내 자료 차단
+        # (KITA·KOTRA 등 한-호 교역 직접 관련 도메인은 허용)
+        "hira.or.kr",        # 건강보험심사평가원 — 국내 급여 심사 자료
+        "nih.go.kr",         # 국립보건연구원
+        "mohw.go.kr",        # 보건복지부 국내 정책
+        "neca.re.kr",        # 한국보건의료연구원
+        "hises.or.kr",       # 건강보험공단 관련
+        "kpbma.or.kr",       # 한국제약바이오협회 — 국내 행정
     )
     if any(d in lower for d in _BLOCKED):
         return False

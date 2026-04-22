@@ -1102,6 +1102,7 @@ def get_news() -> JSONResponse:
         return _news_api_response(mock_items, source="mock")
 
     try:
+        # SG 방식 동일: return_citations 제거, max_tokens/temperature 추가, 한국어 제목 직접 요청
         r = httpx.post(
             "https://api.perplexity.ai/chat/completions",
             headers={
@@ -1114,54 +1115,30 @@ def get_news() -> JSONResponse:
                     {
                         "role": "system",
                         "content": (
-                            "You are a real-time news search engine for a pharmaceutical export dashboard. "
-                            f"Return EXACTLY {_NEWS_LIST_SIZE} recent TEXT news articles as a JSON array ONLY. "
-                            "Output raw JSON — NO markdown fences, NO prose, NO explanation outside the JSON. "
-                            "Each item MUST have ALL of these keys: "
-                            "\"title\" (original headline exactly as published, in the article's original language), "
-                            "\"source\" (publication or site name, e.g. 'RACGP', 'TGA', 'yakup.com'), "
-                            "\"date\" (YYYY-MM-DD — the ACTUAL publication date printed on the article page; "
-                            "  DO NOT guess, infer, or fabricate a date; "
-                            "  if you cannot confirm the exact publication date from the article itself, skip it and find another), "
-                            "\"link\" (DIRECT URL to the specific article page — NOT a homepage, search page, or video). "
-                            "CRITICAL date rule: report ONLY dates you can verify from the article. "
-                            "CRITICAL link rule: every link must open actual article text. "
-                            "NEVER include YouTube, Vimeo, or any video/podcast URL. "
-                            "If a direct article URL is unavailable, skip that item and find another."
+                            "You are an Australian pharmaceutical market analyst for a Korean pharma export dashboard. "
+                            f"Return ONLY a JSON array with up to {_NEWS_LIST_SIZE} recent news items. "
+                            "All 'title' values MUST be translated into Korean (한국어). "
+                            "Output raw JSON only — NO markdown fences, NO prose."
                         ),
                     },
                     {
                         "role": "user",
                         "content": (
-                            f"Find exactly {_NEWS_LIST_SIZE} TEXT NEWS ARTICLES published within the LAST 48 HOURS. "
-                            f"If fewer than {_NEWS_LIST_SIZE} qualify within 48 h, expand to 7 days — always prefer the most recent. "
-                            "DATE ACCURACY IS MANDATORY: report the date exactly as printed on each article. "
-                            "Do NOT approximate or assume — if you are unsure of the real date, skip that article. "
-                            "STRICT TOPIC FILTER — every article must be about ONE OR MORE of: "
-                            "(A) Australian pharmaceutical / biotech / medical-device industry "
-                            "    (TGA approvals, PBS listings/delisting, ARTG changes, drug shortages, hospital procurement, "
-                            "     oncology drugs, generic medicine policy, PBAC decisions, clinical trials in Australia); "
-                            "(B) Korea–Australia pharma / biotech trade, partnerships, regulatory, or export/import "
-                            "    (KAFTA, Korean companies entering Australian market, joint ventures, co-development); "
-                            "(C) Korean-language pharma press (yakup.com, hitnews.co.kr, medipana.com, pharmnews.com, "
-                            "    Naver News) covering Australian pharma market or Korean pharma companies' Australia activities. "
-                            "STRICTLY EXCLUDE: general business, finance, politics, sports, entertainment, "
-                            "non-pharma healthcare, videos, podcasts, and any pharma story unrelated to Australia. "
-                            "NEVER return results from: cbsnews.com, usnews.com, cnn.com, foxnews.com, nbcnews.com, "
-                            "abcnews.go.com, nytimes.com, washingtonpost.com, reddit.com, wikipedia.org, "
-                            "or any US general news / social media / search engine. "
-                            "PREFERRED SOURCES: racgp.org.au, tga.gov.au, pbs.gov.au, healthshare.nsw.gov.au, "
-                            "ausbiotech.org, australianprescriber.com, mja.com.au, pharmaceutical-journal.com, "
-                            "yakup.com, hitnews.co.kr, medipana.com, pharmnews.com, Naver News 제약/바이오 섹션. "
-                            "Return fields: title, source, date (YYYY-MM-DD verified from article), "
-                            "link (direct article URL only — no videos, no homepages). "
-                            "Skip any item where either the direct URL or the confirmed date is unavailable."
+                            f"Find the latest {_NEWS_LIST_SIZE} news articles about: "
+                            "Australian pharmaceutical industry (TGA approvals, PBS listings, ARTG changes, "
+                            "drug shortages, PBAC decisions, biotech/medical-device news in Australia), "
+                            "or Korea-Australia pharma/biotech trade and export. "
+                            "Strictly exclude: non-pharma news, Indian news, US general news, videos, social media. "
+                            "Return a JSON array. Each item must have: "
+                            "title (Korean translation of headline), source (site name), "
+                            "date (YYYY-MM-DD, actual publication date), link (direct article URL)."
                         ),
                     },
                 ],
-                "return_citations": True,
+                "max_tokens": 900,
+                "temperature": 0.2,
             },
-            timeout=60.0,
+            timeout=30.0,
         )
         if r.status_code != 200:
             logger.warning(

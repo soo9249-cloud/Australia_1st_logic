@@ -1109,7 +1109,7 @@ def get_news() -> JSONResponse:
                 "Content-Type": "application/json",
             },
             json={
-                "model": (os.environ.get("PERPLEXITY_NEWS_MODEL") or "sonar-pro").strip(),
+                "model": (os.environ.get("PERPLEXITY_NEWS_MODEL") or "sonar").strip(),
                 "messages": [
                     {
                         "role": "system",

@@ -53,10 +53,21 @@ logger = logging.getLogger("render_api")
 
 def _normalize_au_product_row(row: dict[str, Any]) -> None:
     """au_products 행은 DB 컬럼명이 product_code(품목 코드)임.
-    API·프론트는 기존 계약대로 product_id 키를 기대하므로 별칭을 채운다."""
+    API·프론트는 기존 계약대로 product_id 키를 기대하므로 별칭을 채운다.
+    v2(pbs_found·pbs_code·aemp_aud·dpmq_aud) ↔ 구 UI/ static/app.js(v1) 키를 맞춘다."""
     pc = row.get("product_code")
     if pc is not None:
         row["product_id"] = pc
+    if row.get("pbs_listed") is None and "pbs_found" in row:
+        row["pbs_listed"] = row.get("pbs_found")
+    if not row.get("pbs_item_code") and row.get("pbs_code") is not None:
+        row["pbs_item_code"] = row.get("pbs_code")
+    if row.get("pbs_dpmq") in (None, "") and row.get("dpmq_aud") is not None:
+        row["pbs_dpmq"] = row.get("dpmq_aud")
+    if row.get("pbs_dpmq_aud") in (None, "") and row.get("dpmq_aud") is not None:
+        row["pbs_dpmq_aud"] = row.get("dpmq_aud")
+    if row.get("pbs_price_aud") in (None, "") and row.get("aemp_aud") is not None:
+        row["pbs_price_aud"] = row.get("aemp_aud")
 
 
 # ─────────────────────────────────────────────────────────────────────

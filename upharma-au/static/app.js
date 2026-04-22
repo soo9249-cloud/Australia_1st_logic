@@ -1203,13 +1203,30 @@ function _addP2AiReportEntry(productName, pdfName) {
   _syncP2ReportsOptions();
 }
 
-/** 커스텀 옵션 한 건을 가격에 반영 (% 가산·% 차감·USD 가산) */
+/**
+ * 커스텀 옵션 한 건을 가격(USD)에 반영.
+ * 연산 타입:
+ *   pct_add    — % 가산    : price × (1 + v/100)
+ *   pct_deduct — % 차감    : price × (1 - v/100)
+ *   multiply   — × 배수    : price × v
+ *   divide     — ÷ 나누기  : price ÷ v
+ *   abs_add    — USD 가산  : price + v
+ *   abs_deduct — USD 차감  : price - v
+ *   aud_add    — AUD 가산  : price + v × aud_usd 환율
+ *   aud_deduct — AUD 차감  : price - v × aud_usd 환율
+ */
 function _p2ApplyOptToPrice(price, type, rawVal) {
   const v = parseFloat(rawVal);
   if (Number.isNaN(v) || v < 0) return price;
-  if (type === 'pct_add') return price * (1 + v / 100);
+  const audUsd = Number(_p2ScenarioRaw.aud_usd) || Number(window._exchangeRates?.aud_usd) || 0;
+  if (type === 'pct_add')    return price * (1 + v / 100);
   if (type === 'pct_deduct') return price * (1 - v / 100);
-  if (type === 'abs_add') return price + v;
+  if (type === 'multiply')   return price * v;
+  if (type === 'divide')     return v > 0 ? price / v : price;
+  if (type === 'abs_add')    return price + v;
+  if (type === 'abs_deduct') return Math.max(0, price - v);
+  if (type === 'aud_add')    return price + v * audUsd;
+  if (type === 'aud_deduct') return Math.max(0, price - v * audUsd);
   return price;
 }
 
@@ -1227,14 +1244,18 @@ function recalcP2Col(col) {
   const rawBase  = parseFloat(document.getElementById('p2ci-base-' + col)?.value);
   let priceUsd   = (rawBase > 0) ? rawBase : (_p2ScenarioRaw[col] || 0);
 
-  // _p2ColData 옵션 적용 (pct_add/pct_deduct/multiply/abs_add)
+  // _p2ColData 옵션 적용 (pct_add/pct_deduct/multiply/divide/abs_add/abs_deduct/aud_add/aud_deduct)
   const opts = _p2ColData[col]?.opts || [];
   for (const opt of opts) {
     const v = Number(opt.value ?? 0);
     if      (opt.type === 'pct_add')    priceUsd *= (1 + v / 100);
     else if (opt.type === 'pct_deduct') priceUsd *= (1 - v / 100);
     else if (opt.type === 'multiply')   priceUsd *= v;
+    else if (opt.type === 'divide')     priceUsd = v > 0 ? priceUsd / v : priceUsd;
     else if (opt.type === 'abs_add')    priceUsd += v;
+    else if (opt.type === 'abs_deduct') priceUsd = Math.max(0, priceUsd - v);
+    else if (opt.type === 'aud_add')    priceUsd += v * audUsd;
+    else if (opt.type === 'aud_deduct') priceUsd = Math.max(0, priceUsd - v * audUsd);
   }
 
   // 미확정 초안 행 적용
@@ -1264,35 +1285,55 @@ function recalcP2Col(col) {
   }
 }
 
-/* P2 컬럼 커스텀 옵션 렌더링 — 확정 옵션 + 항상 보이는 빈 추가 행 (SG 패턴) */
+/**
+ * P2 컬럼 커스텀 옵션 렌더링 (싱가포르 스타일 동적 편집기 — 호주 AUD 기준).
+ * · 확정 옵션 행: 이름(텍스트) + 연산 타입 드롭다운(변경 가능) + 값 입력 + 삭제
+ * · 신규 추가 행: 항상 하단에 표시 (✓ 클릭 시 확정)
+ */
 function renderP2ColOptions(col) {
   const container = document.getElementById('p2co-' + col);
   if (!container) return;
   const opts = (_p2ColData[col] || { opts: [] }).opts;
 
-  const typeLabel = { pct_add: '% 가산', pct_deduct: '% 차감', multiply: '× 배수', abs_add: 'USD 가산' };
-  const typeOptions = `
-    <option value="pct_deduct">% 차감</option>
-    <option value="pct_add">% 가산</option>
-    <option value="multiply">× 배수</option>
-    <option value="abs_add">USD 가산</option>`;
+  // ── 연산 타입 레이블·옵션 목록 (호주 = AUD / USD) ──────────────────────────
+  const typeLabel = {
+    pct_deduct: '% 차감',
+    pct_add:    '% 가산',
+    multiply:   '× 배수',
+    divide:     '÷ 나누기',
+    abs_add:    'USD 가산',
+    abs_deduct: 'USD 차감',
+    aud_add:    'AUD 가산',
+    aud_deduct: 'AUD 차감',
+  };
+  const _typeOptionsHtml = (selectedType) => Object.entries(typeLabel).map(([v, lbl]) =>
+    `<option value="${v}"${v === selectedType ? ' selected' : ''}>${lbl}</option>`
+  ).join('');
 
-  // 확정 옵션 행
-  let html = opts.map(opt => `
+  // ── 확정 옵션 행 (타입 드롭다운 변경 가능) ──────────────────────────────────
+  let html = opts.map(opt => {
+    const safeId  = _escHtml(String(opt.id));
+    const safeName = _escHtml(String(opt.name || ''));
+    return `
     <div class="p2c-opt-row">
-      <span class="p2c-opt-name">${_escHtml(opt.name)}</span>
-      <span class="p2c-opt-type-label">${typeLabel[opt.type] || opt.type}</span>
+      <input class="p2c-opt-name-input p2c-opt-name-confirmed" type="text"
+        value="${safeName}" maxlength="30"
+        onchange="updateP2ColOptionName('${col}','${safeId}',this.value)">
+      <select class="p2c-opt-type-select" onchange="updateP2ColOptionType('${col}','${safeId}',this.value)">
+        ${_typeOptionsHtml(opt.type)}
+      </select>
       <input class="p2c-opt-val" type="number" value="${opt.value}" step="0.01" min="0"
-        onchange="updateP2ColOption('${col}','${_escHtml(opt.id)}',this.value)">
-      <button type="button" class="p2c-opt-del" onclick="removeP2ColOption('${col}','${_escHtml(opt.id)}')">×</button>
-    </div>`).join('');
+        oninput="updateP2ColOption('${col}','${safeId}',this.value)">
+      <button type="button" class="p2c-opt-del" onclick="removeP2ColOption('${col}','${safeId}')">×</button>
+    </div>`;
+  }).join('');
 
-  // 항상 표시되는 빈 추가 행 (SG 패턴 — ✓ 클릭 시 확정)
+  // ── 신규 추가 행 (항상 하단에 표시, ✓ 클릭 시 확정) ──────────────────────────
   const aid = 'always_' + col;
   html += `
     <div class="p2c-opt-row p2c-add-row">
-      <input class="p2c-opt-name-input" type="text" placeholder="옵션명" id="p2c-newname-${col}-${aid}" maxlength="20">
-      <select class="p2c-opt-type-select" id="p2c-newtype-${col}-${aid}">${typeOptions}</select>
+      <input class="p2c-opt-name-input" type="text" placeholder="옵션명" id="p2c-newname-${col}-${aid}" maxlength="30">
+      <select class="p2c-opt-type-select" id="p2c-newtype-${col}-${aid}">${_typeOptionsHtml('pct_deduct')}</select>
       <input class="p2c-opt-val" type="number" placeholder="값" id="p2c-newval-${col}-${aid}" step="0.1" min="0">
       <button type="button" class="p2c-confirm-btn" onclick="confirmP2ColOption('${col}','${aid}')">✓</button>
     </div>`;
@@ -1342,6 +1383,20 @@ function updateP2ColOption(col, optId, newVal) {
   if (!_p2ColData[col]) return;
   const opt = _p2ColData[col].opts.find(o => o.id === optId);
   if (opt) { opt.value = parseFloat(newVal) || 0; recalcP2Col(col); }
+}
+
+/* 옵션 연산 타입 수정 (드롭다운 변경 시) */
+function updateP2ColOptionType(col, optId, newType) {
+  if (!_p2ColData[col]) return;
+  const opt = _p2ColData[col].opts.find(o => o.id === optId);
+  if (opt) { opt.type = newType; recalcP2Col(col); }
+}
+
+/* 옵션 이름 수정 (텍스트 필드 변경 시) */
+function updateP2ColOptionName(col, optId, newName) {
+  if (!_p2ColData[col]) return;
+  const opt = _p2ColData[col].opts.find(o => o.id === optId);
+  if (opt) { opt.name = String(newName).trim(); }
 }
 
 function _renderP2AiResult(data) {

@@ -2114,13 +2114,19 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
   min-width: 0;
   box-sizing: border-box;
 }
-/* 확정 행: 이름 | 유형 | 값 | 삭제 */
+/* 확정 행: 이름(편집가능) | 연산타입 드롭다운 | 값 | 삭제 */
 .p2c-opt-row:not(.p2c-add-row) {
-  grid-template-columns: minmax(0, 1fr) 64px 50px 26px;
+  grid-template-columns: minmax(0, 1fr) 72px 52px 26px;
 }
-/* 초안 행: 이름 | 종류 | 값 | 확인 | 취소 */
+/* 초안 행: 이름 | 연산타입 드롭다운 | 값 | 확인 */
 .p2c-opt-row.p2c-add-row {
-  grid-template-columns: minmax(0, 1fr) 70px 50px 26px 26px;
+  grid-template-columns: minmax(0, 1fr) 72px 52px 26px;
+}
+/* 확정 행의 이름 입력 — 테두리 없이 읽기 쉽게 */
+.p2c-opt-name-confirmed {
+  background: rgba(23,63,120,.06) !important;
+  font-weight: 700;
+  color: var(--navy);
 }
 .p2c-opt-name {
   font-size: 10px;

@@ -1003,6 +1003,92 @@ def _scrape_naver_news_au(count: int = 7) -> list[dict[str, Any]]:
     return items
 
 
+def _scrape_serpapi_news_au(count: int = 7) -> list[dict[str, Any]]:
+    """SerpAPI Google News 다중 쿼리로 호주 제약·바이오·수출·규제 뉴스 수집.
+
+    쿼리 커버리지:
+      - TGA / PBS / ARTG 규제 변경
+      - 호주 제약·바이오 수출, 패스트트랙 진출
+      - 경제·정책 뉴스 (한국어 + 영어 혼합)
+    영어 기사 제목은 get_news() 에서 OpenAI 번역 적용.
+    """
+    api_key = os.environ.get("SERPAPI_KEY", "").strip()
+    if not api_key:
+        logger.info("[api/news] SERPAPI_KEY 미설정 — SerpAPI 건너뜀")
+        return []
+
+    # 호주 제약/바이오/수출/규제 키워드 4종 (사용자 요청 키워드 전 커버)
+    queries = [
+        "Australia pharmaceutical TGA PBS ARTG regulation approval 2025",
+        "Australia pharma biotech export Korea fast track",
+        "호주 제약 바이오 수출 정책 규제",
+        "Australia pharmaceutical market economic policy news",
+    ]
+
+    results: list[dict[str, Any]] = []
+    seen_urls: set[str] = set()
+
+    for query in queries:
+        if len(results) >= count:
+            break
+        try:
+            r = httpx.get(
+                "https://serpapi.com/search",
+                params={
+                    "engine": "google",
+                    "tbm": "nws",          # Google News 탭
+                    "q": query,
+                    "api_key": api_key,
+                    "hl": "ko",            # 한국어 UI (한국어 기사 우선)
+                    "gl": "au",            # 호주 지역 뉴스 우선
+                    "num": str(count),
+                },
+                timeout=12.0,
+            )
+            if r.status_code != 200:
+                logger.warning(
+                    "[api/news] serpapi HTTP %s (query: %s)", r.status_code, query[:40]
+                )
+                continue
+            data = r.json()
+        except Exception as exc:
+            logger.warning("[api/news] serpapi 요청 실패 (query: %s): %s", query[:40], exc)
+            continue
+
+        for item in data.get("news_results", []):
+            if len(results) >= count:
+                break
+            if not isinstance(item, dict):
+                continue
+            url = str(item.get("link") or "").strip()
+            if not url or url in seen_urls or not _is_valid_news_url(url):
+                continue
+            seen_urls.add(url)
+
+            title = str(item.get("title") or "").strip()
+            if not _is_valid_news_title(title):
+                continue
+
+            # source 필드가 dict 또는 str 모두 대응
+            src_raw = item.get("source") or ""
+            source = (
+                str(src_raw.get("name") or "").strip()
+                if isinstance(src_raw, dict)
+                else str(src_raw).strip()
+            )
+
+            results.append(_normalize_news_item({
+                "title":    title,
+                "title_ko": "",   # OpenAI 번역 대상 (영어 제목인 경우)
+                "source":   source,
+                "date":     str(item.get("date") or "").strip(),
+                "link":     url,
+            }))
+        logger.info("[api/news] serpapi '%s' → %d건 누적", query[:40], len(results))
+
+    return results
+
+
 def _extract_openai_message_text(message: dict[str, Any] | None) -> str:
     """chat/completions 의 assistant message.content — str 또는 멀티파트 배열 모두 문자열로 병합."""
     if not message or not isinstance(message, dict):
@@ -1185,49 +1271,21 @@ _MOCK_NEWS: list[dict[str, Any]] = [
 _FX_FALLBACK: dict[str, Any] = {"aud_krw": 893.0, "aud_usd": 0.6412, "updated": ""}
 
 
-@app.get("/api/news")
-def get_news() -> JSONResponse:
-    """호주 의약품 뉴스 — Naver '호주 의약품' 스크레이핑 1순위 → Perplexity 폴백 → mock (SG 동일 패턴).
-    10분 캐시 적용.
+def _collect_perplexity_news_au() -> list[dict[str, Any]]:
+    """Perplexity sonar-pro로 호주 제약/바이오/수출 뉴스 수집 (get_news 보조 함수).
+    성공 시 정규화된 뉴스 항목 리스트 반환, 실패 시 빈 리스트.
     """
-    import time as _time
-
-    # ── 캐시 확인 ──────────────────────────────────────────────────────────
-    if _news_cache["data"] and _time.time() - _news_cache["ts"] < _NEWS_TTL:
-        logger.info("[api/news] cache hit")
-        return JSONResponse(_news_cache["data"])
-
-    mock_items = [_normalize_news_item(x) for x in _MOCK_NEWS]
-
-    # ── ① Naver 모바일 뉴스 스크레이핑 ('호주 의약품') ─────────────────────
-    try:
-        naver_items = _scrape_naver_news_au(_NEWS_LIST_SIZE)
-        if naver_items:
-            logger.info("[api/news] naver: %d건", len(naver_items))
-            resp_data = {"ok": True, "items": naver_items, "error": None, "source": "naver"}
-            _news_cache["data"] = resp_data
-            _news_cache["ts"]   = _time.time()
-            response = JSONResponse(content=resp_data)
-            response.headers["X-News-Source"] = "naver"
-            return response
-    except Exception as _nv_exc:
-        logger.warning("[api/news] naver 실패 → Perplexity 폴백: %s", _nv_exc)
-
-    # ── ② Perplexity 폴백 ──────────────────────────────────────────────────
-    api_key = (os.environ.get("PERPLEXITY_API_KEY") or "").strip() or (os.environ.get("PERPLEXITY_KEY") or "").strip()
-
+    api_key = (os.environ.get("PERPLEXITY_API_KEY") or "").strip() or (
+        os.environ.get("PERPLEXITY_KEY") or ""
+    ).strip()
     if not api_key:
-        logger.warning("[api/news] mock: 환경변수 PERPLEXITY_API_KEY(또는 PERPLEXITY_KEY) 비어 있음")
-        return _news_api_response(mock_items, source="mock")
+        logger.info("[api/news] PERPLEXITY_API_KEY 미설정 — Perplexity 건너뜀")
+        return []
 
     try:
-        # SG 방식 동일: return_citations 제거, max_tokens/temperature 추가, 한국어 제목 직접 요청
         r = httpx.post(
             "https://api.perplexity.ai/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={
                 "model": (os.environ.get("PERPLEXITY_NEWS_MODEL") or "sonar-pro").strip(),
                 "messages": [
@@ -1247,7 +1305,7 @@ def get_news() -> JSONResponse:
                             "Australian pharmaceutical industry — TGA (호주 의약품 규제청) approvals, "
                             "PBS (호주 의약품 급여 목록) listings, ARTG (호주 의약품 등록 시스템) changes, "
                             "drug shortages in Australia, PBAC decisions, biotech/medical-device news in Australia, "
-                            "or Korea-Australia pharma/biotech trade and export. "
+                            "Australia pharmaceutical export fast track, Korea-Australia pharma trade. "
                             "Sources MUST be from Australian government (.gov.au), Australian media, "
                             "international pharma publications, or Korea-Australia bilateral trade organizations. "
                             "Strictly exclude: Korean domestic government research papers, Korean domestic health policy, "
@@ -1264,147 +1322,167 @@ def get_news() -> JSONResponse:
             timeout=30.0,
         )
         if r.status_code != 200:
-            logger.warning(
-                "[api/news] mock: Perplexity HTTP %s — %s",
-                r.status_code,
-                (r.text or "")[:500],
-            )
-            return _news_api_response(mock_items, source="mock")
+            logger.warning("[api/news] Perplexity HTTP %s", r.status_code)
+            return []
         data = r.json()
     except Exception as exc:
-        logger.warning("[api/news] mock: 요청 예외 %s: %s", type(exc).__name__, exc)
-        return _news_api_response(mock_items, source="mock")
+        logger.warning("[api/news] Perplexity 요청 실패: %s", exc)
+        return []
 
     if isinstance(data, dict):
         err_top = data.get("error")
-        # 일부 클라이언트가 성공 본문에 error:null 만 넣음 — message/code 가 실제 있을 때만 실패 처리
         if isinstance(err_top, dict) and (
             (err_top.get("message") and str(err_top.get("message")).strip())
             or (err_top.get("code") is not None)
         ):
-            logger.warning("[api/news] mock: Perplexity 응답 error 필드 %s", err_top)
-            return _news_api_response(mock_items, source="mock")
+            logger.warning("[api/news] Perplexity error 필드: %s", err_top)
+            return []
 
-    choices = data.get("choices") if isinstance(data, dict) else None
-    if not choices:
-        logger.warning("[api/news] mock: choices 비어 있음")
-        return _news_api_response(mock_items, source="mock")
-
-    content = ""
-    try:
-        ch0 = (data.get("choices") or [{}])[0]
-        msg0 = ch0.get("message") if isinstance(ch0, dict) else None
-        content = _extract_openai_message_text(msg0 if isinstance(msg0, dict) else None)
-        if not content.strip() and isinstance(ch0, dict):
-            content = str(ch0.get("text") or "")
-    except Exception as exc:
-        logger.warning("[api/news] mock: 응답 choices 파싱 실패: %s", exc)
-        return _news_api_response(mock_items, source="mock")
-
-    if not content.strip():
-        logger.warning("[api/news] mock: message content 비어 있음")
-        return _news_api_response(mock_items, source="mock")
-
-    link_list = _extract_perplexity_citation_urls(data if isinstance(data, dict) else {})
-
-    # ── 1순위: search_results 직접 활용 (sonar 계열 정식 필드) ───────────
     result: list[dict[str, Any]] = []
+    # search_results 필드 1순위
+    from urllib.parse import urlparse as _urlparse
     sr_raw = (data.get("search_results") if isinstance(data, dict) else None) or []
-    if isinstance(sr_raw, list):
-        from urllib.parse import urlparse as _urlparse
-        for sr in sr_raw:
+    for sr in sr_raw:
+        if len(result) >= _NEWS_LIST_SIZE:
+            break
+        if not isinstance(sr, dict):
+            continue
+        url = str(sr.get("url") or sr.get("link") or "").strip()
+        if not url or not _is_valid_news_url(url):
+            continue
+        title = str(sr.get("title") or "").strip()
+        if not _is_valid_news_title(title):
+            continue
+        try:
+            _src = _urlparse(url).netloc.replace("www.", "")
+        except Exception:
+            _src = ""
+        result.append(_normalize_news_item({
+            "title": title, "source": _src,
+            "date": str(sr.get("date") or sr.get("published_date") or ""), "link": url,
+        }))
+
+    # content JSON 파싱 2순위
+    if len(result) < _NEWS_LIST_SIZE:
+        try:
+            ch0   = (data.get("choices") or [{}])[0]
+            msg0  = ch0.get("message") if isinstance(ch0, dict) else None
+            content = _extract_openai_message_text(msg0 if isinstance(msg0, dict) else None)
+        except Exception:
+            content = ""
+        items = _parse_perplexity_news_json_array(content)
+        link_pool = [u for u in _extract_perplexity_citation_urls(
+            data if isinstance(data, dict) else {}
+        ) if _is_valid_news_url(u)]
+        for it in (items or []):
             if len(result) >= _NEWS_LIST_SIZE:
                 break
-            if not isinstance(sr, dict):
-                continue
-            url = str(sr.get("url") or sr.get("link") or "").strip()
-            if not url or not _is_valid_news_url(url):
-                continue
-            title = str(sr.get("title") or "").strip()
-            if not _is_valid_news_title(title):   # 제목이 URL이거나 너무 짧으면 건너뜀
-                continue
-            try:
-                _src = _urlparse(url).netloc.replace("www.", "")
-            except Exception:
-                _src = ""
-            result.append(_normalize_news_item({
-                "title": title,
-                "source": _src,
-                "date":   str(sr.get("date") or sr.get("published_date") or ""),
-                "link":   url,
-            }))
-    logger.info("[api/news] search_results %d건 추출", len(result))
+            if isinstance(it, dict):
+                merged = dict(it)
+                raw_link = str(merged.get("link") or merged.get("url") or "")
+                if raw_link and not _is_valid_news_url(raw_link):
+                    merged["link"] = ""
+                if not (merged.get("link") or merged.get("url")) and link_pool:
+                    merged["link"] = link_pool.pop(0)
+                result.append(_normalize_news_item(merged))
 
-    # ── 2순위: content JSON 파싱 (search_results 부족 시 보충) ────────────
-    if len(result) < _NEWS_LIST_SIZE:
-        items = _parse_perplexity_news_json_array(content)
-        logger.info(
-            "[api/news] content 파싱 결과: %s건 (prefix=%s)",
-            len(items) if items else 0,
-            (content or "")[:200],
-        )
-        link_pool = [u for u in link_list if _is_valid_news_url(u)]
-        if items:
-            for it in items:
-                if len(result) >= _NEWS_LIST_SIZE:
-                    break
-                if isinstance(it, dict):
-                    merged = dict(it)
-                    raw_link = str(merged.get("link") or merged.get("url") or "")
-                    if raw_link and not _is_valid_news_url(raw_link):
-                        merged["link"] = ""
-                    if not (merged.get("link") or merged.get("url")) and link_pool:
-                        merged["link"] = link_pool.pop(0)
-                    result.append(_normalize_news_item(merged))
-                elif isinstance(it, str) and _is_valid_news_url(it):
-                    # URL 문자열만 돌아온 경우 (sonar가 JSON 배열로 URL만 반환할 때)
-                    from urllib.parse import urlparse as _urlparse
-                    try:
-                        _src = _urlparse(it).netloc.replace("www.", "")
-                    except Exception:
-                        _src = ""
-                    result.append(_normalize_news_item({"title": it, "source": _src, "link": it}))
-        # citations만 남아 있는 경우 URL만으로 카드 채우기
-        if len(result) < _NEWS_LIST_SIZE:
-            for url in link_pool:
-                if len(result) >= _NEWS_LIST_SIZE:
-                    break
-                from urllib.parse import urlparse as _urlparse
-                try:
-                    _src = _urlparse(url).netloc.replace("www.", "")
-                except Exception:
-                    _src = ""
-                result.append(_normalize_news_item({"title": url, "source": _src, "link": url}))
+    logger.info("[api/news] Perplexity: %d건", len(result))
+    return result
 
-    if not result:
-        logger.warning("[api/news] mock: search_results·content·citations 모두 0건")
-        return _news_api_response(mock_items, source="mock")
 
-    # ── OpenAI gpt-4o-mini 로 한국어 번역 + 요약 주입 ──────────────────
-    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if openai_key and _OPENAI_AVAILABLE:
+@app.get("/api/news")
+def get_news() -> JSONResponse:
+    """호주 의약품·제약·바이오 뉴스 통합 수집.
+
+    소스 우선순위:
+      ① Naver 스크레이핑  — '호주 의약품' 한국어 뉴스
+      ② SerpAPI           — Google News 다중 쿼리 (TGA/PBS/수출/바이오/규제)
+         (Naver + SerpAPI 합산, URL 중복 제거)
+      ③ Perplexity        — 7건 미만일 때 AI 검색으로 보충
+      ④ OpenAI 번역       — 영어 제목 → 한국어 (OPENAI_API_KEY 설정 시)
+      ⑤ Mock              — 최종 7건 미만이면 채움
+    캐시: 10분
+    """
+    import time as _time
+
+    # ── 캐시 확인 ──────────────────────────────────────────────────────────
+    if _news_cache["data"] and _time.time() - _news_cache["ts"] < _NEWS_TTL:
+        logger.info("[api/news] cache hit")
+        return JSONResponse(_news_cache["data"])
+
+    mock_items = [_normalize_news_item(x) for x in _MOCK_NEWS]
+    pool: list[dict[str, Any]] = []      # 수집 풀
+    seen_urls: set[str] = set()          # 중복 URL 추적
+
+    def _add_items(items: list[dict[str, Any]]) -> None:
+        """pool에 추가 (URL 중복 제거)."""
+        for it in items:
+            if len(pool) >= _NEWS_LIST_SIZE:
+                break
+            url = it.get("link") or ""
+            if url and url in seen_urls:
+                continue
+            if url:
+                seen_urls.add(url)
+            pool.append(it)
+
+    # ── ① Naver 스크레이핑 ────────────────────────────────────────────────
+    try:
+        naver_items = _scrape_naver_news_au(_NEWS_LIST_SIZE)
+        logger.info("[api/news] naver: %d건", len(naver_items))
+        _add_items(naver_items)
+    except Exception as exc:
+        logger.warning("[api/news] naver 실패: %s", exc)
+
+    # ── ② SerpAPI (Google News 다중 쿼리) ────────────────────────────────
+    if len(pool) < _NEWS_LIST_SIZE:
         try:
-            result = _openai_translate_news_ko(result, openai_key)
-        except Exception as _tr_exc:
-            logger.warning("[api/news] OpenAI 번역 실패(무시): %s", _tr_exc)
-    # title_ko 폴백: OpenAI 미설치·실패 시 원문 제목 그대로 표시
-    for item in result:
+            serpapi_items = _scrape_serpapi_news_au(_NEWS_LIST_SIZE - len(pool))
+            logger.info("[api/news] serpapi: %d건", len(serpapi_items))
+            _add_items(serpapi_items)
+        except Exception as exc:
+            logger.warning("[api/news] serpapi 실패: %s", exc)
+
+    logger.info("[api/news] Naver+SerpAPI 합산: %d건", len(pool))
+
+    # ── ③ Perplexity 보충 (7건 미만일 때) ────────────────────────────────
+    if len(pool) < _NEWS_LIST_SIZE:
+        try:
+            px_items = _collect_perplexity_news_au()
+            _add_items(px_items)
+            logger.info("[api/news] Perplexity 보충 후: %d건", len(pool))
+        except Exception as exc:
+            logger.warning("[api/news] Perplexity 실패: %s", exc)
+
+    # ── ④ OpenAI 한국어 번역 (title_ko 비어 있는 영어 기사) ──────────────
+    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if pool and openai_key and _OPENAI_AVAILABLE:
+        try:
+            pool = _openai_translate_news_ko(pool, openai_key)
+        except Exception as exc:
+            logger.warning("[api/news] OpenAI 번역 실패(무시): %s", exc)
+    # title_ko 폴백: 번역 실패 또는 OpenAI 미설정 시 원문 제목 그대로
+    for item in pool:
         if not item.get("title_ko"):
             item["title_ko"] = item.get("title", "")
 
-    if len(result) < _NEWS_LIST_SIZE:
-        # 카드 높이를 고정했기 때문에 프론트에는 항상 동일 개수를 내려준다.
+    # ── ⑤ Mock 보충 (최종 7건 미만) ──────────────────────────────────────
+    if len(pool) < _NEWS_LIST_SIZE:
         for fallback in mock_items:
-            if len(result) >= _NEWS_LIST_SIZE:
+            if len(pool) >= _NEWS_LIST_SIZE:
                 break
-            result.append(fallback)
+            pool.append(fallback)
 
-    final_resp = _news_api_response(result, source="perplexity")
-    # Perplexity 성공 결과도 10분 캐시
-    import time as _time2
-    _news_cache["data"] = {"ok": True, "items": result, "error": None, "source": "perplexity"}
-    _news_cache["ts"]   = _time2.time()
-    return final_resp
+    if not pool:
+        logger.warning("[api/news] 모든 소스 실패 → mock 반환")
+        return _news_api_response(mock_items, source="mock")
+
+    # ── 캐시 저장 & 응답 ─────────────────────────────────────────────────
+    source_label = "naver+serpapi+perplexity"
+    resp_data = {"ok": True, "items": pool, "error": None, "source": source_label}
+    _news_cache["data"] = resp_data
+    _news_cache["ts"]   = _time.time()
+    return _news_api_response(pool, source=source_label)
 
 
 @app.get("/api/exchange")

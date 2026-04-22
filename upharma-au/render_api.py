@@ -1007,9 +1007,11 @@ def _scrape_serpapi_news_au(count: int = 7) -> list[dict[str, Any]]:
     """SerpAPI Google News 다중 쿼리로 호주 제약·바이오·수출·규제 뉴스 수집.
 
     쿼리 커버리지:
-      - TGA / PBS / ARTG 규제 변경
-      - 호주 제약·바이오 수출, 패스트트랙 진출
-      - 경제·정책 뉴스 (한국어 + 영어 혼합)
+      - TGA (호주 의약품 규제청) / PBS / ARTG 규제·승인·스폰서
+      - 호주 제약·바이오·항암제 신약 승인
+      - 호주 정부 제약회사 협약·수입 의존도 정책
+      - 한국-호주 제약 수출 패스트트랙, TGA 스폰서 등록
+    최신성: tbs=qdr:d3 (72시간 이내 기사)
     영어 기사 제목은 get_news() 에서 OpenAI 번역 적용.
     """
     api_key = os.environ.get("SERPAPI_KEY", "").strip()
@@ -1017,12 +1019,13 @@ def _scrape_serpapi_news_au(count: int = 7) -> list[dict[str, Any]]:
         logger.info("[api/news] SERPAPI_KEY 미설정 — SerpAPI 건너뜀")
         return []
 
-    # 호주 제약/바이오/수출/규제 키워드 4종 (사용자 요청 키워드 전 커버)
+    # 호주 제약/바이오/수출/규제 키워드 4종
+    # — 모든 쿼리에 "Australia" 명시, 사용자 요청 키워드 전 커버
     queries = [
-        "Australia pharmaceutical TGA PBS ARTG regulation approval 2025",
-        "Australia pharma biotech export Korea fast track",
-        "호주 제약 바이오 수출 정책 규제",
-        "Australia pharmaceutical market economic policy news",
+        "Australia TGA drug approval ARTG registration PBS PBAC listing sponsor",
+        "Australia pharmaceutical biotech cancer drug biosimilar Hydrine oncology approval",
+        "Australia government pharmaceutical company agreement medicine import dependency policy",
+        "Korea Australia pharma export TGA registration fast track approval pathway",
     ]
 
     results: list[dict[str, Any]] = []
@@ -1039,8 +1042,9 @@ def _scrape_serpapi_news_au(count: int = 7) -> list[dict[str, Any]]:
                     "tbm": "nws",          # Google News 탭
                     "q": query,
                     "api_key": api_key,
-                    "hl": "ko",            # 한국어 UI (한국어 기사 우선)
+                    "hl": "en",            # 영어 UI → 호주 영어 기사 우선 (hl=ko 시 한국뉴스 혼입)
                     "gl": "au",            # 호주 지역 뉴스 우선
+                    "tbs": "qdr:d3",       # 72시간 이내 기사만 (최신성 필터)
                     "num": str(count),
                 },
                 timeout=12.0,
@@ -1288,12 +1292,14 @@ def _collect_perplexity_news_au() -> list[dict[str, Any]]:
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={
                 "model": (os.environ.get("PERPLEXITY_NEWS_MODEL") or "sonar-pro").strip(),
+                "search_recency_filter": "week",   # 최근 1주일 이내 기사만 검색 (72h 근접 필터)
                 "messages": [
                     {
                         "role": "system",
                         "content": (
                             "You are an Australian pharmaceutical market analyst for a Korean pharma export dashboard. "
                             f"Return ONLY a JSON array with up to {_NEWS_LIST_SIZE} recent news items. "
+                            "ALL items MUST be about Australia specifically — not EU, US, or general global pharma. "
                             "All 'title' values MUST be translated into Korean (한국어). "
                             "Output raw JSON only — NO markdown fences, NO prose."
                         ),
@@ -1301,22 +1307,26 @@ def _collect_perplexity_news_au() -> list[dict[str, Any]]:
                     {
                         "role": "user",
                         "content": (
-                            f"Find the latest {_NEWS_LIST_SIZE} news articles about: "
-                            "Australian pharmaceutical industry — TGA (호주 의약품 규제청) approvals, "
-                            "PBS (호주 의약품 급여 목록) listings, ARTG (호주 의약품 등록 시스템) changes, "
-                            "drug shortages in Australia, PBAC decisions, biotech/medical-device news in Australia, "
-                            "Australia pharmaceutical export fast track, Korea-Australia pharma trade. "
-                            "Sources MUST be from Australian government (.gov.au), Australian media, "
-                            "international pharma publications, or Korea-Australia bilateral trade organizations. "
-                            "Strictly exclude: Korean domestic government research papers, Korean domestic health policy, "
-                            "Indian news, US general news, videos, social media. "
-                            "Return a JSON array. Each item must have: "
+                            f"Find the {_NEWS_LIST_SIZE} most recent news articles (published within 72 hours if possible, "
+                            "otherwise within the past week) strictly about AUSTRALIA: "
+                            "① TGA (호주 의약품 규제청) new drug approvals, ARTG (호주 의약품 등록 시스템) registrations, "
+                            "TGA sponsor information, ARTG sponsor changes; "
+                            "② PBS (호주 의약품 급여 목록) new listings, PBAC (약값 심사 위원회) decisions; "
+                            "③ Australia government pharmaceutical import dependency — agreements with pharma companies "
+                            "to secure medicine supply (e.g. sovereign manufacturing, local production partnerships); "
+                            "④ Australia biotech, cancer drugs (항암제), biosimilars, oncology approvals; "
+                            "⑤ Hydrine or similar drugs in Australia; "
+                            "⑥ Korea-Australia pharmaceutical export — fast track TGA approval pathway, "
+                            "TGA sponsor registration for Korean companies. "
+                            "Sources MUST be Australian (.gov.au, Australian news, international pharma journals). "
+                            "Strictly EXCLUDE: Korean domestic research, EU/US-only news, Indian news, videos, social media. "
+                            "Return a JSON array. Each item: "
                             "title (Korean translation of headline), source (site name), "
                             "date (YYYY-MM-DD, actual publication date), link (direct article URL)."
                         ),
                     },
                 ],
-                "max_tokens": 900,
+                "max_tokens": 1200,
                 "temperature": 0.2,
             },
             timeout=30.0,
@@ -2552,7 +2562,7 @@ def _openai_translate_news_ko(
                 {"role": "user",   "content": user_prompt},
             ],
             temperature=0.1,
-            max_tokens=600,
+            max_tokens=1000,   # 7건 × 긴 제목 대응 (600→1000으로 증가)
         )
         raw = (completion.choices[0].message.content or "").strip()
         # JSON 펜스 제거

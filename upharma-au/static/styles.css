@@ -1697,10 +1697,10 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
 .leaflet-tooltip.au-city-tooltip::before {
   border-top-color: rgba(255, 255, 255, 0.96) !important;
 }
-/* 메인 프리뷰 지도: flex:1 로 남은 높이 채움, height:auto 제거 (Leaflet 높이 인식 보장) */
+/* 메인 프리뷰 지도: flex:none 으로 고정 (flex:1+min-height:0 조합이 height:300px를 0으로
+   덮어씌우는 문제 해결). 실제 높이는 initAuMap() JS가 getBoundingClientRect 로 설정. */
 #main .map-news-grid .map-card-wrap .sg-leaflet-map {
-  flex: 1;
-  min-height: 0;
+  flex: none;
   width: 100%;
   border-radius: 0;
 }

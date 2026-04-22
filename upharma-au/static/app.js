@@ -136,20 +136,33 @@ function _setMacro(valId, val, srcId, src) {
  * id="au-map" 요소 없으면 조기 리턴.
  */
 function initAuMap() {
-  /* SG 동일: Leaflet 미로드 시 200ms 재시도 (CDN 지연 방어) */
+  /* Leaflet 미로드 시 200ms 재시도 (CDN 지연 방어) */
   if (typeof L === 'undefined') { setTimeout(initAuMap, 200); return; }
   const el = document.getElementById('au-map');
   if (!el) return;
 
-  /* SG 동일: leaflet-container 클래스로 이미 초기화 여부 판단 */
+  /* leaflet-container 클래스로 이미 초기화 여부 판단 */
   if (el.classList.contains('leaflet-container')) {
     if (window._auLeafletMap) window._auLeafletMap.invalidateSize();
     return;
   }
 
-  /* SG 동일: offsetWidth/Height 가 0 이면 flex/grid 레이아웃 미확정 → 200ms 후 재시도
-     (window.load 직후에도 flex 1fr 계산이 아직 브라우저 렌더 프레임에 반영 안 될 수 있음) */
-  if (el.offsetWidth === 0 || el.offsetHeight === 0) { setTimeout(initAuMap, 200); return; }
+  /* 지도 높이를 CSS flex 체인에 의존하지 않고 JS 에서 직접 계산.
+     원인: .sg-leaflet-map { flex:1 } + min-height:0 조합이 flex-basis:0% 를 만들어
+     height:300px 를 무력화하고 offsetHeight=0 으로 만드는 문제.
+     해결: 부모 카드의 getBoundingClientRect 로 실제 렌더된 높이 확인 후 직접 지정. */
+  const card = el.closest('article') || el.parentElement;
+  const sec  = card ? card.querySelector('.sec') : null;
+  const cardH = card ? card.getBoundingClientRect().height : 0;
+  const secH  = sec  ? sec.getBoundingClientRect().height  : 46;
+
+  if (cardH > 50) {
+    /* 카드 높이가 확정된 경우: 헤더 제외 나머지 채움 */
+    el.style.height = Math.max(cardH - secH - 2, 200) + 'px';
+  } else {
+    /* 레이아웃 미확정: 뷰포트 기반 fallback (상단바 58 + 메인 패딩 44 + 여유 150) */
+    el.style.height = Math.max(window.innerHeight - 252, 200) + 'px';
+  }
 
   /* 호주 중심 + 줌 4 (대륙 전체 표시) */
   const map = L.map('au-map', { scrollWheelZoom: false }).setView([-27.0, 133.5], 4);

@@ -122,6 +122,12 @@ DEFAULT_AHI_FEE_PRIVATE = 4.91          # AHI 인프라 수수료 Tier 1 (매입
 #   출처: OECD ITIC, ABS 통관 데이터 의약품 평균 5% (리퍼 컨테이너 포함)
 DEFAULT_FREIGHT_INSURANCE_PCT = 5.0
 
+# ▸ 에이전트 수수료 (Agent Commission) — Logic A(공공)에 적용
+#   호주 현지 에이전트·파트너 중간 수수료. 수입상 마진 차감 후 추가 역산.
+#   기본 5%: 신규 시장 진입 초기 에이전트 활용 시 통상 범위(3~10%).
+#   에이전트 없이 수입상과 직접 거래하는 경우 0%로 설정.
+DEFAULT_AGENT_MARGIN_PCT = 5.0
+
 
 __all__ = [
     # 상수
@@ -132,7 +138,8 @@ __all__ = [
     "DEFAULT_PRESETS_PCT", "DEFAULT_FX_AUD_TO_KRW", "ALPHA_MARKET_UPLIFT_PCT",
     "DEFAULT_GST_PCT", "OTC_GST_PCT",
     "DEFAULT_PHARMACY_MARGIN_PCT", "DEFAULT_WHOLESALE_MARGIN_B_PCT",
-    "DEFAULT_DISPENSING_FEE_PRIVATE", "DEFAULT_AHI_FEE_PRIVATE", "DEFAULT_FREIGHT_INSURANCE_PCT",
+    "DEFAULT_DISPENSING_FEE_PRIVATE", "DEFAULT_AHI_FEE_PRIVATE",
+    "DEFAULT_FREIGHT_INSURANCE_PCT", "DEFAULT_AGENT_MARGIN_PCT",
     # 함수
     "calculate_aemp_from_dpmq",
     "calculate_fob_logic_a",
@@ -149,26 +156,34 @@ def calculate_fob_logic_a(
     aemp_aud: float,
     importer_margin_pct: float,
     fx_aud_to_krw: float = DEFAULT_FX_AUD_TO_KRW,
+    agent_margin_pct: float = DEFAULT_AGENT_MARGIN_PCT,
 ) -> dict[str, float]:
-    """PBS 공시 AEMP에 α 시장 보정 후 수입상 마진만 제거하여 FOB 도출.
+    """PBS 공시 AEMP에 α 시장 보정 후 수입상·에이전트 마진 제거하여 FOB 도출.
 
-    기준 AEMP = 공시 AEMP × (1 + α/100),  FOB_AUD = 기준 AEMP ÷ (1 + importer_margin/100)
+    기준 AEMP = 공시 AEMP × (1 + α/100)
+    FOB_AUD   = 기준 AEMP ÷ (1 + importer_margin/100) ÷ (1 + agent_margin/100)
+
     α는 ALPHA_MARKET_UPLIFT_PCT(기본 20%). Logic B(소매 실거래)에는 적용하지 않음.
+    에이전트 없이 수입상과 직접 거래하면 agent_margin_pct=0 으로 호출.
     """
     if not isinstance(aemp_aud, (int, float)) or aemp_aud <= 0:
         raise ValueError(f"aemp_aud must be positive, got {aemp_aud}")
     if not isinstance(importer_margin_pct, (int, float)) or importer_margin_pct < 0:
         raise ValueError(f"importer_margin_pct must be >= 0, got {importer_margin_pct}")
+    if not isinstance(agent_margin_pct, (int, float)) or agent_margin_pct < 0:
+        raise ValueError(f"agent_margin_pct must be >= 0, got {agent_margin_pct}")
 
     listed_aemp = float(aemp_aud)
     adjusted_aemp = listed_aemp * (1.0 + ALPHA_MARKET_UPLIFT_PCT / 100.0)
     fob_aud = adjusted_aemp / (1.0 + importer_margin_pct / 100.0)
+    fob_aud = fob_aud / (1.0 + agent_margin_pct / 100.0)
     fob_krw = fob_aud * fx_aud_to_krw
     return {
         "aemp_aud": round(listed_aemp, 4),
         "adjusted_aemp_aud": round(adjusted_aemp, 4),
         "alpha_market_uplift_pct": float(ALPHA_MARKET_UPLIFT_PCT),
         "importer_margin_pct": float(importer_margin_pct),
+        "agent_margin_pct": float(agent_margin_pct),
         "fob_aud": round(fob_aud, 4),
         "fob_krw": round(fob_krw, 2),
         "fx_aud_to_krw": float(fx_aud_to_krw),
@@ -267,8 +282,12 @@ def calculate_three_scenarios(
     fx_aud_to_krw: float = DEFAULT_FX_AUD_TO_KRW,
     presets_pct: dict[str, float] | None = None,
     logic_b_kwargs: dict[str, Any] | None = None,
+    agent_margin_pct: float = DEFAULT_AGENT_MARGIN_PCT,
 ) -> dict[str, dict[str, float]]:
-    """30/20/10% (기본) 프리셋 기준 3 시나리오를 한 번에 계산."""
+    """30/20/10% (기본) 프리셋 기준 3 시나리오를 한 번에 계산.
+
+    agent_margin_pct: Logic A(공공) 에만 적용. Logic B(민간)는 영향 없음.
+    """
     presets = presets_pct or DEFAULT_PRESETS_PCT
     b_kwargs = logic_b_kwargs or {}
     out: dict[str, dict[str, float]] = {}
@@ -277,7 +296,7 @@ def calculate_three_scenarios(
         if logic == "A":
             if aemp_aud is None:
                 raise ValueError("Logic A requires aemp_aud")
-            out[key] = calculate_fob_logic_a(aemp_aud, pct, fx_aud_to_krw)
+            out[key] = calculate_fob_logic_a(aemp_aud, pct, fx_aud_to_krw, agent_margin_pct)
         elif logic == "B":
             if retail_aud is None:
                 raise ValueError("Logic B requires retail_aud")
@@ -595,6 +614,7 @@ def dispatch_by_pricing_case(
     presets_pct: dict[str, float] | None = None,
     logic_b_kwargs: dict[str, Any] | None = None,
     crawler_row: dict[str, Any] | None = None,
+    agent_margin_pct: float = DEFAULT_AGENT_MARGIN_PCT,
 ) -> dict[str, Any]:
     """`fob_reference_seeds.json`의 단일 seed dict를 받아 3 시나리오 FOB 반환.
 
@@ -603,6 +623,7 @@ def dispatch_by_pricing_case(
         fx_aud_to_krw: AUD → KRW 환율
         presets_pct: 수입 스폰서 마진 프리셋 (기본 aggressive=30/average=20/conservative=10)
         logic_b_kwargs: Logic B 마진 파라미터 (GST, pharmacy, wholesale) 덮어쓰기
+        agent_margin_pct: 에이전트 수수료 — Logic A(공공 PBS 경로)에만 적용. 기본 5%.
         crawler_row: 크롤러 실시간 row (선택). Logic B 에서 seed.reference_retail_aud 가
                      없을 때 crawler_row.retail_price_aud 를 2순위 참고가로 사용.
                      retail_estimation_method 로 출처(PBS DPMQ vs Chemist × 1.20) 구분.
@@ -712,7 +733,8 @@ def dispatch_by_pricing_case(
                 )
 
         scenarios = calculate_three_scenarios(
-            logic="A", aemp_aud=aemp, fx_aud_to_krw=fx_aud_to_krw, presets_pct=presets_pct
+            logic="A", aemp_aud=aemp, fx_aud_to_krw=fx_aud_to_krw,
+            presets_pct=presets_pct, agent_margin_pct=agent_margin_pct,
         )
         return {
             "logic": "A",
@@ -750,6 +772,7 @@ def dispatch_by_pricing_case(
             aemp_aud=total_aemp,
             fx_aud_to_krw=fx_aud_to_krw,
             presets_pct=presets_pct,
+            agent_margin_pct=agent_margin_pct,
         )
         return {
             "logic": "A",
@@ -814,7 +837,8 @@ def dispatch_by_pricing_case(
                 )
 
         scenarios = calculate_three_scenarios(
-            logic="A", aemp_aud=aemp_use, fx_aud_to_krw=fx_aud_to_krw, presets_pct=presets_pct
+            logic="A", aemp_aud=aemp_use, fx_aud_to_krw=fx_aud_to_krw,
+            presets_pct=presets_pct, agent_margin_pct=agent_margin_pct,
         )
         return {
             "logic": "A",
@@ -976,9 +1000,11 @@ def dispatch_both_segments(
     fx_aud_to_krw: float = DEFAULT_FX_AUD_TO_KRW,
     presets_pct: dict[str, float] | None = None,
     crawler_row: dict[str, Any] | None = None,
+    agent_margin_pct: float = DEFAULT_AGENT_MARGIN_PCT,
 ) -> dict[str, Any]:
     """공공(Logic A) + 민간(Logic B) 양쪽 FOB 동시 산출.
 
+    agent_margin_pct: 공공 Logic A에만 적용. 기본 5%.
     기존 dispatch_by_pricing_case()를 내부 재사용 — 기존 코드 무변경.
 
     반환 스키마::
@@ -1002,7 +1028,8 @@ def dispatch_both_segments(
 
     # ── ESTIMATE_withdrawal: 양쪽 모두 차단 ────────────────────────────────────
     if case == "ESTIMATE_withdrawal":
-        blocked = dispatch_by_pricing_case(seed, fx_aud_to_krw=fx_aud_to_krw)
+        blocked = dispatch_by_pricing_case(seed, fx_aud_to_krw=fx_aud_to_krw,
+                                           agent_margin_pct=agent_margin_pct)
         note = "PBS 철수 이력 — 재진입 조건 건별 검토 대상 (TGA·PBAC 개별 심의)"
         pub = {**blocked, "market_note": note}
         pri = {**blocked, "market_note": note}
@@ -1017,7 +1044,7 @@ def dispatch_both_segments(
     if case == "ESTIMATE_private":
         priv = dict(dispatch_by_pricing_case(
             seed, fx_aud_to_krw=fx_aud_to_krw, presets_pct=presets_pct,
-            crawler_row=crawler_row,
+            crawler_row=crawler_row, agent_margin_pct=agent_margin_pct,
         ))
         priv["market_note"] = (
             "민간 시장: ETC 처방약 소매가 기반 Logic B 역산 (GST 0%, PBS 미등재)"
@@ -1045,7 +1072,7 @@ def dispatch_both_segments(
     if case == "ESTIMATE_hospital":
         pub = dict(dispatch_by_pricing_case(
             seed, fx_aud_to_krw=fx_aud_to_krw, presets_pct=presets_pct,
-            crawler_row=crawler_row,
+            crawler_row=crawler_row, agent_margin_pct=agent_margin_pct,
         ))
         pub["market_note"] = (
             "공공 시장: 병원 tender / HealthShare NSW 정부 조달. "
@@ -1073,7 +1100,7 @@ def dispatch_both_segments(
     # 민간: Logic B — crawler_row.retail_price_aud 또는 seed.reference_retail_aud
     pub = dict(dispatch_by_pricing_case(
         seed, fx_aud_to_krw=fx_aud_to_krw, presets_pct=presets_pct,
-        crawler_row=crawler_row,
+        crawler_row=crawler_row, agent_margin_pct=agent_margin_pct,
     ))
     pub["market_note"] = (
         "공공 시장: PBS AEMP (정부 승인 출고가) 기반 Logic A 역산 — α 20% 시장 보정 포함"

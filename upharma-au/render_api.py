@@ -5525,6 +5525,160 @@ def _latest_pdf_from_history(product_id: str) -> str | None:
     return files[0].name if files else None
 
 
+def _try_rebuild_p2_pdf_from_r2(product_id: str) -> str | None:
+    """au_reports_r2 적재 데이터로 P2 PDF를 로컬 재생성.
+
+    목적:
+      - DB에는 pdf_filename 이 남아 있는데 로컬 파일이 지워진 경우, 최종 병합용으로 복구.
+    """
+    try:
+        sb = get_supabase_client()
+        r2_rows = (
+            sb.table("au_reports_r2")
+            .select("*")
+            .eq("product_id", product_id)
+            .order("generated_at", desc=True)
+            .limit(20)
+            .execute()
+            .data
+        ) or []
+        if not r2_rows:
+            return None
+
+        by_seg: dict[str, dict[str, Any]] = {}
+        for r in r2_rows:
+            seg = str((r or {}).get("segment") or "").lower()
+            if seg in ("public", "private") and seg not in by_seg:
+                by_seg[seg] = r
+
+        primary = by_seg.get("public") or by_seg.get("private")
+        if not primary:
+            return None
+
+        prod_rows = (
+            sb.table(TABLE_NAME)
+            .select("*")
+            .eq("product_code", product_id)
+            .limit(1)
+            .execute()
+            .data
+        ) or []
+        if not prod_rows:
+            return None
+        row = prod_rows[0]
+        if isinstance(row, dict):
+            _normalize_au_product_row(row)
+
+        seeds = _load_stage2_seeds()
+        seed = next((s for s in seeds if s.get("product_id") == product_id), {"product_id": product_id})
+
+        def _blocks_from_r2(rr: dict[str, Any]) -> dict[str, str]:
+            rc = rr.get("report_content_v2")
+            if isinstance(rc, dict):
+                p2b = rc.get("p2_blocks")
+                if isinstance(p2b, dict):
+                    return {k: str(v or "") for k, v in p2b.items()}
+            return {
+                "block_market_macro": "",
+                "block_extract": str(rr.get("block_extract") or ""),
+                "block_fob_intro": str(rr.get("block_fob_intro") or ""),
+                "scenario_penetration": str(rr.get("scenario_penetration") or ""),
+                "scenario_reference": str(rr.get("scenario_reference") or ""),
+                "scenario_premium": str(rr.get("scenario_premium") or ""),
+                "block_strategy": str(rr.get("block_strategy") or ""),
+                "block_risks": str(rr.get("block_risks") or ""),
+                "block_positioning": str(rr.get("block_positioning") or ""),
+            }
+
+        def _dispatch_from_r2(rr: dict[str, Any]) -> dict[str, Any]:
+            fx_krw = rr.get("fx_aud_to_krw")
+            def _f(v: Any) -> float | None:
+                try:
+                    n = float(v)
+                    return n
+                except Exception:
+                    return None
+            agg_aud = _f(rr.get("fob_penetration_aud")) or 0.0
+            avg_aud = _f(rr.get("fob_reference_aud")) or 0.0
+            con_aud = _f(rr.get("fob_premium_aud")) or 0.0
+            agg_krw = _f(rr.get("fob_penetration_krw")) or (agg_aud * (_f(fx_krw) or 893.0))
+            avg_krw = _f(rr.get("fob_reference_krw")) or (avg_aud * (_f(fx_krw) or 893.0))
+            con_krw = _f(rr.get("fob_premium_krw")) or (con_aud * (_f(fx_krw) or 893.0))
+            logic = str(rr.get("logic") or "A")
+            inputs: dict[str, Any] = {
+                "product_id": product_id,
+                "pricing_case": rr.get("pricing_case"),
+                "fx_aud_to_krw": _f(fx_krw) or 893.0,
+            }
+            if logic == "A":
+                inputs["aemp_aud"] = _f(row.get("aemp_aud"))
+                inputs["aemp_source"] = "crawler"
+                inputs["alpha_market_uplift_pct"] = ALPHA_MARKET_UPLIFT_PCT
+            elif logic == "B":
+                inputs["retail_aud"] = _f(row.get("retail_price_aud"))
+                inputs["retail_source"] = "crawler"
+            return {
+                "logic": logic,
+                "inputs": inputs,
+                "scenarios": {
+                    "aggressive": {"fob_aud": agg_aud, "fob_krw": agg_krw},
+                    "average": {"fob_aud": avg_aud, "fob_krw": avg_krw},
+                    "conservative": {"fob_aud": con_aud, "fob_krw": con_krw},
+                },
+                "warnings": rr.get("warnings") or [],
+                "disclaimer": rr.get("disclaimer") or "",
+                "blocked_reason": None,
+            }
+
+        pub_r = by_seg.get("public")
+        pri_r = by_seg.get("private")
+        pub_dispatch = _dispatch_from_r2(pub_r) if pub_r else None
+        pri_dispatch = _dispatch_from_r2(pri_r) if pri_r else None
+        pub_blocks = _blocks_from_r2(pub_r) if pub_r else None
+        pri_blocks = _blocks_from_r2(pri_r) if pri_r else None
+
+        dispatch = pub_dispatch or pri_dispatch
+        blocks = pub_blocks or pri_blocks
+        if not dispatch or not blocks:
+            return None
+
+        fx_rates = {
+            "aud_krw": float(primary.get("fx_aud_to_krw") or (_fetch_exchange_rates_simple().get("aud_krw") or 893.0)),
+            "aud_usd": float(primary.get("fx_aud_to_usd") or (_fetch_exchange_rates_simple().get("aud_usd") or 0.64)),
+        }
+
+        from report_generator import render_p2_pdf
+        from datetime import datetime as _dt
+        ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+        out_name = f"au_p2_report_{product_id}_public_{ts}.pdf"
+        out_path = _REPORTS_DIR / out_name
+        render_p2_pdf(
+            row,
+            seed,
+            dispatch,
+            blocks,
+            fx_rates,
+            out_path,
+            dispatch_public=pub_dispatch,
+            p2_blocks_public=pub_blocks,
+            dispatch_private=pri_dispatch,
+            p2_blocks_private=pri_blocks,
+        )
+        if out_path.is_file():
+            try:
+                for seg in ("public", "private"):
+                    if seg in by_seg:
+                        sb.table("au_reports_r2").update({"pdf_filename": out_name}).eq(
+                            "product_id", product_id
+                        ).eq("segment", seg).execute()
+            except Exception:
+                pass
+            return out_name
+    except Exception as exc:
+        logger.warning("P2 PDF 재생성 실패(%s): %s", product_id, exc)
+    return None
+
+
 def _latest_pdf_from_r2(product_id: str) -> str | None:
     """au_reports_r2 에서 최신 P2 PDF 파일명 조회 (public 우선)."""
     rows: list[dict[str, Any]] = []
@@ -5573,7 +5727,10 @@ def _latest_pdf_from_r2(product_id: str) -> str | None:
         return Path(str(fallback[0]["pdf_filename"])).name
 
     files = sorted(_REPORTS_DIR.glob(f"au_p2_report_{product_id}_*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
-    return files[0].name if files else None
+    if files:
+        return files[0].name
+    # DB에는 있는데 로컬 파일이 없으면 재생성 시도
+    return _try_rebuild_p2_pdf_from_r2(product_id)
 
 
 def _latest_pdf_from_p3(product_id: str) -> str | None:
@@ -5659,11 +5816,6 @@ def final_report_generate(payload: dict[str, Any]) -> JSONResponse:
     cover_path = _build_final_cover_pdf(pid)
     from datetime import datetime as _dt
 
-    try:
-        from pypdf import PdfMerger
-    except ImportError:
-        from PyPDF2 import PdfMerger  # type: ignore[no-redef,import-not-found]
-
     final_name = f"au_final_report_{pid}_{_dt.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     final_path = _REPORTS_DIR / final_name
 
@@ -5673,21 +5825,34 @@ def final_report_generate(payload: dict[str, Any]) -> JSONResponse:
         _REPORTS_DIR / p3_name,
         _REPORTS_DIR / p1_name,
     ]
-    merger = None
     try:
-        merger = PdfMerger()
-        for p in merge_paths:
-            merger.append(str(p))
-        merger.write(str(final_path))
-        logger.info("최종 PDF 병합 완료: %s (품목 %s)", final_path, pid)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"최종 병합 실패: {exc}") from exc
-    finally:
-        if merger is not None:
+        try:
+            # pypdf 구버전/일부 배포판
+            from pypdf import PdfMerger  # type: ignore
+
+            merger = PdfMerger()
+            for p in merge_paths:
+                merger.append(str(p))
+            merger.write(str(final_path))
             try:
                 merger.close()
             except Exception:
                 pass
+        except Exception:
+            # pypdf 최신(merger 제거) 호환: PdfWriter 로 페이지 단위 병합
+            from pypdf import PdfReader, PdfWriter
+
+            writer = PdfWriter()
+            for p in merge_paths:
+                reader = PdfReader(str(p))
+                for pg in reader.pages:
+                    writer.add_page(pg)
+            with open(final_path, "wb") as wf:
+                writer.write(wf)
+        logger.info("최종 PDF 병합 완료: %s (품목 %s)", final_path, pid)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"최종 병합 실패: {exc}") from exc
+    finally:
         try:
             cover_path.unlink(missing_ok=True)
         except Exception:

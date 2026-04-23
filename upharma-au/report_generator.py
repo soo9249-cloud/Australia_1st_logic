@@ -1611,9 +1611,9 @@ def render_p2_pdf(
     s_date = ps("P2Date", fontName=base_font, fontSize=9, leading=12,
                 alignment=TA_CENTER, textColor=colors.HexColor("#6B7280"))
     s_section = ps("P2Section", fontName=bold_font, fontSize=10, textColor=C_NAVY,
-                   leading=14, spaceBefore=10, spaceAfter=6)
+                   leading=14, spaceBefore=10, spaceAfter=6, keepWithNext=True)
     s_sub = ps("P2SubSection", fontName=bold_font, fontSize=9, textColor=C_NAVY,
-               leading=13, spaceBefore=8, spaceAfter=4)
+               leading=13, spaceBefore=8, spaceAfter=4, keepWithNext=True)
     s_cell_h = ps("P2CellH", fontName=bold_font, fontSize=9, textColor=C_NAVY,
                   leading=13, wordWrap="CJK")
     s_cell = ps("P2Cell", fontName=base_font, fontSize=9, textColor=C_BODY,
@@ -1926,6 +1926,26 @@ def render_p2_pdf(
         Paragraph(
             _rx(
                 "* 본 산출 결과는 AI 분석에 기반한 추정치이므로, 최종 의사결정 전 반드시 담당자의 검토 및 확인이 필요합니다."
+            ),
+            s_cell_sm,
+        )
+    )
+    story.append(Spacer(1, 8))
+    story.append(Paragraph(_rx("6. 용어 해설 (별첨)"), s_section))
+    story.append(
+        Paragraph(
+            _rx(
+                "· AEMP (Approved Ex-Manufacturer Price, 정부 승인 출고가): "
+                "호주 PBS 등재 의약품의 정부 공시 기준 출고가입니다."
+            ),
+            s_cell_sm,
+        )
+    )
+    story.append(
+        Paragraph(
+            _rx(
+                "· DPMQ (Dispensed Price for Maximum Quantity, 최대 처방량 총약가): "
+                "최대 처방량 기준으로 환자에게 조제될 때의 총 약가(공시 기준)입니다."
             ),
             s_cell_sm,
         )

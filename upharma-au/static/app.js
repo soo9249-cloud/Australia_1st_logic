@@ -578,9 +578,11 @@ let _p2ManualCalculated = false;
 
 function _makeP2Defaults() {
   // 호주 기본값 (stage2/fob_calculator.py DEFAULT_* 상수 맞춤):
-  //   GST_PCT               = 10%  (처방약은 _p2ClassifyGst 로 자동 0% 전환)
-  //   PHARMACY_MARGIN_PCT   = 30%
-  //   WHOLESALE_MARGIN_B    = 10%
+  //   GST_PCT               = 0%   (처방약 GST-free, _p2ClassifyGst 로 자동 전환)
+  //   PHARMACY_MARGIN_PCT   = 15%  (8CPA 관행 10~20% 중간값)
+  //   WHOLESALE_MARGIN_B    = 7.52% (1PWA 2025-01-01 확정)
+  //   FREIGHT_INSURANCE_PCT = 5%   (OECD ITIC 의약품 평균, Logic B 민간에만)
+  //   AGENT_MARGIN_PCT      = 5%   (Logic A 공공에만)
   //   IMPORTER_MARGIN       = 20%  (average 시나리오 기준)
   // 화폐: USD 메인 (AUD 원본은 loadExchange.window._exchangeRates.aud_usd 로 환산)
   //
@@ -602,6 +604,7 @@ function _makeP2Defaults() {
       { key: 'gst', label: 'GST 공제', value: 0, type: 'gst_fixed', unit: '%', step: 0, min: 0, max: 10, enabled: true, fixed: true, expanded: false, hint: '호주 GST — 처방약(S4/S8) 0% · OTC/건강기능식품 10%. 품목 선택 시 자동 전환.', rationale: '호주는 S4/S8 처방의약품 GST-free.' },
       { key: 'pharmacy', label: '약국 마진율', value: 15, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '호주 약국 소매 마진 — fob_calculator DEFAULT_PHARMACY_MARGIN_PCT = 15% (8CPA 관행 10~20% 중간값)', rationale: 'Chemist Warehouse·Priceline 등 체인 마진 차감.' },
       { key: 'wholesale', label: '도매 마진', value: 7.52, type: 'pct_deduct', unit: '%', step: 0.01, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '도매 마진 — fob_calculator DEFAULT_WHOLESALE_MARGIN_B_PCT = 7.52% (1PWA 2025-01-01 확정)', rationale: 'Sigma/API 등 호주 의약품 도매 마진 (1st Pharmaceutical Wholesaler Agreement).' },
+      { key: 'freight', label: '운임·보험료 (Freight & Insurance)', value: 5, type: 'pct_deduct', unit: '%', step: 0.5, min: 0, max: 30, enabled: true, fixed: false, expanded: false, hint: '운임·적하보험료 — fob_calculator DEFAULT_FREIGHT_INSURANCE_PCT = 5% (OECD ITIC 의약품 평균, 리퍼 컨테이너 포함)', rationale: '소매가 역산 시 CIF→FOB 전환 단계. 도매가에서 운임·보험료 제거 후 수입상 마진 역산.' },
       { key: 'importer', label: '수입상 마진', value: 20, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '호주 수입상 마진 (stage2 average 시나리오 = 20%)', rationale: '한국 제조사 ↔ 호주 수입상 사이 중간 마진.' },
     ],
   };

@@ -3202,18 +3202,67 @@ resetProgress();
       </li>`;
   }
 
+  // ───── 기업 개요 단락 자동 생성 ─────
+  function _buildCompanyOverview(buyer, tier, artg) {
+    const name  = escHtml(buyer.company_name || '해당 기업');
+    const state = buyer.state || '호주';
+
+    // ① 사업 성격
+    let overview = `${name}은(는) 호주 ${escHtml(state)}에 소재한 의약품 `;
+    if (buyer.has_au_factory === 'Y') {
+      const locs = (buyer.factory_locations || []).filter(Boolean);
+      overview += `제조·유통 기업으로, ${locs.length ? escHtml(locs.join(', ')) + ' 소재 ' : ''}TGA 등록 제조시설을 보유하고 있습니다.`;
+    } else if (artg >= 10) {
+      overview += `전문 수입·유통 기업으로, TGA ARTG (호주 의약품 등록 시스템)에 총 ${artg}건의 의약품을 등재하고 있습니다.`;
+    } else if (artg >= 1) {
+      overview += `수입·유통 기업으로, TGA ARTG (호주 의약품 등록 시스템)에 ${artg}건의 등재 실적을 보유하고 있습니다.`;
+    } else {
+      overview += `유통 기업입니다.`;
+    }
+
+    // ② 협회·인증
+    const memb = [];
+    if (buyer.is_ma_member)     memb.push('Medicines Australia (호주 제약협회) 정회원');
+    if (buyer.is_gbma_member)   memb.push('GBMA (제네릭·바이오시밀러 협회) 회원');
+    if (buyer.is_gpce_exhibitor) memb.push('GPCE (호주 전국 약사 컨퍼런스) 전시 이력 보유');
+    if (memb.length) {
+      overview += ` ${memb.join(', ')}으로 업계 네트워크 및 규제 기반이 확인됩니다.`;
+    }
+
+    // ③ 시장 포지션
+    if (tier === 'A') {
+      overview += ` 해당 품목과 동일 성분 의약품을 TGA에 직접 스폰서로 등록한 경험이 있어, 호주 시장 진입 파트너로서 높은 적합성을 보입니다.`;
+    } else if (tier === 'B') {
+      overview += ` 동일 치료영역(ATC 분류) 의약품을 취급하며 관련 유통망을 보유하고 있습니다.`;
+    } else {
+      overview += ` 호주 처방의약품(Rx) 시장에서 지속적으로 활동 중인 기업입니다.`;
+    }
+
+    return overview;
+  }
+
   // ───── 바이어 카드 모달 열기 ─────
   window.openBuyerCard = function (idx) {
     const buyer = _p3BuyersCache[idx];
     if (!buyer) return;
 
     const tier = _buyerTier(buyer);
+    const artg = Number(buyer.tga_artg_count || 0);
 
     // 기본 정보
     const state   = buyer.state || '—';
     const email   = buyer.email || null;
     const phone   = buyer.phone || null;
     const website = buyer.website || null;
+
+    // 업계 인증·회원 태그
+    const certTags = [];
+    if (buyer.is_ma_member)      certTags.push('Medicines Australia');
+    if (buyer.is_gbma_member)    certTags.push('GBMA');
+    if (buyer.is_gpce_exhibitor) certTags.push('GPCE 전시');
+    const certHtml = certTags.length
+      ? certTags.map(t => `<span class="buyer-cert-tag">${escHtml(t)}</span>`).join('')
+      : '<span style="color:#9ca3af;">—</span>';
 
     // 파트너 적합 판정 — 정성적 텍스트
     const revenueText = escHtml(buyer.annual_revenue_rank || '정보 없음');
@@ -3228,7 +3277,6 @@ resetProgress();
       ? `<span class="fit-ok">운영</span>`
       : `<span class="fit-no">미운영</span>`;
 
-    const artg = Number(buyer.tga_artg_count || 0);
     const pipelineText = tier === 'A'
       ? `<span class="fit-hi">성분 직접 등록 (ARTG ${artg}건)</span>`
       : tier === 'B'
@@ -3236,17 +3284,19 @@ resetProgress();
       : `<span class="fit-low">관련성 낮음</span>`;
 
     let importText;
-    if (artg >= 10)       importText = `<span class="fit-hi">풍부 (ARTG ${artg}건 등재)</span>`;
-    else if (artg >= 5)   importText = `<span class="fit-mid">보유 (ARTG ${artg}건)</span>`;
-    else if (artg >= 1)   importText = `<span class="fit-mid">기초 (ARTG ${artg}건)</span>`;
+    if (artg >= 10)               importText = `<span class="fit-hi">풍부 (ARTG ${artg}건 등재)</span>`;
+    else if (artg >= 5)           importText = `<span class="fit-mid">보유 (ARTG ${artg}건)</span>`;
+    else if (artg >= 1)           importText = `<span class="fit-mid">기초 (ARTG ${artg}건)</span>`;
     else if (buyer.is_gpce_exhibitor) importText = `<span class="fit-mid">GPCE 전시 이력</span>`;
-    else                  importText = `<span class="fit-low">정보 없음</span>`;
+    else                          importText = `<span class="fit-low">정보 없음</span>`;
 
-    // AI 추천 근거 (3줄+)
-    const reasonLines = _buildReasoningLines(buyer, tier, artg);
     const finalVerifiedText = _isFinalVerifiedBuyer(buyer)
       ? '<span class="fit-ok">완료 (수기/교차검증 근거 반영)</span>'
       : '<span class="fit-low">미표시</span>';
+
+    // 기업 개요 단락 + AI 추천 근거 (3줄+)
+    const overviewPara = _buildCompanyOverview(buyer, tier, artg);
+    const reasonLines  = _buildReasoningLines(buyer, tier, artg);
 
     const modal = document.getElementById('buyer-card-modal');
     const overlay = document.getElementById('buyer-card-overlay');
@@ -3258,6 +3308,13 @@ resetProgress();
         <span class="buyer-card-name">${escHtml(buyer.company_name || '—')}</span>
         <button class="buyer-card-close" onclick="closeBuyerCard()" title="닫기">×</button>
       </div>
+
+      <!-- 기업 개요 단락 -->
+      <div class="buyer-card-overview">
+        <div class="buyer-card-section-title">기업 개요</div>
+        <p class="buyer-overview-para">${overviewPara}</p>
+      </div>
+
       <div class="buyer-card-body">
         <div class="buyer-card-col">
           <div class="buyer-card-col-title">기본 정보</div>
@@ -3280,6 +3337,10 @@ resetProgress();
             <span class="buyer-info-val">${website
               ? `<a href="${escHtml(website)}" target="_blank" rel="noopener">${escHtml(website.replace(/^https?:\/\//, ''))}</a>`
               : '<span style="color:#9ca3af;">—</span>'}</span>
+          </div>
+          <div class="buyer-info-row">
+            <span class="buyer-info-label">업계 인증</span>
+            <span class="buyer-info-val">${certHtml}</span>
           </div>
         </div>
         <div class="buyer-card-col">

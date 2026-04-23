@@ -2515,6 +2515,42 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
 .buyer-card-close:hover { background: #f3f4f6; color: #374151; }
 
 /* 카드 바디 — 2컬럼 */
+/* 기업 개요 섹션 */
+.buyer-card-overview {
+  padding: 14px 22px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  background: rgba(23,63,120,.025);
+}
+.buyer-card-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 7px;
+}
+.buyer-overview-para {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+  margin: 0;
+  word-break: keep-all;
+}
+
+/* 업계 인증 태그 */
+.buyer-cert-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(23,63,120,.08);
+  color: var(--navy);
+  font-size: 11px;
+  font-weight: 700;
+  margin-right: 4px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
 .buyer-card-body {
   display: grid;
   grid-template-columns: 1fr 1fr;

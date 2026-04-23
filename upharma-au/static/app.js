@@ -589,18 +589,20 @@ function _makeP2Defaults() {
   // 항목 수가 1:1이 아님. Logic A 역산은 AI 탭 3열 또는 /api/stage2/calculate.
   return {
     public: [
-      { key: 'base_aemp', label: 'AEMP (정부 승인 출고가, AUD)', value: 0, type: 'abs_input', unit: 'AUD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 PBS AEMP (Approved Ex-Manufacturer Price) — 크롤링 결과 aemp_aud 값 입력. 공공 역산 기준점.', rationale: 'FOB = AEMP(AUD) × 환율 ÷ (1+수입상마진) ÷ (1+에이전트) — 민간과 동일한 나눗셈 역산 구조.' },
+      { key: 'base_aemp', label: 'AEMP (정부 승인 출고가, AUD)', value: 0, type: 'abs_input', unit: 'AUD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 PBS AEMP (Approved Ex-Manufacturer Price) — 크롤링 결과 aemp_aud 값 입력. 공공 역산 기준점.', rationale: 'FOB = AEMP × (1+α) × 환율 ÷ (1+수입상마진) ÷ (1+에이전트)' },
+      { key: 'alpha', label: 'α 시장 보정계수 (Market Uplift)', value: 20, type: 'pct_add', unit: '%', step: 1, min: 0, max: 100, enabled: true, fixed: false, expanded: false, hint: 'AEMP 공시가 대비 실거래 시장가 보정계수 — fob_calculator.py ALPHA_MARKET_UPLIFT_PCT = 20%.', rationale: '공시 AEMP는 실제 시장 거래가보다 낮게 책정됨. α 보정 후 수입상 마진 역산 적용.' },
       { key: 'exchange', label: '환율 (AUD→USD)', value: 0.65, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'AUD 기준가를 USD 로 환산 (로드 시 실시간 aud_usd 반영)', rationale: '호주 AUD 기준가를 USD 로 맞춰 환차 위험을 줄입니다.' },
-      { key: 'importer', label: '수입상 마진 (Importer/Sponsor Margin)', value: 20, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '호주 수입상(스폰서) 마진 — 공공 채널 기본 20%. AEMP×환율에서 나눗셈으로 제거.', rationale: '한국 제조사 ↔ 호주 수입상 사이 중간 마진.' },
+      { key: 'importer', label: '수입상 마진 (Importer/Sponsor Margin)', value: 20, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '호주 수입상(스폰서) 마진 — 공공 채널 기본 20%.', rationale: '한국 제조사 ↔ 호주 수입상 사이 중간 마진.' },
       { key: 'agent', label: '에이전트 수수료 (Agent Commission)', value: 5, type: 'pct_deduct', unit: '%', step: 0.5, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '호주 현지 에이전트·파트너 수수료 — 기본 5%', rationale: '현지 파트너 수수료 차감 후 FOB 확정.' },
     ],
     private: [
-      { key: 'base_het', label: '민간 기준가 (AUD 소매가 USD 환산)', value: 0, type: 'abs_input', unit: 'USD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: 'Chemist Warehouse × 1.20 (CHOICE 조사 기준) 또는 PBS DPMQ 를 USD 환산한 값', rationale: '호주 민간 시장은 Chemist/약국 체인 소매가를 USD 로 환산해 역산.' },
+      { key: 'base_het', label: '소매가 (AUD)', value: 0, type: 'abs_input', unit: 'AUD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: 'Chemist Warehouse 또는 PBS DPMQ 기준 소매가 (AUD). 고정수수료 차감 → 환율 환산 → 마진 역산 순으로 계산.', rationale: '호주 민간 시장 역산 기준점: 소매가(AUD)에서 모든 유통 마진을 제거하면 FOB(USD).' },
+      { key: 'dispensing_fee', label: '고정 수수료 차감 (조제료 + AHI)', value: 13.79, type: 'abs_deduct_aud', unit: 'AUD', step: 0.01, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '건당 고정 수수료 — 조제료(Dispensing Fee) $8.88 + AHI 수수료(Administration, Handling, Infrastructure) $4.91 = $13.79 AUD. 8CPA 2025 기준.', rationale: '소매가에서 퍼센트 마진 역산 전 먼저 차감해야 정확. 이 수수료는 약값에 비례하지 않고 건당 고정.' },
       { key: 'exchange', label: '환율 (AUD→USD)', value: 0.65, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'AUD 입력 값을 USD 로 환산 (로드 시 실시간 aud_usd 반영)', rationale: '실시간 환율 반영으로 가격 정합성을 유지합니다.' },
-      { key: 'gst', label: 'GST 공제', value: 0, type: 'gst_fixed', unit: '%', step: 0, min: 0, max: 10, enabled: true, fixed: true, expanded: false, hint: '호주 GST — 처방약(S4/S8) 0% · OTC/건강기능식품 10%. 품목 선택 시 _p2ClassifyGst 로 자동 전환.', rationale: '호주는 S4/S8 처방의약품 GST-free, Omethyl(Omega-3) 등 OTC 만 10% 과세.' },
-      { key: 'pharmacy', label: '약국 마진율', value: 30, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 약국 체인 마진 (fob_calculator DEFAULT_PHARMACY_MARGIN_PCT = 30%)', rationale: 'Chemist Warehouse·Priceline 등 체인 마진 차감.' },
-      { key: 'wholesale', label: '도매 마진', value: 10, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 도매 유통 마진 (fob_calculator DEFAULT_WHOLESALE_MARGIN_B_PCT = 10%)', rationale: 'Sigma/API 등 호주 의약품 도매 마진.' },
-      { key: 'importer', label: '수입상 마진', value: 20, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 수입상 마진 (stage2 average 시나리오 = 20%)', rationale: '한국 제조사 ↔ 호주 수입상 사이 중간 마진.' },
+      { key: 'gst', label: 'GST 공제', value: 0, type: 'gst_fixed', unit: '%', step: 0, min: 0, max: 10, enabled: true, fixed: true, expanded: false, hint: '호주 GST — 처방약(S4/S8) 0% · OTC/건강기능식품 10%. 품목 선택 시 자동 전환.', rationale: '호주는 S4/S8 처방의약품 GST-free.' },
+      { key: 'pharmacy', label: '약국 마진율', value: 15, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '호주 약국 소매 마진 — fob_calculator DEFAULT_PHARMACY_MARGIN_PCT = 15% (8CPA 관행 10~20% 중간값)', rationale: 'Chemist Warehouse·Priceline 등 체인 마진 차감.' },
+      { key: 'wholesale', label: '도매 마진', value: 7.52, type: 'pct_deduct', unit: '%', step: 0.01, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '도매 마진 — fob_calculator DEFAULT_WHOLESALE_MARGIN_B_PCT = 7.52% (1PWA 2025-01-01 확정)', rationale: 'Sigma/API 등 호주 의약품 도매 마진 (1st Pharmaceutical Wholesaler Agreement).' },
+      { key: 'importer', label: '수입상 마진', value: 20, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '호주 수입상 마진 (stage2 average 시나리오 = 20%)', rationale: '한국 제조사 ↔ 호주 수입상 사이 중간 마진.' },
     ],
   };
 }
@@ -1701,12 +1703,19 @@ function _calcP2Manual() {
     // 공공 역산: AEMP(AUD) × 환율 ÷ (1+수입상마진) ÷ (1+에이전트) = FOB(USD)
     // 민간 Logic B 와 동일한 나눗셈 방식 (fob_calculator.py Logic A 와 정합)
     const baseAud  = Number(options.find((x) => x.key === 'base_aemp')?.value || 0);
+    const alpha    = Number(options.find((x) => x.key === 'alpha')?.value ?? 20);
     const ex       = Number(options.find((x) => x.key === 'exchange')?.value || 1);
     const importer = Number(options.find((x) => x.key === 'importer')?.value ?? 20);
     const agent    = Number(options.find((x) => x.key === 'agent')?.value ?? 5);
 
-    let price = baseAud * ex;
-    const parts = [`AUD ${baseAud.toFixed(2)}`, `× ${ex.toFixed(4)} (AUD→USD)`];
+    // AEMP × (1+α) = 조정 AEMP → × 환율 → USD 변환 → 마진 역산
+    const adjustedAemp = baseAud * (1 + alpha / 100);
+    let price = adjustedAemp * ex;
+    const parts = [
+      `AUD ${baseAud.toFixed(2)}`,
+      `× (1+α ${alpha}%) = AUD ${adjustedAemp.toFixed(2)}`,
+      `× ${ex.toFixed(4)} (AUD→USD)`,
+    ];
 
     const impDiv = 1 + importer / 100;
     price /= impDiv;
@@ -1732,15 +1741,26 @@ function _calcP2Manual() {
   //   FOB = Retail ÷ (1+GST) ÷ (1+pharmacy) ÷ (1+wholesale) ÷ (1+importer)
   // 원본 싱가포르 로직은 (1-margin%) 차감 방식이었으나, 호주는 (1+margin) 나눗셈.
   // 호환성 유지를 위해 pct_deduct 는 (1+margin) ÷ 로 해석.
-  let price = 0;
+  // 민간 Logic B — fob_calculator.py 와 정합:
+  //   (소매가AUD − 고정수수료AUD) × 환율 ÷ (1+GST) ÷ (1+약국%) ÷ (1+도매%) ÷ (1+수입상%)
+  // options 배열 순서대로 처리 (base_het → dispensing_fee → exchange → gst → pharmacy → wholesale → importer)
+  let price = 0;        // AUD 기준으로 시작, exchange 적용 후 USD로 전환
+  let inAud  = true;    // exchange 적용 전까지 AUD 단위
   const parts = [];
   options.forEach((opt) => {
     if (opt.key === 'base_het') {
       price = Number(opt.value);
-      parts.push(`USD ${price.toFixed(2)}`);
-    } else if (opt.key === 'exchange' && Number(opt.value) !== 1) {
-      price *= Number(opt.value);
-      parts.push(`× ${Number(opt.value).toFixed(4)}`);
+      parts.push(`AUD ${price.toFixed(2)}`);
+    } else if (opt.key === 'dispensing_fee') {
+      // 고정 수수료 — AUD 선차감 (exchange 변환 전, 비율 역산 전)
+      const fee = Number(opt.value) || 0;
+      price = Math.max(0, price - fee);
+      parts.push(`- AUD ${fee.toFixed(2)} (고정수수료 조제료+AHI)`);
+    } else if (opt.key === 'exchange') {
+      // AUD → USD 환산
+      const ex = Number(opt.value) || 1;
+      if (ex !== 1) { price *= ex; inAud = false; }
+      parts.push(`× ${(Number(opt.value) || 1).toFixed(4)} (AUD→USD)`);
     } else if (opt.type === 'gst_fixed') {
       // 호주 GST: 처방약 0% → ÷1.00, OTC 10% → ÷1.10. 동적 반영.
       const gstRate = Number(opt.value) || 0;
@@ -2410,8 +2430,9 @@ async function _handleCustomCrawlResult(job) {
         const pub = _p2Manual.public.find((x) => x.key === 'base_aemp');
         if (pub) pub.value = aempAud;
       } else if (fob.logic === 'B' && retailAud > 0) {
+        // base_het 는 AUD 단위 — 환율 변환은 _calcP2Manual 내 exchange 옵션이 처리
         const pri = _p2Manual.private.find((x) => x.key === 'base_het');
-        if (pri) pri.value = retailAud * audUsd;
+        if (pri) pri.value = retailAud;
       }
       if (typeof switchP2Tab === 'function') switchP2Tab('manual');
       const p2body = document.getElementById('pb-p2');

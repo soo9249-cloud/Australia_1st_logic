@@ -2187,11 +2187,15 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "  · scenario_penetration  ← scenarios.aggressive.fob_aud  (저가 FOB 진입 · Penetration)\n"
     "  · scenario_reference    ← scenarios.average.fob_aud     (기준 FOB · Reference)\n"
     "  · scenario_premium      ← scenarios.conservative.fob_aud (고 FOB · Premium)\n"
-    "각 scenario_* 문장에는 해당 키의 fob_aud 를 AUD 소수 둘째 자리로 반드시 인용함.\n\n"
+    "각 scenario_* 문장에는 해당 키의 fob_aud 를 인용하되, 보고서 문장은 USD 기준으로 먼저 쓰고 "
+    "AUD는 괄호 보조값으로만 병기합니다.\n\n"
     "【필드 정의】\n"
     "  block_market_macro   : 1문단(3~4문장). 호주 거시시장 핵심만 요약. "
     "가능하면 2025년 이후 수치(1인당 GDP·의약품 시장 규모·수입 의존도)를 포함하고, "
     "없으면 최신 연도로 대체하며 연도를 명시.\n"
+    "                         가격(AEMP/DPMQ/FOB) 숫자 나열 중심으로 쓰지 말고, "
+    "국가 의약품 시장 구조(공공 PBS/민간 약국), 본 성분의 질환/환자군 수요 맥락, "
+    "수출전략과의 연결까지 반드시 포함합니다.\n"
     "  block_extract        : 1문단(3~5문장). 제품명·참고가(AEMP 또는 retail)·TGA/PBS 판정 요약.\n"
     "  block_fob_intro      : 1문단(3~5문장). dispatch.logic(A 또는 B 등)에 따라 왜 해당 역산 경로인지, "
     "                         3시나리오 FOB(AUD) 범위를 한 줄로 요약.\n"
@@ -2219,6 +2223,13 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "- 호주 수출 구조상 스폰서(수입상) 마진이 FOB에 미치는 영향을 최소 1회 이상 명시합니다.\n"
     "- 품목이 복합제(FDC)이고 현지가 단일 성분 위주라면, 복합제 편의성(복약·채널 운영·포지셔닝)을 근거에 반영합니다.\n"
     "- 반대로 복합제 근거 데이터가 없으면 단정하지 말고 '별도 검증 필요'를 명시합니다.\n\n"
+    "【거시시장 블록(block_market_macro) 강제 규칙】\n"
+    "- block_market_macro는 반드시 3축으로 작성합니다: "
+    "(1) 호주 의약품 시장 구조/규모, (2) 본 성분 연관 질환·환자군·발병/유병 부담, "
+    "(3) 해당 맥락이 가격/채널 전략에 미치는 영향.\n"
+    "- 질환 발병률/유병률 수치가 입력 JSON에 없으면 추정하지 말고 "
+    "'유병률 수치는 제공 데이터 범위 외로 별도 검증 필요함'을 명시합니다.\n"
+    "- block_market_macro에 AEMP/DPMQ/FOB 수치만 반복하는 작성은 금지합니다.\n\n"
     "【사실·중립 — PBAC·철수·우월성】\n"
     "- seed.warnings·dispatch.warnings·pricing_case 에 적힌 사실만 반영하고, "
     "그 범위를 넘는 사업 적합성·‘반드시’·‘불가’ 단정은 하지 않습니다.\n"
@@ -2271,6 +2282,80 @@ def _row_summary_for_p2(row: dict[str, Any]) -> dict[str, Any]:
         "export_viable", "reason_code",
     ]
     return {k: row.get(k) for k in keys}
+
+
+def _fallback_p2_blocks(
+    row: dict[str, Any],
+    seed: dict[str, Any],
+    dispatch_result: dict[str, Any],
+    segment: str,
+) -> dict[str, str]:
+    """P2 AI 실패/미설정 시 사용할 규칙 기반 블록."""
+    scenarios = dispatch_result.get("scenarios") or {}
+    avg = scenarios.get("average") or {}
+    agg = scenarios.get("aggressive") or {}
+    cons = scenarios.get("conservative") or {}
+    logic = str(dispatch_result.get("logic") or "미확보")
+    pricing_case = str(seed.get("pricing_case") or "미확보")
+    aud_usd = float((dispatch_result.get("fx_rates") or {}).get("aud_usd") or 0.64)
+    if aud_usd <= 0:
+        aud_usd = 0.64
+
+    def _usd(v: Any) -> str:
+        try:
+            n = float(v)
+            if n <= 0:
+                return "미확보"
+            return f"USD {n * aud_usd:.2f}"
+        except Exception:
+            return "미확보"
+
+    market_macro = (
+        "호주 의약품 시장은 공공 급여(PBS)와 민간 약국 유통이 병행되는 구조이며, "
+        "본 성분은 제한 급여 조건과 환자군 규모가 채널 전략에 직접 영향을 줍니다. "
+        "유병률·발병률 수치는 제공 데이터 범위 외로 별도 검증이 필요하며, "
+        f"{'공공' if segment == 'public' else '민간'} 채널에서는 가격 자체보다 급여 조건·유통 마진·처방 접근성을 함께 고려해야 합니다."
+    )
+    extract = (
+        f"기준 산정은 pricing_case {pricing_case}, logic {logic}를 기반으로 수행합니다. "
+        f"공식 AEMP는 {_usd(row.get('aemp_aud'))}, 공식 DPMQ는 {_usd(row.get('dpmq_aud') or row.get('pbs_dpmq'))} 수준입니다. "
+        "입력 데이터 범위를 벗어나는 값은 사용하지 않았으며, 누락 항목은 별도 검증 대상으로 남깁니다."
+    )
+    fob_intro = (
+        f"3개 FOB 시나리오는 저가 {_usd(agg.get('fob_aud'))}, 기준가 {_usd(avg.get('fob_aud'))}, "
+        f"프리미엄 {_usd(cons.get('fob_aud'))}로 산정했습니다. "
+        f"각 시나리오는 pricing_case {pricing_case}와 logic {logic}, 수입상 마진 가정값을 반영한 결과입니다."
+    )
+
+    return {
+        "block_market_macro": market_macro,
+        "block_extract": extract,
+        "block_fob_intro": fob_intro,
+        "scenario_penetration": (
+            f"저가 진입은 {_usd(agg.get('fob_aud'))} 기준으로 초기 점유 확보를 우선합니다. "
+            f"pricing_case {pricing_case}, logic {logic}, 수입상 마진 {agg.get('importer_margin_pct', '미확보')}%를 근거로 합니다."
+        ),
+        "scenario_reference": (
+            f"기준가는 {_usd(avg.get('fob_aud'))}로 중기 운영 안정성과 거래 지속성을 목표로 합니다. "
+            f"pricing_case {pricing_case}, logic {logic}, 수입상 마진 {avg.get('importer_margin_pct', '미확보')}%를 반영합니다."
+        ),
+        "scenario_premium": (
+            f"프리미엄은 {_usd(cons.get('fob_aud'))}로 수익성 우선 전략에 해당합니다. "
+            f"pricing_case {pricing_case}, logic {logic}, 수입상 마진 {cons.get('importer_margin_pct', '미확보')}%를 기준으로 합니다."
+        ),
+        "block_strategy": (
+            f"{'공공' if segment == 'public' else '민간'} 채널의 규제·유통 조건을 반영해 기준가 시나리오를 기본안으로 운영하고, "
+            "입찰/유통 반응에 따라 저가·프리미엄 시나리오를 보조적으로 적용합니다."
+        ),
+        "block_risks": (
+            "주요 리스크는 규제 심사 일정, 급여 조건 변동, 환율 및 유통 마진 변동성입니다. "
+            "누락 데이터는 계약 전 재검증이 필요합니다."
+        ),
+        "block_positioning": (
+            "경쟁 제품 대비 포지셔닝은 급여 적합성, 공급 안정성, 유통 채널 협상력을 기준으로 평가해야 하며 "
+            "단순 가격 비교만으로 의사결정을 확정하지 않습니다."
+        ),
+    }
 
 
 def _haiku_p2_blocks(
@@ -3993,6 +4078,7 @@ def _enforce_p2_evidence_anchors(
     dispatch_result: dict[str, Any],
     seed: dict[str, Any],
     segment: str,
+    aud_usd_rate: float = 0.64,
 ) -> dict[str, str]:
     """P2 블록 후처리: 시나리오 문구를 입력 데이터 근거와 강하게 연결한다."""
     out = dict(p2_blocks or {})
@@ -4010,6 +4096,7 @@ def _enforce_p2_evidence_anchors(
     for disp_key, block_key, label in mapping:
         sc = scenarios.get(disp_key) or {}
         fob_aud = float(sc.get("fob_aud") or 0.0)
+        fob_usd = fob_aud * aud_usd_rate
         margin = sc.get("importer_margin_pct")
         margin_txt = f"{float(margin):.0f}%" if margin is not None else "미확보"
         basis = (
@@ -4019,7 +4106,7 @@ def _enforce_p2_evidence_anchors(
         )
         channel = "PBS·공공 조달" if segment == "public" else "소매·약국 채널"
         evidence_line = (
-            f"본 시나리오는 FOB AUD {fob_aud:.2f}, pricing_case {pricing_case}, "
+            f"본 시나리오는 FOB USD {fob_usd:.2f} (AUD {fob_aud:.2f}), pricing_case {pricing_case}, "
             f"logic {logic}, 수입상 마진 {margin_txt}, {basis}, {channel}를 근거로 산정합니다."
         )
         existing = str(out.get(block_key) or "").strip()
@@ -4047,8 +4134,9 @@ def _enforce_p2_evidence_anchors(
     rec_dispatch, rec_label = rec_to_dispatch.get(rec, ("average", "기준가"))
     rec_sc = scenarios.get(rec_dispatch) or {}
     rec_fob = float(rec_sc.get("fob_aud") or 0.0)
+    rec_fob_usd = rec_fob * aud_usd_rate
     strategy_anchor = (
-        f"권장 기준은 {rec_label} 시나리오(FOB AUD {rec_fob:.2f})이며, "
+        f"권장 기준은 {rec_label} 시나리오(FOB USD {rec_fob_usd:.2f}, AUD {rec_fob:.2f})이며, "
         f"pricing_case {pricing_case}·logic {logic}·{('PBS 공공' if segment == 'public' else '민간 소매')} 채널 조건을 근거로 판단합니다."
     )
     if not strategy:
@@ -4056,6 +4144,87 @@ def _enforce_p2_evidence_anchors(
     elif "pricing_case" not in strategy or "logic" not in strategy:
         out["block_strategy"] = f"{strategy} {strategy_anchor}"
 
+    return out
+
+
+def _enforce_p2_macro_market_context(
+    p2_blocks: dict[str, str],
+    row: dict[str, Any],
+    seed: dict[str, Any],
+    segment: str,
+) -> dict[str, str]:
+    """P2 거시시장 블록 후처리: 가격 나열을 줄이고 시장·질환 맥락을 강제한다."""
+    out = dict(p2_blocks or {})
+    macro = str(out.get("block_market_macro") or "").strip()
+    if not macro:
+        macro = "호주 의약품 시장은 공공 급여(PBS)와 민간 약국 채널이 병행되는 구조입니다."
+
+    seed_notes = str(seed.get("notes") or "")
+    note_hint = ""
+    # 예: "Restricted Benefit(CML/진성다혈구증)" 형태에서 질환 힌트 추출
+    m = re.search(r"Restricted Benefit\(([^)]+)\)", seed_notes, flags=re.IGNORECASE)
+    if m and m.group(1).strip():
+        note_hint = m.group(1).strip()
+
+    disease_anchor = (
+        f"본 품목 관련 주요 질환/환자군은 {note_hint} 중심으로 파악되며, "
+        "해당 환자군의 처방 수요와 급여 조건이 채널 전략에 직접 영향을 줍니다."
+        if note_hint
+        else "본 성분의 질환·환자군별 수요 강도는 채널 전략의 핵심 변수이며, "
+             "유병률·발병률 수치는 제공 데이터 범위 외로 별도 검증 필요합니다."
+    )
+    market_anchor = (
+        "거시시장 관점에서는 호주가 공공(PBS) 조달과 민간(약국·도매) 유통이 분리된 구조이므로, "
+        "공공은 급여 기준 적합성, 민간은 유통 마진과 약국 접근성이 핵심입니다."
+    )
+    strategy_anchor = (
+        "따라서 가격 숫자 자체보다 시장 구조·질환 수요·급여 제한을 함께 반영해 "
+        f"{'공공' if segment == 'public' else '민간'} 채널 전략을 설계해야 합니다."
+    )
+
+    has_market = ("시장" in macro and ("구조" in macro or "규모" in macro))
+    has_disease = any(k in macro for k in ("질환", "환자군", "유병", "발병", "적응증"))
+    too_price_heavy = (
+        macro.count("AEMP") + macro.count("DPMQ") + macro.count("FOB") >= 3
+        and not has_disease
+    )
+
+    if not has_market:
+        macro = f"{market_anchor} {macro}"
+    if not has_disease or too_price_heavy:
+        macro = f"{macro} {disease_anchor}"
+    if "채널 전략" not in macro and "전략" not in macro:
+        macro = f"{macro} {strategy_anchor}"
+
+    out["block_market_macro"] = " ".join(macro.split())
+    return out
+
+
+def _rewrite_p2_currency_to_usd(
+    p2_blocks: dict[str, str],
+    aud_usd_rate: float,
+) -> dict[str, str]:
+    """P2 서술 통화 표기 정규화: AUD 숫자를 USD 우선 표기로 치환."""
+    out = dict(p2_blocks or {})
+    rate = float(aud_usd_rate or 0.64)
+    if rate <= 0:
+        rate = 0.64
+
+    def _replace_aud_prefix(match: re.Match[str]) -> str:
+        aud_val = float(match.group(1))
+        return f"USD {aud_val * rate:.2f} (AUD {aud_val:.2f})"
+
+    def _replace_aud_suffix(match: re.Match[str]) -> str:
+        aud_val = float(match.group(1))
+        return f"USD {aud_val * rate:.2f} (AUD {aud_val:.2f})"
+
+    for k, v in list(out.items()):
+        txt = str(v or "")
+        if not txt:
+            continue
+        txt = re.sub(r"\bAUD\s*([0-9]+(?:\.[0-9]+)?)\b", _replace_aud_prefix, txt)
+        txt = re.sub(r"\b([0-9]+(?:\.[0-9]+)?)\s*AUD\b", _replace_aud_suffix, txt)
+        out[k] = txt
     return out
 
 
@@ -4262,10 +4431,25 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
             _p2_state["step"] = "ai_analysis"
             _p2_state["step_label"] = "④ AI(Haiku) 수출 전략 분석 중…"
         anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        llm_model_used = _CLAUDE_MODEL
         if not anthropic_key:
-            raise ValueError("ANTHROPIC_API_KEY 환경변수 미설정")
-        p2_blocks = _haiku_p2_blocks(row, seed, dispatch_result, segment, anthropic_key)
-        p2_blocks = _enforce_p2_evidence_anchors(p2_blocks, dispatch_result, seed, segment)
+            llm_model_used = "rule-based-fallback"
+            p2_blocks = _fallback_p2_blocks(row, seed, dispatch_result, segment)
+        else:
+            try:
+                p2_blocks = _haiku_p2_blocks(row, seed, dispatch_result, segment, anthropic_key)
+            except Exception as exc:
+                print(f"[P2 Haiku error] {exc}", flush=True)
+                llm_model_used = "rule-based-fallback"
+                p2_blocks = _fallback_p2_blocks(row, seed, dispatch_result, segment)
+        p2_blocks = _enforce_p2_evidence_anchors(
+            p2_blocks,
+            dispatch_result,
+            seed,
+            segment,
+            float(fx_rates.get("aud_usd") or 0.64),
+        )
+        p2_blocks = _enforce_p2_macro_market_context(p2_blocks, row, seed, segment)
         export_strategy_v5 = _merge_p2_export_strategy_v5(
             p2_blocks, dispatch_result, fx_rates, seed
         )
@@ -4401,7 +4585,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
                 "block_positioning": p2_blocks.get("block_positioning"),
                 "warnings": [w for w in (dispatch_result.get("warnings") or []) if w],
                 "disclaimer": dispatch_result.get("disclaimer"),
-                "llm_model": _CLAUDE_MODEL,
+                "llm_model": llm_model_used,
                 "generated_at": _dt_now_utc(),
                 "report_content_v2": jsonable_encoder(
                     {
@@ -4590,8 +4774,8 @@ def _p2_pipeline_worker_both(product_id: str) -> None:
 
         # ── Step 4: Haiku 분석 (available_segments 기준 최소 실행) ─────────────
         anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-        if not anthropic_key:
-            raise ValueError("ANTHROPIC_API_KEY 환경변수 미설정")
+        llm_model_pub = _CLAUDE_MODEL
+        llm_model_pri = _CLAUDE_MODEL
 
         run_pub = "public" in available_segments
         run_pri = "private" in available_segments
@@ -4601,8 +4785,24 @@ def _p2_pipeline_worker_both(product_id: str) -> None:
             with _p2_lock:
                 _p2_state["step"] = "ai_analysis"
                 _p2_state["step_label"] = "④ AI(Haiku) 공공 시장 분석 중…"
-            pub_blocks = _haiku_p2_blocks(row, seed, pub_dispatch, "public", anthropic_key)
-            pub_blocks = _enforce_p2_evidence_anchors(pub_blocks, pub_dispatch, seed, "public")
+            if not anthropic_key:
+                llm_model_pub = "rule-based-fallback"
+                pub_blocks = _fallback_p2_blocks(row, seed, pub_dispatch, "public")
+            else:
+                try:
+                    pub_blocks = _haiku_p2_blocks(row, seed, pub_dispatch, "public", anthropic_key)
+                except Exception as exc:
+                    print(f"[P2-both public Haiku error] {exc}", flush=True)
+                    llm_model_pub = "rule-based-fallback"
+                    pub_blocks = _fallback_p2_blocks(row, seed, pub_dispatch, "public")
+            pub_blocks = _enforce_p2_evidence_anchors(
+                pub_blocks,
+                pub_dispatch,
+                seed,
+                "public",
+                float(fx_rates.get("aud_usd") or 0.64),
+            )
+            pub_blocks = _enforce_p2_macro_market_context(pub_blocks, row, seed, "public")
             pub_strategy_v5 = _merge_p2_export_strategy_v5(pub_blocks, pub_dispatch, fx_rates, seed)
         else:
             pub_blocks = {}
@@ -4612,8 +4812,24 @@ def _p2_pipeline_worker_both(product_id: str) -> None:
         if run_pri:
             with _p2_lock:
                 _p2_state["step_label"] = "④ AI(Haiku) 민간 시장 분석 중…"
-            pri_blocks = _haiku_p2_blocks(row, seed, pri_dispatch, "private", anthropic_key)
-            pri_blocks = _enforce_p2_evidence_anchors(pri_blocks, pri_dispatch, seed, "private")
+            if not anthropic_key:
+                llm_model_pri = "rule-based-fallback"
+                pri_blocks = _fallback_p2_blocks(row, seed, pri_dispatch, "private")
+            else:
+                try:
+                    pri_blocks = _haiku_p2_blocks(row, seed, pri_dispatch, "private", anthropic_key)
+                except Exception as exc:
+                    print(f"[P2-both private Haiku error] {exc}", flush=True)
+                    llm_model_pri = "rule-based-fallback"
+                    pri_blocks = _fallback_p2_blocks(row, seed, pri_dispatch, "private")
+            pri_blocks = _enforce_p2_evidence_anchors(
+                pri_blocks,
+                pri_dispatch,
+                seed,
+                "private",
+                float(fx_rates.get("aud_usd") or 0.64),
+            )
+            pri_blocks = _enforce_p2_macro_market_context(pri_blocks, row, seed, "private")
             pri_strategy_v5 = _merge_p2_export_strategy_v5(pri_blocks, pri_dispatch, fx_rates, seed)
         else:
             # 재사용: 공공과 동일 블록 (ESTIMATE_hospital 처럼 동일 데이터)
@@ -4809,7 +5025,7 @@ def _p2_pipeline_worker_both(product_id: str) -> None:
                     "block_positioning":   blks.get("block_positioning"),
                     "warnings":            [w for w in (d_res.get("warnings") or []) if w],
                     "disclaimer":          d_res.get("disclaimer"),
-                    "llm_model":           _CLAUDE_MODEL,
+                    "llm_model":           (llm_model_pub if seg_label == "public" else llm_model_pri),
                     "generated_at":        _dt_now_utc(),
                     "report_content_v2":   jsonable_encoder({
                         "schema_ver":       3,

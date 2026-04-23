@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import json
 from pathlib import Path
 import re
 from typing import Any
@@ -133,9 +134,12 @@ def _verdict_label(export_viable: str | None) -> str:
 
 def _hs_formatted(hs_code_6: str | None) -> str:
     s = str(hs_code_6 or "").strip()
-    if len(s) >= 6:
-        return f"{s[:4]}.{s[4:6]}"
-    return s or "—"
+    if not s:
+        return "—"
+    digits = "".join(ch for ch in s if ch.isdigit())
+    if len(digits) >= 6:
+        return f"{digits[:4]}.{digits[4:6]}"
+    return s
 
 
 def _source_label(src: str | None) -> str:
@@ -144,6 +148,26 @@ def _source_label(src: str | None) -> str:
         "pubmed":           "PubMed",
         "perplexity":       "Perplexity",
     }.get((src or "").lower(), (src or "출처"))
+
+
+def _hs_from_catalog(product_id: str | None) -> str | None:
+    """au_products.json에서 product_id 기준 HS 코드를 조회한다."""
+    pid = (product_id or "").strip()
+    if not pid:
+        return None
+    path = ROOT / "crawler" / "au_products.json"
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    for p in (data.get("products") or []):
+        if str(p.get("product_id") or "").strip() != pid:
+            continue
+        hs = p.get("hs_code_6") or p.get("hs_code")
+        return str(hs).strip() if hs else None
+    return None
 
 
 # 정적 DB/기관 설명 (호주 크롤링 소스)
@@ -537,7 +561,12 @@ def _render_pdf_legacy_v2(
     inn = str(row.get("inn_normalized") or "—")
     strength = str(row.get("strength") or "")
     dosage = str(row.get("dosage_form") or "")
-    hs = _hs_formatted(row.get("hs_code_6"))
+    hs_raw = (
+        row.get("hs_code_6")
+        or row.get("hs_code")
+        or _hs_from_catalog(row.get("product_code") or row.get("product_id"))
+    )
+    hs = _hs_formatted(hs_raw)
     viable_text = _verdict_label(meta.get("export_viable"))
     conf_val = meta.get("confidence")
     conf_pct = (f"{round(float(conf_val) * 100)}%"
@@ -956,12 +985,12 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     snap_data = [
         (
             "AEMP (정부 승인 출고가)",
-            f"AUD {psn.aemp_aud} / USD {psn.aemp_usd}",
+            f"USD {psn.aemp_usd} / AUD {psn.aemp_aud}",
             f"PBS item {psn.pbs_code}",
         ),
         (
             "DPMQ (최대 처방량 총약가)",
-            f"AUD {psn.dpmq_aud} / USD {psn.dpmq_usd}",
+            f"USD {psn.dpmq_usd} / AUD {psn.dpmq_aud}",
             f"PBS item {psn.pbs_code}",
         ),
         ("시장 구분", psn.market_class, "—"),
@@ -1666,7 +1695,12 @@ def render_p2_pdf(
     inn = str(row.get("inn_normalized") or "—")
     strength = str(row.get("strength") or "")
     dosage = str(row.get("dosage_form") or "")
-    hs = _hs_formatted(row.get("hs_code_6"))
+    hs_raw = (
+        row.get("hs_code_6")
+        or row.get("hs_code")
+        or _hs_from_catalog(row.get("product_code") or row.get("product_id"))
+    )
+    hs = _hs_formatted(hs_raw)
     logic = dispatch.get("logic", "?")
     scenarios = dispatch.get("scenarios", {})
     warnings = dispatch.get("warnings", [])
@@ -1726,6 +1760,15 @@ def render_p2_pdf(
     aud_usd_rate = float(aud_usd) if aud_usd else 0.64
     aud_krw_rate = float(aud_krw) if aud_krw else 893.0
 
+    def _fmt_usd(v: Any) -> str:
+        try:
+            n = float(v)
+            if n <= 0:
+                return "미확보"
+            return f"USD {(n * aud_usd_rate):.2f}"
+        except Exception:
+            return "미확보"
+
     avg_sc = scenarios.get("average", {}) if isinstance(scenarios, dict) else {}
     dispatch_inputs = dispatch.get("inputs") or {}
     listed_aemp_aud = avg_sc.get("aemp_aud") or dispatch_inputs.get("aemp_aud")
@@ -1764,7 +1807,7 @@ def render_p2_pdf(
                 [
                     Paragraph(_rx(label_ko), s_cell_h),
                     Paragraph(_rx(price_line), s_cell),
-                    Paragraph(_rx(_trunc(reason, 420)), s_cell),
+                    Paragraph(_rx(_trunc(reason, 4000)), s_cell),
                 ]
             )
             if idx % 2 == 0:
@@ -1816,26 +1859,21 @@ def render_p2_pdf(
     else:
         pricing_method_text = "병원 tender 수기 FOB (α 미적용)"
 
-    def _fmt_aud(v: Any) -> str:
-        try:
-            n = float(v)
-            return f"AUD {n:.2f}" if n > 0 else "미확보"
-        except Exception:
-            return "미확보"
-
     try:
         if adjusted_aemp_aud is not None:
             benchmark_usd = float(adjusted_aemp_aud) * aud_usd_rate
         elif listed_aemp_aud is not None:
             benchmark_usd = float(listed_aemp_aud) * aud_usd_rate
+        elif row_aemp is not None:
+            benchmark_usd = float(row_aemp) * aud_usd_rate
     except Exception:
         benchmark_usd = 0.0
     benchmark_rows = [
         [Paragraph(_rx("기준 가격"), s_cell_h), Paragraph(_rx(f"USD {benchmark_usd:.2f}" if benchmark_usd > 0 else "USD 미확보"), s_cell)],
         [Paragraph(_rx("산정 방식"), s_cell_h), Paragraph(_rx(pricing_method_text), s_cell)],
-        [Paragraph(_rx("공식 AEMP"), s_cell_h), Paragraph(_rx(_fmt_aud(row_aemp)), s_cell)],
-        [Paragraph(_rx("공식 DPMQ"), s_cell_h), Paragraph(_rx(_fmt_aud(row_dpmq)), s_cell)],
-        [Paragraph(_rx("시장 참고 소매가"), s_cell_h), Paragraph(_rx(_fmt_aud(row_retail)), s_cell)],
+        [Paragraph(_rx("공식 AEMP (USD 기준)"), s_cell_h), Paragraph(_rx(_fmt_usd(row_aemp)), s_cell)],
+        [Paragraph(_rx("공식 DPMQ (USD 기준)"), s_cell_h), Paragraph(_rx(_fmt_usd(row_dpmq)), s_cell)],
+        [Paragraph(_rx("시장 참고 소매가 (USD 기준)"), s_cell_h), Paragraph(_rx(_fmt_usd(row_retail)), s_cell)],
         [Paragraph(_rx("가격 근거 출처"), s_cell_h), Paragraph(_rx(dispatch_source_label), s_cell)],
         [Paragraph(_rx("시장 구분"), s_cell_h), Paragraph(_rx("공공 / 민간"), s_cell)],
     ]
@@ -1850,13 +1888,13 @@ def render_p2_pdf(
             Paragraph(_rx("업체명"), s_hdr),
             Paragraph(_rx("제품명"), s_hdr),
             Paragraph(_rx("성분함량"), s_hdr),
-            Paragraph(_rx("시장가"), s_hdr),
+            Paragraph(_rx("시장가(USD 기준)"), s_hdr),
         ],
         [
             Paragraph(_rx("시장 근거 종합"), s_cell),
             Paragraph(_rx(product_name), s_cell),
             Paragraph(_rx((f"{inn} {strength} {dosage}").strip() or "미확보"), s_cell),
-            Paragraph(_rx(_trunc(p2_blocks.get("block_extract", "시장가 데이터 미확보"), 320)), s_cell),
+            Paragraph(_rx(f"USD {benchmark_usd:.2f}" if benchmark_usd > 0 else "USD 미확보"), s_cell),
         ],
     ]
     ref_tbl = Table(
@@ -1866,6 +1904,14 @@ def render_p2_pdf(
     )
     ref_tbl.setStyle(TableStyle(_base_style([("BACKGROUND", (0, 0), (-1, 0), C_NAVY), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white)])))
     story.append(ref_tbl)
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(_rx("시장가 근거 상세"), s_sub))
+    story.append(
+        Paragraph(
+            _rx(_trunc(p2_blocks.get("block_extract", "시장가 데이터 미확보"), 4000)),
+            s_cell,
+        )
+    )
     story.append(Spacer(1, 8))
 
     story.append(Paragraph(_rx("4. 가격 시나리오"), s_section))
@@ -1916,9 +1962,9 @@ def render_p2_pdf(
         "<b>참고(산출 경로·환율·경고)</b><br/>"
         f"· 분석 경로: Logic {logic} ({_rx(str(seed.get('pricing_case', '—')))} )<br/>"
         f"· 적용 환율: {_rx(fx_str)}<br/>"
-        f"· 경고 사항: {_rx(_trunc(warn_text, 700))}<br/>"
-        f"· 시드·데이터 표시: {_rx(_trunc(flag_text, 700))}<br/>"
-        f"· 면책 조항: {_rx(_trunc(disclaimer or '없음', 700))}"
+        f"· 경고 사항: {_rx(_trunc(warn_text, 4000))}<br/>"
+        f"· 시드·데이터 표시: {_rx(_trunc(flag_text, 4000))}<br/>"
+        f"· 면책 조항: {_rx(_trunc(disclaimer or '없음', 4000))}"
     )
     story.append(Paragraph(footer_para, s_cell_sm))
     story.append(Spacer(1, 6))

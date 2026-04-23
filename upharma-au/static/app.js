@@ -1088,12 +1088,15 @@ function openP2ColModal(col) {
   if (refAudEl) refAudEl.textContent = baseAud > 0 ? baseAud.toFixed(2) : '—';
   if (refUsdEl) refUsdEl.textContent = baseUsd > 0 ? baseUsd.toFixed(2) : '—';
 
-  // ② 기준가 초기화 (AI 결과 USD — 사용자가 수동 조정 가능)
+  // ② 기준가 초기화 (AI/직접입력 FOB 결과 USD — 사용자가 수동 조정 가능)
   const baseInput = document.getElementById('p2ci-base-' + col);
   if (baseInput && baseUsd > 0) baseInput.value = baseUsd.toFixed(2);
 
-  // ③ 시장별 기본 옵션 채우기 (SG 패턴)
-  _initP2ColDataForMarket(col, _p2AiSeg);
+  // ③ 옵션은 기존 사용자 편집값 유지 (없으면 빈 상태로 시작)
+  //    _initP2ColDataForMarket 을 여기서 호출하지 않음:
+  //    AI FOB 결과(이미 역산 완료)에 다시 차감 옵션을 꽂으면 이중 역산 버그 발생.
+  //    모달은 "FOB 결과에 추가 미세 조정"하는 편집기. 기본 차감 없이 시작.
+  if (!_p2ColData[col]) _p2ColData[col] = { opts: [] };
 
   detail.style.display = ''; // 인라인 숨김 해제
   modalBody.appendChild(detail); // 모달 바디로 이동

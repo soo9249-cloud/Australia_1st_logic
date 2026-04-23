@@ -2087,11 +2087,11 @@ def render_buyers_pdf(
                 alignment=TA_CENTER, textColor=C_MUTED)
     s_sec = ps("BSec", fontName=bold_font, fontSize=11, leading=16,
                textColor=C_NAVY, spaceBefore=10, spaceAfter=6)
-    s_sub = ps("BSub", fontName=bold_font, fontSize=10, leading=15,
-               textColor=C_NAVY, spaceBefore=6, spaceAfter=3)
-    s_body = ps("BBody", fontName=base_font, fontSize=10, leading=15,
+    s_sub = ps("BSub", fontName=bold_font, fontSize=10, leading=16,
+               textColor=C_NAVY, spaceBefore=10, spaceAfter=6, keepWithNext=True)
+    s_body = ps("BBody", fontName=base_font, fontSize=10, leading=17,
                 textColor=C_BODY, alignment=TA_LEFT)
-    s_small = ps("BSmall", fontName=base_font, fontSize=9, leading=13,
+    s_small = ps("BSmall", fontName=base_font, fontSize=9, leading=14,
                  textColor=C_MUTED, alignment=TA_LEFT)
 
     def tier_color(t: str):
@@ -2198,8 +2198,8 @@ def render_buyers_pdf(
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, C_ALT]),
             ("LEFTPADDING", (0, 0), (-1, -1), 8),
             ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-            ("TOPPADDING", (0, 0), (-1, -1), 8),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 10),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
         ]
         tbl.setStyle(TableStyle(tstyle))
         story.append(tbl)
@@ -2226,9 +2226,11 @@ def render_buyers_pdf(
 
             company_title = f"{b.get('rank') or '?'} ) {safe(b.get('company_name'))}"
             story.append(Paragraph(company_title, s_sub))
+            story.append(Spacer(1, 2))
 
             notes = safe(b.get("notes"), "공개 자료 요약 기반 기업 프로필")
             story.append(Paragraph(f"- 기업 개요: {_rx(_trunc(notes, 320))}", s_body))
+            story.append(Spacer(1, 2))
 
             story.append(Paragraph("- 추천 이유 (5가지 주요 기준):", s_body))
             story.append(Paragraph(
@@ -2252,6 +2254,7 @@ def render_buyers_pdf(
                 f"  ⑤ 약국 체인/유통 채널: {assoc_str} (점수 {b.get('psi_pharmacy_chain') or 0})",
                 s_body,
             ))
+            story.append(Spacer(1, 2))
 
             story.append(Paragraph("- 기본 정보:", s_body))
             story.append(Paragraph(f"  주소: {safe(b.get('state'), '미확보')}", s_body))
@@ -2265,7 +2268,19 @@ def render_buyers_pdf(
                 s_body,
             ))
             story.append(Paragraph("* 출처: Gemini 딥 리서치, Perplexity 분석", s_small))
+            sep = Table([[""]], colWidths=[CONTENT_W])
+            sep.setStyle(
+                TableStyle(
+                    [
+                        ("LINEABOVE", (0, 0), (-1, 0), 0.6, C_BORDER),
+                        ("TOPPADDING", (0, 0), (-1, 0), 0),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 0),
+                    ]
+                )
+            )
             story.append(Spacer(1, 8))
+            story.append(sep)
+            story.append(Spacer(1, 10))
 
     story.append(Spacer(1, 12))
     story.append(Paragraph(

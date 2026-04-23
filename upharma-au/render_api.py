@@ -2214,6 +2214,8 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "- 모르는 사실은 '제공 데이터 범위 외로 별도 검증 필요함' 으로 명시.\n\n"
     "【시나리오 근거 차별화 규칙】\n"
     "- 세 시나리오 근거를 동일 문장 템플릿으로 반복하지 않습니다. 각 시나리오마다 서로 다른 전략 논리를 제시합니다.\n"
+    "- scenario_* 문장에는 반드시 '근거 앵커'를 2개 이상 포함합니다: pricing_case, dispatch.logic, importer_margin_pct, AEMP/DPMQ/retail 중 해당 값.\n"
+    "- 추상적 권고 문구(예: '시장 상황을 보며 유연하게 대응', '단계적 접근이 바람직')만 단독으로 쓰지 않습니다.\n"
     "- 호주 수출 구조상 스폰서(수입상) 마진이 FOB에 미치는 영향을 최소 1회 이상 명시합니다.\n"
     "- 품목이 복합제(FDC)이고 현지가 단일 성분 위주라면, 복합제 편의성(복약·채널 운영·포지셔닝)을 근거에 반영합니다.\n"
     "- 반대로 복합제 근거 데이터가 없으면 단정하지 말고 '별도 검증 필요'를 명시합니다.\n\n"
@@ -3986,6 +3988,77 @@ def _p2_formula_summary_for_scenario(logic: str | None, sc: dict[str, Any]) -> s
     return ""
 
 
+def _enforce_p2_evidence_anchors(
+    p2_blocks: dict[str, str],
+    dispatch_result: dict[str, Any],
+    seed: dict[str, Any],
+    segment: str,
+) -> dict[str, str]:
+    """P2 블록 후처리: 시나리오 문구를 입력 데이터 근거와 강하게 연결한다."""
+    out = dict(p2_blocks or {})
+    scenarios = dispatch_result.get("scenarios") or {}
+    logic = str(dispatch_result.get("logic") or "미확보")
+    pricing_case = str(seed.get("pricing_case") or "미확보")
+    warnings = [str(w).strip() for w in (dispatch_result.get("warnings") or []) if str(w).strip()]
+    warning_hint = warnings[0] if warnings else ""
+
+    mapping = (
+        ("aggressive", "scenario_penetration", "저가 진입"),
+        ("average", "scenario_reference", "기준가"),
+        ("conservative", "scenario_premium", "프리미엄"),
+    )
+    for disp_key, block_key, label in mapping:
+        sc = scenarios.get(disp_key) or {}
+        fob_aud = float(sc.get("fob_aud") or 0.0)
+        margin = sc.get("importer_margin_pct")
+        margin_txt = f"{float(margin):.0f}%" if margin is not None else "미확보"
+        basis = (
+            "AEMP·DPMQ 기준"
+            if logic == "A"
+            else ("소매가 역산 기준" if logic == "B" else "수기 Tender 기준")
+        )
+        channel = "PBS·공공 조달" if segment == "public" else "소매·약국 채널"
+        evidence_line = (
+            f"본 시나리오는 FOB AUD {fob_aud:.2f}, pricing_case {pricing_case}, "
+            f"logic {logic}, 수입상 마진 {margin_txt}, {basis}, {channel}를 근거로 산정합니다."
+        )
+        existing = str(out.get(block_key) or "").strip()
+        needs_anchor = (
+            f"{fob_aud:.2f}" not in existing
+            or "pricing_case" not in existing
+            or "logic" not in existing
+            or "마진" not in existing
+        )
+        if not existing:
+            out[block_key] = evidence_line
+        elif needs_anchor:
+            out[block_key] = f"{existing} {evidence_line}"
+
+        if warning_hint and "경고" not in out[block_key] and "주의" not in out[block_key]:
+            out[block_key] = f"{out[block_key]} 주요 주의사항: {warning_hint}"
+
+    strategy = str(out.get("block_strategy") or "").strip()
+    rec = _infer_p2_recommended_key(strategy)
+    rec_to_dispatch = {
+        "penetration": ("aggressive", "저가 진입"),
+        "reference": ("average", "기준가"),
+        "premium": ("conservative", "프리미엄"),
+    }
+    rec_dispatch, rec_label = rec_to_dispatch.get(rec, ("average", "기준가"))
+    rec_sc = scenarios.get(rec_dispatch) or {}
+    rec_fob = float(rec_sc.get("fob_aud") or 0.0)
+    strategy_anchor = (
+        f"권장 기준은 {rec_label} 시나리오(FOB AUD {rec_fob:.2f})이며, "
+        f"pricing_case {pricing_case}·logic {logic}·{('PBS 공공' if segment == 'public' else '민간 소매')} 채널 조건을 근거로 판단합니다."
+    )
+    if not strategy:
+        out["block_strategy"] = strategy_anchor
+    elif "pricing_case" not in strategy or "logic" not in strategy:
+        out["block_strategy"] = f"{strategy} {strategy_anchor}"
+
+    return out
+
+
 def _merge_p2_export_strategy_v5(
     p2_blocks: dict[str, str],
     dispatch_result: dict[str, Any],
@@ -4192,6 +4265,7 @@ def _p2_pipeline_worker(product_id: str, segment: str) -> None:
         if not anthropic_key:
             raise ValueError("ANTHROPIC_API_KEY 환경변수 미설정")
         p2_blocks = _haiku_p2_blocks(row, seed, dispatch_result, segment, anthropic_key)
+        p2_blocks = _enforce_p2_evidence_anchors(p2_blocks, dispatch_result, seed, segment)
         export_strategy_v5 = _merge_p2_export_strategy_v5(
             p2_blocks, dispatch_result, fx_rates, seed
         )
@@ -4528,6 +4602,7 @@ def _p2_pipeline_worker_both(product_id: str) -> None:
                 _p2_state["step"] = "ai_analysis"
                 _p2_state["step_label"] = "④ AI(Haiku) 공공 시장 분석 중…"
             pub_blocks = _haiku_p2_blocks(row, seed, pub_dispatch, "public", anthropic_key)
+            pub_blocks = _enforce_p2_evidence_anchors(pub_blocks, pub_dispatch, seed, "public")
             pub_strategy_v5 = _merge_p2_export_strategy_v5(pub_blocks, pub_dispatch, fx_rates, seed)
         else:
             pub_blocks = {}
@@ -4538,6 +4613,7 @@ def _p2_pipeline_worker_both(product_id: str) -> None:
             with _p2_lock:
                 _p2_state["step_label"] = "④ AI(Haiku) 민간 시장 분석 중…"
             pri_blocks = _haiku_p2_blocks(row, seed, pri_dispatch, "private", anthropic_key)
+            pri_blocks = _enforce_p2_evidence_anchors(pri_blocks, pri_dispatch, seed, "private")
             pri_strategy_v5 = _merge_p2_export_strategy_v5(pri_blocks, pri_dispatch, fx_rates, seed)
         else:
             # 재사용: 공공과 동일 블록 (ESTIMATE_hospital 처럼 동일 데이터)

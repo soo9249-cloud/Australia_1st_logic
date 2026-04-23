@@ -1521,16 +1521,24 @@ def render_p2_pdf(
     p2_blocks: dict[str, str],
     fx_rates: dict[str, Any],
     out_path: Path,
+    *,
+    dispatch_public: dict[str, Any] | None = None,
+    p2_blocks_public: dict[str, str] | None = None,
+    dispatch_private: dict[str, Any] | None = None,
+    p2_blocks_private: dict[str, str] | None = None,
 ) -> None:
     """수출 전략 제안 보고서 PDF 를 생성하여 out_path 에 저장.
 
     Args:
         row       : Supabase australia row (품목 메타·TGA·PBS 등)
         seed      : fob_reference_seeds.json 시드 (pricing_case·플래그·참고가)
-        dispatch  : fob_calculator.dispatch_by_pricing_case() 결과
-        p2_blocks : _haiku_p2_blocks() 8필드 dict
+        dispatch  : 본 PDF 세그먼트(공/민 중 파일명에 맞는 쪽) dispatch — 1~3절·기준가에 사용
+        p2_blocks : 위 세그먼트에 대응하는 Haiku 8필드
         fx_rates  : {"aud_krw": float, "aud_usd": float}
         out_path  : 저장 경로
+        dispatch_public / p2_blocks_public / dispatch_private / p2_blocks_private:
+            P2 이중 파이프라인에서 **4-1 공공 / 4-2 민간** 각각 FOB·전략 표를 넣을 때 사용.
+            네 인자를 모두 주면 README 양식대로 4-1·4-2 모두에 표가 붙는다.
     """
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
@@ -1679,7 +1687,7 @@ def render_p2_pdf(
     story.append(Paragraph(_rx("1. 호주 거시 시장"), s_section))
     story.append(
         Paragraph(
-            _rx(_trunc(p2_blocks.get("block_market_macro", "데이터 미확보 — 최신 공신력 출처 확인 필요"), 520)),
+            _rx(_trunc(p2_blocks.get("block_market_macro", "데이터 미확보 — 최신 공신력 출처 확인 필요"), 2000)),
             s_cell,
         )
     )
@@ -1698,37 +1706,50 @@ def render_p2_pdf(
         except Exception:
             adjusted_aemp_aud = None
 
-    sum_rows: list[list] = [
-        [
-            Paragraph(_rx("시나리오"), s_hdr),
-            Paragraph(_rx("수출가 (FOB)"), s_hdr),
-            Paragraph(_rx("핵심 전략"), s_hdr),
-        ]
-    ]
-    sum_ex: list[tuple] = [("BACKGROUND", (0, 0), (-1, 0), C_NAVY)]
-    scen_labels = [
+    _scen_labels = [
         ("aggressive", "저가 진입", "scenario_penetration"),
-        ("average", "기준가 ★권장", "scenario_reference"),
+        ("average", "기준가", "scenario_reference"),
         ("conservative", "프리미엄", "scenario_premium"),
     ]
-    for idx, (skey, label_ko, p2k) in enumerate(scen_labels, 1):
-        sc = scenarios.get(skey, {})
-        fob_aud = float(sc.get("fob_aud") or 0)
-        fob_usd = fob_aud * aud_usd_rate
-        fob_krw = float(sc.get("fob_krw") or (fob_aud * aud_krw_rate))
-        price_line = f"USD {fob_usd:.2f} / KRW {fob_krw:,.0f}원"
-        reason = p2_blocks.get(p2k, "—")
-        sum_rows.append(
+
+    def _scenario_fob_table(disp_in: dict[str, Any], blocks_in: dict[str, str]) -> Any:
+        """3시나리오 FOB + Haiku 전략 한 줄 — 4-1(공공) / 4-2(민간) 각각에 사용."""
+        scn = (disp_in or {}).get("scenarios", {}) or {}
+        sum_rows: list[list] = [
             [
-                Paragraph(_rx(label_ko), s_cell_h),
-                Paragraph(_rx(price_line), s_cell),
-                Paragraph(_rx(_trunc(reason, 260)), s_cell),
+                Paragraph(_rx("시나리오"), s_hdr),
+                Paragraph(_rx("수출가 (FOB)"), s_hdr),
+                Paragraph(_rx("핵심 전략"), s_hdr),
             ]
-        )
-        if idx % 2 == 0:
-            sum_ex.append(("BACKGROUND", (0, idx), (-1, idx), C_ALT))
-    sum_tbl = Table(sum_rows, colWidths=[CONTENT_W * 0.22, CONTENT_W * 0.33, CONTENT_W * 0.45])
-    sum_tbl.setStyle(TableStyle(_base_style(sum_ex)))
+        ]
+        sum_ex: list[tuple] = [("BACKGROUND", (0, 0), (-1, 0), C_NAVY)]
+        for idx, (skey, label_ko, p2k) in enumerate(_scen_labels, 1):
+            sc = scn.get(skey, {}) or {}
+            fob_aud = float(sc.get("fob_aud") or 0)
+            fob_usd = fob_aud * aud_usd_rate
+            fob_krw = float(sc.get("fob_krw") or (fob_aud * aud_krw_rate))
+            price_line = f"USD {fob_usd:.2f} / KRW {fob_krw:,.0f}원"
+            reason = (blocks_in or {}).get(p2k, "—")
+            sum_rows.append(
+                [
+                    Paragraph(_rx(label_ko), s_cell_h),
+                    Paragraph(_rx(price_line), s_cell),
+                    Paragraph(_rx(_trunc(reason, 1200)), s_cell),
+                ]
+            )
+            if idx % 2 == 0:
+                sum_ex.append(("BACKGROUND", (0, idx), (-1, idx), C_ALT))
+        tbl = Table(sum_rows, colWidths=[CONTENT_W * 0.22, CONTENT_W * 0.33, CONTENT_W * 0.45])
+        tbl.setStyle(TableStyle(_base_style(sum_ex)))
+        return tbl
+
+    # README 4-1/4-2: 공공+민간 dispatch 를 모두 넣으면 각 절에 표가 붙는다(이전엔 4-1이 비고 표가 4-2에만 갔음).
+    _dual = dispatch_public is not None and dispatch_private is not None
+    if _dual:
+        sum_tbl_public = _scenario_fob_table(dispatch_public, p2_blocks_public or {})
+        sum_tbl_private = _scenario_fob_table(dispatch_private, p2_blocks_private or {})
+    else:
+        sum_tbl = _scenario_fob_table(dispatch, p2_blocks)
     # 2. 단가(시장기준가) — 요청 양식 표 구조 반영
     story.append(Paragraph(_rx(f"2. {product_name} 단가(시장기준가)"), s_section))
     # 상단 2. 단가(시장기준가)에서 계산한 기준값 재사용
@@ -1763,7 +1784,7 @@ def render_p2_pdf(
             Paragraph(_rx("크롤링 근거 종합"), s_cell),
             Paragraph(_rx(product_name), s_cell),
             Paragraph(_rx((f"{inn} {strength} {dosage}").strip() or "미확보"), s_cell),
-            Paragraph(_rx(_trunc(p2_blocks.get("block_extract", "시장가 데이터 미확보"), 180)), s_cell),
+            Paragraph(_rx(_trunc(p2_blocks.get("block_extract", "시장가 데이터 미확보"), 800)), s_cell),
         ],
     ]
     ref_tbl = Table(ref_rows, colWidths=[CONTENT_W * 0.16, CONTENT_W * 0.24, CONTENT_W * 0.24, CONTENT_W * 0.36])
@@ -1775,9 +1796,25 @@ def render_p2_pdf(
     story.append(Paragraph(_rx("4-1. 공공 시장 (데이터 소스: 정부 입찰가, PBS 공시가 등)"), s_sub))
     story.append(Paragraph(_rx("※ 어려운 영어 용어는 괄호로 한글 설명 병기: PBS (Pharmaceutical Benefits Scheme, 호주 의약품 급여 제도)"), s_cell_sm))
     story.append(Spacer(1, 4))
+    if _dual:
+        story.append(sum_tbl_public)
+    else:
+        story.append(
+            Paragraph(
+                _rx(
+                    "· 본 절(공공) FOB 3시나리오: 이 PDF가 단일 세그먼트만 생성된 경우 4-2 민간 절에 표를 배치합니다. "
+                    "공공·민간 양쪽 표는 수출가격 P2 이중(공+민) 파이프라인으로 생성하세요."
+                ),
+                s_cell_sm,
+            )
+        )
+    story.append(Spacer(1, 8))
 
     story.append(Paragraph(_rx("4-2. 민간 시장 (데이터 소스: 병원, 약국)"), s_sub))
-    story.append(sum_tbl)
+    if _dual:
+        story.append(sum_tbl_private)
+    else:
+        story.append(sum_tbl)
     story.append(Spacer(1, 8))
 
     # 5. 면책 (README P2 양식)
@@ -1807,7 +1844,7 @@ def render_p2_pdf(
                     f"· 적용 환율: {_rx(fx_str)}<br/>"
                     f"· 경고 사항: {_rx(warn_text)}<br/>"
                     f"· 시드·데이터 표시: {_rx(flag_text)}<br/>"
-                    f"· 면책 조항: {_rx(_trunc(disclaimer or '없음', 280))}"
+                    f"· 면책 조항: {_rx(_trunc(disclaimer or '없음', 2000))}"
                 ),
                 s_cell_sm,
             )

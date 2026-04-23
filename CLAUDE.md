@@ -82,6 +82,7 @@ Australia_1st_logic/
 ## 수출 전략 AI 파이프라인 (구현 완료)
 
 ### 핵심 코드
+- **보고서 DB/JSON 스키마 한눈에:** `upharma-au/REPORT_SCHEMA.md` (P1·P2·`report_content_v2`·`au_reports_r2` 정리)
 - `render_api.py`: `_haiku_p2_blocks()` (8블록 Haiku 어댑터) + `_p2_pipeline_worker()` (백그라운드 스레드)
 - 엔드포인트: `/api/p2/pipeline`, `/api/p2/pipeline/status`, `/api/p2/pipeline/result`
 - `report_generator.py`: `render_p2_pdf()` (2페이지 PDF — 추출정보/FOB 3시나리오/전략/리스크/포지셔닝/면책)

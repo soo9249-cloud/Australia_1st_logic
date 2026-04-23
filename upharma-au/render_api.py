@@ -4709,7 +4709,19 @@ def _p2_pipeline_worker_both(product_id: str) -> None:
                 _ts = _dt.now().strftime("%Y%m%d_%H%M%S")
                 pdf_name = f"au_p2_report_{product_id}_{seg_label}_{_ts}.pdf"
                 pdf_path = _REPORTS_DIR / pdf_name
-                render_p2_pdf(row, seed, d_res, blks, fx_rates, pdf_path)
+                # 4-1 공공 / 4-2 민간 각각 FOB 표 (README 양식) — 파일명이 public|private 여도 본문은 양쪽 모두 포함
+                render_p2_pdf(
+                    row,
+                    seed,
+                    d_res,
+                    blks,
+                    fx_rates,
+                    pdf_path,
+                    dispatch_public=pub_dispatch,
+                    p2_blocks_public=pub_blocks,
+                    dispatch_private=pri_dispatch,
+                    p2_blocks_private=pri_blocks,
+                )
                 sz = pdf_path.stat().st_size
                 print(f"[render_p2_pdf-both] OK {pdf_name} ({sz} bytes)", flush=True)
                 f_res["pdf"] = pdf_name

@@ -1039,6 +1039,39 @@ let _modalOrigParent   = null;
  * 닫을 때 원래 위치로 복원.
  */
 /**
+ * 시장별 역산 체인 (소스가격 AUD → FOB USD) 을 steps 배열로 반환.
+ * type: 'pct_add'  = ×(1+v%)   (α 보정)
+ *       'margin_rev' = ÷(1+v%) (마진 역산 — 백엔드 Logic A/B 와 동일)
+ *       'abs_deduct' = −v AUD   (고정수수료)
+ *       'exchange'  = ×환율     (AUD→USD 변환)
+ * col: 'agg'|'avg'|'cons' — 수입상 마진 프리셋 결정
+ */
+function _buildModalChain(col, seg) {
+  const audUsd  = Number(_p2ScenarioRaw.aud_usd) || Number(window._exchangeRates?.aud_usd) || 0.65;
+  const impPct  = { agg: 30, avg: 20, cons: 10 }[col] ?? 20;
+
+  if (seg === 'public') {
+    return [
+      { name: 'α 시장 보정계수 (공시 AEMP × 1.20)',      type: 'pct_add',    value: 20 },
+      { name: '환율 (AUD → USD)',                        type: 'exchange',   value: Number(audUsd.toFixed(4)) },
+      { name: '수입상 마진 (Importer/Sponsor Margin)',    type: 'margin_rev', value: impPct },
+      { name: '에이전트 수수료 (Agent Commission)',        type: 'margin_rev', value: 5 },
+    ];
+  }
+  // 민간 (Logic B)
+  const gstRate = (_p2Manual?.private?.find(x => x.key === 'gst')?.value) ?? 0;
+  return [
+    { name: '고정수수료 차감 (조제료 $8.88 + AHI $4.91)', type: 'abs_deduct',  value: 13.79 },
+    { name: '환율 (AUD → USD)',                          type: 'exchange',    value: Number(audUsd.toFixed(4)) },
+    { name: `GST 공제 (소비세 — 처방약 ${gstRate}% 면제)`, type: 'margin_rev',  value: gstRate },
+    { name: '약국 마진 (Pharmacy Markup, 8CPA 기준)',     type: 'margin_rev',  value: 15 },
+    { name: '도매 마진 (Wholesale, 1PWA 기준)',           type: 'margin_rev',  value: 7.52 },
+    { name: '운임·보험료 (Freight & Insurance)',          type: 'margin_rev',  value: 5 },
+    { name: '수입상 마진 (Importer/Sponsor Margin)',      type: 'margin_rev',  value: impPct },
+  ];
+}
+
+/**
  * 시장(공공/민간)별 기본 옵션을 _p2ColData[col]에 미리 채운다 (SG 패턴).
  * - 이미 옵션이 있거나 같은 시장으로 이미 초기화된 경우 → 유지
  * - 시장이 바뀐 경우(공공↔민간) → 강제 재초기화
@@ -1084,29 +1117,39 @@ function openP2ColModal(col) {
   _modalActiveCol  = col;
   _modalOrigParent = detail.parentNode;
 
-  // ① AI 결과 참조가 업데이트 (AUD 원본 + USD 환산)
-  const audUsd  = Number(_p2ScenarioRaw.aud_usd) || Number(window._exchangeRates?.aud_usd) || 0;
+  const seg    = _p2AiSeg || _p2ScenarioRaw.ref_seg || 'public';
+  const audUsd = Number(_p2ScenarioRaw.aud_usd) || Number(window._exchangeRates?.aud_usd) || 0;
   const baseUsd = _p2ScenarioRaw[col] || 0;
-  const baseAud = (_p2ScenarioRaw[col + '_aud']) || (audUsd > 0 ? baseUsd / audUsd : 0);
+
+  // ① AI 계산 FOB 표시 (상단 읽기전용 행 — 파이프라인 결과 참조용)
+  const baseAud  = audUsd > 0 ? baseUsd / audUsd : 0;
   const refAudEl = document.getElementById('p2ci-ref-aud-' + col);
   const refUsdEl = document.getElementById('p2ci-ref-usd-' + col);
   if (refAudEl) refAudEl.textContent = baseAud > 0 ? baseAud.toFixed(2) : '—';
   if (refUsdEl) refUsdEl.textContent = baseUsd > 0 ? baseUsd.toFixed(2) : '—';
 
-  // ② 기준가 초기화 (AI/직접입력 FOB 결과 USD — 사용자가 수동 조정 가능)
-  const baseInput = document.getElementById('p2ci-base-' + col);
-  if (baseInput && baseUsd > 0) baseInput.value = baseUsd.toFixed(2);
+  // ② 소스가격 설정: AEMP(공공) 또는 소매가(민간) AUD — 역산 출발점
+  const sourceAud = Number(_p2ScenarioRaw.ref_aud) || 0;
+  const existing  = _p2ColData[col] || {};
+  _p2ColData[col] = {
+    sourceAud,
+    chain: _buildModalChain(col, seg),  // 역산 체인 (백엔드 Logic A/B 동일 공식)
+    opts:  existing.opts || [],          // 사용자 추가 조정 옵션 유지
+  };
 
-  // ③ 옵션은 기존 사용자 편집값 유지 (없으면 빈 상태로 시작)
-  //    _initP2ColDataForMarket 을 여기서 호출하지 않음:
-  //    AI FOB 결과(이미 역산 완료)에 다시 차감 옵션을 꽂으면 이중 역산 버그 발생.
-  //    모달은 "FOB 결과에 추가 미세 조정"하는 편집기. 기본 차감 없이 시작.
-  if (!_p2ColData[col]) _p2ColData[col] = { opts: [] };
+  // ③ 소스가격 입력 필드: sourceAud 우선, 없으면 AI FOB → AUD 역환산 표시
+  const baseInput = document.getElementById('p2ci-base-' + col);
+  const labelEl   = document.getElementById('p2ci-base-label-' + col);
+  if (baseInput) {
+    const fallbackAud = (baseUsd > 0 && audUsd > 0) ? (baseUsd / audUsd).toFixed(2) : '0';
+    baseInput.value = sourceAud > 0 ? sourceAud.toFixed(2) : fallbackAud;
+  }
+  if (labelEl) labelEl.textContent = seg === 'public' ? 'AEMP 공시가 (AUD)' : '소매가 (AUD)';
 
   detail.style.display = ''; // 인라인 숨김 해제
   modalBody.appendChild(detail); // 모달 바디로 이동
 
-  const segLabel = _p2AiSeg === 'public' ? '공공 시장' : '민간 시장';
+  const segLabel = seg === 'public' ? '공공 시장' : '민간 시장';
   const labels = {
     agg:  `저가 진입 시나리오 (Penetration Pricing) · ${segLabel}`,
     avg:  `기준가 기반 시나리오 (Reference Pricing) · ${segLabel}`,
@@ -1115,7 +1158,7 @@ function openP2ColModal(col) {
   const titleEl = document.getElementById('p2-calc-modal-title');
   if (titleEl) titleEl.textContent = labels[col] || '역산 · 옵션 편집';
 
-  // ④ 옵션 목록 렌더 + 재계산
+  // ④ 옵션+체인 렌더 + 재계산
   renderP2ColOptions(col);
   recalcP2Col(col);
 
@@ -1249,18 +1292,47 @@ function recalcP2Col(col) {
   const audKrw = Number(_p2ScenarioRaw.aud_krw) || 0;
   const usdKrw = audUsd > 0 ? audKrw / audUsd : 0;
 
-  // 기준가: 해당 컬럼 모달이 열려 있을 때만 p2ci-base-{col} 사용.
-  // 모달이 닫혀 있으면 반드시 _p2ScenarioRaw 직접 참조 — 이전 모달 세션의 스테일값
-  // (공공↔민간 전환·제품 재실행 후에도 잔존)이 카드 가격을 덮어쓰는 이중역산 버그 방지.
-  const rawBase  = (_modalActiveCol === col)
-    ? parseFloat(document.getElementById('p2ci-base-' + col)?.value)
-    : NaN;
-  let priceUsd   = (!Number.isNaN(rawBase) && rawBase > 0)
-    ? rawBase
-    : (_p2ScenarioRaw[col] || 0);
+  const colData  = _p2ColData[col] || {};
+  const chain    = colData.chain;
+  const hasChain = Array.isArray(chain) && chain.length > 0;
 
-  // _p2ColData 옵션 적용 (pct_add/pct_deduct/multiply/divide/abs_add/abs_deduct/aud_add/aud_deduct)
-  const opts = _p2ColData[col]?.opts || [];
+  let priceUsd;
+
+  if (hasChain && _modalActiveCol === col) {
+    // ── 체인 모드: 소스가격(AUD) → 역산 체인 → FOB USD ─────────────────────────
+    // 소스가격: p2ci-base-{col} 입력 필드 우선, 없으면 colData.sourceAud 사용.
+    const rawBase = parseFloat(document.getElementById('p2ci-base-' + col)?.value);
+    let price = (!Number.isNaN(rawBase) && rawBase >= 0) ? rawBase : (colData.sourceAud || 0);
+
+    let exchangeDone = false;
+    for (const step of chain) {
+      const v = Number(step.value ?? 0);
+      if (step.type === 'pct_add') {
+        price *= (1 + v / 100);              // ×(1+v%) — α 보정
+      } else if (step.type === 'abs_deduct') {
+        price = Math.max(0, price - v);       // −v AUD 고정 차감 (환율 변환 전)
+      } else if (step.type === 'exchange') {
+        price *= audUsd;                      // ×환율 (최신 실시간 값 사용, step.value는 표시용)
+        exchangeDone = true;
+      } else if (step.type === 'margin_rev') {
+        if (v > 0) price /= (1 + v / 100);   // ÷(1+v%) — 백엔드 Logic A/B 동일
+      }
+    }
+    if (!exchangeDone && audUsd > 0) price *= audUsd; // 환율 단계 누락 시 fallback
+    priceUsd = Math.max(0, price);
+  } else {
+    // ── 기존 모드: AI FOB USD 직접 참조 (모달 미열림 시 카드 가격 유지) ──────────
+    // 모달 미열림 시 → _p2ScenarioRaw 직접 참조 (스테일 input 이중역산 버그 방지)
+    const rawBase = (_modalActiveCol === col)
+      ? parseFloat(document.getElementById('p2ci-base-' + col)?.value)
+      : NaN;
+    priceUsd = (!Number.isNaN(rawBase) && rawBase > 0)
+      ? rawBase
+      : (_p2ScenarioRaw[col] || 0);
+  }
+
+  // ── 사용자 추가 조정 옵션 적용 ────────────────────────────────────────────────
+  const opts = colData.opts || [];
   for (const opt of opts) {
     const v = Number(opt.value ?? 0);
     if      (opt.type === 'pct_add')    priceUsd *= (1 + v / 100);
@@ -1271,9 +1343,10 @@ function recalcP2Col(col) {
     else if (opt.type === 'abs_deduct') priceUsd = Math.max(0, priceUsd - v);
     else if (opt.type === 'aud_add')    priceUsd += v * audUsd;
     else if (opt.type === 'aud_deduct') priceUsd = Math.max(0, priceUsd - v * audUsd);
+    else if (opt.type === 'margin_rev') { if (v > 0) priceUsd /= (1 + v / 100); }
   }
 
-  // 미확정 초안 행 적용
+  // ── 미확정 초안 행 적용 ───────────────────────────────────────────────────────
   const drafts = _p2ColPendingDrafts[col] || [];
   for (const d of drafts) {
     const rid  = String(d.id).replace(/[^a-zA-Z0-9_-]/g, '') || 'd0';
@@ -1284,7 +1357,7 @@ function recalcP2Col(col) {
   }
   priceUsd = Math.max(0, priceUsd);
 
-  // 카드 상단 가격 갱신
+  // ── 카드 상단 가격 갱신 ───────────────────────────────────────────────────────
   const krwTxt  = usdKrw > 0 ? `${Math.round(priceUsd * usdKrw).toLocaleString('ko-KR')}원` : '—';
   const audTxt  = audUsd > 0 ? `${(priceUsd / audUsd).toFixed(2)} AUD` : '';
   const priceEl = document.getElementById('p2c-price-' + col);
@@ -1292,7 +1365,7 @@ function recalcP2Col(col) {
   if (priceEl) priceEl.textContent = priceUsd.toFixed(2);
   if (subEl)   subEl.textContent   = audTxt ? `${krwTxt} / ${audTxt}` : krwTxt;
 
-  // 모달 내 계산 결과 줄 (열려 있을 때만)
+  // ── 모달 내 계산 결과 줄 (열려 있을 때만) ─────────────────────────────────────
   const resultEl = document.getElementById('p2ci-result-' + col);
   if (resultEl) {
     const audStr = audUsd > 0 ? ` · ${(priceUsd / audUsd).toFixed(2)} AUD` : '';
@@ -1308,9 +1381,14 @@ function recalcP2Col(col) {
 function renderP2ColOptions(col) {
   const container = document.getElementById('p2co-' + col);
   if (!container) return;
-  const opts = (_p2ColData[col] || { opts: [] }).opts;
+  const colData  = _p2ColData[col] || { opts: [] };
+  const opts     = colData.opts || [];
+  const chain    = colData.chain;
+  const hasChain = Array.isArray(chain) && chain.length > 0;
 
-  // ── 연산 타입 레이블·옵션 목록 (호주 = AUD / USD) ──────────────────────────
+  const audUsd = Number(_p2ScenarioRaw.aud_usd) || Number(window._exchangeRates?.aud_usd) || 0;
+
+  // ── 연산 타입 레이블·옵션 목록 ──────────────────────────────────────────────
   const typeLabel = {
     pct_deduct: '% 차감',
     pct_add:    '% 가산',
@@ -1320,14 +1398,54 @@ function renderP2ColOptions(col) {
     abs_deduct: 'USD 차감',
     aud_add:    'AUD 가산',
     aud_deduct: 'AUD 차감',
+    margin_rev: '마진역산',
   };
   const _typeOptionsHtml = (selectedType) => Object.entries(typeLabel).map(([v, lbl]) =>
     `<option value="${v}"${v === selectedType ? ' selected' : ''}>${lbl}</option>`
   ).join('');
 
-  // ── 확정 옵션 행 (타입 드롭다운 변경 가능) ──────────────────────────────────
-  let html = opts.map(opt => {
-    const safeId  = _escHtml(String(opt.id));
+  let html = '';
+
+  // ── ① 역산 파라미터 섹션 (체인 steps — 백엔드 Logic A/B 동일 공식) ──────────
+  if (hasChain) {
+    html += `<div class="p2c-chain-header">📐 역산 파라미터</div>`;
+    chain.forEach((step, idx) => {
+      const v = Number(step.value ?? 0);
+      let formulaStr, inputHtml;
+
+      if (step.type === 'exchange') {
+        // 환율: 최신 실시간 값 표시, 수동 편집 불가
+        const liveRate = audUsd > 0 ? audUsd.toFixed(4) : v.toFixed(4);
+        formulaStr = `× ${liveRate}`;
+        inputHtml  = `<span class="p2c-chain-val-fixed">${liveRate}</span>`;
+      } else if (step.type === 'pct_add') {
+        formulaStr = `+${v}%`;
+        inputHtml  = `<input class="p2c-chain-val-input" type="number" value="${v}" step="0.1" min="0"
+          oninput="updateP2ChainStep('${col}',${idx},this.value)"><span class="p2c-chain-unit">%</span>`;
+      } else if (step.type === 'abs_deduct') {
+        formulaStr = `−${v} AUD`;
+        inputHtml  = `<input class="p2c-chain-val-input" type="number" value="${v}" step="0.01" min="0"
+          oninput="updateP2ChainStep('${col}',${idx},this.value)"><span class="p2c-chain-unit">AUD</span>`;
+      } else { // margin_rev
+        formulaStr = `÷(1+${v}%)`;
+        inputHtml  = `<input class="p2c-chain-val-input" type="number" value="${v}" step="0.1" min="0"
+          oninput="updateP2ChainStep('${col}',${idx},this.value)"><span class="p2c-chain-unit">%</span>`;
+      }
+
+      html += `
+      <div class="p2c-chain-row">
+        <span class="p2c-chain-name">${_escHtml(step.name)}</span>
+        <span class="p2c-chain-formula">${formulaStr}</span>
+        <div class="p2c-chain-input-wrap">${inputHtml}</div>
+      </div>`;
+    });
+    html += `<div class="p2c-chain-divider"></div>`;
+    html += `<div class="p2c-chain-header">🔧 추가 조정 <span class="p2c-chain-header-sub">(선택)</span></div>`;
+  }
+
+  // ── ② 확정 옵션 행 (타입 드롭다운 변경 가능) ────────────────────────────────
+  html += opts.map(opt => {
+    const safeId   = _escHtml(String(opt.id));
     const safeName = _escHtml(String(opt.name || ''));
     return `
     <div class="p2c-opt-row">
@@ -1343,7 +1461,7 @@ function renderP2ColOptions(col) {
     </div>`;
   }).join('');
 
-  // ── 신규 추가 행 (항상 하단에 표시, ✓ 클릭 시 확정) ──────────────────────────
+  // ── ③ 신규 추가 행 (항상 하단에, ✓ 클릭 시 확정) ────────────────────────────
   const aid = 'always_' + col;
   html += `
     <div class="p2c-opt-row p2c-add-row">
@@ -1354,6 +1472,20 @@ function renderP2ColOptions(col) {
     </div>`;
 
   container.innerHTML = html;
+  recalcP2Col(col);
+}
+
+/** 체인 파라미터 값 수정 (idx = chain 배열 인덱스, exchange 타입은 건드리지 않음) */
+function updateP2ChainStep(col, idx, val) {
+  const chain = _p2ColData[col]?.chain;
+  if (!Array.isArray(chain) || !chain[idx]) return;
+  if (chain[idx].type === 'exchange') return; // 환율은 실시간 자동 반영, 수동 편집 무효
+  chain[idx].value = parseFloat(val) || 0;
+  recalcP2Col(col);
+}
+
+/** 소스가격(AUD) 입력 필드 변경 핸들러 */
+function onP2BaseChange(col) {
   recalcP2Col(col);
 }
 
@@ -1553,6 +1685,9 @@ function _renderP2AiResult(data) {
   });
 
   _p2ScenarioRaw.usd_krw = usdKrw;
+  // 역산 체인 소스가격 저장 (모달에서 전체 체인 재구성에 사용)
+  _p2ScenarioRaw.ref_aud = Number(extracted.ref_price_aud) || 0;
+  _p2ScenarioRaw.ref_seg = _p2AiSeg;
   ['agg', 'avg', 'cons'].forEach((c) => recalcP2Col(c));
 
   _p2UpdateImporterMarginHints(scenarios);

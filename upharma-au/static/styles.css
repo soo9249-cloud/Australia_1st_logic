@@ -3092,3 +3092,103 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* ── P2 모달 역산 체인 (Chain) 스타일 ────────────────────────────────────── */
+/* 섹션 헤더 */
+.p2c-chain-header {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: .03em;
+  padding: 6px 2px 4px;
+  margin-top: 4px;
+}
+.p2c-chain-header-sub {
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 9px;
+}
+/* 구분선 */
+.p2c-chain-divider {
+  height: 1px;
+  background: rgba(23,63,120,.12);
+  margin: 8px 0;
+}
+/* 체인 한 줄 */
+.p2c-chain-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 68px 72px;
+  align-items: center;
+  column-gap: 4px;
+  padding: 5px 6px;
+  background: rgba(23,63,120,.04);
+  border-radius: 7px;
+  margin-bottom: 3px;
+  width: 100%;
+  box-sizing: border-box;
+}
+/* 항목명 */
+.p2c-chain-name {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 공식 요약 (읽기전용) */
+.p2c-chain-formula {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--navy);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+/* 입력 + 단위를 묶는 flex 래퍼 */
+.p2c-chain-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+/* 편집 가능한 chain 값 입력 */
+.p2c-chain-val-input {
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 0;
+  height: 26px;
+  padding: 0 3px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #fff;
+  color: var(--navy);
+  border: none;
+  outline: none;
+  text-align: right;
+  font-family: inherit;
+  box-shadow: var(--sh3);
+  box-sizing: border-box;
+}
+/* 환율 등 고정값 (편집 불가) */
+.p2c-chain-val-fixed {
+  display: inline-block;
+  width: 100%;
+  text-align: right;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+/* % / AUD 단위 표시 */
+.p2c-chain-unit {
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}

@@ -231,16 +231,15 @@
                         </div>
                         <div class="p2-col-detail" id="p2cd-agg" style="display:none;">
                           <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">보고서 가격</label>
+                            <label class="p2-col-input-label">AI 계산 FOB</label>
                             <div class="p2-ref-price-box">
                               <span id="p2ci-ref-usd-agg">—</span> USD &nbsp;≈&nbsp; <span id="p2ci-ref-aud-agg">—</span> AUD
                             </div>
                           </div>
                           <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">기준가 (USD)</label>
-                            <input class="p2-col-input" type="number" id="p2ci-base-agg" value="0" step="0.01" min="0" oninput="recalcP2Col('agg')">
+                            <label class="p2-col-input-label" id="p2ci-base-label-agg">소스가격 (AUD)</label>
+                            <input class="p2-col-input" type="number" id="p2ci-base-agg" value="0" step="0.01" min="0" oninput="onP2BaseChange('agg')">
                           </div>
-                          <div class="p2-modal-opts-header">추가 옵션</div>
                           <div id="p2co-agg" class="p2-custom-opts"></div>
                           <div class="p2-col-result-row">결과: <strong id="p2ci-result-agg">—</strong></div>
                         </div>
@@ -257,16 +256,15 @@
                         </div>
                         <div class="p2-col-detail" id="p2cd-avg" style="display:none;">
                           <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">보고서 가격</label>
+                            <label class="p2-col-input-label">AI 계산 FOB</label>
                             <div class="p2-ref-price-box">
                               <span id="p2ci-ref-usd-avg">—</span> USD &nbsp;≈&nbsp; <span id="p2ci-ref-aud-avg">—</span> AUD
                             </div>
                           </div>
                           <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">기준가 (USD)</label>
-                            <input class="p2-col-input" type="number" id="p2ci-base-avg" value="0" step="0.01" min="0" oninput="recalcP2Col('avg')">
+                            <label class="p2-col-input-label" id="p2ci-base-label-avg">소스가격 (AUD)</label>
+                            <input class="p2-col-input" type="number" id="p2ci-base-avg" value="0" step="0.01" min="0" oninput="onP2BaseChange('avg')">
                           </div>
-                          <div class="p2-modal-opts-header">추가 옵션</div>
                           <div id="p2co-avg" class="p2-custom-opts"></div>
                           <div class="p2-col-result-row">결과: <strong id="p2ci-result-avg">—</strong></div>
                         </div>
@@ -283,16 +281,15 @@
                         </div>
                         <div class="p2-col-detail" id="p2cd-cons" style="display:none;">
                           <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">보고서 가격</label>
+                            <label class="p2-col-input-label">AI 계산 FOB</label>
                             <div class="p2-ref-price-box">
                               <span id="p2ci-ref-usd-cons">—</span> USD &nbsp;≈&nbsp; <span id="p2ci-ref-aud-cons">—</span> AUD
                             </div>
                           </div>
                           <div class="p2-col-input-row">
-                            <label class="p2-col-input-label">기준가 (USD)</label>
-                            <input class="p2-col-input" type="number" id="p2ci-base-cons" value="0" step="0.01" min="0" oninput="recalcP2Col('cons')">
+                            <label class="p2-col-input-label" id="p2ci-base-label-cons">소스가격 (AUD)</label>
+                            <input class="p2-col-input" type="number" id="p2ci-base-cons" value="0" step="0.01" min="0" oninput="onP2BaseChange('cons')">
                           </div>
-                          <div class="p2-modal-opts-header">추가 옵션</div>
                           <div id="p2co-cons" class="p2-custom-opts"></div>
                           <div class="p2-col-result-row">결과: <strong id="p2ci-result-cons">—</strong></div>
                         </div>

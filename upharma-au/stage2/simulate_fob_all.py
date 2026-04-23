@@ -21,7 +21,6 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any
 
 _HERE = Path(__file__).resolve().parent
 _ROOT = _HERE.parent

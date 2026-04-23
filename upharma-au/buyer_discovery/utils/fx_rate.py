@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import datetime as _dt
 from functools import lru_cache
-from typing import Any
 
 try:
     import yfinance as yf  # type: ignore

@@ -418,7 +418,7 @@ def insert_crawl_log(row: dict[str, Any]) -> bool:
         client = get_supabase_client()
         data = _filter_cols(row, _CRAWL_LOG_ALLOWED)
         data = _jsonify_decimals(data)
-        response = client.table(TABLE_CRAWL_LOG).insert(data).execute()
+        client.table(TABLE_CRAWL_LOG).insert(data).execute()
         # 로그가 너무 시끄러울 수 있으므로 실패 외에는 짧게만
         print(f"[INSERT au_crawl_log] {src}/{row.get('endpoint', '-')} [{row.get('status', '-')}]")
         return True

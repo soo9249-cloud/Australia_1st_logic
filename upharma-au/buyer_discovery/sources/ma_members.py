@@ -12,7 +12,6 @@ Australia 중 하나 포함, 최소 4글자) 적용해 네비·링크 텍스트 
 """
 from __future__ import annotations
 
-import re
 from typing import Any
 
 import httpx

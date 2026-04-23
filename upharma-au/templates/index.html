@@ -114,7 +114,7 @@
             <!-- ── pb-p1: 시장조사 실행 블록 ── -->
             <div id="pb-p1">
 
-              <!-- ① 품목 선택 + 분석 실행 -->
+              <!-- ① 품목 선택 + 분석 실행 + ② 신약 직접 분석 (같은 카드) -->
               <div class="selector-card p1-section p1-section--product">
                 <div class="selector-row">
                   <select id="product-select">
@@ -143,11 +143,9 @@
                   <div class="prog-step" id="prog-report"><div class="prog-dot">4</div><div class="prog-label">PDF 생성</div></div>
                 </div>
                 <div class="p1-result-note" id="p1-result-note" style="display:none;"></div>
-              </div>
 
-              <!-- ② 신약 직접 분석 (토글) -->
-              <div class="selector-card p1-section p1-section--custom p1-custom-drug-card">
-                <div>
+                <!-- ② 신약 직접 분석 (토글 — 품목 선택 카드 하단에 인라인) -->
+                <div style="margin-top:6px;">
                   <button class="btn-toggle-custom" id="btn-custom-toggle" onclick="toggleCustomForm()" type="button">▸ 신약 직접 분석</button>
                 </div>
                 <div id="custom-form-wrap" style="display:none;">

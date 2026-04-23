@@ -698,6 +698,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import mm
     from reportlab.platypus import (
+        KeepTogether,
         PageBreak,
         Paragraph,
         SimpleDocTemplate,
@@ -730,9 +731,6 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     C_APPENDIX_BR = colors.HexColor("#e5e5dd")
     C_FT_BG = colors.HexColor("#fff8e1")
 
-    COL_L = CONTENT_W * 0.28
-    COL_R = CONTENT_W * 0.72
-
     def ps(name: str, **kw: Any) -> ParagraphStyle:
         return ParagraphStyle(name, **kw)
 
@@ -761,6 +759,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         textColor=C_TITLE,
         spaceBefore=18,
         spaceAfter=8,
+        keepWithNext=True,
     )
     s_sub = ps(
         "V8Sub",
@@ -769,6 +768,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
         textColor=C_TITLE,
         spaceBefore=14,
         spaceAfter=6,
+        keepWithNext=True,
     )
     s_cell = ps(
         "V8Cell",
@@ -943,7 +943,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     )
     story.append(Spacer(1, 8))
 
-    story.append(Paragraph(_rx("1-4. 공시 가격 스냅샷"), s_sub))
+    snap_flow: list[Any] = [Paragraph(_rx("1-4. 공시 가격 스냅샷"), s_sub)]
     psn = v8.price_snapshot
     snap_rows: list[list] = [
         [
@@ -955,12 +955,12 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     snap_ex: list[tuple] = [("BACKGROUND", (0, 0), (-1, 0), C_HDR_BG)]
     snap_data = [
         (
-            "AEMP (Approved Ex-Manufacturer Price · 정부 승인 출고가)",
+            "AEMP (정부 승인 출고가)",
             f"AUD {psn.aemp_aud} / USD {psn.aemp_usd}",
             f"PBS item {psn.pbs_code}",
         ),
         (
-            "DPMQ (Dispensed Price for Maximum Quantity · 최대 처방량 총약가)",
+            "DPMQ (최대 처방량 총약가)",
             f"AUD {psn.dpmq_aud} / USD {psn.dpmq_usd}",
             f"PBS item {psn.pbs_code}",
         ),
@@ -978,8 +978,9 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
             snap_ex.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor("#f7f9fc")))
     st_snap = Table(snap_rows, colWidths=[CONTENT_W * 0.36, CONTENT_W * 0.28, CONTENT_W * 0.36])
     st_snap.setStyle(TableStyle(_base_tbl_style(snap_ex)))
-    story.append(st_snap)
-    story.append(Spacer(1, 10))
+    snap_flow.append(st_snap)
+    snap_flow.append(Spacer(1, 10))
+    story.append(KeepTogether(snap_flow))
 
     story.append(Paragraph(_rx("2. 무역/규제 환경"), s_sec))
     es = v8.entry_strategy
@@ -1576,7 +1577,6 @@ def render_p2_pdf(
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import mm
     from reportlab.platypus import (
-        PageBreak,
         Paragraph,
         SimpleDocTemplate,
         Spacer,

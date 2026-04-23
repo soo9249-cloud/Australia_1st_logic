@@ -30,7 +30,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -550,7 +550,6 @@ def main(dry_run: bool = False) -> None:
             cat_entry = (categories.get("categories") or {}).get(canon_key) or {}
             # 하드코딩 시트 (딥리서치 45 완성본)
             hc = hardcoded_buyers.get(canon_key) or {}
-            factory_hc = hc.get("factory") or {}
             mfr_match = mfr_matches.get(canon_key, {}) or {}
             has_au_local_factory, au_factory_locs, factory_source = _resolve_local_au_factory(
                 hc, mfr_match

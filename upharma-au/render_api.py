@@ -3329,8 +3329,6 @@ try:
     from stage2.fob_calculator import (  # type: ignore
         ALPHA_MARKET_UPLIFT_PCT,
         DEFAULT_FX_AUD_TO_KRW,
-        calculate_fob_logic_a,
-        calculate_fob_logic_b,
         calculate_three_scenarios,
         dispatch_by_pricing_case,
         dispatch_both_segments,
@@ -5254,9 +5252,6 @@ def _p3_worker(job_id: str, product_id: str) -> None:
             ingredient_per_product,
         )
         import json as _json
-        survivors_path = Path(
-            r"C:/Users/user/Documents/Claude/Projects/AX 호주 final/survivors_expanded_v5.json"
-        )
         # 전 품목 실행이 아니라 단일 품목만 돌린 결과이므로 부분 업데이트 위험.
         # Stage 2 는 전 품목 DB SELECT 기반이므로 원본 v5 유지. 단일 품목 최신화는 별도.
         # → 단일 품목 결과는 `seeds/p3_last_run_{product_id}.json` 에 따로 저장.

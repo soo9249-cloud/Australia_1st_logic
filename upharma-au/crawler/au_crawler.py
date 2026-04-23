@@ -1025,7 +1025,6 @@ def _dispatch_pbs_by_case(product: dict[str, Any]) -> dict[str, Any]:
         fetch_pbs_hospital_skip,
         fetch_pbs_multi,
         fetch_pbs_same_ingredient,
-        fetch_pbs_similar,         # 레거시 (하위호환)
         fetch_pbs_substitute,      # Task 2 신설 — 실제 proxy AEMP 조회
         fetch_pbs_withdrawal,
     )
@@ -1255,7 +1254,6 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
 
     # Lazy import (크롤러만 돌릴 때 supabase-py 로드 최소화)
     from db.supabase_insert import (
-        insert_crawl_log,
         log_crawl,
         upsert_buyer_candidates,
         upsert_pbs_raw,
@@ -1264,7 +1262,7 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     )
     from sources.buynsw import fetch_buynsw
     from sources.chemist import fetch_chemist_price
-    from sources.pbs import fetch_pbs_by_ingredient, fetch_pbs_multi, fetch_pbs_web
+    from sources.pbs import fetch_pbs_by_ingredient, fetch_pbs_web
     from sources.tga import fetch_tga_artg
 
     run_id = str(uuid.uuid4())
@@ -1339,7 +1337,6 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
     _pbs_started = now_kst_iso()
     try:
         pbs = _dispatch_pbs_by_case(product)
-        pbs_rows = pbs.get("_component_rows") if isinstance(pbs, dict) else None
         log_crawl(
             run_id=run_id, product_code=product_filter, source="pbs_api_v3", status="success",
             endpoint=f"/items,/item-dispensing-rule-relationships (case={product.get('pricing_case')})",
@@ -1348,7 +1345,6 @@ def _process_one_product(product: dict[str, Any], *, dry_run: bool = False) -> b
             finished_at=now_kst_iso(),
         )
     except Exception as exc:
-        pbs_rows = []
         pbs = {}
         log_crawl(
             run_id=run_id, product_code=product_filter, source="pbs_api_v3", status="failed",

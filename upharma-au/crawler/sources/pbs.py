@@ -1525,7 +1525,6 @@ def fetch_pbs_web(pbs_item_code: str) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    import json as _json
     result = fetch_pbs_by_ingredient("hydroxycarbamide")
     for dto in result:
         # Decimal 은 json.dumps 불가 → 간이 출력

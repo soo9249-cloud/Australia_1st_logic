@@ -33,7 +33,6 @@ load_dotenv(_PROJECT_ROOT / ".env", override=True)
 sys.path.insert(0, str(_UPHARMA))
 
 from buyer_discovery.sources.perplexity_adapter import query_revenue  # type: ignore
-from buyer_discovery.validators.haiku_cross_check import validate_revenue  # type: ignore
 
 _SEEDS = _BUYER_DIR / "seeds"
 _HARDCODE_SEEDS = _SEEDS / "au_buyers_hardcode.json"

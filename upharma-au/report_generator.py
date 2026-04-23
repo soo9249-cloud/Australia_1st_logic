@@ -1734,12 +1734,16 @@ def render_p2_pdf(
                 [
                     Paragraph(_rx(label_ko), s_cell_h),
                     Paragraph(_rx(price_line), s_cell),
-                    Paragraph(_rx(_trunc(reason, 1200)), s_cell),
+                    Paragraph(_rx(_trunc(reason, 420)), s_cell),
                 ]
             )
             if idx % 2 == 0:
                 sum_ex.append(("BACKGROUND", (0, idx), (-1, idx), C_ALT))
-        tbl = Table(sum_rows, colWidths=[CONTENT_W * 0.22, CONTENT_W * 0.33, CONTENT_W * 0.45])
+        tbl = Table(
+            sum_rows,
+            colWidths=[CONTENT_W * 0.22, CONTENT_W * 0.33, CONTENT_W * 0.45],
+            repeatRows=1,
+        )
         tbl.setStyle(TableStyle(_base_style(sum_ex)))
         return tbl
 
@@ -1755,6 +1759,18 @@ def render_p2_pdf(
     # 상단 2. 단가(시장기준가)에서 계산한 기준값 재사용
 
     benchmark_usd = 0.0
+    row_aemp = row.get("aemp_aud") or row.get("pbs_aemp_aud")
+    row_dpmq = row.get("dpmq_aud") or row.get("pbs_dpmq") or row.get("pbs_dpmq_aud")
+    row_retail = row.get("retail_price_aud")
+    dispatch_source = (dispatch_inputs.get("aemp_source") or dispatch_inputs.get("retail_source") or "미확인")
+
+    def _fmt_aud(v: Any) -> str:
+        try:
+            n = float(v)
+            return f"AUD {n:.2f}" if n > 0 else "미확보"
+        except Exception:
+            return "미확보"
+
     try:
         if adjusted_aemp_aud is not None:
             benchmark_usd = float(adjusted_aemp_aud) * aud_usd_rate
@@ -1765,6 +1781,10 @@ def render_p2_pdf(
     benchmark_rows = [
         [Paragraph(_rx("기준 가격"), s_cell_h), Paragraph(_rx(f"USD {benchmark_usd:.2f}" if benchmark_usd > 0 else "USD 미확보"), s_cell)],
         [Paragraph(_rx("산정 방식"), s_cell_h), Paragraph(_rx("AEMP (Approved Ex-Manufacturer Price, 정부 승인 출고가) 기반 + 시장 보정(α) + FOB 역산"), s_cell)],
+        [Paragraph(_rx("크롤링 AEMP"), s_cell_h), Paragraph(_rx(_fmt_aud(row_aemp)), s_cell)],
+        [Paragraph(_rx("크롤링 DPMQ"), s_cell_h), Paragraph(_rx(_fmt_aud(row_dpmq)), s_cell)],
+        [Paragraph(_rx("크롤링 소매가"), s_cell_h), Paragraph(_rx(_fmt_aud(row_retail)), s_cell)],
+        [Paragraph(_rx("계산 입력 출처"), s_cell_h), Paragraph(_rx(str(dispatch_source)), s_cell)],
         [Paragraph(_rx("시장 구분"), s_cell_h), Paragraph(_rx("공공 / 민간"), s_cell)],
     ]
     benchmark_tbl = Table(benchmark_rows, colWidths=[CONTENT_W * 0.24, CONTENT_W * 0.76])
@@ -1784,10 +1804,14 @@ def render_p2_pdf(
             Paragraph(_rx("크롤링 근거 종합"), s_cell),
             Paragraph(_rx(product_name), s_cell),
             Paragraph(_rx((f"{inn} {strength} {dosage}").strip() or "미확보"), s_cell),
-            Paragraph(_rx(_trunc(p2_blocks.get("block_extract", "시장가 데이터 미확보"), 800)), s_cell),
+            Paragraph(_rx(_trunc(p2_blocks.get("block_extract", "시장가 데이터 미확보"), 320)), s_cell),
         ],
     ]
-    ref_tbl = Table(ref_rows, colWidths=[CONTENT_W * 0.16, CONTENT_W * 0.24, CONTENT_W * 0.24, CONTENT_W * 0.36])
+    ref_tbl = Table(
+        ref_rows,
+        colWidths=[CONTENT_W * 0.16, CONTENT_W * 0.24, CONTENT_W * 0.24, CONTENT_W * 0.36],
+        repeatRows=1,
+    )
     ref_tbl.setStyle(TableStyle(_base_style([("BACKGROUND", (0, 0), (-1, 0), C_NAVY), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white)])))
     story.append(ref_tbl)
     story.append(Spacer(1, 8))
@@ -1835,35 +1859,16 @@ def render_p2_pdf(
             "데이터: 상업적 철수(Commercial Withdrawal) 이력 있음 — 재진입·재평가는 건별 검토 대상"
         )
     flag_text = " / ".join(flags) if flags else "없음"
-    footer_rows = [
-        [
-            Paragraph(
-                (
-                    "<b>참고(산출 경로·환율·경고)</b><br/>"
-                    f"· 분석 경로: Logic {logic} ({_rx(str(seed.get('pricing_case', '—')))} )<br/>"
-                    f"· 적용 환율: {_rx(fx_str)}<br/>"
-                    f"· 경고 사항: {_rx(warn_text)}<br/>"
-                    f"· 시드·데이터 표시: {_rx(flag_text)}<br/>"
-                    f"· 면책 조항: {_rx(_trunc(disclaimer or '없음', 2000))}"
-                ),
-                s_cell_sm,
-            )
-        ]
-    ]
-    footer_tbl = Table(footer_rows, colWidths=[CONTENT_W])
-    footer_tbl.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fafaf7")),
-                ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#e5e5dd")),
-                ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-                ("TOPPADDING", (0, 0), (-1, -1), 10),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
-            ]
-        )
+    # NOTE: 긴 면책/경고를 단일 Table 셀에 넣으면 A4 하단에서 잘릴 수 있어 Paragraph 로 분리.
+    footer_para = (
+        "<b>참고(산출 경로·환율·경고)</b><br/>"
+        f"· 분석 경로: Logic {logic} ({_rx(str(seed.get('pricing_case', '—')))} )<br/>"
+        f"· 적용 환율: {_rx(fx_str)}<br/>"
+        f"· 경고 사항: {_rx(_trunc(warn_text, 700))}<br/>"
+        f"· 시드·데이터 표시: {_rx(_trunc(flag_text, 700))}<br/>"
+        f"· 면책 조항: {_rx(_trunc(disclaimer or '없음', 700))}"
     )
-    story.append(footer_tbl)
+    story.append(Paragraph(footer_para, s_cell_sm))
     story.append(Spacer(1, 6))
     story.append(
         Paragraph(

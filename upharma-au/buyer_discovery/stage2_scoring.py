@@ -656,6 +656,11 @@ def main(dry_run: bool = False) -> None:
                         "ma" if entry["is_ma"] else None,
                         "gbma" if entry["is_gbma"] else None,
                         "gpce" if entry["is_gpce"] else None,
+                        # Jisoo 수기 하드코드(딥리서치 교차검증) 근거가 붙은 행은 최종검증 표시
+                        "final_verified" if (
+                            bool((entry.get("notes") or "").strip())
+                            or entry.get("sales_source") == "hardcode"
+                        ) else None,
                     ] if f
                 ],
                 "evidence_urls":     entry["evidence_urls"],

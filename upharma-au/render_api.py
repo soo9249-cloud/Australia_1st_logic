@@ -62,6 +62,22 @@ def _normalize_au_product_row(row: dict[str, Any]) -> None:
         row["pbs_listed"] = row.get("pbs_found")
     if not row.get("pbs_item_code") and row.get("pbs_code") is not None:
         row["pbs_item_code"] = row.get("pbs_code")
+    def _to_pos_float(v: Any) -> float | None:
+        """Supabase numeric 이 str/Decimal 로 들어와도 계산기에 쓰기 좋게 float 로 정규화."""
+        if v is None or v == "":
+            return None
+        try:
+            n = float(v)
+        except (TypeError, ValueError):
+            return None
+        return n if n > 0 else None
+
+    # P2 계산기(stage2/fob_calculator)는 숫자형을 기대하므로 핵심 가격 필드를 선변환한다.
+    for _k in ("aemp_aud", "pbs_aemp_aud", "dpmq_aud", "pbs_dpmq", "pbs_dpmq_aud", "retail_price_aud"):
+        _n = _to_pos_float(row.get(_k))
+        if _n is not None:
+            row[_k] = _n
+
     if row.get("pbs_dpmq") in (None, "") and row.get("dpmq_aud") is not None:
         row["pbs_dpmq"] = row.get("dpmq_aud")
     if row.get("pbs_dpmq_aud") in (None, "") and row.get("dpmq_aud") is not None:
@@ -5080,6 +5096,18 @@ def buyers_for_product(product_id: str) -> JSONResponse:
             status_code=404,
             detail=f"바이어 데이터 없음: {product_id}. Stage 2 scoring 실행 필요.",
         )
+
+    # 하위호환 보강: 과거 데이터는 source_flags 에 final_verified 가 없을 수 있음.
+    # notes(수기 검증 근거)가 존재하면 응답에서 final_verified 를 보강해 프론트 표시를 유지한다.
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        flags = r.get("source_flags")
+        flags_list = list(flags) if isinstance(flags, list) else []
+        has_notes = bool(str(r.get("notes") or "").strip())
+        if has_notes and "final_verified" not in flags_list:
+            flags_list.append("final_verified")
+            r["source_flags"] = flags_list
 
     meta = _load_buyer_au_products_meta().get(product_id) or {}
     return JSONResponse({

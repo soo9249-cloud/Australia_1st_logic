@@ -589,9 +589,10 @@ function _makeP2Defaults() {
   // 항목 수가 1:1이 아님. Logic A 역산은 AI 탭 3열 또는 /api/stage2/calculate.
   return {
     public: [
-      { key: 'base_price', label: '기준 입찰가 (USD)', value: 0, type: 'abs_input', unit: 'USD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 PBS AEMP 또는 주 정부 병원조달 입찰가 참고', rationale: '호주 공공채널은 PBS 급여가격·HealthShare NSW 입찰가가 기준.' },
-      { key: 'exchange', label: '환율 (AUD→USD)', value: 0.65, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'AUD 입력 값을 USD 로 환산 (로드 시 실시간 aud_usd 반영)', rationale: '호주 AUD 기준가를 USD 로 맞춰 환차 위험을 줄입니다.' },
-      { key: 'pub_ratio', label: '공공 수출가 산출 비율', value: 30, type: 'pct_mult', unit: '%', step: 1, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '기준가 대비 최종 반영 비율 (수입상 30% 기본)', rationale: 'PBS 급여·병원조달·파트너 마진을 반영한 목표 비율.' },
+      { key: 'base_aemp', label: 'AEMP (정부 승인 출고가, AUD)', value: 0, type: 'abs_input', unit: 'AUD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: '호주 PBS AEMP (Approved Ex-Manufacturer Price) — 크롤링 결과 aemp_aud 값 입력. 공공 역산 기준점.', rationale: 'FOB = AEMP(AUD) × 환율 ÷ (1+수입상마진) ÷ (1+에이전트) — 민간과 동일한 나눗셈 역산 구조.' },
+      { key: 'exchange', label: '환율 (AUD→USD)', value: 0.65, type: 'abs_input', unit: 'rate', step: 0.0001, min: 0.0001, max: 99, enabled: true, fixed: false, expanded: false, hint: 'AUD 기준가를 USD 로 환산 (로드 시 실시간 aud_usd 반영)', rationale: '호주 AUD 기준가를 USD 로 맞춰 환차 위험을 줄입니다.' },
+      { key: 'importer', label: '수입상 마진 (Importer/Sponsor Margin)', value: 20, type: 'pct_deduct', unit: '%', step: 1, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '호주 수입상(스폰서) 마진 — 공공 채널 기본 20%. AEMP×환율에서 나눗셈으로 제거.', rationale: '한국 제조사 ↔ 호주 수입상 사이 중간 마진.' },
+      { key: 'agent', label: '에이전트 수수료 (Agent Commission)', value: 5, type: 'pct_deduct', unit: '%', step: 0.5, min: 0, max: 99, enabled: true, fixed: false, expanded: false, hint: '호주 현지 에이전트·파트너 수수료 — 기본 5%', rationale: '현지 파트너 수수료 차감 후 FOB 확정.' },
     ],
     private: [
       { key: 'base_het', label: '민간 기준가 (AUD 소매가 USD 환산)', value: 0, type: 'abs_input', unit: 'USD', step: 0.5, min: 0, max: 99999, enabled: true, fixed: false, expanded: false, hint: 'Chemist Warehouse × 1.20 (CHOICE 조사 기준) 또는 PBS DPMQ 를 USD 환산한 값', rationale: '호주 민간 시장은 Chemist/약국 체인 소매가를 USD 로 환산해 역산.' },
@@ -1588,7 +1589,8 @@ function _p2FillBaseFromReport() {
     ? Number(numHint)
     : _extractPriceHint(report.price_hint || '');
   if (!Number.isNaN(hint) && hint > 0) {
-    const pub = _p2Manual.public.find((x) => x.key === 'base_price');
+    // hint 는 _extractPriceHint 우선순위상 AUD 값 → base_aemp(AUD)에 직접 입력
+    const pub = _p2Manual.public.find((x) => x.key === 'base_aemp');
     const pri = _p2Manual.private.find((x) => x.key === 'base_het');
     if (pub) pub.value = hint;
     if (pri) pri.value = hint;
@@ -1693,11 +1695,24 @@ function _calcP2Manual() {
   const seg = _p2ManualSeg;
   const options = _p2Manual[seg].filter((x) => x.enabled);
   if (seg === 'public') {
-    const base = Number(options.find((x) => x.key === 'base_price')?.value || 0);
-    const ex = Number(options.find((x) => x.key === 'exchange')?.value || 1);
-    const ratio = Number(options.find((x) => x.key === 'pub_ratio')?.value || 30);
-    let price = base * ex * (ratio / 100);
-    const parts = [`USD ${base.toFixed(2)}`, `× ${ex.toFixed(4)}`, `× ${ratio}%`];
+    // 공공 역산: AEMP(AUD) × 환율 ÷ (1+수입상마진) ÷ (1+에이전트) = FOB(USD)
+    // 민간 Logic B 와 동일한 나눗셈 방식 (fob_calculator.py Logic A 와 정합)
+    const baseAud  = Number(options.find((x) => x.key === 'base_aemp')?.value || 0);
+    const ex       = Number(options.find((x) => x.key === 'exchange')?.value || 1);
+    const importer = Number(options.find((x) => x.key === 'importer')?.value ?? 20);
+    const agent    = Number(options.find((x) => x.key === 'agent')?.value ?? 5);
+
+    let price = baseAud * ex;
+    const parts = [`AUD ${baseAud.toFixed(2)}`, `× ${ex.toFixed(4)} (AUD→USD)`];
+
+    const impDiv = 1 + importer / 100;
+    price /= impDiv;
+    parts.push(`÷ ${impDiv.toFixed(3)} (수입상마진 ${importer}%)`);
+
+    const agentDiv = 1 + agent / 100;
+    price /= agentDiv;
+    parts.push(`÷ ${agentDiv.toFixed(3)} (에이전트 ${agent}%)`);
+
     options.forEach((opt) => {
       if (opt.type === 'pct_add_custom') {
         price *= (1 + Number(opt.value) / 100);
@@ -1707,7 +1722,7 @@ function _calcP2Manual() {
         parts.push(`+ USD ${Number(opt.value).toFixed(2)}`);
       }
     });
-    return { kup: Math.max(price, 0), formulaStr: `${parts.join('  ')}  =  KUP  USD ${Math.max(price, 0).toFixed(2)}` };
+    return { kup: Math.max(price, 0), formulaStr: `${parts.join('  ')}  =  FOB  USD ${Math.max(price, 0).toFixed(2)}` };
   }
 
   // 민간 (Logic B) — 호주 fob_calculator.py 공식 맞춤:
@@ -2352,9 +2367,10 @@ async function _handleCustomCrawlResult(job) {
     if (typeof _p2ApplyGstForReport === 'function') _p2ApplyGstForReport(synReport);
 
     if (typeof _p2Manual !== 'undefined') {
-      if (fob.logic === 'A' && Number.isFinite(fobAud)) {
-        const pub = _p2Manual.public.find((x) => x.key === 'base_price');
-        if (pub) pub.value = fobAud * audUsd;
+      if (fob.logic === 'A' && aempAud > 0) {
+        // base_aemp 는 AUD 단위 → AEMP(AUD) 그대로 채움
+        const pub = _p2Manual.public.find((x) => x.key === 'base_aemp');
+        if (pub) pub.value = aempAud;
       } else if (fob.logic === 'B' && retailAud > 0) {
         const pri = _p2Manual.private.find((x) => x.key === 'base_het');
         if (pri) pri.value = retailAud * audUsd;
@@ -2956,12 +2972,20 @@ resetProgress();
     return 'C';
   }
 
+  function _isFinalVerifiedBuyer(buyer) {
+    const sf = Array.isArray(buyer.source_flags) ? buyer.source_flags : [];
+    return sf.includes('final_verified');
+  }
+
   // ───── 리스트 아이템 (이름만 표시) ─────
   function renderBuyerListItem(buyer, idx) {
+    const verifiedBadge = _isFinalVerifiedBuyer(buyer)
+      ? '<span style="margin-left:8px;padding:2px 6px;border-radius:10px;background:#ecfdf5;color:#065f46;font-size:11px;font-weight:700;">최종검증</span>'
+      : '';
     return `
       <li class="p3-buyer-item" onclick="openBuyerCard(${idx})">
         <span class="p3-buyer-rank">${idx + 1}</span>
-        <span class="p3-buyer-name">${escHtml(buyer.company_name || '—')}</span>
+        <span class="p3-buyer-name">${escHtml(buyer.company_name || '—')}${verifiedBadge}</span>
         <span class="p3-buyer-arrow">›</span>
       </li>`;
   }
@@ -3008,6 +3032,9 @@ resetProgress();
 
     // AI 추천 근거 (3줄+)
     const reasonLines = _buildReasoningLines(buyer, tier, artg);
+    const finalVerifiedText = _isFinalVerifiedBuyer(buyer)
+      ? '<span class="fit-ok">완료 (수기/교차검증 근거 반영)</span>'
+      : '<span class="fit-low">미표시</span>';
 
     const modal = document.getElementById('buyer-card-modal');
     const overlay = document.getElementById('buyer-card-overlay');
@@ -3064,6 +3091,10 @@ resetProgress();
           <div class="buyer-fit-row">
             <span class="buyer-fit-label">수입 경험</span>
             <span class="buyer-fit-val">${importText}</span>
+          </div>
+          <div class="buyer-fit-row">
+            <span class="buyer-fit-label">최종 검증</span>
+            <span class="buyer-fit-val">${finalVerifiedText}</span>
           </div>
         </div>
       </div>
@@ -3145,10 +3176,6 @@ resetProgress();
       const dot = el.querySelector('.prog-dot');
       if (dot) dot.textContent = String(i + 1);
     }
-    const wrap = document.getElementById('p3-dl-wrap');
-    if (wrap) wrap.style.display = 'none';
-    const dlBtn = document.getElementById('p3-dl-btn');
-    if (dlBtn) dlBtn.disabled = true;
   }
 
   function _setP3StepActive(stepName) {
@@ -3378,15 +3405,8 @@ resetProgress();
         }
       }
 
-      // 5. 마무리 — 스테퍼 전부 완료 표시 + PDF 다운로드 활성
+      // 5. 마무리 — 스테퍼 전부 완료 표시
       _markP3AllDone();
-      const wrap = document.getElementById('p3-dl-wrap');
-      if (wrap) wrap.style.display = '';
-      const dlBtn = document.getElementById('p3-dl-btn');
-      if (dlBtn) {
-        dlBtn.disabled = false;
-        if (result.download_url) dlBtn.dataset.pdfUrl = result.download_url;
-      }
       // 최종 보고서 버튼 활성 (바이어 발굴 완료 시 표시)
       const finalWrap2 = document.getElementById('p3-final-report-wrap');
       if (finalWrap2) finalWrap2.style.display = '';
@@ -3488,17 +3508,6 @@ resetProgress();
       if (el) el.checked = false;
     });
     window.p3ResortBuyers();
-  };
-
-  // ───── PDF 다운로드 — run 에서 이미 생성된 파일 직접 열기 ─────
-  window.generateBuyersPdf = function () {
-    const dlBtn = document.getElementById('p3-dl-btn');
-    const url = dlBtn && dlBtn.dataset && dlBtn.dataset.pdfUrl;
-    if (url) {
-      window.open(url, '_blank');
-    } else {
-      alert('먼저 [▶ 바이어 발굴 실행] 을 눌러주세요');
-    }
   };
 
   // ───── 품목 변경 감지 — 자동 로드 아님, 리스트 초기화만 ─────

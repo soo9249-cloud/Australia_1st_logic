@@ -1999,6 +1999,15 @@ def _buyers_fetch_rows(product_id: str | None) -> list[dict[str, Any]]:
     return [r for r in rows if not (r.get("product_id") or "").startswith("_")]
 
 
+def _is_non_buyer_row(row: dict[str, Any]) -> bool:
+    """바이어 후보 PDF에서 제외할 비유통성 행 판정(명시적 '바이어 아님'만 제외)."""
+    text = " ".join(
+        str(row.get(k) or "")
+        for k in ("notes", "company_name", "annual_revenue_rank")
+    ).lower()
+    return "바이어 아님" in text or "buyer 아님" in text
+
+
 def _buyers_load_product_meta() -> dict[str, dict[str, Any]]:
     """crawler/au_products.json 메타 로드."""
     import json as _json
@@ -2145,6 +2154,9 @@ def render_buyers_pdf(
             story.append(PageBreak())
 
         meta = meta_map.get(pid) or {}
+        filtered_buyers = [b for b in buyers if not _is_non_buyer_row(b)]
+        if not filtered_buyers:
+            filtered_buyers = buyers
         pname = meta.get("product_name_ko") or pid
         pen = meta.get("product_name_en") or ""
         inns = " + ".join(meta.get("inn_components") or [])
@@ -2155,7 +2167,7 @@ def render_buyers_pdf(
         ))
         story.append(Paragraph("1. 바이어 후보 리스트 (현지 유통 가능 바이어)", s_sec))
         story.append(Paragraph(
-            f"성분: <b>{safe(inns)}</b> · 가격 케이스: {safe(meta.get('pricing_case'))} · 바이어 {len(buyers)}개",
+            f"성분: <b>{safe(inns)}</b> · 가격 케이스: {safe(meta.get('pricing_case'))} · 바이어 {len(filtered_buyers)}개",
             s_body,
         ))
         story.append(Paragraph(
@@ -2166,7 +2178,7 @@ def render_buyers_pdf(
 
         header = ["기업명", "주력상품", "이메일"]
         tbl_data: list[list[Any]] = [header]
-        for b in buyers:
+        for b in filtered_buyers:
             cats = b.get("therapeutic_categories") or []
             if isinstance(cats, list):
                 cats_str = ", ".join(str(c) for c in cats if str(c).strip()) or "완제품 유통/판매"
@@ -2207,7 +2219,7 @@ def render_buyers_pdf(
         story.append(Spacer(1, 12))
         story.append(Paragraph("2. 바이어 정보 상세", s_sec))
 
-        for b in buyers[:10]:
+        for b in filtered_buyers[:10]:
             cats = b.get("therapeutic_categories") or []
             if isinstance(cats, list):
                 cats_str = " · ".join(str(c) for c in cats) or "—"

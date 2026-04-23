@@ -157,7 +157,9 @@ def query_revenue(company_name: str) -> dict[str, Any]:
         "You are a pharmaceutical market analyst for the Australian market. "
         "Respond ONLY in valid JSON. Use 2024 data when available, "
         "fallback to 2023. Cite sources (prefer ASX annual reports, "
-        "IBISWorld, Medicines Australia, news outlets like AFR/ABC/SMH)."
+        "IBISWorld, Medicines Australia, news outlets like AFR/ABC/SMH). "
+        "CRITICAL: Focus on Australian legal entity and Australian operations only. "
+        "Do not treat global HQ numbers as Australia numbers unless explicitly labeled as estimate."
     )
     user = (
         f"Company: {company_name} (Australia)\n\n"
@@ -189,7 +191,8 @@ def query_therapeutic_areas(company_name: str) -> dict[str, Any]:
         "You are a pharmaceutical market research analyst. "
         "Answer ONLY in valid JSON. "
         "Include at least 2 source URLs. "
-        "Use standard ATC-like therapeutic area names."
+        "Use standard ATC-like therapeutic area names. "
+        "CRITICAL: prioritize Australia-market portfolio over global portfolio."
     )
     user = (
         f"Company: {company_name} (Australia or global, but focus on Australian portfolio)\n\n"
@@ -215,7 +218,8 @@ def query_pharmacy_chain(company_name: str) -> dict[str, Any]:
     """
     system = (
         "You are a pharmaceutical market research analyst. "
-        "Answer ONLY in valid JSON."
+        "Answer ONLY in valid JSON. "
+        "CRITICAL: only consider pharmacy chain operation in Australia."
     )
     user = (
         f"Company: {company_name} (Australia)\n\n"
@@ -237,7 +241,8 @@ def query_import_experience(company_name: str) -> dict[str, Any]:
     """
     system = (
         "You are a pharmaceutical market research analyst. "
-        "Answer ONLY in valid JSON."
+        "Answer ONLY in valid JSON. "
+        "CRITICAL: only consider importer/distributor track record in Australia."
     )
     user = (
         f"Company: {company_name} (Australia)\n\n"

@@ -1796,7 +1796,11 @@ function _renderP2Manual() {
   const consFormula = `FOB USD ${calc.kup.toFixed(2)} × 1.10 = USD ${cons.toFixed(2)}`;
   _p2LastScenarios = { mode: 'manual', seg: _p2ManualSeg, base: calc.kup, agg, avg, cons, formulaStr: calc.formulaStr, aggReason, avgReason, consReason, aggFormula, avgFormula, consFormula, rationaleLines: [] };
 
-  // ── 3열 시나리오 카드 즉시 반영 (실시간 환율로 KRW/AUD 보조줄 계산) ──
+  // ── 계산 공식 미리보기 (슬라이더 조작 때마다 실시간 표시) ──────────────────────
+  const formulaEl = document.getElementById('p2-formula-preview');
+  if (formulaEl) formulaEl.textContent = calc.formulaStr || '—';
+
+  // ── 3열 시나리오 카드 + p2-manual-scenarios 반영 (▶ 계산 버튼 후) ──────────────
   if (_p2ManualCalculated) {
     const rt    = window._exchangeRates || {};
     const usdKrw = Number(_p2ScenarioRaw.usd_krw) || Number(rt.usd_krw) || 0;
@@ -1812,6 +1816,34 @@ function _renderP2Manual() {
       if (subEl) subEl.textContent = audTxt ? `${krwTxt} / ${audTxt}` : krwTxt;
       _p2ScenarioRaw[col] = price;   // recalcP2Col 기준값 동기화
     });
+
+    // p2-manual-scenarios: 직접입력 탭 전용 시나리오 요약 카드
+    const scenEl = document.getElementById('p2-manual-scenarios');
+    if (scenEl) {
+      const fmtUSD = (v) => `USD ${Number(v).toFixed(2)}`;
+      const fmtKRW = (v) => {
+        const n = Number(v) * (usdKrw || 0);
+        if (n >= 1e8) return `${(n / 1e8).toFixed(2)}억원`;
+        if (n >= 1e4) return `${(n / 1e4).toFixed(1)}만원`;
+        return n > 0 ? `${Math.round(n).toLocaleString('ko-KR')}원` : '—';
+      };
+      const fmtAUD = (v) => audUsd > 0 ? `${(Number(v) / audUsd).toFixed(2)} AUD` : '';
+      const rows = [
+        { cls: 'agg',  label: '저가 진입 (Penetration Pricing)', price: agg,  reason: aggReason,  formula: aggFormula  },
+        { cls: 'avg',  label: '기준가 (Reference Pricing)',       price: avg,  reason: avgReason,  formula: avgFormula  },
+        { cls: 'cons', label: '프리미엄 (Premium Pricing)',        price: cons, reason: consReason, formula: consFormula },
+      ];
+      scenEl.innerHTML = rows.map(r => `
+        <div class="p2-scenario p2-scenario--${r.cls}">
+          <div class="p2-scenario-top">
+            <span class="p2-scenario-name">${_escHtml(r.label)}</span>
+            <span class="p2-scenario-price">${fmtUSD(r.price)}
+              <span style="font-size:11px;color:var(--muted);margin-left:4px;">≈ ${fmtKRW(r.price)}${fmtAUD(r.price) ? ' / ' + fmtAUD(r.price) : ''}</span>
+            </span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">${_escHtml(r.formula)}</div>
+        </div>`).join('');
+    }
   }
 }
 
@@ -1822,8 +1854,11 @@ function _p2OptionCardHtml(opt) {
   const inputVal = opt.unit === 'rate' ? Number(opt.value).toFixed(4)
                  : opt.unit === '%'    ? Number(opt.value).toFixed(0)
                  :                       Number(opt.value).toFixed(2);
-  // 단위 표시
-  const unitLabel = opt.unit === '%' ? '%' : opt.unit === 'rate' ? '' : 'USD';
+  // 단위 표시 (%, rate, AUD, USD 케이스 명시)
+  const unitLabel = opt.unit === '%' ? '%'
+                  : opt.unit === 'rate' ? ''
+                  : opt.unit === 'AUD' ? 'AUD'
+                  : 'USD';
 
   return `
     <div class="p2-step-card">

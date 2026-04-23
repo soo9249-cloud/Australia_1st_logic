@@ -2013,11 +2013,13 @@ def render_buyers_pdf(
                  alignment=TA_CENTER, textColor=C_NAVY, spaceAfter=6)
     s_date = ps("BDate", fontName=base_font, fontSize=9, leading=12,
                 alignment=TA_CENTER, textColor=C_MUTED)
-    s_sec = ps("BSec", fontName=bold_font, fontSize=11, leading=14,
+    s_sec = ps("BSec", fontName=bold_font, fontSize=11, leading=16,
                textColor=C_NAVY, spaceBefore=10, spaceAfter=6)
-    s_body = ps("BBody", fontName=base_font, fontSize=9, leading=13,
+    s_sub = ps("BSub", fontName=bold_font, fontSize=10, leading=15,
+               textColor=C_NAVY, spaceBefore=6, spaceAfter=3)
+    s_body = ps("BBody", fontName=base_font, fontSize=10, leading=15,
                 textColor=C_BODY, alignment=TA_LEFT)
-    s_small = ps("BSmall", fontName=base_font, fontSize=8, leading=11,
+    s_small = ps("BSmall", fontName=base_font, fontSize=9, leading=13,
                  textColor=C_MUTED, alignment=TA_LEFT)
 
     def tier_color(t: str):
@@ -2031,6 +2033,16 @@ def render_buyers_pdf(
         if v is None or v == "":
             return dash
         return str(v)
+
+    def _rx(text: str) -> str:
+        return ((text or "")
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;"))
+
+    def _trunc(text: str, limit: int = 320) -> str:
+        s = (text or "").strip()
+        return s if len(s) <= limit else s[:limit] + "…"
 
     rows_by_pid: dict[str, list[dict[str, Any]]] = {}
     for r in rows:
@@ -2069,64 +2081,59 @@ def render_buyers_pdf(
             f"【 {safe(pname)} 】 {safe(pen, '')}",
             s_sec,
         ))
-        story.append(Paragraph("1. 바이어 후보 리스트 (전체 10개사)", s_sec))
+        story.append(Paragraph("1. 바이어 후보 리스트 (현지 유통 가능 바이어)", s_sec))
         story.append(Paragraph(
-            f"성분: <b>{safe(inns)}</b> · 가격 케이스: {safe(meta.get('pricing_case'))} · "
-            f"바이어 TOP {len(buyers)} (최대 10)",
+            f"성분: <b>{safe(inns)}</b> · 가격 케이스: {safe(meta.get('pricing_case'))} · 바이어 {len(buyers)}개",
             s_body,
+        ))
+        story.append(Paragraph(
+            "필터링 조건: 원료의약품(API) 기업·다국적 글로벌 기업·오리지널 제약사 제외 / 완제품(FDF) 판매 기업 우선",
+            s_small,
         ))
         story.append(Spacer(1, 6))
 
-        header = ["#", "회사명 (바이어)", "매출 등급", "공장", "총점", "티어"]
+        header = ["기업명", "주력상품", "이메일"]
         tbl_data: list[list[Any]] = [header]
         for b in buyers:
-            tier = _buyers_tier_from_source_flags(b.get("source_flags"))
+            cats = b.get("therapeutic_categories") or []
+            if isinstance(cats, list):
+                cats_str = ", ".join(str(c) for c in cats if str(c).strip()) or "완제품 유통/판매"
+            else:
+                cats_str = str(cats or "완제품 유통/판매")
+            company_name = f"{safe(b.get('company_name'))} (#{b.get('rank') or '?'})"
             tbl_data.append([
-                str(b.get("rank") or "?"),
-                Paragraph(safe(b.get("company_name")), s_body),
-                Paragraph(safe(b.get("annual_revenue_rank"), "-")[:30], s_small),
-                "Y" if b.get("has_au_factory") == "Y" else "-",
-                str(b.get("psi_total") or 0),
-                tier,
+                Paragraph(company_name, s_body),
+                Paragraph(_rx(_trunc(cats_str, 120)), s_body),
+                Paragraph(safe(b.get("email"), "비공개"), s_body),
             ])
 
         col_widths = [
-            CONTENT_W * 0.05,
             CONTENT_W * 0.38,
-            CONTENT_W * 0.28,
-            CONTENT_W * 0.07,
-            CONTENT_W * 0.10,
-            CONTENT_W * 0.12,
+            CONTENT_W * 0.42,
+            CONTENT_W * 0.20,
         ]
         tbl = Table(tbl_data, colWidths=col_widths, repeatRows=1)
         tstyle = [
             ("FONTNAME", (0, 0), (-1, -1), base_font),
             ("FONTNAME", (0, 0), (-1, 0), bold_font),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("FONTSIZE", (0, 0), (-1, -1), 10),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("BACKGROUND", (0, 0), (-1, 0), C_NAVY),
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("ALIGN", (1, 1), (1, -1), "LEFT"),
-            ("ALIGN", (2, 1), (2, -1), "LEFT"),
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("BOX", (0, 0), (-1, -1), 0.5, C_BORDER),
             ("INNERGRID", (0, 0), (-1, -1), 0.3, C_BORDER),
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, C_ALT]),
-            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ("TOPPADDING", (0, 0), (-1, -1), 5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
         ]
-        for ridx in range(1, len(tbl_data)):
-            tier_val = tbl_data[ridx][5]
-            tstyle.append(("BACKGROUND", (5, ridx), (5, ridx), tier_color(tier_val)))
-            tstyle.append(("TEXTCOLOR", (5, ridx), (5, ridx), colors.white))
-            tstyle.append(("FONTNAME", (5, ridx), (5, ridx), bold_font))
         tbl.setStyle(TableStyle(tstyle))
         story.append(tbl)
 
-        story.append(Spacer(1, 10))
-        story.append(Paragraph("2. 우선 접촉 바이어 상세 정보 (상위 10개사)", s_sec))
+        story.append(Spacer(1, 12))
+        story.append(Paragraph("2. 바이어 정보 상세", s_sec))
 
         for b in buyers[:10]:
             cats = b.get("therapeutic_categories") or []
@@ -2145,32 +2152,48 @@ def render_buyers_pdf(
             if b.get("is_gpce_exhibitor"): assocs.append("GPCE")
             assoc_str = " · ".join(assocs) or "—"
 
-            detail_lines = [
-                f"<b>#{b.get('rank')} {safe(b.get('company_name'))}</b> "
-                f"(총점 {b.get('psi_total')}/100)",
-                f"매출 등급: {safe(b.get('annual_revenue_rank'))} · "
-                f"호주 공장: {('Y — ' + locs_str) if b.get('has_au_factory') == 'Y' else 'N'}",
-                f"치료영역: {cats_str} · 소속 협회: {assoc_str}",
-                f"TGA ARTG {b.get('tga_artg_count') or 0} 건 · "
-                f"5지표 점수: 매출 {b.get('psi_sales_scale') or 0} · "
-                f"성분 {b.get('psi_pipeline') or 0} · "
-                f"공장 {b.get('psi_manufacturing') or 0} · "
-                f"수입 {b.get('psi_import_exp') or 0} · "
-                f"약국 {b.get('psi_pharmacy_chain') or 0}",
-            ]
-            if b.get("website"):
-                detail_lines.append(f"웹사이트: {safe(b.get('website'))}")
-            if b.get("email"):
-                detail_lines.append(f"이메일: {safe(b.get('email'))}")
-            if b.get("phone"):
-                detail_lines.append(f"전화: {safe(b.get('phone'))}")
-            notes = b.get("notes")
-            if notes:
-                detail_lines.append(f"<i>메모: {safe(notes)[:300]}</i>")
+            company_title = f"{b.get('rank') or '?'} ) {safe(b.get('company_name'))}"
+            story.append(Paragraph(company_title, s_sub))
 
-            for line in detail_lines:
-                story.append(Paragraph(line, s_body))
-            story.append(Spacer(1, 6))
+            notes = safe(b.get("notes"), "공개 자료 요약 기반 기업 프로필")
+            story.append(Paragraph(f"- 기업 개요: {_rx(_trunc(notes, 320))}", s_body))
+
+            story.append(Paragraph("- 추천 이유 (5가지 주요 기준):", s_body))
+            story.append(Paragraph(
+                f"  ① 매출 규모: {safe(b.get('annual_revenue_rank'))} (점수 {b.get('psi_sales_scale') or 0})",
+                s_body,
+            ))
+            story.append(Paragraph(
+                f"  ② 파이프라인(중요): {cats_str} / 점수 {b.get('psi_pipeline') or 0}",
+                s_body,
+            ))
+            story.append(Paragraph(
+                f"  ③ 제조소 보유: {('보유 - ' + locs_str) if b.get('has_au_factory') == 'Y' else '미보유'} "
+                f"(점수 {b.get('psi_manufacturing') or 0})",
+                s_body,
+            ))
+            story.append(Paragraph(
+                f"  ④ 수입 경험: TGA ARTG {b.get('tga_artg_count') or 0}건 (점수 {b.get('psi_import_exp') or 0})",
+                s_body,
+            ))
+            story.append(Paragraph(
+                f"  ⑤ 약국 체인/유통 채널: {assoc_str} (점수 {b.get('psi_pharmacy_chain') or 0})",
+                s_body,
+            ))
+
+            story.append(Paragraph("- 기본 정보:", s_body))
+            story.append(Paragraph(f"  주소: {safe(b.get('state'), '미확보')}", s_body))
+            story.append(Paragraph(f"  연락처: {safe(b.get('phone'), '미확보')} / {safe(b.get('email'), '미확보')}", s_body))
+            story.append(Paragraph("  설립 연도: 미확보", s_body))
+            story.append(Paragraph(f"  홈페이지: {safe(b.get('website'), '미확보')}", s_body))
+            story.append(Paragraph(f"  파이프라인: {cats_str}", s_body))
+            story.append(Paragraph(f"- 기업 규모: {safe(b.get('annual_revenue_rank'), '매출/직원수 미확보')}", s_body))
+            story.append(Paragraph(
+                f"- 등록 제품: TGA ARTG 등록 {b.get('tga_artg_count') or 0}건 (CPHI 등 외부 등록 제품은 별도 조사 필요)",
+                s_body,
+            ))
+            story.append(Paragraph("* 출처: Gemini 딥 리서치, Perplexity 분석", s_small))
+            story.append(Spacer(1, 8))
 
     story.append(Spacer(1, 12))
     story.append(Paragraph(

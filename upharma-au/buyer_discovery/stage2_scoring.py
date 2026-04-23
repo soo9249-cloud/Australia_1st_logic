@@ -123,6 +123,50 @@ def _score_manufacturing(canon_key: str, mfr_matches: dict) -> int:
     return 0
 
 
+_AU_STATE_TOKENS = (
+    "NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT",
+    "NEW SOUTH WALES", "VICTORIA", "QUEENSLAND", "WESTERN AUSTRALIA",
+    "SOUTH AUSTRALIA", "TASMANIA", "AUSTRALIAN CAPITAL TERRITORY",
+    "NORTHERN TERRITORY", "AUSTRALIA", "AUS",
+)
+
+
+def _is_au_local_location(text: str) -> bool:
+    s = (text or "").strip().upper()
+    if not s:
+        return False
+    return any(tok in s for tok in _AU_STATE_TOKENS)
+
+
+def _resolve_local_au_factory(entry_hc: dict, mfr_match: dict) -> tuple[bool, list[str], str]:
+    """호주 현지 제조소 여부 확정.
+
+    우선순위:
+      1) hardcode.factory.has == Y 이고 locations 가 호주 지명을 포함하면 True
+      2) hardcode 가 Y 이고 mfr_match.has_factory 도 True 면 True (TGA 제조소 검증 보강)
+      3) hardcode 비어있으면 mfr_match.has_factory + state 호주 지명일 때만 True
+    """
+    factory_hc = (entry_hc or {}).get("factory") or {}
+    locs = factory_hc.get("locations")
+    hc_locs = [str(x).strip() for x in (locs if isinstance(locs, list) else []) if str(x).strip()]
+    hc_has_y = str(factory_hc.get("has") or "").upper() == "Y"
+    m_has = bool((mfr_match or {}).get("has_factory"))
+    m_state = str((mfr_match or {}).get("state") or "").strip()
+
+    if hc_has_y:
+        if hc_locs and any(_is_au_local_location(x) for x in hc_locs):
+            return True, hc_locs, "hardcode_au_location"
+        if m_has:
+            out_locs = hc_locs or ([m_state] if m_state else [])
+            return True, out_locs, "hardcode_plus_tga_match"
+        # Y인데 호주 지명/location 근거가 없으면 보수적으로 False 처리
+        return False, hc_locs, "hardcode_unverified_location"
+
+    if m_has and _is_au_local_location(m_state):
+        return True, [m_state], "tga_mfr_match"
+    return False, hc_locs or ([m_state] if m_state else []), "no_au_factory_evidence"
+
+
 def _hardcode_rank_to_score(rank_text: str) -> int:
     """hardcode 의 annual_revenue_rank 문자열 → 0~100 점수.
 
@@ -507,6 +551,10 @@ def main(dry_run: bool = False) -> None:
             # 하드코딩 시트 (딥리서치 45 완성본)
             hc = hardcoded_buyers.get(canon_key) or {}
             factory_hc = hc.get("factory") or {}
+            mfr_match = mfr_matches.get(canon_key, {}) or {}
+            has_au_local_factory, au_factory_locs, factory_source = _resolve_local_au_factory(
+                hc, mfr_match
+            )
 
             # annual_revenue_rank 는 이미 _score_sales 에서 hardcode 우선 결정됨
             # static["sales_rank"] 가 곧 최종 표시용 문자열.
@@ -528,20 +576,9 @@ def main(dry_run: bool = False) -> None:
                 "state_location": row.get("state"),
                 "therapeutic_categories_en": cat_entry.get("areas_en") or [],
                 "therapeutic_categories_kr": cat_entry.get("areas_kr") or [],
-                "has_au_factory": (
-                    factory_hc.get("has") == "Y"
-                    if factory_hc
-                    else bool(mfr_matches.get(canon_key, {}).get("has_factory"))
-                ),
-                "factory_locations": (
-                    factory_hc.get("locations")
-                    if factory_hc.get("locations")
-                    else (
-                        [mfr_matches.get(canon_key, {}).get("state")]
-                        if mfr_matches.get(canon_key, {}).get("has_factory")
-                        else []
-                    )
-                ),
+                "has_au_factory": has_au_local_factory,
+                "factory_locations": au_factory_locs,
+                "factory_evidence_source": factory_source,
                 "notes": hc.get("notes"),
                 "evidence_urls": (
                     (revenue.get("revenue") or {}).get(canon_key, {}).get("evidence_urls") or []
@@ -656,6 +693,7 @@ def main(dry_run: bool = False) -> None:
                         "ma" if entry["is_ma"] else None,
                         "gbma" if entry["is_gbma"] else None,
                         "gpce" if entry["is_gpce"] else None,
+                        "factory_au_local_verified" if entry.get("has_au_factory") else "factory_au_local_no_evidence",
                         # Jisoo 수기 하드코드(딥리서치 교차검증) 근거가 붙은 행은 최종검증 표시
                         "final_verified" if (
                             bool((entry.get("notes") or "").strip())

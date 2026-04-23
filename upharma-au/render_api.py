@@ -3050,6 +3050,47 @@ def _perplexity_fetch_refs(row: dict[str, Any], api_key: str) -> list[dict[str, 
     return refs
 
 
+def _fallback_market_blocks_from_row(row: dict[str, Any]) -> dict[str, str]:
+    """시장조사 보고서 안전 모드 블록(LLM 키/호출 실패 시)."""
+    pname = str(row.get("product_name_ko") or row.get("product_code") or "해당 품목")
+    inn = str(row.get("inn_normalized") or "성분 미확보")
+    pbs_code = row.get("pbs_code")
+    aemp = row.get("aemp_aud")
+    dpmq = row.get("dpmq_aud") or row.get("pbs_dpmq")
+    retail = row.get("retail_price_aud")
+    tga_found = bool(row.get("tga_found"))
+    pbs_found = bool(row.get("pbs_found"))
+
+    def _fmt_aud(v: Any) -> str:
+        try:
+            n = float(v)
+            return f"AUD {n:.2f}" if n > 0 else "미확보"
+        except Exception:
+            return "미확보"
+
+    return {
+        "block2_market": (
+            f"{pname} ({inn})의 호주 시장 데이터는 현재 DB 적재값 기준으로 요약함. "
+            "시장 규모·경쟁 강도 등 추가 정량지표는 후속 검증이 필요함."
+        ),
+        "block2_regulatory": (
+            f"TGA 등록 상태: {'등록' if tga_found else '미등록/미확보'}, "
+            f"PBS 등재 상태: {'등재' if pbs_found else '미등재/미확보'}, "
+            f"PBS 코드: {pbs_code or '미확보'}."
+        ),
+        "block2_trade": "공공(PBS)·민간(약국/병원) 채널을 분리 검토하고, 규제 충족 경로를 우선 확보해야 함.",
+        "block2_procurement": (
+            f"공식 기준 가격: AEMP {_fmt_aud(aemp)}, DPMQ {_fmt_aud(dpmq)}, 소매 참고가 {_fmt_aud(retail)}."
+        ),
+        "block2_channel": "초기 진입은 데이터 신뢰도가 높은 채널부터 단계적으로 확장하는 전략이 적절함.",
+        "block3_channel": "규제 적합성과 유통 실행력을 동시에 갖춘 현지 파트너를 우선 협의 대상으로 설정함.",
+        "block3_pricing": "공식 가격과 유통 마진을 기준으로 보수적 가격대부터 협상 후 단계 조정하는 접근이 바람직함.",
+        "block3_partners": "TGA/PBS 대응 경험이 있는 스폰서·도매 파트너 중심으로 후보군을 압축해야 함.",
+        "block3_risks": "규제 일정 지연, 환율 변동, 경쟁사 가격 대응, 공급 안정성 리스크를 동시 관리해야 함.",
+        "block4_regulatory": "안전 모드로 생성된 임시 요약임. 상세 근거 문구는 AI 정상 연결 후 재생성 권장.",
+    }
+
+
 @app.post("/api/report/generate")
 def generate_report(payload: dict[str, Any]) -> JSONResponse:
     """예외 시 Render 로그에 스택이 남도록 래핑 (원인 조사용)."""
@@ -3089,11 +3130,11 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     perplexity_key = os.environ.get("PERPLEXITY_API_KEY", "").strip()
     openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    llm_model_used = _CLAUDE_MODEL
+    use_fallback_blocks = False
     if not anthropic_key:
-        raise HTTPException(
-            status_code=500,
-            detail="ANTHROPIC_API_KEY 환경변수가 필요합니다 (.env 확인).",
-        )
+        llm_model_used = "rule-based-fallback"
+        use_fallback_blocks = True
 
     # 1) DB 에서 품목 조회
     try:
@@ -3114,10 +3155,18 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
     if isinstance(row, dict):
         _normalize_au_product_row(row)
 
-    # 2) Claude Haiku 4.5 호출 — 크롤링 row 해석 → 10개 블록 생성
-    blocks = _claude_generate_blocks(row, anthropic_key)
-    # 2b) v8이 경쟁·시장·TGA·가격 스냅샷을 비우는 경우, 동일 row(au_products)로 보강
-    blocks = _enrich_v8_blocks_from_au_row(blocks, row)
+    # 2) Claude Haiku 4.5 호출 — 실패 시 안전 모드 fallback
+    if use_fallback_blocks:
+        blocks = _fallback_market_blocks_from_row(row)
+    else:
+        try:
+            blocks = _claude_generate_blocks(row, anthropic_key)
+            # 2b) v8이 경쟁·시장·TGA·가격 스냅샷을 비우는 경우, 동일 row(au_products)로 보강
+            blocks = _enrich_v8_blocks_from_au_row(blocks, row)
+        except Exception as exc:
+            logger.warning("시장분석 AI 생성 실패 → 안전 모드 전환: %s", exc)
+            blocks = _fallback_market_blocks_from_row(row)
+            llm_model_used = "rule-based-fallback"
 
     # 3) 하이브리드 논문 검색 — Semantic Scholar → PubMed → Perplexity 순 폴백
     #    카테고리당 1개씩 총 3개 공신력 있는 출처 (논문 우선).
@@ -3139,7 +3188,7 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
     update_data: dict[str, Any] = {
         **flat_blocks,
         "perplexity_refs": refs if refs else None,
-        "llm_model": _CLAUDE_MODEL,
+        "llm_model": llm_model_used,
         "llm_generated_at": generated_at,
     }
     try:
@@ -3253,7 +3302,7 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
             {
                 "ok": True,
                 "product_id": product_id,
-                "llm_model": _CLAUDE_MODEL,
+                "llm_model": llm_model_used,
                 "llm_generated_at": generated_at,
                 "blocks": flat_blocks,
                 "market_analysis_v8": blocks if is_v8_market_blocks(blocks) else None,

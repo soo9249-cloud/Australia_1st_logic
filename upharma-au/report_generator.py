@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+import re
 from typing import Any
 
 from stage1_schema import (
@@ -30,6 +31,35 @@ from stage1_schema import (
 ROOT = Path(__file__).resolve().parent
 
 _FONT_CACHE: str | None = None
+
+
+_TERM_ANNOTATIONS_KO: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\bLogic\s*A\b(?!\s*\()", re.IGNORECASE), "Logic A (역산 로직 A)"),
+    (re.compile(r"\bLogic\s*B\b(?!\s*\()", re.IGNORECASE), "Logic B (역산 로직 B)"),
+    (re.compile(r"\bTop\s*10\b(?!\s*\()", re.IGNORECASE), "Top 10 (상위 10개)"),
+    (re.compile(r"\bARTG\b(?!\s*\()"), "ARTG (호주 의약품 등록부)"),
+    (re.compile(r"\bPBAC\b(?!\s*\()"), "PBAC (약값 심사 위원회)"),
+    (re.compile(r"\bAEMP\b(?!\s*\()"), "AEMP (정부 승인 출고가)"),
+    (re.compile(r"\bDPMQ\b(?!\s*\()"), "DPMQ (최대 처방량 총약가)"),
+    (re.compile(r"\bFOB\b(?!\s*\()"), "FOB (본선인도가격)"),
+    (re.compile(r"\bPBS\b(?!\s*\()"), "PBS (호주 의약품 급여 제도)"),
+    (re.compile(r"\bTGA\b(?!\s*\()"), "TGA (호주 식약청)"),
+    (re.compile(r"\bGST\b(?!\s*\()"), "GST (부가가치세)"),
+    (re.compile(r"\bGPCE\b(?!\s*\()"), "GPCE (호주 약사 컨퍼런스)"),
+    (re.compile(r"\bCPHI\b(?!\s*\()"), "CPHI (국제 제약 박람회)"),
+    (re.compile(r"\bAPI\b(?!\s*\()"), "API (원료의약품)"),
+    (re.compile(r"\bUSD\b(?!\s*\()"), "USD (미국 달러)"),
+    (re.compile(r"\bAUD\b(?!\s*\()"), "AUD (호주 달러)"),
+    (re.compile(r"\bKRW\b(?!\s*\()"), "KRW (원화)"),
+]
+
+
+def _annotate_terms_ko(text: str) -> str:
+    """보고서 본문의 핵심 영문 용어에 한국어 괄호 설명을 자동 병기."""
+    out = text or ""
+    for pattern, repl in _TERM_ANNOTATIONS_KO:
+        out = pattern.sub(repl, out)
+    return out
 
 
 def _register_korean_font() -> str:
@@ -201,7 +231,7 @@ def _build_product_info_flowables(
     )
 
     def _rx(text: str) -> str:
-        return ((text or "")
+        return (_annotate_terms_ko(text or "")
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;"))
@@ -467,7 +497,7 @@ def _render_pdf_legacy_v2(
                    textColor=colors.HexColor("#6B7280"), leading=10, wordWrap="CJK")
 
     def _rx(text: str) -> str:
-        return ((text or "")
+        return (_annotate_terms_ko(text or "")
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;"))
@@ -794,7 +824,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
 
     def _rx(text: str) -> str:
         return (
-            (text or "")
+            _annotate_terms_ko(text or "")
             .replace("&", "&amp;")
             .replace("<", "&lt;")
             .replace(">", "&gt;")
@@ -1201,7 +1231,7 @@ def _render_pdf_stage1_v3(payload: ReportR1Payload, out_path: Path) -> None:
 
     def _rx(text: str) -> str:
         return (
-            (text or "")
+            _annotate_terms_ko(text or "")
             .replace("&", "&amp;")
             .replace("<", "&lt;")
             .replace(">", "&gt;")
@@ -1596,7 +1626,7 @@ def render_p2_pdf(
                    textColor=colors.HexColor("#6B7280"), leading=11, wordWrap="CJK")
 
     def _rx(text: str) -> str:
-        return ((text or "")
+        return (_annotate_terms_ko(text or "")
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;"))
@@ -1763,6 +1793,13 @@ def render_p2_pdf(
     row_dpmq = row.get("dpmq_aud") or row.get("pbs_dpmq") or row.get("pbs_dpmq_aud")
     row_retail = row.get("retail_price_aud")
     dispatch_source = (dispatch_inputs.get("aemp_source") or dispatch_inputs.get("retail_source") or "미확인")
+    source_label_map = {
+        "crawler": "실시간 수집 데이터",
+        "seed": "기준 시드 데이터",
+        "dpmq_reverse": "DPMQ 역산값",
+        "hardcoded": "수기 확정값",
+    }
+    dispatch_source_label = source_label_map.get(str(dispatch_source), str(dispatch_source))
     alpha_pct_val = dispatch_inputs.get("alpha_market_uplift_pct")
     try:
         alpha_pct_num = int(round(float(alpha_pct_val)))
@@ -1796,10 +1833,10 @@ def render_p2_pdf(
     benchmark_rows = [
         [Paragraph(_rx("기준 가격"), s_cell_h), Paragraph(_rx(f"USD {benchmark_usd:.2f}" if benchmark_usd > 0 else "USD 미확보"), s_cell)],
         [Paragraph(_rx("산정 방식"), s_cell_h), Paragraph(_rx(pricing_method_text), s_cell)],
-        [Paragraph(_rx("크롤링 AEMP"), s_cell_h), Paragraph(_rx(_fmt_aud(row_aemp)), s_cell)],
-        [Paragraph(_rx("크롤링 DPMQ"), s_cell_h), Paragraph(_rx(_fmt_aud(row_dpmq)), s_cell)],
-        [Paragraph(_rx("크롤링 소매가"), s_cell_h), Paragraph(_rx(_fmt_aud(row_retail)), s_cell)],
-        [Paragraph(_rx("계산 입력 출처"), s_cell_h), Paragraph(_rx(str(dispatch_source)), s_cell)],
+        [Paragraph(_rx("공식 AEMP"), s_cell_h), Paragraph(_rx(_fmt_aud(row_aemp)), s_cell)],
+        [Paragraph(_rx("공식 DPMQ"), s_cell_h), Paragraph(_rx(_fmt_aud(row_dpmq)), s_cell)],
+        [Paragraph(_rx("시장 참고 소매가"), s_cell_h), Paragraph(_rx(_fmt_aud(row_retail)), s_cell)],
+        [Paragraph(_rx("가격 근거 출처"), s_cell_h), Paragraph(_rx(dispatch_source_label), s_cell)],
         [Paragraph(_rx("시장 구분"), s_cell_h), Paragraph(_rx("공공 / 민간"), s_cell)],
     ]
     benchmark_tbl = Table(benchmark_rows, colWidths=[CONTENT_W * 0.24, CONTENT_W * 0.76])
@@ -1816,7 +1853,7 @@ def render_p2_pdf(
             Paragraph(_rx("시장가"), s_hdr),
         ],
         [
-            Paragraph(_rx("크롤링 근거 종합"), s_cell),
+            Paragraph(_rx("시장 근거 종합"), s_cell),
             Paragraph(_rx(product_name), s_cell),
             Paragraph(_rx((f"{inn} {strength} {dosage}").strip() or "미확보"), s_cell),
             Paragraph(_rx(_trunc(p2_blocks.get("block_extract", "시장가 데이터 미확보"), 320)), s_cell),
@@ -2050,7 +2087,7 @@ def render_buyers_pdf(
         return str(v)
 
     def _rx(text: str) -> str:
-        return ((text or "")
+        return (_annotate_terms_ko(text or "")
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;"))

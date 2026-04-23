@@ -1246,9 +1246,15 @@ function recalcP2Col(col) {
   const audKrw = Number(_p2ScenarioRaw.aud_krw) || 0;
   const usdKrw = audUsd > 0 ? audKrw / audUsd : 0;
 
-  // 기준가: 모달이 열려 있으면 p2ci-base-{col} 값, 아니면 AI 결과 그대로
-  const rawBase  = parseFloat(document.getElementById('p2ci-base-' + col)?.value);
-  let priceUsd   = (rawBase > 0) ? rawBase : (_p2ScenarioRaw[col] || 0);
+  // 기준가: 해당 컬럼 모달이 열려 있을 때만 p2ci-base-{col} 사용.
+  // 모달이 닫혀 있으면 반드시 _p2ScenarioRaw 직접 참조 — 이전 모달 세션의 스테일값
+  // (공공↔민간 전환·제품 재실행 후에도 잔존)이 카드 가격을 덮어쓰는 이중역산 버그 방지.
+  const rawBase  = (_modalActiveCol === col)
+    ? parseFloat(document.getElementById('p2ci-base-' + col)?.value)
+    : NaN;
+  let priceUsd   = (!Number.isNaN(rawBase) && rawBase > 0)
+    ? rawBase
+    : (_p2ScenarioRaw[col] || 0);
 
   // _p2ColData 옵션 적용 (pct_add/pct_deduct/multiply/divide/abs_add/abs_deduct/aud_add/aud_deduct)
   const opts = _p2ColData[col]?.opts || [];

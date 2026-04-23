@@ -5375,8 +5375,16 @@ def buyers_list_summary() -> JSONResponse:
         raise HTTPException(status_code=500, detail=f"DB 조회 실패: {exc}") from exc
 
     meta = _load_buyer_au_products_meta()
+    # 레거시 행 방어: rank 없는(예: 크롤 임시 적재) 데이터는 TOP 요약에서 제외
+    valid_rows = [
+        r for r in rows
+        if isinstance(r, dict)
+        and isinstance(r.get("rank"), int)
+        and 1 <= int(r.get("rank")) <= 10
+    ]
+
     grouped: dict[str, dict[str, Any]] = {}
-    for r in rows:
+    for r in valid_rows:
         pid = r["product_id"]
         if pid.startswith("_"):
             continue  # _test 같은 레거시 rows
@@ -5429,6 +5437,14 @@ def buyers_for_product(product_id: str) -> JSONResponse:
     except Exception as exc:
         logger.error("buyers/%s 조회 실패: %s", product_id, exc)
         raise HTTPException(status_code=500, detail=f"DB 조회 실패: {exc}") from exc
+
+    # 레거시 행 방어: rank 없는 행/범위 밖 행 제거 후 TOP10만 반환
+    rows = [
+        r for r in rows
+        if isinstance(r, dict)
+        and isinstance(r.get("rank"), int)
+        and 1 <= int(r.get("rank")) <= 10
+    ]
 
     if not rows:
         raise HTTPException(

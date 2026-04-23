@@ -507,6 +507,7 @@ def main(dry_run: bool = False) -> None:
     # 2. 품목별 TOP 10 선별 + A/B/C 티어 + psi_total
     # ========================================================================
     product_rankings: dict[str, list] = {}
+    ranking_meta: dict[str, dict] = {}
     total_upserts = 0
     tier_dist: Counter = Counter()
     distributors_scored: list[dict] = []  # 루프 후 리포트용 — 품목 무관 동일
@@ -589,14 +590,36 @@ def main(dry_run: bool = False) -> None:
             })
 
         # A티어 우선 → B티어 → C티어 순 안에서 psi_total 내림차순
-        # ───── TOP 10 = 순수 스폰서 후보 (유통 파트너 강제 슬롯 없음) ─────
-        # D_dist (Sigma/EBOS/Wesfarmers 등) 는 TOP 10 제외 → 별도 distribution_partners
+        # 기본 원칙: 일반 바이어(A/B/C) 우선.
+        # 예외: 엄격 필터로 10개 미만이면 유통 파트너(D_dist)에서 부족분만 보충.
         tier_order = {"A": 0, "B": 1, "C": 2}
         distributors_scored = [x for x in scored if x.get("tier") == "D_dist"]
         general_scored = [x for x in scored if x.get("tier") != "D_dist"]
         general_scored.sort(key=lambda x: (tier_order.get(x["tier"], 9), -x["psi_total"]))
         distributors_scored.sort(key=lambda x: -x["psi_total"])
         top10 = general_scored[:10]
+        fallback_added = 0
+        if len(top10) < 10 and distributors_scored:
+            needed = 10 - len(top10)
+            fallback = distributors_scored[:needed]
+            for f in fallback:
+                f["selection_note"] = "fallback_distributor_fill"
+            top10.extend(fallback)
+            fallback_added = len(fallback)
+        final_count = len(top10)
+        shortfall = max(0, 10 - final_count)
+        ranking_meta[pid] = {
+            "requested_top_n": 10,
+            "general_candidates": len(general_scored),
+            "distributor_candidates": len(distributors_scored),
+            "fallback_distributor_added": fallback_added,
+            "final_count": final_count,
+            "shortfall": shortfall,
+            "shortfall_reason": (
+                "엄격 필터(API/다국적/오리지널 제외) 및 품목 매칭 조건 충족 기업 수 부족"
+                if shortfall > 0 else ""
+            ),
+        }
 
         # 순위 부여 (1~10)
         for rnk, entry in enumerate(top10, 1):
@@ -610,7 +633,8 @@ def main(dry_run: bool = False) -> None:
             f"A={sum(1 for x in top10 if x['tier']=='A')} "
             f"B={sum(1 for x in top10 if x['tier']=='B')} "
             f"C={sum(1 for x in top10 if x['tier']=='C')} "
-            f"(유통파트너 별도: {len(distributors_scored)}개)",
+            f"D_dist={sum(1 for x in top10 if x['tier']=='D_dist')} "
+            f"(후보 유통파트너: {len(distributors_scored)}개, 부족분 보충: {fallback_added}개)",
             flush=True,
         )
 
@@ -639,6 +663,7 @@ def main(dry_run: bool = False) -> None:
             "tier_distribution": dict(tier_dist),
         },
         "rankings": product_rankings,
+        "ranking_meta": ranking_meta,
         # 유통 채널 파트너 (TOP 10 바이어와 별개) — PDF 보고서 하단 섹션 활용
         "distribution_partners": dist_partners_out,
     }
@@ -667,6 +692,7 @@ def main(dry_run: bool = False) -> None:
         rows_to_insert: list[dict] = []
         for entry in top10:
             scores = entry["scores"]
+            tier_flag = entry["tier"] if entry["tier"] in {"A", "B", "C"} else "C"
             rows_to_insert.append({
                 "product_id": pid,
                 "rank": entry["rank"],
@@ -688,7 +714,8 @@ def main(dry_run: bool = False) -> None:
                 "tga_artg_count":    entry["tga_artg_count"],
                 "source_flags": [
                     f for f in [
-                        "tier_" + entry["tier"],
+                        "tier_" + tier_flag,
+                        "fallback_distributor_fill" if entry.get("selection_note") == "fallback_distributor_fill" else None,
                         "ma" if entry["is_ma"] else None,
                         "gbma" if entry["is_gbma"] else None,
                         "gpce" if entry["is_gpce"] else None,
@@ -701,7 +728,10 @@ def main(dry_run: bool = False) -> None:
                     ] if f
                 ],
                 "evidence_urls":     entry["evidence_urls"],
-                "reasoning":         entry.get("notes") or f"tier={entry['tier']}",
+                "reasoning":         entry.get("notes") or (
+                    "후보 수 부족으로 유통 파트너 보충 편성" if entry.get("selection_note") == "fallback_distributor_fill"
+                    else f"tier={entry['tier']}"
+                ),
                 "notes":             entry.get("notes"),
                 # 실시간 크롤링 수집 연락처 (GBMA 본문·GPCE Algolia)
                 "website":           entry.get("website"),

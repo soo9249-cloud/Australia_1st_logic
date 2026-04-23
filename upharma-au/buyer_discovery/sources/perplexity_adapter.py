@@ -30,6 +30,14 @@ _MODEL = "sonar-pro"
 _TIMEOUT = 60.0
 _MAX_RETRIES = 3
 
+_BUYER_FILTER_POLICY = (
+    "Candidate quality policy (must apply): "
+    "Exclude API-only raw-material companies, multinational global companies with overwhelmingly global footprint, "
+    "and originator-only pharma companies. "
+    "Prefer Australian local companies that can buy finished dosage forms (FDF, especially ETC/Rx) "
+    "and distribute them in Australia, ideally with Australian local manufacturing capability."
+)
+
 
 def _get_api_key() -> str | None:
     """`.env` 에서 PERPLEXITY_API_KEY 읽기. 없으면 None."""
@@ -159,7 +167,8 @@ def query_revenue(company_name: str) -> dict[str, Any]:
         "fallback to 2023. Cite sources (prefer ASX annual reports, "
         "IBISWorld, Medicines Australia, news outlets like AFR/ABC/SMH). "
         "CRITICAL: Focus on Australian legal entity and Australian operations only. "
-        "Do not treat global HQ numbers as Australia numbers unless explicitly labeled as estimate."
+        "Do not treat global HQ numbers as Australia numbers unless explicitly labeled as estimate. "
+        + _BUYER_FILTER_POLICY
     )
     user = (
         f"Company: {company_name} (Australia)\n\n"
@@ -173,6 +182,8 @@ def query_revenue(company_name: str) -> dict[str, Any]:
         "비공개 법인이면 '비공개 (Pty Ltd)' 명시. 추정치면 '추정' 명시.\n"
         "  - 'sources': array of 2+ URLs (ASX annual report > IBISWorld > news)\n\n"
         "Rules:\n"
+        "  - Apply buyer filter policy: API-only / multinational-global / originator-only are exclusion targets.\n"
+        "  - If excluded by policy, set rank='unknown', revenue_aud_millions=null and clearly write exclusion reason in 'reasoning'.\n"
         "  - If Australian subsidiary revenue not disclosed, write Korean note in "
         "'reasoning' and set 'revenue_aud_millions' to null.\n"
         "  - Prefer Rx (prescription) revenue over total. If only total, note in reasoning.\n"
@@ -192,7 +203,8 @@ def query_therapeutic_areas(company_name: str) -> dict[str, Any]:
         "Answer ONLY in valid JSON. "
         "Include at least 2 source URLs. "
         "Use standard ATC-like therapeutic area names. "
-        "CRITICAL: prioritize Australia-market portfolio over global portfolio."
+        "CRITICAL: prioritize Australia-market portfolio over global portfolio. "
+        + _BUYER_FILTER_POLICY
     )
     user = (
         f"Company: {company_name} (Australia or global, but focus on Australian portfolio)\n\n"
@@ -205,7 +217,7 @@ def query_therapeutic_areas(company_name: str) -> dict[str, Any]:
         "OTC/Consumer Health, Nutrition\n\n"
         "Return JSON with keys:\n"
         "  - 'areas': array of 1-5 therapeutic area names\n"
-        "  - 'reasoning': 1-2 sentences\n"
+        "  - 'reasoning': 1-2 sentences (if API-only/global/originator-only, explicitly mark as exclusion target)\n"
         "  - 'sources': array of 2+ URLs\n"
     )
     return _call_perplexity(system, user, max_tokens=500)
@@ -219,7 +231,8 @@ def query_pharmacy_chain(company_name: str) -> dict[str, Any]:
     system = (
         "You are a pharmaceutical market research analyst. "
         "Answer ONLY in valid JSON. "
-        "CRITICAL: only consider pharmacy chain operation in Australia."
+        "CRITICAL: only consider pharmacy chain operation in Australia. "
+        + _BUYER_FILTER_POLICY
     )
     user = (
         f"Company: {company_name} (Australia)\n\n"
@@ -242,7 +255,8 @@ def query_import_experience(company_name: str) -> dict[str, Any]:
     system = (
         "You are a pharmaceutical market research analyst. "
         "Answer ONLY in valid JSON. "
-        "CRITICAL: only consider importer/distributor track record in Australia."
+        "CRITICAL: only consider importer/distributor track record in Australia. "
+        + _BUYER_FILTER_POLICY
     )
     user = (
         f"Company: {company_name} (Australia)\n\n"

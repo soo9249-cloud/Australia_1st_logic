@@ -1437,6 +1437,7 @@ function renderP2ColOptions(col) {
         <span class="p2c-chain-name">${_escHtml(step.name)}</span>
         <span class="p2c-chain-formula">${formulaStr}</span>
         <div class="p2c-chain-input-wrap">${inputHtml}</div>
+        <button type="button" class="p2c-opt-del" onclick="removeP2ChainStep('${col}',${idx})" title="이 단계 제거">×</button>
       </div>`;
     });
     html += `<div class="p2c-chain-divider"></div>`;
@@ -1473,6 +1474,14 @@ function renderP2ColOptions(col) {
 
   container.innerHTML = html;
   recalcP2Col(col);
+}
+
+/** 체인 step 삭제 (idx = chain 배열 인덱스) */
+function removeP2ChainStep(col, idx) {
+  const chain = _p2ColData[col]?.chain;
+  if (!Array.isArray(chain)) return;
+  chain.splice(idx, 1);
+  renderP2ColOptions(col);
 }
 
 /** 체인 파라미터 값 수정 (idx = chain 배열 인덱스, exchange 타입은 건드리지 않음) */

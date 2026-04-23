@@ -1414,7 +1414,18 @@ select:focus { box-shadow: 0 0 0 3px rgba(23,63,120,.15); }
 .empty-page .ep-msg  { font-size: 15px; font-weight: 800; color: var(--navy); opacity: .55; }
 .empty-page .ep-sub  { font-size: 12px; }
 
-/* ── 23. 보고서 로딩 스피너 (border 없이 conic-gradient + mask) ────────────── */
+/* ── 23-A. 인라인 로딩 dot (팀원 스타일 — 작은 채워진 원 + pulse) ─────────── */
+.p1-loading-dot {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: rgba(23,63,120,.45);
+  box-shadow: 0 0 0 3px rgba(23,63,120,.10);
+  animation: pulse-dot 1.2s infinite;
+  flex-shrink: 0;
+}
+
+/* ── 23-B. 보고서 로딩 스피너 (PDF 카드 전용 — conic-gradient + mask) ──────── */
 .report-loading-spinner {
   display: inline-block;
   width: 16px; height: 16px;
@@ -3114,10 +3125,10 @@ a.news-card-panel #news-list > a.irow.news-item:hover {
   background: rgba(23,63,120,.12);
   margin: 8px 0;
 }
-/* 체인 한 줄 */
+/* 체인 한 줄 — 이름 | 공식 | 입력 | 삭제버튼 */
 .p2c-chain-row {
   display: grid;
-  grid-template-columns: minmax(0,1fr) 68px 72px;
+  grid-template-columns: minmax(0,1fr) 68px 72px 26px;
   align-items: center;
   column-gap: 4px;
   padding: 5px 6px;

@@ -1882,6 +1882,29 @@ def render_p2_pdf(
     story.append(benchmark_tbl)
     story.append(Spacer(1, 8))
 
+    def _resolve_reference_company() -> str:
+        """거래처 참고 가격 표의 업체명(우선순위: 현지 스폰서 → 스폰서 목록 → 오리지널 스폰서)."""
+        sponsor = str(row.get("tga_sponsor") or "").strip()
+        if sponsor:
+            return sponsor
+        sponsors = row.get("tga_sponsors")
+        if isinstance(sponsors, list):
+            for s in sponsors:
+                s_txt = str(s or "").strip()
+                if s_txt:
+                    sponsor = s_txt
+                    break
+        originator = str(row.get("originator_sponsor") or "").strip()
+        if sponsor and originator and sponsor != originator:
+            return f"{sponsor} (오리지널 스폰서: {originator})"
+        if sponsor:
+            return sponsor
+        if originator:
+            return originator
+        return "미확보 (현지 스폰서 확인 필요)"
+
+    reference_company = _resolve_reference_company()
+
     story.append(Paragraph(_rx("3. 거래처 참고 가격"), s_section))
     ref_rows = [
         [
@@ -1891,7 +1914,7 @@ def render_p2_pdf(
             Paragraph(_rx("시장가(USD 기준)"), s_hdr),
         ],
         [
-            Paragraph(_rx("시장 근거 종합"), s_cell),
+            Paragraph(_rx(reference_company), s_cell),
             Paragraph(_rx(product_name), s_cell),
             Paragraph(_rx((f"{inn} {strength} {dosage}").strip() or "미확보"), s_cell),
             Paragraph(_rx(f"USD {benchmark_usd:.2f}" if benchmark_usd > 0 else "USD 미확보"), s_cell),

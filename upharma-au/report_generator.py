@@ -1763,6 +1763,21 @@ def render_p2_pdf(
     row_dpmq = row.get("dpmq_aud") or row.get("pbs_dpmq") or row.get("pbs_dpmq_aud")
     row_retail = row.get("retail_price_aud")
     dispatch_source = (dispatch_inputs.get("aemp_source") or dispatch_inputs.get("retail_source") or "미확인")
+    alpha_pct_val = dispatch_inputs.get("alpha_market_uplift_pct")
+    try:
+        alpha_pct_num = int(round(float(alpha_pct_val)))
+    except Exception:
+        alpha_pct_num = 20
+    if logic == "A":
+        pricing_method_text = (
+            f"AEMP (Approved Ex-Manufacturer Price, 정부 승인 출고가) 기반 + 시장 보정(α={alpha_pct_num}%) + FOB 역산"
+        )
+    elif logic == "B":
+        pricing_method_text = (
+            "소매가 기반 역산 (GST·약국·도매·수입상 마진 반영, α 미적용)"
+        )
+    else:
+        pricing_method_text = "병원 tender 수기 FOB (α 미적용)"
 
     def _fmt_aud(v: Any) -> str:
         try:
@@ -1780,7 +1795,7 @@ def render_p2_pdf(
         benchmark_usd = 0.0
     benchmark_rows = [
         [Paragraph(_rx("기준 가격"), s_cell_h), Paragraph(_rx(f"USD {benchmark_usd:.2f}" if benchmark_usd > 0 else "USD 미확보"), s_cell)],
-        [Paragraph(_rx("산정 방식"), s_cell_h), Paragraph(_rx("AEMP (Approved Ex-Manufacturer Price, 정부 승인 출고가) 기반 + 시장 보정(α) + FOB 역산"), s_cell)],
+        [Paragraph(_rx("산정 방식"), s_cell_h), Paragraph(_rx(pricing_method_text), s_cell)],
         [Paragraph(_rx("크롤링 AEMP"), s_cell_h), Paragraph(_rx(_fmt_aud(row_aemp)), s_cell)],
         [Paragraph(_rx("크롤링 DPMQ"), s_cell_h), Paragraph(_rx(_fmt_aud(row_dpmq)), s_cell)],
         [Paragraph(_rx("크롤링 소매가"), s_cell_h), Paragraph(_rx(_fmt_aud(row_retail)), s_cell)],

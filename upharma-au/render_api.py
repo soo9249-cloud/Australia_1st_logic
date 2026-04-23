@@ -1645,8 +1645,11 @@ _CLAUDE_SYSTEM_PROMPT = (
     "【양식 매핑 규칙】\n"
     "- 1) 의료 거시환경 파악: market_overview.paragraph 에 시장 사이즈·거시 지표를 2~4문장으로 요약합니다.\n"
     "- 2) 무역/규제 환경: regulatory_risk.artg_paragraph·pbac_paragraph 에 등록 여부(등재/미등재/신규 등록 필요성), Fast Track 가능 경로, 관세 혜택 맥락을 포함합니다.\n"
+    "  또한 entry_strategy.rationale 에 수출 조건(FOB 책임 경계, 스폰서 측 통관·ARTG·라벨링 책임, GMP/COA/Batch Record 문서 전달)을 간결히 반영합니다.\n"
     "- 3) 참고 가격: price_snapshot 에 크롤링 가격(AEMP/DPMQ/코드)을 입력 JSON 그대로 반영하고, 출처 맥락(PBS/TGA 등)을 references 에 연결합니다.\n"
     "- 4) 리스크/조건: regulatory_risk.prescription_limit_paragraph 및 operational_risk/product_specific_risk 에 심사 소요기간·난이도·운영 리스크를 기술합니다.\n"
+    "  PBS 제한급여(Restricted Benefit)·Authority(사전 승인) 단서가 row에 있으면 4-1(데이터·운영 유의사항)에 "
+    "처방 범위 제한 및 MOQ 협상 영향(수요 상한 가능성)을 반드시 포함합니다.\n"
     "- 5) 근거 및 출처: references 에 논문/기관 출처를 채우고 허구 출처를 금지합니다.\n\n"
     "【분량·최신성 규칙】\n"
     "- 시장분석 본문은 핵심 정보 중심으로 간결하게 작성해 PDF 기준 1페이지 내에 들어갈 밀도를 목표로 합니다.\n"
@@ -1903,6 +1906,59 @@ def _v8_price_snapshot_from_row(
     return d, changed
 
 
+def _build_rx_limit_note_from_row(row: dict[str, Any]) -> str:
+    """row 텍스트 단서로 처방 제한/Authority/MOQ 유의사항을 안전하게 생성."""
+    product = str(row.get("product_name_ko") or row.get("product_code") or "해당 품목").strip()
+    inn = str(row.get("inn_normalized") or "성분 미확보").strip()
+    pbs_code = str(row.get("pbs_code") or row.get("pbs_item_code") or "").strip().upper()
+
+    # 검증된 품목 규칙: PBS 3093T(hydroxycarbamide) — 제한 질환/CML·PV + Authority 조건
+    if pbs_code == "3093T" or "hydroxycarbamide" in inn.lower() or "hydroxyurea" in inn.lower():
+        return (
+            f"{product} 성분 {inn}은(는) 호주 PBS의 Restricted Benefit으로 운영되어 "
+            "만성 골수성 백혈병(CML) 및 진성 적혈구 증가증(PV) 환자군 중심으로 처방이 제한될 수 있습니다. "
+            "또한 Authority(사전 승인) 처방 절차가 요구될 수 있어 연간 처방 건수에 실질적 상한이 생길 수 있으므로, "
+            "수입상과 MOQ(최소 주문량) 협상 시 해당 수요 특성을 반영해야 합니다."
+        )
+
+    signal_blob = " ".join(
+        str(row.get(k) or "")
+        for k in (
+            "pbs_formulary",
+            "nsw_note",
+            "reason_code",
+            "pbs_brand_name",
+            "match_type",
+            "_pplx_pbs_restriction_signal",
+        )
+    )
+    signal_blob_l = signal_blob.lower()
+    has_restricted = any(k in signal_blob_l for k in ("restricted benefit", "restricted"))
+    has_authority = "authority" in signal_blob_l
+
+    disease_hints: list[str] = []
+    if "cml" in signal_blob_l:
+        disease_hints.append("만성 골수성 백혈병(CML)")
+    if "polycythemia vera" in signal_blob_l or "pv" in signal_blob_l:
+        disease_hints.append("진성 적혈구 증가증(PV)")
+
+    scope_line = ""
+    if disease_hints:
+        scope_line = (
+            f"현재 수집 데이터 기준으로 주요 제한 대상 환자군은 {', '.join(disease_hints)} 관련 처방으로 확인됩니다. "
+        )
+
+    if has_restricted or has_authority:
+        return (
+            f"{product} 성분 {inn}은(는) PBS 급여에서 제한급여(Restricted Benefit) 또는 "
+            "Authority(사전 승인) 처방 조건이 적용될 수 있습니다. "
+            f"{scope_line}"
+            "해당 조건은 일반 외래 처방약 대비 연간 처방 건수 상한으로 작용할 수 있으므로, "
+            "수입상과 MOQ(최소 주문량) 협상 시 보수적 수요 가정을 반영해야 합니다."
+        ).strip()
+    return ""
+
+
 def _enrich_v8_blocks_from_au_row(blocks: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
     """Haiku 시장보고서 v8 출력을 au_products row로 보강(빈 표·미확보 완화)."""
     from stage1_schema import MarketAnalysisV8, is_v8_market_blocks
@@ -1941,6 +1997,28 @@ def _enrich_v8_blocks_from_au_row(blocks: dict[str, Any], row: dict[str, Any]) -
             if apn:
                 d["regulatory_risk"] = {**rr, "artg_paragraph": apn}
                 changed = True
+
+    # 2-3 협력 우선순위 근거(무역/규제 환경)에 수출 조건(FOB 책임 경계)을 공통 보강
+    es = d.get("entry_strategy")
+    if isinstance(es, dict):
+        rat = str(es.get("rationale") or "").strip()
+        export_cond = (
+            "FOB 조건에서 한국유나이티드제약의 역할은 한국 항구 선적 시점까지이며, "
+            "그 이후 국제운송·호주 관세 통관·ARTG 등재·라벨링은 호주 스폰서(수입상) 책임입니다. "
+            "제조사 문서(GMP 인증서, COA, Batch Record) 전달 체계를 계약 조건에 반영해야 합니다."
+        )
+        if "FOB" not in rat or "스폰서" not in rat:
+            d["entry_strategy"] = {**es, "rationale": f"{rat} {export_cond}".strip()}
+            changed = True
+
+    # 4-1 데이터·운영 유의사항: row에서 제한급여/Authority 단서를 찾은 경우에만 보강(환각 방지)
+    op = str(d.get("operational_risk") or "").strip()
+    rx_limit = _build_rx_limit_note_from_row(row)
+    if rx_limit:
+        has_core_rx = all(token in op for token in ("Restricted Benefit", "Authority", "MOQ"))
+        if not has_core_rx:
+            d["operational_risk"] = f"{op} {rx_limit}".strip()
+            changed = True
     d, c2 = _v8_price_snapshot_from_row(d, row)
     changed = changed or c2
     if not changed:
@@ -2236,6 +2314,13 @@ _CLAUDE_P2_SYSTEM_PROMPT = (
     "- PBAC 임상우월성·비교임상, 상업적 철수 이력은 ‘제도상 이런 논의가 있을 수 있음’·‘데이터상 이력이 있음’ 수준으로 쓰고, "
     "최종 필요 여부·재진입 가능성은 개별 심의·검토 대상임을 밝힙니다.\n"
     "- 독자에게 특정 칸을 직접 채우라고 지시하는 문구는 쓰지 않습니다.\n\n"
+    "【FOB 역할·책임 분담 — 필수 반영】\n"
+    "- 본 보고서는 FOB (본선 인도가) 기준입니다. "
+    "한국유나이티드제약의 책임 범위는 한국 항구 선적 시점까지임을 명시합니다.\n"
+    "- 이후 국제운송, 호주 관세 통관, ARTG 등재, 라벨링은 호주 스폰서(수입상) 책임임을 "
+    "block_strategy 또는 block_risks 중 최소 1개 필드에 반드시 반영합니다.\n"
+    "- 한국유나이티드제약이 제공하는 제조사 문서(GMP 인증서, COA, Batch Record) 전달 책임을 "
+    "운영 조건으로 함께 서술합니다.\n\n"
     "【품질 규칙】\n"
     "1. block_market_macro 는 3~4문장, 나머지 block_extract · block_fob_intro · "
     "block_strategy · block_risks · block_positioning 각 3~5문장 (문장 40~100자).\n"
@@ -2345,11 +2430,13 @@ def _fallback_p2_blocks(
         ),
         "block_strategy": (
             f"{'공공' if segment == 'public' else '민간'} 채널의 규제·유통 조건을 반영해 기준가 시나리오를 기본안으로 운영하고, "
-            "입찰/유통 반응에 따라 저가·프리미엄 시나리오를 보조적으로 적용합니다."
+            "입찰/유통 반응에 따라 저가·프리미엄 시나리오를 보조적으로 적용합니다. "
+            "FOB 기준에서 한국유나이티드제약의 책임은 한국 항구 선적까지이며, 이후 국제운송·통관·ARTG·라벨링은 호주 스폰서 책임입니다."
         ),
         "block_risks": (
             "주요 리스크는 규제 심사 일정, 급여 조건 변동, 환율 및 유통 마진 변동성입니다. "
-            "누락 데이터는 계약 전 재검증이 필요합니다."
+            "누락 데이터는 계약 전 재검증이 필요합니다. "
+            "한국유나이티드제약은 GMP 인증서, COA, Batch Record를 스폰서에 제공해야 하며 문서 정합 미흡 시 통관·등록 지연 리스크가 있습니다."
         ),
         "block_positioning": (
             "경쟁 제품 대비 포지셔닝은 급여 적합성, 공급 안정성, 유통 채널 협상력을 기준으로 평가해야 하며 "
@@ -2869,6 +2956,32 @@ def _perplexity_top1(query: str, api_key: str) -> dict[str, Any] | None:
     return None
 
 
+def _fetch_pplx_pbs_restriction_signal(row: dict[str, Any], api_key: str) -> str:
+    """Perplexity로 PBS 제한급여/Authority 단서를 보조 수집(없으면 빈 문자열)."""
+    if not api_key:
+        return ""
+    inn = str(row.get("inn_normalized") or row.get("product_name_ko") or "").strip()
+    if not inn:
+        return ""
+    query = (
+        f'Australia PBS listing for "{inn}" restricted benefit authority required '
+        "clinical criteria patient group indications. "
+        "Return concise evidence sentence with official PBS context."
+    )
+    top = _perplexity_top1(query, api_key)
+    if not top:
+        return ""
+    snippet = str(top.get("snippet") or "").strip()
+    if not snippet:
+        return ""
+    s_low = snippet.lower()
+    has_restricted = ("restricted benefit" in s_low) or ("restricted" in s_low)
+    has_authority = "authority" in s_low
+    if not (has_restricted or has_authority):
+        return ""
+    return snippet[:500]
+
+
 # ── 신뢰도 계산 ─────────────────────────────────────────────────────
 # 원래 아는 정보(품목명·INN·HS·제형·함량)는 신뢰도에서 제외. 실 크롤링으로 가져와야
 # 하는 7개 필드만 체크해서 "수집 성공률" 을 confidence 로 재정의.
@@ -3241,6 +3354,8 @@ def _generate_report_core(payload: dict[str, Any]) -> JSONResponse:
     row = rows[0]
     if isinstance(row, dict):
         _normalize_au_product_row(row)
+        # DB 단서가 약하면 Perplexity에서 제한급여/Authority 텍스트 단서를 보조 수집
+        row["_pplx_pbs_restriction_signal"] = _fetch_pplx_pbs_restriction_signal(row, perplexity_key)
 
     # 2) Claude Haiku 4.5 호출 — 실패 시 안전 모드 fallback
     if use_fallback_blocks:

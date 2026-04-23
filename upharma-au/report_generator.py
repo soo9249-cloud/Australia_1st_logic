@@ -1018,7 +1018,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
     story.append(Paragraph(_rx("2-2. 우선 접근 파트너 방향성"), s_sub))
     story.append(Paragraph(_rx(_trunc(es.partner_direction, 420)), s_cell))
     story.append(Paragraph(_rx("2-3. 협력 우선순위 근거"), s_sub))
-    story.append(Paragraph(_rx(_trunc(es.rationale, 420)), s_cell))
+    story.append(Paragraph(_rx(_trunc(es.rationale, 1200)), s_cell))
     story.append(Spacer(1, 18))
 
     story.append(Paragraph(_rx("3. 참고 가격"), s_sec))
@@ -1064,7 +1064,7 @@ def _render_pdf_market_v8(payload: ReportR1Payload, out_path: Path) -> None:
 
     story.append(Paragraph(_rx("4. 리스크 / 조건"), s_sec))
     story.append(Paragraph(_rx("4-1. 데이터 · 운영 유의사항"), s_sub))
-    story.append(Paragraph(_rx(_trunc(v8.operational_risk, 480)), s_cell))
+    story.append(Paragraph(_rx(_trunc(v8.operational_risk, 1200)), s_cell))
     story.append(Paragraph(_rx("4-2. 본 품목 고유 리스크"), s_sub))
     story.append(Paragraph(_rx(_trunc(v8.product_specific_risk, 420)), s_cell))
 
@@ -1991,6 +1991,11 @@ def render_p2_pdf(
     )
     story.append(Paragraph(footer_para, s_cell_sm))
     story.append(Spacer(1, 6))
+    story.append(Paragraph(_rx("FOB 조건 책임 분담"), s_sub))
+    story.append(Paragraph(_rx("· 한국유나이티드제약 책임: 한국 항구 선적 시점까지(제조·출하)."), s_cell_sm))
+    story.append(Paragraph(_rx("· 호주 스폰서(수입상) 책임: 국제운송, 호주 관세 통관, ARTG 등재, 라벨링."), s_cell_sm))
+    story.append(Paragraph(_rx("· 제조사 제공 문서: GMP 인증서, COA (시험 성적서), Batch Record (배치 제조 기록)."), s_cell_sm))
+    story.append(Spacer(1, 6))
     story.append(
         Paragraph(
             _rx(
@@ -2194,6 +2199,45 @@ def render_buyers_pdf(
         s = (text or "").strip()
         return s if len(s) <= limit else s[:limit] + "…"
 
+    _THERAPY_LABELS_KO: dict[str, str] = {
+        "Oncology": "종양학(항암)",
+        "Cardiovascular": "심혈관",
+        "Respiratory": "호흡기",
+        "CNS_Neurology": "중추신경/신경과",
+        "Immunology": "면역",
+        "Infectious_Disease": "감염질환",
+        "Diabetes_Endocrine": "당뇨/내분비",
+        "Gastrointestinal": "소화기",
+        "Dermatology": "피부과",
+        "Ophthalmology": "안과",
+        "Rare_Disease": "희귀질환",
+        "Vaccine": "백신",
+        "Imaging_Contrast": "영상진단/조영제",
+        "Pain_Anesthesia": "통증/마취",
+        "Hematology": "혈액",
+        "Womens_Health": "여성건강",
+        "Mens_Health": "남성건강",
+        "OTC_Consumer_Health": "일반의약품/컨슈머헬스",
+        "Nutrition": "영양",
+    }
+
+    def _format_therapy_with_ko(cats: Any, sep: str = ", ") -> str:
+        if isinstance(cats, list):
+            vals = [str(c).strip() for c in cats if str(c).strip()]
+        else:
+            vals = [str(cats).strip()] if str(cats or "").strip() else []
+        if not vals:
+            return "완제품 유통/판매"
+        out: list[str] = []
+        for v in vals:
+            ko = _THERAPY_LABELS_KO.get(v)
+            out.append(f"{v} ({ko})" if ko else v)
+        return sep.join(out)
+
+    def _has_info(v: Any) -> bool:
+        s = str(v or "").strip().lower()
+        return bool(s and s not in {"unknown", "미확보", "비공개", "—"})
+
     rows_by_pid: dict[str, list[dict[str, Any]]] = {}
     for r in rows:
         rows_by_pid.setdefault(r["product_id"], []).append(r)
@@ -2249,10 +2293,7 @@ def render_buyers_pdf(
         tbl_data: list[list[Any]] = [header]
         for b in filtered_buyers:
             cats = b.get("therapeutic_categories") or []
-            if isinstance(cats, list):
-                cats_str = ", ".join(str(c) for c in cats if str(c).strip()) or "완제품 유통/판매"
-            else:
-                cats_str = str(cats or "완제품 유통/판매")
+            cats_str = _format_therapy_with_ko(cats, ", ")
             company_name = f"{safe(b.get('company_name'))} (#{b.get('rank') or '?'})"
             tbl_data.append([
                 Paragraph(company_name, s_body),
@@ -2286,14 +2327,12 @@ def render_buyers_pdf(
         story.append(tbl)
 
         story.append(Spacer(1, 12))
+        story.append(PageBreak())
         story.append(Paragraph("2. 바이어 정보 상세", s_sec))
 
         for b in filtered_buyers[:10]:
             cats = b.get("therapeutic_categories") or []
-            if isinstance(cats, list):
-                cats_str = " · ".join(str(c) for c in cats) or "—"
-            else:
-                cats_str = str(cats)
+            cats_str = _format_therapy_with_ko(cats, " · ")
             locs = b.get("factory_locations") or []
             if isinstance(locs, list):
                 locs_str = ", ".join(str(x) for x in locs if x) or "—"
@@ -2313,41 +2352,39 @@ def render_buyers_pdf(
             story.append(Paragraph(f"- 기업 개요: {_rx(_trunc(notes, 320))}", s_body))
             story.append(Spacer(1, 2))
 
-            story.append(Paragraph("- 추천 이유 (5가지 주요 기준):", s_body))
+            revenue_info = safe(b.get("annual_revenue_rank"), "미확보")
+            has_revenue = _has_info(revenue_info)
+            has_pipeline = bool(cats_str and cats_str != "완제품 유통/판매")
+            has_factory = b.get("has_au_factory") == "Y"
+            tga_cnt = int(b.get("tga_artg_count") or 0)
+            has_import = tga_cnt > 0
+            has_channel = bool(assocs)
+
+            story.append(Paragraph("- 핵심 지표 (5가지):", s_body))
             story.append(Paragraph(
-                f"  ① 매출 규모: {safe(b.get('annual_revenue_rank'))} (점수 {b.get('psi_sales_scale') or 0})",
+                f"  ① 매출 규모 정보: {'있음' if has_revenue else '없음'} ({revenue_info})",
                 s_body,
             ))
             story.append(Paragraph(
-                f"  ② 파이프라인(중요): {cats_str} / 점수 {b.get('psi_pipeline') or 0}",
+                f"  ② 파이프라인(완제품/치료영역): {'있음' if has_pipeline else '없음'} ({cats_str})",
                 s_body,
             ))
             story.append(Paragraph(
-                f"  ③ 제조소 보유: {('보유 - ' + locs_str) if b.get('has_au_factory') == 'Y' else '미보유'} "
-                f"(점수 {b.get('psi_manufacturing') or 0})",
+                f"  ③ 호주 현지 제조소: {'있음' if has_factory else '없음'}"
+                f"{(' - ' + locs_str) if has_factory else ''}",
                 s_body,
             ))
             story.append(Paragraph(
-                f"  ④ 수입 경험: TGA ARTG {b.get('tga_artg_count') or 0}건 (점수 {b.get('psi_import_exp') or 0})",
+                f"  ④ 수입/등록 경험: {'있음' if has_import else '없음'} (TGA ARTG {tga_cnt}건)",
                 s_body,
             ))
             story.append(Paragraph(
-                f"  ⑤ 약국 체인/유통 채널: {assoc_str} (점수 {b.get('psi_pharmacy_chain') or 0})",
+                f"  ⑤ 약국 체인/유통 채널 연계: {'있음' if has_channel else '없음'} ({assoc_str})",
                 s_body,
             ))
             story.append(Spacer(1, 2))
+            story.append(Paragraph(f"- AI 추천 이유: {_rx(_trunc(notes, 260))}", s_body))
 
-            story.append(Paragraph("- 기본 정보:", s_body))
-            story.append(Paragraph(f"  주소: {safe(b.get('state'), '미확보')}", s_body))
-            story.append(Paragraph(f"  연락처: {safe(b.get('phone'), '미확보')} / {safe(b.get('email'), '미확보')}", s_body))
-            story.append(Paragraph("  설립 연도: 미확보", s_body))
-            story.append(Paragraph(f"  홈페이지: {safe(b.get('website'), '미확보')}", s_body))
-            story.append(Paragraph(f"  파이프라인: {cats_str}", s_body))
-            story.append(Paragraph(f"- 기업 규모: {safe(b.get('annual_revenue_rank'), '매출/직원수 미확보')}", s_body))
-            story.append(Paragraph(
-                f"- 등록 제품: TGA ARTG 등록 {b.get('tga_artg_count') or 0}건 (CPHI 등 외부 등록 제품은 별도 조사 필요)",
-                s_body,
-            ))
             story.append(Paragraph("* 출처: Gemini 딥 리서치, Perplexity 분석", s_small))
             sep = Table([[""]], colWidths=[CONTENT_W])
             sep.setStyle(
@@ -2362,23 +2399,6 @@ def render_buyers_pdf(
             story.append(Spacer(1, 8))
             story.append(sep)
             story.append(Spacer(1, 10))
-
-    story.append(Spacer(1, 12))
-    story.append(Paragraph(
-        "<b>5지표 가중치:</b> 매출 규모 35% · 성분 경험(파이프라인) 25% · "
-        "호주 제조소 20% · 수입 경험 10% · 약국 체인 10%",
-        s_small,
-    ))
-    story.append(Paragraph(
-        "<b>티어:</b> A = 해당 품목 INN 직접 등재 · B = 치료영역 매칭 (오리지널/제네릭 파트너) · "
-        "C = 기타 (협회·컨퍼런스 기반 잠재)",
-        s_small,
-    ))
-    story.append(Paragraph(
-        "본 보고서의 매출 등급은 Perplexity sonar-pro 웹 검색 + Claude Haiku 교차검증 결과이며, "
-        "Gemini 딥리서치 수기 데이터 (45개사) 우선 적용. 실제 바이어 접촉 시 현지 상황 별도 확인 권장.",
-        s_small,
-    ))
 
     doc.build(story)
     return out_path

@@ -116,6 +116,9 @@ _ALLOWED_COLUMNS: frozenset[str] = frozenset(
         # Task 3 (2026-04-19) — Healthylife 가격·URL 전용 컬럼
         "healthylife_price_aud",
         "healthylife_url",
+        # 수출 적합성 판정 (크롤러 → DB 저장, 보고서·UI 에서 직접 참조)
+        "export_viable",   # viable | conditional | not_viable
+        "reason_code",     # PBS_REGISTERED | ARTG_REGISTERED | TGA_NOT_APPROVED 등
         # 메타
         "schedule_code",
         "last_crawled_at",

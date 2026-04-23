@@ -36,6 +36,7 @@ from dotenv import load_dotenv
 
 from utils.crawl_time import now_kst_iso
 import httpx
+from bs4 import BeautifulSoup
 
 # 프로젝트 루트 .env 로드 (cwd 무관하게 상위 경로 탐색)
 _env_dir = Path(__file__).resolve().parent
@@ -55,6 +56,27 @@ _BASE = "https://data-api.health.gov.au/pbs/api/v3"
 _MAX_FALLBACK_PAGES = 10
 _MAX_FDC_PAGES = 5   # FDC 전체 페이지 스캔 최대치 — fluticasone+salmeterol 은 3~4 페이지에 위치
 _RATE_LIMIT_SEC = 21
+
+# ── PBS 웹 크롤링 상수 (FDC API 실패 시 fallback 전용) ──────────────
+# data-api.health.gov.au API가 FDC를 못 찾을 때 pbs.gov.au 직접 크롤링.
+# Subscription-Key 불필요, rate limit 2초 (API 21초 대비 대폭 단축).
+_PBS_WEB_SEARCH_URL = "https://www.pbs.gov.au/pbs/search"
+_PBS_WEB_ITEM_BASE  = "https://www.pbs.gov.au/medicine/item"
+_PBS_WEB_HEADERS: dict[str, str] = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-AU,en;q=0.9",
+}
+# PBS 가격 역산 상수 (2024-25 기준)
+# 공식: DPMQ = AEMP × (1 + 도매마진%) + 조제료
+# 역산: AEMP = (DPMQ - 조제료) ÷ (1 + 도매마진%)
+_PBS_WEB_DISPENSING_FEE   = Decimal("8.32")    # 표준 조제료 (Standard Dispensing Fee)
+_PBS_WEB_WHOLESALE_MARKUP = Decimal("0.0752")  # 도매마진 Band 1 (7.52%)
+_PBS_WEB_RATE_SEC         = 2                  # 웹 크롤링 요청 간격 (초)
 
 
 def _headers() -> dict[str, str]:
@@ -654,6 +676,13 @@ def fetch_pbs_by_ingredient(
                 _join_dispensing_rule(r, schedule) for r in fallback_matched
             ])
 
+        # 웹 크롤링 fallback — API 3단계(primary/보조/전체스캔) 모두 실패 시
+        # _return_all=True 는 fetch_pbs_fdc 내부 FDC 탐색용 → 웹 fallback 불필요
+        if not _return_all:
+            _web = _fetch_ingredient_web(ing_raw)
+            if _web is not None:
+                return [_web]
+
         return [out_empty]
     except Exception:
         return [out_empty]
@@ -858,6 +887,429 @@ def _fdc_raw_page_scan(anchor: str) -> tuple[list[dict[str, Any]], str | None]:
         return [], None
 
 
+# ─────────────────────────────────────────────────────────────────────
+# PBS 웹 크롤링 fallback — FDC API 실패 시 pbs.gov.au 직접 크롤링
+# 실측 HTML 구조 확인: 2026-04-24 (pbs_web_test.py 검증 완료)
+# ─────────────────────────────────────────────────────────────────────
+
+def _aemp_from_dpmq(dpmq: Decimal) -> Decimal | None:
+    """DPMQ(최대처방량 총약가) → AEMP(승인 출고가) 역산.
+
+    PBS 공식 (2024-25):
+      DPMQ = AEMP × (1 + 도매마진%) + 조제료
+      AEMP = (DPMQ - 조제료) ÷ (1 + 도매마진%)
+
+    기준값:
+      조제료  = $8.32 AUD (_PBS_WEB_DISPENSING_FEE)
+      도매마진 = 7.52%   (_PBS_WEB_WHOLESALE_MARKUP, Wholesale Markup Band 1)
+
+    ※ 실제 AEMP와 오차 ±5% 내외. API 값 없을 때 추정 전용.
+    """
+    if not dpmq or dpmq <= 0:
+        return None
+    net = dpmq - _PBS_WEB_DISPENSING_FEE
+    if net <= 0:
+        return None
+    return (net / (1 + _PBS_WEB_WHOLESALE_MARKUP)).quantize(Decimal("0.01"))
+
+
+def _strength_matches_desc(strength_str: str, description: str) -> bool:
+    """자사 함량 문자열과 PBS 품목 설명 텍스트가 일치하는지 확인.
+
+    예) "250/50" → 숫자 ['250', '50'] 추출 → 설명에 단어 경계로 모두 포함?
+        "fluticasone 250 microgram + salmeterol 50 microgram" → True  ✓
+        "fluticasone 250 microgram + salmeterol 25 microgram" → False ✓
+           (단순 in 연산자는 '50' ⊂ '250' 오매칭 → re.search 단어경계로 해결)
+    """
+    if not strength_str or not description:
+        return False
+    nums = re.findall(r"\d+", strength_str)
+    desc_l = description.lower()
+    # \b 단어 경계: "50"이 "250" 안에 포함되는 오매칭 방지
+    return all(bool(re.search(r"\b" + n + r"\b", desc_l)) for n in nums)
+
+
+def _parse_pbs_web_item_detail(codes_str: str) -> dict[str, Any]:
+    """PBS 품목 상세 페이지 크롤링 → DPMQ·브랜드 추출.
+
+    codes_str: 단일 코드("14449L") 또는 듀얼코드("14449L-8431R") 모두 허용.
+    첫 번째 코드(= 2팩 기준, 제네릭 기준가)의 DPMQ를 추출.
+
+    실측 테이블 구조 (2026-04-24 확인):
+      테이블0: Source(스케줄명) / Body System
+      테이블1: 급여 유형 (Restricted Benefit / Authority Required 등)
+      테이블2+: 가격 테이블 — 헤더: Code & Prescriber | 품목명 | ... | DPMQ | ... | Patient Charge
+                데이터행 → "Available brands" → 브랜드 행들 순으로 구성.
+
+    반환 키:
+      pbs_code          : 첫 번째 PBS 품목 코드 (주 코드)
+      drug_name         : 성분명 + 제형·함량 전체 텍스트
+      dpmq_aud          : Decimal | None  ← 제네릭 기준 DPMQ
+      patient_charge_aud: Decimal | None  ← 일반 환자 본인부담금
+      available_brands  : 브랜드명 리스트 (오리지널 포함)
+      source_url        : 원본 URL
+    """
+    url = f"{_PBS_WEB_ITEM_BASE}/{codes_str}"
+    result: dict[str, Any] = {
+        "pbs_code": codes_str.split("-")[0].upper(),
+        "drug_name": None,
+        "dpmq_aud": None,
+        "patient_charge_aud": None,
+        "available_brands": [],
+        "source_url": url,
+    }
+    try:
+        time.sleep(_PBS_WEB_RATE_SEC)
+        r = httpx.get(url, headers=_PBS_WEB_HEADERS, timeout=15)
+        if r.status_code != 200:
+            return result
+    except Exception:
+        return result
+
+    soup = BeautifulSoup(r.text, "lxml")
+
+    for table in soup.find_all("table"):
+        rows = table.find_all("tr")
+        if not rows:
+            continue
+        header_cells = [
+            th.get_text(separator=" ", strip=True)
+            for th in rows[0].find_all(["th", "td"])
+        ]
+        if "DPMQ" not in " ".join(header_cells):
+            continue  # 가격 테이블 아님 → 스킵
+
+        headers_l  = [h.lower() for h in header_cells]
+        idx_name   = next((i for i, h in enumerate(headers_l) if "medicinal" in h or "product" in h), None)
+        idx_dpmq   = next((i for i, h in enumerate(headers_l) if "dpmq" in h), None)
+        idx_charge = next((i for i, h in enumerate(headers_l) if "patient charge" in h or "general patient" in h), None)
+
+        primary_found = False
+        brands: list[str] = []
+        in_brands = False
+
+        for row in rows[1:]:
+            cells = [td.get_text(separator=" ", strip=True) for td in row.find_all(["td", "th"])]
+            if not cells or not any(cells):
+                continue
+            first = cells[0].strip()
+
+            # "Available brands" 섹션 진입
+            if "available brands" in first.lower():
+                in_brands = True
+                continue
+
+            # 브랜드 행 수집
+            if in_brands:
+                brand = re.sub(r"\s*\*.*$", "", first).strip()  # "* Additional charge..." 제거
+                brand = re.sub(r"\s+[a-z]\s*$", "", brand).strip()  # 각주 문자 제거
+                if brand:
+                    brands.append(brand)
+                continue
+
+            # PBS 코드 포함 행 = 데이터 행 (예: "14449L MP NP")
+            if not re.match(r"[A-Z0-9]{5}", first):
+                continue
+
+            # 첫 번째 데이터 행만 사용 (2팩 기준, 제네릭 기준가)
+            if not primary_found:
+                primary_found = True
+                if idx_name is not None and idx_name < len(cells):
+                    name = re.sub(r"\(\s*PI\s*,?\s*CMI\s*\)", "", cells[idx_name]).strip()
+                    result["drug_name"] = name
+                if idx_dpmq is not None and idx_dpmq < len(cells):
+                    m = re.search(r"\$(\d+\.\d+)", cells[idx_dpmq])
+                    if m:
+                        result["dpmq_aud"] = _safe_decimal(m.group(1))
+                if idx_charge is not None and idx_charge < len(cells):
+                    m = re.search(r"\$(\d+\.\d+)", cells[idx_charge])
+                    if m:
+                        result["patient_charge_aud"] = _safe_decimal(m.group(1))
+
+        result["available_brands"] = brands
+        break  # 첫 번째 DPMQ 테이블만 처리
+
+    return result
+
+
+def _fetch_ingredient_web(ingredient: str) -> dict[str, Any] | None:
+    """fetch_pbs_by_ingredient() API 3단계 모두 실패 시 PBS 웹 크롤링 fallback.
+
+    단일 성분(rosuvastatin, atorvastatin 등) 전용.
+    FDC 복합제는 _fetch_fdc_web_fallback() 사용.
+
+    전략:
+      1. search-type=medicines 로 PBS 검색 → 성분 포함 링크 수집
+      2. 첫 번째 매칭 코드(단일/듀얼 모두 허용)로 상세 페이지 크롤링
+      3. DPMQ 추출 → AEMP 역산
+      4. PBSItemDTO 호환 dict 반환
+
+    실적 데이터 (2026-04-24 확인):
+      rosuvastatin 5mg  (13406N): DPMQ $19.22 → AEMP ~$10.14
+      rosuvastatin 10mg (13586C): DPMQ $21.32 → AEMP ~$12.09
+      atorvastatin 10mg (13495G): DPMQ $19.22 → AEMP ~$10.14
+      omega-3-acid ethyl esters : PBS 미등재 → None 반환 (Healthylife fallback 유지)
+
+    반환: PBSItemDTO 호환 dict | None (크롤링 실패 or 미등재 시 None).
+    """
+    ing = (ingredient or "").strip()
+    if not ing:
+        return None
+
+    needles = _pbs_needles(ing)
+    if not needles:
+        return None
+
+    # Step 1: PBS 웹 검색
+    try:
+        time.sleep(_PBS_WEB_RATE_SEC)
+        r = httpx.get(
+            _PBS_WEB_SEARCH_URL,
+            params={"term": ing, "search-type": "medicines"},
+            headers=_PBS_WEB_HEADERS,
+            timeout=15,
+        )
+        if r.status_code != 200:
+            return None
+    except Exception:
+        return None
+
+    soup = BeautifulSoup(r.text, "lxml")
+
+    # Step 2: 성분 포함 첫 번째 링크 선택 (단일코드·듀얼코드 모두 허용)
+    # 단, FDC 제외: 두 성분 이상의 복합 설명 링크는 스킵 ('+' 기호 있는 경우)
+    item_re = re.compile(
+        r"/medicine/item/([A-Z0-9]{4,6}(?:-[A-Z0-9]{4,6})?)",
+        re.IGNORECASE,
+    )
+    # 후보 수집 (최대 20개) → 저함량 우선 정렬 → 첫 번째 선택
+    # 이유: search-type=medicines 결과가 고함량(80mg) 부터 나올 수 있음
+    # → mg/mcg 수치를 추출해 오름차순 정렬 → 저함량(10mg) 우선 채택
+    candidates_for_sort: list[dict[str, Any]] = []
+
+    for a_tag in soup.find_all("a", href=item_re):
+        href = a_tag.get("href", "")
+        m = item_re.search(href)
+        if not m:
+            continue
+        codes_str = m.group(1).upper()
+        desc = a_tag.get_text(separator=" ", strip=True).lower()
+
+        # 성분 포함 확인
+        if not any(n in desc for n in needles):
+            continue
+
+        # FDC 제외: PBS 복합제 표기 두 가지 모두 차단
+        # 1) "EZETIMIBE (&) ROSUVASTATIN" — PBS 공식 FDC 표기
+        # 2) "fluticasone + salmeterol"    — 성분 나열 표기
+        if "(&)" in desc:
+            continue
+        if "+" in desc and not all(
+            any(n in part for n in needles)
+            for part in desc.split("+")
+        ):
+            continue
+
+        # 설명에서 첫 번째 mg/mcg 수치 추출 (정렬용)
+        dose_m = re.search(r"(\d+(?:\.\d+)?)\s*(?:mg|mcg|microgram)", desc)
+        dose_num = float(dose_m.group(1)) if dose_m else 9999.0
+
+        candidates_for_sort.append({
+            "codes_str": codes_str,
+            "dose_num": dose_num,
+        })
+
+        if len(candidates_for_sort) >= 20:
+            break  # 충분한 후보 수집
+
+    if not candidates_for_sort:
+        return None
+
+    # 저함량 우선 정렬 (10mg < 80mg)
+    candidates_for_sort.sort(key=lambda x: x["dose_num"])
+    chosen_codes: str = candidates_for_sort[0]["codes_str"]
+
+    if not chosen_codes:
+        return None
+
+    # Step 3: 아이템 상세 페이지 크롤링 → DPMQ 추출
+    web_detail = _parse_pbs_web_item_detail(chosen_codes)
+    dpmq = web_detail.get("dpmq_aud")
+    if not isinstance(dpmq, Decimal) or dpmq <= 0:
+        return None
+
+    # Step 4: AEMP 역산
+    aemp_est = _aemp_from_dpmq(dpmq)
+
+    # Step 5: PBSItemDTO 호환 dict 구성
+    dto = _empty_dto()
+    dto["pbs_found"]             = True
+    dto["pbs_code"]              = web_detail.get("pbs_code")
+    dto["drug_name"]             = web_detail.get("drug_name")
+    dto["aemp_aud"]              = aemp_est       # 추정값 (DPMQ 역산)
+    dto["dpmq_aud"]              = dpmq           # 실측값
+    dto["mn_pharmacy_price_aud"] = web_detail.get("patient_charge_aud")
+    dto["source_url"]            = web_detail.get("source_url") or _PBS_WEB_ITEM_BASE
+    dto["source_name"]           = "pbs_web_fallback"
+    dto["crawled_at"]            = now_kst_iso()
+    dto["sponsors"]              = web_detail.get("available_brands") or []
+    dto["_source"]               = "pbs_web_fallback"
+    dto["_aemp_estimated"]       = True
+    dto["confidence_override"]   = 0.6
+    dto["warnings"] = [
+        f"aemp_estimated_from_dpmq:{float(dpmq):.2f}",
+        f"dispensing_fee_assumed:{float(_PBS_WEB_DISPENSING_FEE)}",
+        f"wholesale_markup_assumed:{float(_PBS_WEB_WHOLESALE_MARKUP) * 100:.2f}pct",
+    ]
+    return dto
+
+
+def _fetch_fdc_web_fallback(
+    components: list[str],
+    strengths: list[str] | None = None,
+    fdc_search_term: str | None = None,
+) -> dict[str, Any] | None:
+    """fetch_pbs_fdc() API 스캔 실패 시 pbs.gov.au 웹 크롤링 fallback.
+
+    전략:
+      1. search-type=medicines 파라미터로 성분 검색
+         → FDC 듀얼코드 링크 수집 (예: /medicine/item/14449L-8431R)
+      2. 성분 INN 포함 확인 (모든 components 가 설명에 존재)
+      3. strengths 매칭 → 자사 함량에 맞는 코드 선택
+         (예: "250/50" → 14449L-8431R, "500/50" → 14450M-8432T)
+      4. 아이템 상세 페이지 크롤링 → DPMQ 실측값 추출
+      5. AEMP 역산: (DPMQ - 조제료 $8.32) ÷ (1 + 도매마진 7.52%)
+      6. PBSItemDTO 호환 dict 반환
+
+    반환: PBSItemDTO 호환 dict | None (크롤링 실패 시 None → 호출부에서 component_sum).
+
+    태그:
+      _source            : "pbs_web_fallback"
+      _aemp_estimated    : True  (AEMP는 DPMQ 역산 추정값)
+      confidence_override: 0.6
+      pricing_case_applied: "DIRECT_FDC_web_fallback"
+    """
+    anchor = fdc_search_term or (components[0] if components else "")
+    if not anchor:
+        return None
+
+    # Step 1: PBS 웹 검색 (search-type=medicines)
+    try:
+        time.sleep(_PBS_WEB_RATE_SEC)
+        r = httpx.get(
+            _PBS_WEB_SEARCH_URL,
+            params={"term": anchor, "search-type": "medicines"},
+            headers=_PBS_WEB_HEADERS,
+            timeout=15,
+        )
+        if r.status_code != 200:
+            return None
+    except Exception:
+        return None
+
+    soup = BeautifulSoup(r.text, "lxml")
+
+    # Step 2: 듀얼코드 링크 수집 — FDC 개별 함량 링크는 코드 정확히 2개 (dash 1개)
+    # 예) /medicine/item/14449L-8431R  ← 대상 (dash 1개, 2팩+1팩 쌍)
+    # 제외) /medicine/item/14311F-14413N-14414P-...  ← 헤딩 mega-link (dash 多, 전체 약품군)
+    dual_re = re.compile(
+        r"/medicine/item/([A-Z0-9]{4,6}-[A-Z0-9]{4,6})",
+        re.IGNORECASE,
+    )
+    candidates: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for a_tag in soup.find_all("a", href=dual_re):
+        href = a_tag.get("href", "")
+        m = dual_re.search(href)
+        if not m:
+            continue
+        codes_str = m.group(1).upper()
+        # mega-link 완전 차단 — captured group은 regex 특성상 항상 dash 1개라
+        # group 만 보면 의미 없음. href 전체 경로의 dash 개수로 판별해야 정확.
+        # 예) /medicine/item/14311F-14413N-14414P-... → path에 dash 2개 이상 → skip
+        _item_path = href.split("/medicine/item/")[-1].split("?")[0].split("#")[0].upper()
+        if _item_path.count("-") != 1:
+            continue
+        if codes_str in seen:
+            continue
+        seen.add(codes_str)
+
+        desc = a_tag.get_text(separator=" ", strip=True).lower()
+
+        # 모든 components INN이 설명에 포함돼야 FDC 후보
+        comps_present = all(
+            any(needle in desc for needle in _pbs_needles(c))
+            for c in components
+            if c
+        )
+        if not comps_present:
+            continue
+
+        candidates.append({"codes_str": codes_str, "desc": desc})
+
+    if not candidates:
+        return None
+
+    # Step 3: strengths 매칭 → 자사 함량에 맞는 코드 우선 선택
+    chosen: str | None = None
+    if strengths:
+        for strength in strengths:
+            for cand in candidates:
+                if _strength_matches_desc(strength, cand["desc"]):
+                    chosen = cand["codes_str"]
+                    break
+            if chosen:
+                break
+
+    if not chosen:
+        chosen = candidates[0]["codes_str"]  # 함량 매칭 실패 → 첫 번째 후보
+
+    # Step 4: 아이템 상세 페이지 크롤링 → DPMQ 실측
+    web_detail = _parse_pbs_web_item_detail(chosen)
+    dpmq = web_detail.get("dpmq_aud")
+    if not isinstance(dpmq, Decimal) or dpmq <= 0:
+        return None
+
+    # Step 5: AEMP 역산
+    aemp_est = _aemp_from_dpmq(dpmq)
+
+    # Step 6: PBSItemDTO 호환 dict 구성
+    dto = _empty_dto()
+    dto["pbs_found"]               = True
+    dto["pbs_code"]                = web_detail.get("pbs_code")
+    dto["drug_name"]               = web_detail.get("drug_name")
+    dto["aemp_aud"]                = aemp_est       # 추정값 (DPMQ 역산)
+    dto["dpmq_aud"]                = dpmq           # 실측값
+    dto["mn_pharmacy_price_aud"]   = web_detail.get("patient_charge_aud")
+    dto["source_url"]              = web_detail.get("source_url") or _PBS_WEB_ITEM_BASE
+    dto["source_name"]             = "pbs_web_fallback"
+    dto["crawled_at"]              = now_kst_iso()
+    # 브랜드 목록 (바이어 후보 풀 겸용)
+    brand_list: list[str] = web_detail.get("available_brands") or []
+    dto["sponsors"]   = brand_list
+    dto["pbs_brands"] = [
+        {
+            "brand_name":    b,
+            "dpmq_aud":      None,
+            "originator_brand": None,
+            "pbs_code":      dto["pbs_code"],
+        }
+        for b in brand_list
+    ]
+    # 추정값 메타 태그
+    dto["_source"]           = "pbs_web_fallback"
+    dto["_aemp_estimated"]   = True   # AEMP는 DPMQ 역산값 (실측 아님)
+    dto["confidence_override"]      = 0.6
+    dto["pricing_case_applied"]     = "DIRECT_FDC_web_fallback"
+    dto["warnings"] = [
+        f"aemp_estimated_from_dpmq:{float(dpmq):.2f}",
+        f"dispensing_fee_assumed:{float(_PBS_WEB_DISPENSING_FEE)}",
+        f"wholesale_markup_assumed:{float(_PBS_WEB_WHOLESALE_MARKUP) * 100:.2f}pct",
+    ]
+    return dto
+
+
 def fetch_pbs_fdc(
     components: list[str],
     fdc_search_term: str | None = None,
@@ -924,6 +1376,16 @@ def fetch_pbs_fdc(
         if _dto_inn_set(quick_dtos[i]) == expected_inns
     ]
     if not matched_pairs:
+        # 1차 fallback: 웹 크롤링 — API FDC 검색 실패 시 pbs.gov.au 직접 크롤링
+        # (세레테롤처럼 API drug_name 검색이 FDC를 못 잡는 케이스 대응)
+        _web = _fetch_fdc_web_fallback(
+            components,
+            strengths=list(strengths) if strengths else None,
+            fdc_search_term=fdc_search_term,
+        )
+        if _web is not None:
+            return _web
+        # 2차 fallback: component_sum (웹 크롤링도 실패 시)
         fallback = fetch_pbs_component_sum(components)
         fallback["pricing_case_applied"] = "DIRECT_FDC_fallback_to_component_sum"
         fallback["fdc_fallback"] = True

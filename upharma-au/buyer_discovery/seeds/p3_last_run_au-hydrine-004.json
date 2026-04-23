@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "generated_at": "2026-04-20T00:36:39.693660+00:00",
+    "generated_at": "2026-04-23T21:58:49.092076+00:00",
     "instruction": "각 회사의 'hardcode_needed' 두 필드(annual_revenue_rank + factory) 와 notes 만 채워서 buyer_discovery/seeds/au_buyers_hardcode.json 으로 저장하세요. 다른 필드는 건드리지 마세요. Gemini 딥리서치 권장.",
-    "total_unique": 63
+    "total_unique": 50
   },
   "buyers": {
     "medsurge": {
@@ -15,11 +15,12 @@
       "description": null,
       "represented_brands": [],
       "sources": [
-        "tga"
+        "tga",
+        "tga_inn_match"
       ],
-      "stage1_sort_score": 59,
+      "stage1_sort_score": 77,
       "evidence": {
-        "tga_artg_count": 2,
+        "tga_artg_count": 1,
         "pbs_listed_count": 0,
         "is_ma_member": false,
         "is_gbma_member": false,
@@ -31,86 +32,6 @@
       "products_relevant": [
         "au-hydrine-004"
       ],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "viatris": {
-      "canonical_name": "Alphapharm Pty Ltd",
-      "website": "https://www.viatris.com/en-au/lm/Australia",
-      "email": "au-communications@viatris.com",
-      "phone": "02 9298 3999",
-      "address": "Level 1, 30 The Bond 30-34 Hickson Road, Millers Point NSW 2000",
-      "state": "NSW",
-      "description": "VIATRIS™ is a global healthcare company with a strong local presence and proud history of making high-quality medicines available to patients in Australia since 1982.\nOur diverse portfolio of more than 1,000 medicine products ranges from complex generics to some of the world’s best-known brands, and new innovative medicines to meet the healthcare needs of the future. Our manufacturing facility in Queensland is an important part of our global network of 37 manufacturing, R&D and packaging sites, and produces more than 3.5 billion doses of tablets and capsules each year.  ",
-      "represented_brands": [
-        "Dymista",
-        "EpiPen Auto Injector",
-        "Acnatac",
-        "Elidel",
-        "Relpax",
-        "Celebrex",
-        "Inspra"
-      ],
-      "sources": [
-        "tga",
-        "gbma",
-        "gpce"
-      ],
-      "stage1_sort_score": 59,
-      "evidence": {
-        "tga_artg_count": 2,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": true,
-        "is_gpce_exhibitor": true,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "pfizer": {
-      "canonical_name": "Pfizer (Perth) Pty Ltd",
-      "website": "https://www.pfizer.com.au/",
-      "email": null,
-      "phone": "02 9850 3333",
-      "address": null,
-      "state": null,
-      "description": "Breakthroughs that change patients’ lives™\n\nThroughout Pfizer's 175 year history, and over 65 years in Australia, we have remained dedicated to discovering and developing new and better ways to prevent and treat disease, and improve the health and wellbeing of people around the world.\nFor more information visit www.pfizer.com.au\n\n",
-      "represented_brands": [],
-      "sources": [
-        "tga",
-        "ma",
-        "gpce"
-      ],
-      "stage1_sort_score": 57,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": true,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": true,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
       "hardcode_needed": {
         "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
         "factory": {
@@ -134,9 +55,9 @@
         "tga",
         "gbma"
       ],
-      "stage1_sort_score": 55,
+      "stage1_sort_score": 51,
       "evidence": {
-        "tga_artg_count": 5,
+        "tga_artg_count": 3,
         "pbs_listed_count": 0,
         "is_ma_member": false,
         "is_gbma_member": true,
@@ -169,9 +90,9 @@
         "tga",
         "gbma"
       ],
-      "stage1_sort_score": 51,
+      "stage1_sort_score": 49,
       "evidence": {
-        "tga_artg_count": 3,
+        "tga_artg_count": 2,
         "pbs_listed_count": 0,
         "is_ma_member": false,
         "is_gbma_member": true,
@@ -191,80 +112,8 @@
         "notes": ""
       }
     },
-    "sanofi": {
-      "canonical_name": "Sanofi-Aventis Australia Pty Ltd",
-      "website": "https://www.sanofi.com/en/australia",
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga",
-        "ma"
-      ],
-      "stage1_sort_score": 47,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": true,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "gsk": {
-      "canonical_name": "GlaxoSmithKline Australia Pty Ltd",
-      "website": "https://au.gsk.com/en-au",
-      "email": "eleanor.j.ashton@gsk.com",
-      "phone": "1800 033 109",
-      "address": null,
-      "state": null,
-      "description": "GSK is a global biopharma company with the ambition and purpose to unite science, technology and talent to get ahead of disease together. Our global portfolio spans vaccines, specialty and general medicines. For more information on our purpose, strategy and culture, please visit https://au.gsk.com/en-au/company/purpose-strategy-and-culture/",
-      "represented_brands": [
-        "Respiratory and Vaccines"
-      ],
-      "sources": [
-        "tga",
-        "gpce"
-      ],
-      "stage1_sort_score": 42,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": true,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "medreich_australia": {
-      "canonical_name": "Medreich Australia Pty Ltd",
+    "bayer": {
+      "canonical_name": "Bayer Australia Ltd",
       "website": null,
       "email": null,
       "phone": null,
@@ -297,144 +146,8 @@
         "notes": ""
       }
     },
-    "pharmacor": {
-      "canonical_name": "Pharmacor Pty Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 34,
-      "evidence": {
-        "tga_artg_count": 2,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "gm_pharma_international": {
-      "canonical_name": "GM Pharma International Pty Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 34,
-      "evidence": {
-        "tga_artg_count": 2,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "sun_pharma_anz": {
-      "canonical_name": "Sun Pharma ANZ Pty Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 34,
-      "evidence": {
-        "tga_artg_count": 2,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "bayer": {
-      "canonical_name": "Bayer Australia Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 32,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "boucher_&_muir": {
-      "canonical_name": "Boucher & Muir Pty Ltd",
+    "amway_of_australia": {
+      "canonical_name": "Amway of Australia",
       "website": null,
       "email": null,
       "phone": null,
@@ -501,8 +214,8 @@
         "notes": ""
       }
     },
-    "helix_pharmaceuticals": {
-      "canonical_name": "Helix Pharmaceuticals Pty Ltd",
+    "pharmacor": {
+      "canonical_name": "Pharmacor Pty Ltd",
       "website": null,
       "email": null,
       "phone": null,
@@ -535,8 +248,8 @@
         "notes": ""
       }
     },
-    "orion_pharma_pty": {
-      "canonical_name": "Orion Pharma (AUS) Pty Limited",
+    "medreich_australia": {
+      "canonical_name": "Medreich Australia Pty Ltd",
       "website": null,
       "email": null,
       "phone": null,
@@ -569,314 +282,8 @@
         "notes": ""
       }
     },
-    "micro_labs": {
-      "canonical_name": "Micro Labs Pty Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 32,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "avallon_pharmaceuticals": {
-      "canonical_name": "Avallon Pharmaceuticals Pty Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 32,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "generic_health": {
-      "canonical_name": "Generic Health Pty Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 32,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "southern_cross_pharma": {
-      "canonical_name": "Southern Cross Pharma Pty Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 32,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "strides_pharma_science": {
-      "canonical_name": "Strides Pharma Science Pty Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 32,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "baxter_healthcare": {
-      "canonical_name": "Baxter Healthcare Pty Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 32,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "demogen_australia_pty_ltd_trading_as_demogen_pharmaceuticals": {
-      "canonical_name": "Demogen Australia Pty Ltd trading as DEMOGEN Pharmaceuticals",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 32,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "ipca_pharma": {
-      "canonical_name": "Ipca Pharma (Australia) Pty Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 32,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "johnson_&_johnson_pacific": {
-      "canonical_name": "Johnson & Johnson Pacific Pty Ltd",
-      "website": null,
-      "email": null,
-      "phone": null,
-      "address": null,
-      "state": null,
-      "description": null,
-      "represented_brands": [],
-      "sources": [
-        "tga"
-      ],
-      "stage1_sort_score": 32,
-      "evidence": {
-        "tga_artg_count": 1,
-        "pbs_listed_count": 0,
-        "is_ma_member": false,
-        "is_gbma_member": false,
-        "is_gpce_exhibitor": false,
-        "ingredient_case_per_product": {
-          "au-hydrine-004": "D_none"
-        }
-      },
-      "products_relevant": [],
-      "hardcode_needed": {
-        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
-        "factory": {
-          "has": "??? (Y/N/unknown)",
-          "count": 0,
-          "locations": []
-        },
-        "notes": ""
-      }
-    },
-    "lumacina_australia": {
-      "canonical_name": "LumaCina Australia Pty Ltd",
+    "gm_pharma_international": {
+      "canonical_name": "GM Pharma International Pty Ltd",
       "website": null,
       "email": null,
       "phone": null,
@@ -1075,6 +482,84 @@
         "pbs_listed_count": 0,
         "is_ma_member": true,
         "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-hydrine-004": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "pfizer": {
+      "canonical_name": "Pfizer",
+      "website": "https://www.pfizer.com.au/",
+      "email": null,
+      "phone": "02 9850 3333",
+      "address": null,
+      "state": null,
+      "description": "Breakthroughs that change patients’ lives™\n\nThroughout Pfizer's 175 year history, and over 65 years in Australia, we have remained dedicated to discovering and developing new and better ways to prevent and treat disease, and improve the health and wellbeing of people around the world.\nFor more information visit www.pfizer.com.au\n\n",
+      "represented_brands": [],
+      "sources": [
+        "ma",
+        "gpce"
+      ],
+      "stage1_sort_score": 25,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-hydrine-004": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "viatris": {
+      "canonical_name": "Viatris",
+      "website": "https://www.viatris.com/en-au/lm/Australia",
+      "email": "au-communications@viatris.com",
+      "phone": "02 9298 3999",
+      "address": "Level 1, 30 The Bond 30-34 Hickson Road, Millers Point NSW 2000",
+      "state": "NSW",
+      "description": "VIATRIS™ is a global healthcare company with a strong local presence and proud history of making high-quality medicines available to patients in Australia since 1982.\nOur diverse portfolio of more than 1,000 medicine products ranges from complex generics to some of the world’s best-known brands, and new innovative medicines to meet the healthcare needs of the future. Our manufacturing facility in Queensland is an important part of our global network of 37 manufacturing, R&D and packaging sites, and produces more than 3.5 billion doses of tablets and capsules each year.  ",
+      "represented_brands": [
+        "Dymista",
+        "EpiPen Auto Injector",
+        "Acnatac",
+        "Elidel",
+        "Relpax",
+        "Celebrex",
+        "Inspra"
+      ],
+      "sources": [
+        "gbma",
+        "gpce"
+      ],
+      "stage1_sort_score": 25,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": true,
         "is_gpce_exhibitor": true,
         "ingredient_case_per_product": {
           "au-hydrine-004": "D_none"
@@ -1298,6 +783,40 @@
     "roche": {
       "canonical_name": "Roche",
       "website": "https://www.roche-australia.com/",
+      "email": null,
+      "phone": null,
+      "address": null,
+      "state": null,
+      "description": null,
+      "represented_brands": [],
+      "sources": [
+        "ma"
+      ],
+      "stage1_sort_score": 15,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": true,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": false,
+        "ingredient_case_per_product": {
+          "au-hydrine-004": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "sanofi": {
+      "canonical_name": "Sanofi",
+      "website": "https://www.sanofi.com/en/australia",
       "email": null,
       "phone": null,
       "address": null,
@@ -2046,6 +1565,42 @@
         "Sunsense",
         "Azclear",
         "Numit"
+      ],
+      "sources": [
+        "gpce"
+      ],
+      "stage1_sort_score": 10,
+      "evidence": {
+        "tga_artg_count": 0,
+        "pbs_listed_count": 0,
+        "is_ma_member": false,
+        "is_gbma_member": false,
+        "is_gpce_exhibitor": true,
+        "ingredient_case_per_product": {
+          "au-hydrine-004": "D_none"
+        }
+      },
+      "products_relevant": [],
+      "hardcode_needed": {
+        "annual_revenue_rank": "??? (예: TOP 5 (제네릭 1위))",
+        "factory": {
+          "has": "??? (Y/N/unknown)",
+          "count": 0,
+          "locations": []
+        },
+        "notes": ""
+      }
+    },
+    "gsk": {
+      "canonical_name": "GlaxoSmithKline Australia Pty Ltd",
+      "website": "https://au.gsk.com/en-au",
+      "email": "eleanor.j.ashton@gsk.com",
+      "phone": "1800 033 109",
+      "address": null,
+      "state": null,
+      "description": "GSK is a global biopharma company with the ambition and purpose to unite science, technology and talent to get ahead of disease together. Our global portfolio spans vaccines, specialty and general medicines. For more information on our purpose, strategy and culture, please visit https://au.gsk.com/en-au/company/purpose-strategy-and-culture/",
+      "represented_brands": [
+        "Respiratory and Vaccines"
       ],
       "sources": [
         "gpce"
